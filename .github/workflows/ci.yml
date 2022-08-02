@@ -13,37 +13,37 @@ jobs:
     name: Тестирование и стиль
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source code
+      - name: Получение кода
         uses: actions/checkout@v2
-      - name: Install Rust Stable
+      - name: Установка Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: 1.56.1 # Pinned warnings
           components: rustfmt, clippy
           default: true
-      - name: Install gcc
+      - name: Установка gcc
         run: sudo apt-get update && sudo apt-get install -y gcc
-      - name: Cargo Build
+      - name: Сборка
         uses: actions-rs/cargo@v1
         with:
           command: build
           args: --all --verbose
-      - name: Cargo Test
+      - name: Тестирование
         uses: actions-rs/cargo@v1
         with:
           command: test
           args: --all --verbose
-      - name: Cargo Doc
+      - name: Документация
         uses: actions-rs/cargo@v1
         with:
           command: doc
           args: --all --verbose
-      - name: Cargo Clippy
+      - name: Анализ
         uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: --all -- -D warnings
-      - name: Cargo Fmt
+      - name: Стиль
         uses: actions-rs/cargo@v1
         with:
           command: fmt
@@ -53,11 +53,11 @@ jobs:
     name: Тестирование
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source code
+      - name: Получение кода
         uses: actions/checkout@v2
-      - name: Install gcc
+      - name: Установка gcc
         run: sudo apt-get update && sudo apt-get install -y gcc
-      - name: Install Rust Nightly
+      - name: Установка Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly-2022-01-01
@@ -65,7 +65,7 @@ jobs:
           profile: minimal
       - name: Cargo minimal-versions
         run: cargo -Z minimal-versions generate-lockfile
-      - name: Cargo test
+      - name: Тестирование
         uses: actions-rs/cargo@v1
         with:
           command: test
@@ -75,20 +75,20 @@ jobs:
     name: Покрытие
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source code
+      - name: Получение кода
         uses: actions/checkout@v3
-      - name: Install Rust Stable
+      - name: Установка Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           profile: minimal
           components: llvm-tools-preview
           default: true
-      - name: Install cargo-llvm-cov
+      - name: Установка cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
-      - name: Generate code coverage
+      - name: Генерация
         run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
-      - name: Upload Results to Codecov
+      - name: Сохранение
         uses: codecov/codecov-action@v3
         with:
           file: lcov.info
