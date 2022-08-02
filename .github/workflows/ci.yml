@@ -10,7 +10,7 @@ on:
 
 jobs:
   testing:
-    name: Unit, Style, and Lint Testing
+    name: Тестирование и стиль
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
@@ -50,7 +50,7 @@ jobs:
           args: --all -- --check
 
   dependency:
-    name: Minimal Versions Testing
+    name: Тестирование
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
@@ -72,7 +72,7 @@ jobs:
           args: --all --verbose
 
   coverage:
-    name: Test Coverage
+    name: Покрытие
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
