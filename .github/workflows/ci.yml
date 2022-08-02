@@ -91,6 +91,7 @@ jobs:
       - name: Сохранение
         uses: codecov/codecov-action@v3
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           file: lcov.info
           flags: unittests
           name: pest-ci-coverage
