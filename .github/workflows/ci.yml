@@ -1,4 +1,4 @@
-name: pest Continuous Integration
+name: BuT
 
 on:
   push:
@@ -94,6 +94,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: lcov.info
           flags: unittests
-          name: pest-ci-coverage
+          name: Покрытие
           fail_ci_if_error: false
           verbose: true
