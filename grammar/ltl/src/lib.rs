@@ -12,7 +12,8 @@ pub struct LtlParser;
 mod tests {
     use crate::*;
 
-    const LTL: &'static str = "(is(x1) W was(z1)) & [](was(z2) -> (is(x1) U was(z1)) & was(z1) -> (!is(x1) R was(z2)))";
+    const LTL: &'static str =
+        "(is(x1) W was(z1)) & [](was(z2) -> (is(x1) U was(z1)) & was(z1) -> (!is(x1) R was(z2)))";
 
     #[test]
     fn test_parse_ltl() {
@@ -21,11 +22,10 @@ mod tests {
             println!("Rule:    {:?}", pair.as_rule());
             println!("Span:    {:?}", pair.as_span());
             println!("Text:    {}", pair.as_str());
-            //
             for inner_pair in pair.into_inner() {
                 match inner_pair.as_rule() {
                     Rule::Name => println!("Name:  {}", inner_pair.as_str()),
-                    _ => println!("{:?}: {}", inner_pair.as_rule(), inner_pair.as_str())
+                    _ => println!("{:?}: {}", inner_pair.as_rule(), inner_pair.as_str()),
                 };
             }
         }
