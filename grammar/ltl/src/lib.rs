@@ -3,197 +3,152 @@ mod ast;
 extern crate pest;
 #[macro_use]
 extern crate pest_derive;
+#[macro_use]
+extern crate function_name;
+extern crate pad;
 
 use crate::ast::UnaryOp::Unknown;
 use crate::ast::{BinaryOp, CompareOp, Node, UnaryOp};
+use ::function_name::named;
 pub use pest::Parser;
+use pad::PadStr;
 
 #[derive(pest_derive::Parser)]
 #[grammar = "ltl.pest"]
 pub struct LtlParser;
 
-pub fn parse(source: &str) -> std::result::Result<Vec<Node>, pest::error::Error<Rule>> {
+#[named]
+pub fn parse(source: &str) -> Result<Vec<Node>, pest::error::Error<Rule>> {
     let mut ast = vec![];
     let pairs = LtlParser::parse(Rule::grammar, source)?;
     for pair in pairs {
         if let Rule::grammar = pair.as_rule() {
-            let text = pair.to_string();
-            println!("{}", text);
-            ast.push(build_ast_from_formula(pair.into_inner().next().unwrap()));
+            ast.push(build_ast_from_formula(0, pair.into_inner().next().unwrap()));
         }
     }
     Ok(ast)
 }
 
-fn build_ast_from_formula(pair: pest::iterators::Pair<Rule>) -> Node {
-    match pair.as_rule() {
-        Rule::formula => {
-            let mut pair = pair.into_inner();
-            let text = pair.to_string();
-            let conj = build_ast_from_conj(pair.next().unwrap());
-            let mut terms = Vec::new();
+#[named]
+fn build_ast_from_formula(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
+    let mut pairs = pair.into_inner();
+    let conj = build_ast_from_conjunction(pad + 1, pairs.next().unwrap());
+    let mut terms = Vec::new();
+    terms.push(Box::new(conj));
+    loop {
+        let pair_buf = pairs.next();
+        if pair_buf != None {
+            let conj = build_ast_from_conjunction(pad + 1, pair_buf.unwrap());
             terms.push(Box::new(conj));
-            loop {
-                let pair_buf = pair.next();
-                if pair_buf != None {
-                    let op = pair_buf.unwrap();
-                    if op.as_str() != "|" {
-                        panic!("Only | operation was present")
-                    }
-                    let conj = build_ast_from_conj(pair.next().unwrap());
-                    terms.push(Box::new(conj));
-                } else {
-                    break;
-                }
+        } else {
+            break;
+        }
+    }
+    Node::TermFormula(terms)
+}
+
+#[named]
+fn build_ast_from_conjunction(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
+    let mut pairs = pair.into_inner();
+    let mut next_ltl = pairs.next().unwrap();
+    let ltl = build_ast_from_ltl(pad + 1, next_ltl);
+    let mut terms = Vec::new();
+    terms.push(Box::new(ltl));
+    loop {
+        let pair_buf = pairs.next();
+        if pair_buf != None {
+            let pair_buf = pair_buf.unwrap();
+            let ltl = build_ast_from_ltl(pad + 1, pair_buf);
+            terms.push(Box::new(ltl));
+        } else {
+            break;
+        }
+    }
+    Node::Conjunction(terms)
+}
+
+#[named]
+fn build_ast_from_ltl(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
+    let mut pairs = pair.into_inner();
+    let part = pairs.next().unwrap();
+    let un_term = build_ast_from_un_term(pad + 1, part);
+    let mut terms = Vec::new();
+    loop {
+        let pair_buf = pairs.next();
+        if pair_buf != None {
+            let pair = pair_buf.unwrap();
+            let op = parse_binary_op(pair);
+            if let BinaryOp::Unknown(text) = op {
+                panic!("LTL. Unknown binary operation {:?}", text);
             }
-            Node::TermFormula(terms)
+            let un_term = build_ast_from_un_term(pad + 1, pairs.next().unwrap());
+            terms.push((op, Box::new(un_term)));
+        } else {
+            break;
         }
-        Rule::conj => {
-            let mut pair = pair.into_inner();
-            let ltl = build_ast_from_ltl(pair.next().unwrap());
-            let mut ltls = Vec::new();
-            ltls.push(Box::new(ltl));
-            loop {
-                let pair_buf = pair.next();
-                if pair_buf != None {
-                    let op = pair_buf.unwrap();
-                    if op.as_str() != "&" {
-                        panic!("Only & operation was present")
-                    }
-                    let ltl = build_ast_from_ltl(pair.next().unwrap());
-                    ltls.push(Box::new(ltl));
-                } else {
-                    break;
-                }
-            }
-            Node::Conjunction(ltls)
-        }
-        Rule::ltlForm => {
-            let mut pair = pair.into_inner();
-            let un = build_ast_from_un_term(pair.next().unwrap());
-            Node::Unknown(un.to_string())
-        }
-        unknown => panic!("Unknown formula: {:?}", unknown),
+    }
+    Node::TermLtl {
+        term: Box::new(un_term),
+        terms,
     }
 }
 
-fn build_ast_from_conj(pair: pest::iterators::Pair<Rule>) -> Node {
-    match pair.as_rule() {
-        Rule::conj => {
-            let text = pair.to_string();
-            build_ast_from_conj(pair.into_inner().next().unwrap())
-        }
-        Rule::ltlForm => {
-            let text1 = pair.to_string();
-            let mut pair = pair.into_inner();
-            let text2 = pair.to_string();
-            build_ast_from_ltl(pair.next().unwrap())
-        }
-        unknown => panic!("Unknown conj: {:?}", unknown),
-    }
-}
-
-fn build_ast_from_ltl(pair: pest::iterators::Pair<Rule>) -> Node {
-    match pair.as_rule() {
-        Rule::ltlForm => {
-            let text = pair.to_string();
-            build_ast_from_ltl(pair.into_inner().next().unwrap())
-        }
-        Rule::unTerm => {
-            let text1 = pair.to_string();
-            let mut pair = pair.into_inner();
-            let text2 = pair.to_string();
-            let un_term = build_ast_from_un_term(pair.next().unwrap());
-            let text3 = pair.to_string();
-            let mut terms = Vec::new();
-            loop {
-                let pair_buf = pair.next();
-                if pair_buf != None {
-                    let op = parse_binary_op(pair_buf.unwrap());
-                    let un_term = build_ast_from_ltl(pair.next().unwrap());
-                    terms.push((op, Box::new(un_term)));
-                } else {
-                    break;
-                }
-            }
-            Node::TermLtl {
-                term: Box::new(un_term),
-                terms,
-            }
-        }
-        unknown => panic!("Unknown unTerm: {:?}", unknown),
-    }
-}
-
-fn build_ast_from_un_term(pair: pest::iterators::Pair<Rule>) -> Node {
+#[named]
+fn build_ast_from_un_term(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
+    let mut pairs = pair.into_inner();
+    let pair = pairs.next().unwrap();
     match pair.as_rule() {
         Rule::unOp => {
-            let text = pair.to_string();
-            let mut pair = pair.into_inner();
-            let text = pair.to_string();
-            let op = pair.next().unwrap();
-            let text = pair.to_string();
-            let term = build_ast_from_term(pair.next().unwrap());
-            parse_un_term_op(op, term)
+            let op = parse_unary_op(pair);
+            let term = build_ast_from_term(pad + 1, pairs.next().unwrap());
+            Node::TermOp {
+                op,
+                term: Box::new(term),
+            }
+        }
+        Rule::unTerm => {
+            build_ast_from_un_term(pad + 1, pair)
         }
         _ => {
-            let text = pair.to_string();
-            build_ast_from_term(pair.into_inner().next().unwrap())
+            build_ast_from_term(pad + 1, pair)
         }
     }
 }
 
-fn build_ast_from_term(pair: pest::iterators::Pair<Rule>) -> Node {
+#[named]
+fn build_ast_from_term(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
+    let mut pairs = pair.into_inner();
+    let pair = pairs.next().unwrap();
     match pair.as_rule() {
-        Rule::term => {
-            let text = pair.to_string();
-            build_ast_from_term(pair.into_inner().next().unwrap())
-        }
         Rule::ConstBool => Node::ConstBool(pair.as_str().parse().unwrap()),
         Rule::ConstNum => {
-            let mut pair = pair.into_inner();
-            let num: i32 = pair.as_str().parse().unwrap();
-            let op = parse_compare_op(pair.next().unwrap());
+            let num: i32 = pairs.next().unwrap().as_str().parse().unwrap();
+            let op = parse_compare_op(pairs.next().unwrap());
             Node::TermNum {
                 num,
                 op,
-                func: Box::new(build_ast_from_func(pair.next().unwrap())),
+                func: Box::new(build_ast_from_func(pad + 1, pairs.next().unwrap())),
             }
         }
         Rule::formula => {
-            let text = pair.to_string();
-            build_ast_from_formula(pair.into_inner().next().unwrap())
+            build_ast_from_formula(pad + 1, pair)
         }
         Rule::func => {
-            let mut pair = pair.into_inner();
-            let name = pair.next().unwrap().as_str();
-            let mut args = Vec::new();
-            loop {
-                let pair_buf = pair.next();
-                if pair_buf != None {
-                    args.push(pair_buf.unwrap().as_str().to_string());
-                } else {
-                    break;
-                }
-            }
-            let func = Node::Function {
-                name: name.to_string(),
-                args,
-            };
-            let op = pair.next();
+            let func = build_ast_from_func(pad + 1, pair);
+            let op = pairs.next();
             if op != None {
                 let op = parse_compare_op(op.unwrap());
-                let next = pair.next().unwrap();
+                let next = pairs.next().unwrap();
                 match next.as_rule() {
                     Rule::func => Node::TermFuncOpFunc {
                         func: Box::new(func),
                         op,
-                        opf: Box::new(build_ast_from_func(next)),
+                        opf: Box::new(build_ast_from_func(pad + 1, next)),
                     },
                     Rule::ConstNum => Node::TermFuncOpNum {
                         func: Box::new(func),
                         op,
-                        num: pair.next().unwrap().as_str().parse().unwrap(),
+                        num: next.as_str().parse().unwrap(),
                     },
                     unknown => panic!("Unknown: {:?}", unknown),
                 }
@@ -205,31 +160,28 @@ fn build_ast_from_term(pair: pest::iterators::Pair<Rule>) -> Node {
     }
 }
 
-fn build_ast_from_func(pair: pest::iterators::Pair<Rule>) -> Node {
-    let text = pair.to_string();
-    match pair.as_rule() {
-        Rule::func => {
-            let mut pair = pair.into_inner();
-            let name = pair.next().unwrap().as_str();
-            let mut args = Vec::new();
-            loop {
-                let pair_buf = pair.next();
-                if pair_buf != None {
-                    args.push(pair_buf.unwrap().as_str().to_string());
-                } else {
-                    break;
-                }
-            }
-            Node::Function {
-                name: name.to_string(),
-                args,
-            }
-        }
-        unknown => {
-            let text = pair.to_string();
-            panic!("CantParse: {:?}", text)
+#[named]
+fn build_ast_from_func(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
+    let mut pairs = pair.into_inner();
+    let name = pairs.next().unwrap().as_str();
+    let mut args = Vec::new();
+    loop {
+        let pair_buf = pairs.next();
+        if pair_buf != None {
+            args.push(pair_buf.unwrap().as_str().to_string());
+        } else {
+            // println!("{: >26}:{:0>3} - {}{}", function_name!(), line!(), padding(pad), "Function complete");
+            break;
         }
     }
+    Node::Function {
+        name: name.to_string(),
+        args,
+    }
+}
+
+fn padding(pad: i8) -> String {
+    "".pad_to_width(pad as usize)
 }
 
 fn parse_un_term_op(op: pest::iterators::Pair<Rule>, term: Node) -> Node {
@@ -251,7 +203,7 @@ fn parse_unary_op(op: pest::iterators::Pair<Rule>) -> UnaryOp {
         "<>" => UnaryOp::Eventually,
         "X" => UnaryOp::Next,
         "!" => UnaryOp::Not,
-        _ => UnaryOp::Unknown,
+        _ => Unknown,
     }
 }
 
@@ -262,7 +214,7 @@ fn parse_binary_op(op: pest::iterators::Pair<Rule>) -> BinaryOp {
         "R" => BinaryOp::Release,
         "->" => BinaryOp::Implication,
         "<->" => BinaryOp::Equivalence,
-        _ => BinaryOp::Unknown,
+        unk => BinaryOp::Unknown(unk.to_string()),
     }
 }
 
@@ -296,6 +248,7 @@ mod tests {
         assert!(result.is_ok());
         let ast = result.unwrap();
         assert_eq!(ast.len(), 1);
+        println!("{}", ast.iter().next().unwrap())
     }
 
     #[test]

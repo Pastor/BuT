@@ -16,3 +16,5 @@ include = ["Cargo.toml", "src/**/*", "src/ltl.rs", "README.md", "LICENSE*"]
 [dependencies]
 pest = "^2.2.1"
 pest_derive = "^2.2.1"
+function_name = "0.3.0"
+pad = "0.1.6"
