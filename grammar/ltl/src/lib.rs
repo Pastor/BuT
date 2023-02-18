@@ -1,26 +1,19 @@
 mod ast;
 
 extern crate pest;
-#[macro_use]
 extern crate pest_derive;
-#[macro_use]
-extern crate function_name;
-extern crate pad;
 
 use crate::ast::UnaryOp::Unknown;
 use crate::ast::{BinaryOp, CompareOp, Node, UnaryOp};
-use ::function_name::named;
 pub use pest::Parser;
-use pad::PadStr;
 
 #[derive(pest_derive::Parser)]
 #[grammar = "ltl.pest"]
-pub struct LtlParser;
+pub struct LTL;
 
-#[named]
 pub fn parse(source: &str) -> Result<Vec<Node>, pest::error::Error<Rule>> {
     let mut ast = vec![];
-    let pairs = LtlParser::parse(Rule::grammar, source)?;
+    let pairs = LTL::parse(Rule::grammar, source)?;
     for pair in pairs {
         if let Rule::grammar = pair.as_rule() {
             ast.push(build_ast_from_formula(0, pair.into_inner().next().unwrap()));
@@ -29,7 +22,6 @@ pub fn parse(source: &str) -> Result<Vec<Node>, pest::error::Error<Rule>> {
     Ok(ast)
 }
 
-#[named]
 fn build_ast_from_formula(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
     let mut pairs = pair.into_inner();
     let conj = build_ast_from_conjunction(pad + 1, pairs.next().unwrap());
@@ -47,11 +39,9 @@ fn build_ast_from_formula(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
     Node::TermFormula(terms)
 }
 
-#[named]
 fn build_ast_from_conjunction(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
     let mut pairs = pair.into_inner();
-    let mut next_ltl = pairs.next().unwrap();
-    let ltl = build_ast_from_ltl(pad + 1, next_ltl);
+    let ltl = build_ast_from_ltl(pad + 1, pairs.next().unwrap());
     let mut terms = Vec::new();
     terms.push(Box::new(ltl));
     loop {
@@ -67,7 +57,6 @@ fn build_ast_from_conjunction(pad: i8, pair: pest::iterators::Pair<Rule>) -> Nod
     Node::Conjunction(terms)
 }
 
-#[named]
 fn build_ast_from_ltl(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
     let mut pairs = pair.into_inner();
     let part = pairs.next().unwrap();
@@ -93,7 +82,6 @@ fn build_ast_from_ltl(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
     }
 }
 
-#[named]
 fn build_ast_from_un_term(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
     let mut pairs = pair.into_inner();
     let pair = pairs.next().unwrap();
@@ -115,7 +103,6 @@ fn build_ast_from_un_term(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
     }
 }
 
-#[named]
 fn build_ast_from_term(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
     let mut pairs = pair.into_inner();
     let pair = pairs.next().unwrap();
@@ -160,8 +147,7 @@ fn build_ast_from_term(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
     }
 }
 
-#[named]
-fn build_ast_from_func(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
+fn build_ast_from_func(_pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
     let mut pairs = pair.into_inner();
     let name = pairs.next().unwrap().as_str();
     let mut args = Vec::new();
@@ -177,23 +163,6 @@ fn build_ast_from_func(pad: i8, pair: pest::iterators::Pair<Rule>) -> Node {
     Node::Function {
         name: name.to_string(),
         args,
-    }
-}
-
-fn padding(pad: i8) -> String {
-    "".pad_to_width(pad as usize)
-}
-
-fn parse_un_term_op(op: pest::iterators::Pair<Rule>, term: Node) -> Node {
-    Node::TermOp {
-        op: match op.as_str() {
-            "[]" => UnaryOp::Always,
-            "<>" => UnaryOp::Eventually,
-            "X" => UnaryOp::Next,
-            "!" => UnaryOp::Not,
-            _ => unreachable!(),
-        },
-        term: Box::new(term),
     }
 }
 
@@ -248,12 +217,13 @@ mod tests {
         assert!(result.is_ok());
         let ast = result.unwrap();
         assert_eq!(ast.len(), 1);
-        println!("{}", ast.iter().next().unwrap())
+        println!("{}", ast.iter().next().unwrap().to_str());
+        println!("{}", LTL)
     }
 
     #[test]
     fn test_parse_ltl() {
-        let pairs = LtlParser::parse(Rule::grammar, LTL).unwrap_or_else(|e| panic!("{}", e));
+        let pairs = LTL::parse(Rule::grammar, LTL).unwrap_or_else(|e| panic!("{}", e));
         for pair in pairs {
             println!("Rule   : {:?}", pair.as_rule());
             println!("Span   : {:?}", pair.as_span());

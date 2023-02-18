@@ -86,7 +86,7 @@ impl fmt::Display for CompareOp {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Node {
     ConstNum(i32),
     ConstBool(bool),
@@ -127,33 +127,36 @@ pub enum Node {
 
 impl fmt::Display for Node {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        match &self {
-            Node::ConstNum(n) => write!(f, "{}", n),
-            Node::ConstBool(n) => write!(f, "{}", n),
-            Node::Ident(n) => write!(f, "{}", n),
-            Node::TermFormula(n) => write!(f, "({})", self.join(n.clone(), ", ")),
-            Node::TermConst(n) => write!(f, "{}", *n),
-            Node::TermFunc(func) => write!(f, "{}", *func),
-            Node::TermFuncOpFunc { func, op, opf } => write!(f, "({} {} {})", *func, op, *opf),
-            Node::TermFuncOpNum { func, op, num } => write!(f, "({} {} {})", *func, op, num),
-            Node::TermOp { op, term } => write!(f, "({} {})", op, *term),
-            Node::TermNum { num, op, func } => write!(f, "({} {} {})", num, op, *func),
-            Node::Function { name, args } => write!(f, "{}({}) ", name, args.join(", ")),
-            Node::Conjunction(ltl) => write!(f, "{}", self.join(ltl.clone(), ", ")),
-            Node::TermLtl { term, terms } => write!(f, "{:?} {}", *term, self.join_op(terms.clone())),
-            Node::Unknown(text) => write!(f, "{}", text),
-        }
+        write!(f, "{}", self.to_str())
     }
 }
 
 impl Node {
+    pub(crate) fn to_str(&self) -> String {
+        match &self {
+            Node::ConstNum(n) => format!("{}", n),
+            Node::ConstBool(n) => format!("{}", n),
+            Node::Ident(n) => format!("{}", n),
+            Node::TermFormula(n) => format!("{}", self.join(n.clone(), " | ")),
+            Node::TermConst(n) => format!("{}", n.to_str()),
+            Node::TermFunc(func) => format!("{}", func.to_str()),
+            Node::TermFuncOpFunc { func, op, opf } => format!("{} {} {}", func.to_str(), op, opf.to_str()),
+            Node::TermFuncOpNum { func, op, num } => format!("{} {} {}", func.to_str(), op, num),
+            Node::TermOp { op, term } => format!("{} {}", op, term.to_str()),
+            Node::TermNum { num, op, func } => format!("{} {} {}", num, op, func.to_str()),
+            Node::Function { name, args } => format!("{}({}) ", name, args.join(", ")),
+            Node::Conjunction(ltl) => format!("{}", self.join(ltl.clone(), " & ")),
+            Node::TermLtl { term, terms } => format!("{} {}", term.to_str(), self.join_op(terms.clone())),
+            Node::Unknown(text) => format!("{}", text),
+        }
+    }
     fn join(&self, data: Vec<Box<Node>>, delim: &'_ str) -> String {
         let mut result = String::new();
         for (pos, node) in data.iter().enumerate() {
             if pos > 0 {
                 result = result.add(delim);
             }
-            result = result.add(&*node.to_string().as_str());
+            result = result.add(&*node.to_str().as_str());
         }
         result
     }
@@ -165,7 +168,7 @@ impl Node {
                 result = result.add(" ");
             }
             result = result.add(node.0.to_string().as_str()).add(" ")
-                .add(node.1.to_string().as_str());
+                .add(node.1.to_str().as_str());
         }
         result
     }
