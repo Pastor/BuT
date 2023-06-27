@@ -13,12 +13,19 @@ rust-version = "1.56"
 exclude = ["src/grammar.lalrpop"]
 include = ["Cargo.toml", "src/**/*", "src/ast.rs", "README.md", "LICENSE*"]
 
+[[bin]]
+name = "tooling"
+test = false
+bench = false
+path = "bin/tooling/main.rs"
+
 [build-dependencies]
-lalrpop = "0.20.0"
+lalrpop = { version = "0.20.0", features = ["lexer"] }
 
 [dependencies]
 lalrpop-util = "0.20.0"
 thiserror = "^1.0"
+clap = { version = "4.2.7", features = ["derive"] }
 
 [dev-dependencies]
 rstest = "^0.17.0"

@@ -2,5 +2,5 @@
 #[macro_use]
 extern crate lalrpop_util;
 
-mod ast;
-mod runtime;
+pub mod ast;
+pub mod runtime;

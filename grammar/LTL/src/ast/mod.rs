@@ -1,5 +1,5 @@
 #![allow(non_snake_case)]
-mod expression;
+pub mod expression;
 pub mod types;
 mod utils;
 
