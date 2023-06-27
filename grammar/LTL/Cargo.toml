@@ -18,6 +18,7 @@ lalrpop = "0.20.0"
 
 [dependencies]
 lalrpop-util = "0.20.0"
+thiserror = "^1.0"
 
 [dev-dependencies]
-rstest = "0.17.0"
+rstest = "^0.17.0"

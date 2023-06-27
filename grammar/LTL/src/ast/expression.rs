@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use crate::types::Value;
+use crate::ast::types::Value;
 
 #[derive(PartialEq, Debug)]
 pub enum Expr {
@@ -19,14 +19,18 @@ impl Display for Expr {
             Expr::Identifier(id) => write!(f, "{}", id),
             Expr::BinaryOp(e1, op, e2) => write!(f, "({} {} {})", e1, op, e2),
             Expr::UnaryOp(op, e) => write!(f, "({}{})", op, e),
-            Expr::Function(name, args) => write!(f, "{}({})", name, args.into_iter()
-                .fold("".to_string(), |acc, x| {
+            Expr::Function(name, args) => write!(
+                f,
+                "{}({})",
+                name,
+                args.into_iter().fold("".to_string(), |acc, x| {
                     if acc.is_empty() {
                         format!("{x}")
                     } else {
-                        format!("{acc},{x}")
+                        format!("{acc}, {x}")
                     }
-                })),
+                })
+            ),
             Expr::Compare(e1, op, e2) => write!(f, "({} {} {})", e1, op, e2),
         }
     }
@@ -118,7 +122,7 @@ impl Display for CompareOpcode {
 mod test {
     use rstest::*;
 
-    use crate::grammar;
+    use crate::ast::grammar;
 
     #[rstest]
     #[case("[]was(z2)", "([]was(z2))")]

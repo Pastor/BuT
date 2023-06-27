@@ -1,5 +1,7 @@
-use crate::expression::{Expr, BinaryOpcode, UnaryOpcode, FormOpcode, CompareOpcode};
-use crate::types::{Value};
+use crate::ast::expression::{Expr, BinaryOpcode, UnaryOpcode, FormOpcode, CompareOpcode};
+use crate::ast::types::{Value};
+use crate::ast::utils::append;
+
 use std::str::FromStr;
 
 grammar;
@@ -74,11 +76,7 @@ Function: Box<Expr> = {
 }
 
 Arguments: Vec<String> = {
-    <args:Arguments> Comma <arg:Argument> => {
-        let mut c = args.clone();
-        c.push(arg);
-        c
-    },
+    <args:Arguments> Comma <arg:Argument> => append(<>),
     Argument => vec!(<>),
 };
 
