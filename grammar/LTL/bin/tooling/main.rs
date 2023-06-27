@@ -15,7 +15,7 @@ struct Args {
 
 fn main() {
     let args: Args = Args::parse();
-    println!("Checking file {}", args.formula_file);
+    println!("File   : {}", args.formula_file);
 
     let formula_text =
         fs::read_to_string(args.formula_file).expect("Unable to read the formula file");
