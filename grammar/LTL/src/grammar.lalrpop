@@ -1,0 +1,122 @@
+use crate::expression::{Expr, BinaryOpcode, UnaryOpcode, FormOpcode, CompareOpcode};
+use crate::types::{Value};
+use std::str::FromStr;
+
+grammar;
+
+pub Formula: Box<Expr> = {
+    Conjunction
+}
+
+Conjunction: Box<Expr> = {
+    Conjunction ConjunctionOp Disjunction => Box::new(Expr::BinaryOp(<>)),
+    Disjunction
+};
+
+ConjunctionOp: BinaryOpcode = {
+    "&" => BinaryOpcode::Conjunction,
+}
+
+Disjunction: Box<Expr> = {
+    Disjunction DisjunctionOp Form => Box::new(Expr::BinaryOp(<>)),
+    Form,
+};
+
+DisjunctionOp: BinaryOpcode = {
+    "|" => BinaryOpcode::Disjunction,
+}
+
+Form: Box<Expr> = {
+    UnaryTerm BinaryOp UnaryTerm => Box::new(Expr::BinaryOp(<>)),
+    UnaryTerm,
+};
+
+UnaryTerm: Box<Expr> = {
+    UnaryOp Term => Box::new(Expr::UnaryOp(<>)),
+    Term
+}
+
+Term: Box<Expr> = {
+    BoolLiteral => Box::new(Expr::Constant(Value::Bool(<>))),
+    Function,
+    Function CompareOp Function => Box::new(Expr::Compare(<>)),
+    Function CompareOp Number => Box::new(Expr::Compare(<>)),
+    Number CompareOp Function => Box::new(Expr::Compare(<>)),
+    "(" <f:Formula> ")" => f,
+}
+
+BinaryOp: BinaryOpcode = {
+    "U" => BinaryOpcode::Form(FormOpcode::Until),
+    "W" => BinaryOpcode::Form(FormOpcode::WeakUntil),
+    "R" => BinaryOpcode::Form(FormOpcode::Release),
+    "->" => BinaryOpcode::Form(FormOpcode::Implication),
+    "<->" => BinaryOpcode::Form(FormOpcode::Equivalence),
+}
+
+CompareOp: CompareOpcode = {
+    "==" => CompareOpcode::Equivalence,
+    "!=" => CompareOpcode::NotEquivalence,
+    ">=" => CompareOpcode::GreaterEquivalence,
+    ">"  => CompareOpcode::Greater,
+    "<=" => CompareOpcode::LowerEquivalence,
+    "<"  => CompareOpcode::Lower,
+}
+
+UnaryOp: UnaryOpcode = {
+    "[]" => UnaryOpcode::Form(FormOpcode::Always),
+    "<>" => UnaryOpcode::Form(FormOpcode::Eventually),
+    "!" => UnaryOpcode::Not,
+    "X" => UnaryOpcode::Form(FormOpcode::Next),
+}
+
+Function: Box<Expr> = {
+    <name:Name> "(" <args:Arguments> ")" => Box::new(Expr::Function(name, args)),
+}
+
+Arguments: Vec<String> = {
+    <args:Arguments> Comma <arg:Argument> => {
+        let mut c = args.clone();
+        c.push(arg);
+        c
+    },
+    Argument => vec!(<>),
+};
+
+Argument: String = {
+    Name
+}
+
+Number: Box<Expr> = {
+    IntNum => Box::new(Expr::Constant(Value::Int(<>))),
+    FloatNum => Box::new(Expr::Constant(Value::Float(<>))),
+}
+
+Name: String = {
+    r"[a-zA-Z][a-zA-z_0-9]*" => <>.to_owned()
+};
+
+IntNum: i32 = {
+    r"-?[0-9]+" => i32::from_str(<>).unwrap()
+};
+
+FloatNum: f32 = {
+    r"-?[0-9]+\.[0-9]+" => f32::from_str(<>).unwrap()
+};
+
+StringLiteral: String = {
+    r#""[^"]*""# => <>[1..<>.len() - 1].to_owned()
+};
+
+BoolLiteral: bool = {
+    "true" => true,
+    "false" => false,
+};
+
+Comment: String = {
+    r"#.*" => <>.to_owned()
+};
+
+Comma:() = {
+    ","
+}
+
