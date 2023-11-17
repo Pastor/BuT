@@ -9,7 +9,7 @@ readme = "../../README.md"
 keywords = ["LTL", "BuT", "framework", "code", "generation"]
 license = "BSD"
 edition = "2021"
-rust-version = "1.56"
+rust-version = "1.71.0"
 exclude = ["src/grammar.lalrpop"]
 include = ["Cargo.toml", "src/**/*", "src/ast.rs", "README.md", "LICENSE*"]
 
@@ -25,7 +25,8 @@ lalrpop = { version = "0.20.0", features = ["lexer"] }
 [dependencies]
 lalrpop-util = "0.20.0"
 thiserror = "^1.0"
-clap = { version = "4.2.7", features = ["derive"] }
+clap = { version = "4.4.8", features = ["derive"] }
+codespan = "0.11.1"
 
 [dev-dependencies]
 rstest = "^0.18.2"

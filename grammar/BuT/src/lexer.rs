@@ -1,9 +1,11 @@
-use crate::ast::{Comment, Loc};
+use std::{fmt, str::CharIndices};
+
 use itertools::{peek_nth, PeekNth};
 use phf::phf_map;
-use std::{fmt, str::CharIndices};
 use thiserror::Error;
 use unicode_xid::UnicodeXID;
+
+use crate::ast::{Comment, Loc};
 
 /// A spanned [Token].
 pub type Spanned<'a> = (usize, Token<'a>, usize);
@@ -980,7 +982,7 @@ impl<'input> Lexer<'input> {
                             Some((i, Token::Arrow, i + 2))
                         }
                         _ => Some((i, Token::Assign, i + 1)),
-                    }
+                    };
                 }
                 Some((i, '!')) => {
                     return if let Some((_, '=')) = self.chars.peek() {
@@ -988,7 +990,7 @@ impl<'input> Lexer<'input> {
                         Some((i, Token::NotEqual, i + 2))
                     } else {
                         Some((i, Token::Not, i + 1))
-                    }
+                    };
                 }
                 Some((i, '|')) => {
                     return match self.chars.peek() {
@@ -1302,7 +1304,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         assert_eq!(tokens, vec!((0, Token::HexLiteral("hex\"cafe_dead\""), 14)));
 
@@ -1312,7 +1314,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1329,7 +1331,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1346,7 +1348,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1363,7 +1365,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1396,7 +1398,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1414,7 +1416,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1480,7 +1482,7 @@ mod tests {
 
         assert_eq!(
             tokens,
-            vec!((0, Token::Subtract, 1), (1, Token::Number("4", ""), 2),)
+            vec!((0, Token::Subtract, 1), (1, Token::Number("4", ""), 2), )
         );
 
         let mut errors = Vec::new();
@@ -1490,7 +1492,7 @@ mod tests {
             errors,
             vec![LexicalError::InvalidCharacterInHexLiteral(
                 Loc::Source(0, 10, 11),
-                'g'
+                'g',
             )]
         );
 
@@ -1501,7 +1503,7 @@ mod tests {
             errors,
             vec!(LexicalError::UnrecognisedToken(
                 Loc::Source(0, 1, 4),
-                "€".to_owned()
+                "€".to_owned(),
             ))
         );
 
@@ -1512,7 +1514,7 @@ mod tests {
             errors,
             vec!(LexicalError::UnrecognisedToken(
                 Loc::Source(0, 0, 3),
-                "€".to_owned()
+                "€".to_owned(),
             ))
         );
 
@@ -1570,7 +1572,7 @@ mod tests {
             comments,
             vec!(Comment::DocBlock(
                 Loc::Source(0, 0, 10),
-                "/** foo */".to_owned()
+                "/** foo */".to_owned(),
             ))
         );
 
@@ -1582,7 +1584,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .count();
+            .count();
 
         assert_eq!(tokens, 0);
         assert_eq!(
@@ -1614,7 +1616,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1651,7 +1653,7 @@ mod tests {
 
         assert_eq!(
             tokens,
-            vec!((1, Token::Subtract, 2), (2, Token::Number("9", "0123"), 8),)
+            vec!((1, Token::Subtract, 2), (2, Token::Number("9", "0123"), 8), )
         );
 
         let mut errors = Vec::new();
@@ -1728,7 +1730,7 @@ mod tests {
             comments,
             vec!(Comment::DocBlock(
                 Loc::Source(0, 0, 10),
-                "/** foo */".to_owned()
+                "/** foo */".to_owned(),
             ))
         );
 
@@ -1740,7 +1742,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .count();
+            .count();
 
         assert_eq!(tokens, 0);
         assert_eq!(
@@ -1772,7 +1774,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<(usize, Token, usize)>>();
+            .collect::<Vec<(usize, Token, usize)>>();
 
         assert_eq!(
             tokens,
@@ -1816,7 +1818,7 @@ mod tests {
 
         assert_eq!(
             tokens,
-            vec!((1, Token::Subtract, 2), (2, Token::Number("9", "0123"), 8),)
+            vec!((1, Token::Subtract, 2), (2, Token::Number("9", "0123"), 8), )
         );
 
         let mut errors = Vec::new();
@@ -1873,8 +1875,8 @@ mod tests {
             errors,
             vec!(LexicalError::InvalidCharacterInHexLiteral(
                 Loc::Source(0, 4, 5),
-                'g'
-            ),)
+                'g',
+            ), )
         );
 
         let mut errors = Vec::new();
@@ -1916,7 +1918,7 @@ mod tests {
             errors,
             vec![LexicalError::UnrecognisedToken(
                 Loc::Source(0, 0, 1),
-                "@".to_string()
+                "@".to_string(),
             )]
         );
         assert!(comments.is_empty());

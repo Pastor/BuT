@@ -1,5 +1,6 @@
-use crate::ast;
 use std::cmp::Ordering;
+
+use crate::ast;
 
 macro_rules! impl_with_cast {
     ($($t:ty),+) => {

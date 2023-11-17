@@ -1,8 +1,8 @@
-#[doc(hidden)]
-pub use crate::helpers::{CodeLocation, OptionalCodeLocation};
-
 #[cfg(feature = "ast-serde")]
 use serde::{Deserialize, Serialize};
+
+#[doc(hidden)]
+pub use crate::helpers::{CodeLocation, OptionalCodeLocation};
 
 /// A code location.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

@@ -1,12 +1,14 @@
 #![doc = include_str!("../README.md")]
 #![warn(missing_debug_implementations, missing_docs)]
 
+use lalrpop_util::ParseError;
+
+use diagnostics::Diagnostic;
+
 use crate::ast::CodeLocation;
 use crate::ast::Loc;
 use crate::lexer::LexicalError;
 use crate::lexer::Token;
-use diagnostics::Diagnostic;
-use lalrpop_util::ParseError;
 
 pub mod ast;
 pub mod diagnostics;
@@ -18,14 +20,14 @@ pub mod lexer;
 mod tests;
 
 #[allow(
-    clippy::needless_lifetimes,
-    clippy::type_complexity,
-    clippy::ptr_arg,
-    clippy::redundant_clone,
-    clippy::just_underscores_and_digits
+clippy::needless_lifetimes,
+clippy::type_complexity,
+clippy::ptr_arg,
+clippy::redundant_clone,
+clippy::just_underscores_and_digits
 )]
 mod but {
-    // include!(concat!(env!("OUT_DIR"), "/solidity.rs"));
+    // include!(concat!(env!("OUT_DIR"), "/but.rs"));
     include!("but.rs");
 }
 

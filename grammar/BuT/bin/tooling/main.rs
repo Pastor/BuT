@@ -1,7 +1,8 @@
 extern crate BuT;
 
-use clap::Parser;
 use std::fs;
+
+use clap::Parser;
 
 #[derive(Debug, Parser)]
 #[clap(name = "BuT tooling", about, verbatim_doc_comment)]

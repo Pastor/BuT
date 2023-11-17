@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::{fs, path::Path, thread};
+use std::sync::mpsc;
+use std::time::Duration;
+
+use pretty_assertions::assert_eq;
+use walkdir::WalkDir;
+
 use crate::ast::*;
 use crate::but;
 use crate::diagnostics::{Diagnostic, ErrorType::ParserError, Level::Error};
 use crate::lexer::Lexer;
 use crate::Loc::Source;
-use pretty_assertions::assert_eq;
-use std::sync::mpsc;
-use std::time::Duration;
-use std::{fs, path::Path, thread};
-use walkdir::WalkDir;
 
 #[test]
 fn parser_error_recovery() {
@@ -43,7 +45,7 @@ contract 9c {
         assert_eq!(
             errors,
             vec![
-                Diagnostic { loc: Source(0, 17, 21), level: Error, ty: ParserError, message: "'frum' found where 'from' expected".to_string(), notes: vec![]},
+                Diagnostic { loc: Source(0, 17, 21), level: Error, ty: ParserError, message: "'frum' found where 'from' expected".to_string(), notes: vec![] },
                 Diagnostic { loc: Source(0, 48, 49), level: Error, ty: ParserError, message: r#"unrecognised token ';', expected string"#.to_string(), notes: vec![] },
                 Diagnostic { loc: Source(0, 62, 65), level: Error, ty: ParserError, message: r#"unrecognised token 'for', expected "(", ";", "=""#.to_string(), notes: vec![] },
                 Diagnostic { loc: Source(0, 78, 79), level: Error, ty: ParserError, message: r#"unrecognised token '9', expected "case", "default", "leave", "revert", "switch", identifier"#.to_string(), notes: vec![] },
@@ -55,7 +57,7 @@ contract 9c {
                 Diagnostic { loc: Source(0, 482, 483), level: Error, ty: ParserError, message: "unrecognised token '3', expected \"!=\", \"%\", \"%=\", \"&\", \"&&\", \"&=\", \"(\", \"*\", \"**\", \"*=\", \"+\", \"++\", \"+=\", \"-\", \"--\", \"-=\", \".\", \"/\", \"/=\", \";\", \"<\", \"<<\", \"<<=\", \"<=\", \"=\", \"==\", \">\", \">=\", \">>\", \">>=\", \"?\", \"[\", \"^\", \"^=\", \"calldata\", \"case\", \"default\", \"leave\", \"memory\", \"revert\", \"storage\", \"switch\", \"{\", \"|\", \"|=\", \"||\", identifier".to_string(), notes: vec![] },
                 Diagnostic { loc: Source(0, 518, 522), level: Error, ty: ParserError, message: "unrecognised token 'uint256', expected \"!=\", \"%\", \"%=\", \"&\", \"&&\", \"&=\", \"*\", \"**\", \"*=\", \"+\", \"++\", \"+=\", \"-\", \"--\", \"-=\", \".\", \"/\", \"/=\", \";\", \"<\", \"<<\", \"<<=\", \"<=\", \"=\", \"==\", \">\", \">=\", \">>\", \">>=\", \"?\", \"[\", \"^\", \"^=\", \"case\", \"default\", \"leave\", \"switch\", \"|\", \"|=\", \"||\", identifier".to_string(), notes: vec![] },
                 Diagnostic { loc: Source(0, 555, 556), level: Error, ty: ParserError, message: "unrecognised token '}', expected \"!\", \"(\", \"+\", \"++\", \"-\", \"--\", \"[\", \"address\", \"assembly\", \"bool\", \"break\", \"byte\", \"bytes\", \"case\", \"continue\", \"default\", \"delete\", \"do\", \"emit\", \"false\", \"for\", \"function\", \"if\", \"leave\", \"mapping\", \"new\", \"payable\", \"return\", \"revert\", \"string\", \"switch\", \"true\", \"try\", \"type\", \"unchecked\", \"while\", \"{\", \"~\", Bytes, Int, Uint, address, hexnumber, hexstring, identifier, number, rational, string".to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 557, 558), level: Error, ty: ParserError, message: "unrecognised token '}', expected \"(\", \";\", \"[\", \"abstract\", \"address\", \"bool\", \"byte\", \"bytes\", \"case\", \"contract\", \"default\", \"enum\", \"event\", \"false\", \"function\", \"import\", \"interface\", \"leave\", \"library\", \"mapping\", \"payable\", \"pragma\", \"string\", \"struct\", \"switch\", \"true\", \"type\", \"using\", Bytes, Int, Uint, address, annotation, hexnumber, hexstring, identifier, number, rational, string".to_string(), notes: vec![] }
+                Diagnostic { loc: Source(0, 557, 558), level: Error, ty: ParserError, message: "unrecognised token '}', expected \"(\", \";\", \"[\", \"abstract\", \"address\", \"bool\", \"byte\", \"bytes\", \"case\", \"contract\", \"default\", \"enum\", \"event\", \"false\", \"function\", \"import\", \"interface\", \"leave\", \"library\", \"mapping\", \"payable\", \"pragma\", \"string\", \"struct\", \"switch\", \"true\", \"type\", \"using\", Bytes, Int, Uint, address, annotation, hexnumber, hexstring, identifier, number, rational, string".to_string(), notes: vec![] },
             ]
         )
     }
@@ -521,21 +523,21 @@ fn parse_error_test() {
         comments,
         vec![
             Comment::DocLine(
-                Loc::Source(0, 134, 199,),
+                Loc::Source(0, 134, 199),
                 "/// Insufficient balance for transfer. Needed `required` but only".to_owned(),
             ),
             Comment::DocLine(
-                Loc::Source(0, 212, 238,),
+                Loc::Source(0, 212, 238),
                 "/// `available` available.".to_owned(),
             ),
             Comment::DocLine(
-                Loc::Source(0, 251, 290,),
+                Loc::Source(0, 251, 290),
                 "/// @param available balance available.".to_owned(),
             ),
             Comment::DocLine(
-                Loc::Source(0, 303, 352,),
+                Loc::Source(0, 303, 352),
                 "/// @param required requested amount to transfer.".to_owned(),
-            )
+            ),
         ]
     );
 }
@@ -763,7 +765,7 @@ fn test_assembly_parser() {
                                             ),
                                         ],
                                     },
-                            }),
+                                }),
                                 YulStatement::VariableDeclaration(
                                     Loc::Source(0, 414, 451),
                                     vec![
@@ -845,16 +847,16 @@ fn test_assembly_parser() {
                                                     ],
                                                 },
                                             ))],
-                                        }
+                                        },
                                     )],
                                     default: Some(YulSwitchOptions::Default(
                                         Loc::Source(0, 645, 714),
                                         YulBlock {
                                             loc: Loc::Source(0, 653, 714),
                                             statements: vec![YulStatement::Leave(Loc::Source(0, 683, 688))],
-                                        }
+                                        },
                                     )),
-                            }),
+                                }),
                             ],
                         },
                         dialect: Some(StringLiteral {
@@ -867,7 +869,7 @@ fn test_assembly_parser() {
                     Statement::Assembly {
                         loc: Loc::Source(0, 758, 1027),
                         block: YulBlock {
-                          loc: Loc::Source(0, 767, 1027),
+                            loc: Loc::Source(0, 767, 1027),
                             statements: vec![YulStatement::FunctionDefinition(Box::new(
                                 YulFunctionDefinition {
                                     loc: Loc::Source(0, 794, 1005),
@@ -906,7 +908,7 @@ fn test_assembly_parser() {
                                     }],
                                     body: YulBlock {
                                         loc: Loc::Source(0, 866, 1005),
-                                        statements:  vec![
+                                        statements: vec![
                                             YulStatement::VariableDeclaration(
                                                 Loc::Source(0, 896, 940),
                                                 vec![YulTypedIdentifier {
@@ -980,7 +982,7 @@ fn test_assembly_parser() {
                                                 None,
                                             ),
                                         ],
-                                    }
+                                    },
                                 },
                             ))],
                         },
@@ -998,7 +1000,7 @@ fn test_assembly_parser() {
         comments,
         vec![
             Comment::Block(Loc::Source(0, 222, 231), "/* meh */".to_string()),
-            Comment::Line(Loc::Source(0, 588, 594), "// feh".to_string())
+            Comment::Line(Loc::Source(0, 588, 594), "// feh".to_string()),
         ]
     );
 }
@@ -1165,10 +1167,10 @@ int  /** x */ constant /** x */ y/** dev:  */ = /** x */1 /** x */ + /** x */2/*
 #[test]
 fn test_libsolidity() {
     fn timeout_after<T, F>(d: Duration, f: F) -> Result<T, String>
-    where
-        T: Send + 'static,
-        F: FnOnce() -> T,
-        F: Send + 'static,
+        where
+            T: Send + 'static,
+            F: FnOnce() -> T,
+            F: Send + 'static,
     {
         let (done_tx, done_rx) = mpsc::channel();
         let handle = thread::spawn(move || {
@@ -1190,21 +1192,21 @@ fn test_libsolidity() {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../testdata/solidity/test/libsolidity/semanticTests"),
     )
-    .into_iter()
-    .collect::<Result<Vec<_>, _>>()
-    .unwrap()
-    .into_iter()
-    .map(|entry| (false, entry));
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+        .into_iter()
+        .map(|entry| (false, entry));
 
     let syntax_tests = WalkDir::new(
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../testdata/solidity/test/libsolidity/syntaxTests"),
     )
-    .into_iter()
-    .collect::<Result<Vec<_>, _>>()
-    .unwrap()
-    .into_iter()
-    .map(|entry| (true, entry));
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+        .into_iter()
+        .map(|entry| (true, entry));
 
     let errors = semantic_tests
         .into_iter()
@@ -1214,7 +1216,7 @@ fn test_libsolidity() {
                 let source = match fs::read_to_string(entry.path()) {
                     Ok(source) => source,
                     Err(err) if matches!(err.kind(), std::io::ErrorKind::InvalidData) => {
-                        return Ok(vec![])
+                        return Ok(vec![]);
                     }
                     Err(err) => return Err(err.to_string()),
                 };
@@ -1326,10 +1328,10 @@ contract MyTest {
                         statements: vec![],
                     }),
                 }
-                .into(),
+                    .into(),
             )],
         }
-        .into(),
+            .into(),
     )]);
 
     assert_eq!(expected_tree, actual_parse_tree);

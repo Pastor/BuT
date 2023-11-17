@@ -1,7 +1,8 @@
+use std::{borrow::Cow, rc::Rc};
+use std::sync::Arc;
+
 use crate::ast::{self, Loc};
 use crate::lexer::LexicalError;
-use std::sync::Arc;
-use std::{borrow::Cow, rc::Rc};
 
 /// Returns the optional code location.
 pub trait OptionalCodeLocation {

@@ -1,7 +1,8 @@
+use thiserror::Error;
+
 use crate::ast::types::Type;
 // use crate::runtime::executor::ExpressionError;
 use crate::runtime::context::VariableError;
-use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum RuntimeError {

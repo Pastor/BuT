@@ -1,8 +1,9 @@
-use crate::ast;
 use std::{
     borrow::Cow,
     fmt::{Display, Formatter, Result, Write},
 };
+
+use crate::ast;
 
 macro_rules! write_opt {
     // no sep
@@ -412,6 +413,7 @@ impl Display for ast::ContractTy {
         f.write_str(self.as_str())
     }
 }
+
 impl ast::ContractTy {
     /// Returns the string representation of this type.
     pub const fn as_str(&self) -> &'static str {
@@ -610,6 +612,7 @@ impl Display for ast::Expression {
         }
     }
 }
+
 impl ast::Expression {
     /// Returns the operator string of this expression, if any.
     #[inline]
@@ -708,6 +711,7 @@ impl Display for ast::FunctionTy {
         f.write_str(self.as_str())
     }
 }
+
 impl ast::FunctionTy {
     /// Returns the string representation of this type.
     pub const fn as_str(&self) -> &'static str {
@@ -772,6 +776,7 @@ impl Display for ast::Mutability {
         f.write_str(self.as_str())
     }
 }
+
 impl ast::Mutability {
     /// Returns the string representation of this type.
     pub const fn as_str(&self) -> &'static str {
@@ -952,6 +957,7 @@ impl Display for ast::StorageLocation {
         f.write_str(self.as_str())
     }
 }
+
 impl ast::StorageLocation {
     /// Returns the string representation of this type.
     pub const fn as_str(&self) -> &'static str {
@@ -1041,6 +1047,7 @@ impl Display for ast::UserDefinedOperator {
         f.write_str(self.as_str())
     }
 }
+
 impl ast::UserDefinedOperator {
     /// Returns the string representation of this type.
     pub const fn as_str(&self) -> &'static str {
@@ -1103,6 +1110,7 @@ impl Display for ast::Visibility {
         f.write_str(self.as_str())
     }
 }
+
 impl ast::Visibility {
     /// Returns the string representation of this type.
     pub const fn as_str(&self) -> &'static str {
@@ -1232,9 +1240,9 @@ fn write_separated<T: Display>(slice: &[T], f: &mut Formatter<'_>, sep: &str) ->
 }
 
 fn write_separated_iter<T, I>(mut iter: I, f: &mut Formatter<'_>, sep: &str) -> Result
-where
-    I: Iterator<Item = T>,
-    T: Display,
+    where
+        I: Iterator<Item=T>,
+        T: Display,
 {
     if let Some(first) = iter.next() {
         first.fmt(f)?;
@@ -1260,8 +1268,9 @@ fn rm_underscores(s: &str) -> Cow<'_, str> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::ast::{Annotation, Loc};
+
+    use super::*;
 
     macro_rules! struct_tests {
         ($(pt::$t:ident { $( $f:ident: $e:expr ),* $(,)? } => $expected:expr),* $(,)?) => {

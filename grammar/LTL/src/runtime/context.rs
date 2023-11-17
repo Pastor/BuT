@@ -1,7 +1,9 @@
-use crate::ast::types::{Type, Value};
 use std::collections::HashMap;
 use std::ops::Deref;
+
 use thiserror::Error;
+
+use crate::ast::types::{Type, Value};
 
 #[derive(Error, Debug)]
 pub enum VariableError {

@@ -1,11 +1,12 @@
+use thiserror::Error;
+
 use crate::ast::block::Block;
 use crate::ast::expression::{BinaryOpcode, Expr, UnaryOpcode};
 use crate::ast::program::Program;
 use crate::ast::statement::Statement;
 use crate::ast::value::Value;
-use crate::runtime::error::RuntimeError;
 use crate::runtime::context::{Context, VariableError};
-use thiserror::Error;
+use crate::runtime::error::RuntimeError;
 
 #[derive(Error, Debug)]
 pub enum ExpressionError {
@@ -129,17 +130,18 @@ pub fn execute_program(frame: Frame, program: &Program) -> Result<Frame, Runtime
 
 #[cfg(test)]
 mod test {
+    use rstest::*;
+
     use crate::ast::grammar;
     use crate::ast::value::Value;
-    use crate::runtime::executor::evalutate_expression;
     use crate::Context;
-    use rstest::*;
+    use crate::runtime::executor::evalutate_expression;
 
     #[rstest]
     #[case("1 + 2 * 3 - 4", Value::Int(3))]
-    #[case("!0", Value::Int(-1))]
+    #[case("!0", Value::Int(- 1))]
     #[case("!-1", Value::Int(0))]
-    #[case("(1 + 2) * (3 - 4)", Value::Int(-3))]
+    #[case("(1 + 2) * (3 - 4)", Value::Int(- 3))]
     #[case("true || false", Value::Bool(true))]
     #[case("true && false", Value::Bool(false))]
     #[case("!false", Value::Bool(true))]

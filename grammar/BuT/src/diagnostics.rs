@@ -1,6 +1,7 @@
+use std::fmt;
+
 use crate::ast;
 use crate::ast::Loc;
-use std::fmt;
 
 /// The level of a diagnostic.
 #[derive(Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]

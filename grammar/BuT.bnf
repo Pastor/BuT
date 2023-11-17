@@ -1,0 +1,30 @@
+{
+    tokens = [
+        COMMA       = ','
+        NAME        = "regexp:[a-zA-Z][a-zA-z_0-9]*"
+        INT_NUMBER  = "regexp:-?[0-9]+"
+        REAL_NUMBER = "regexp:-?[0-9]+\.[0-9]+"
+
+        space="regexp:\s+"
+    ]
+}
+
+external grammar ::= formula
+
+private formula ::= form ( ('&' | '|') formula )?
+private form ::= unary_term (binary_op unary_term)?
+private unary_term ::= unary_op term | term
+private term ::= boolean
+    | function
+    | function compare_op term
+    | number compare_op term
+    | '(' formula ')'
+
+private compare_op::= '==' | '!=' | '>' | '>=' | '<' | '<='
+private boolean   ::= 'true' | 'false'
+private unary_op  ::= '[]' | '<>' | '!' | 'X'
+private binary_op ::= 'U' | 'W' | 'R' | '->' | '<->'
+private function  ::= NAME '(' arguments? ')'
+private arguments ::= argument (COMMA argument)*
+private argument ::= NAME
+private number ::= INT_NUMBER | REAL_NUMBER
