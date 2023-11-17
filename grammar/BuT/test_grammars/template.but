@@ -1,0 +1,24 @@
+model Owned {
+    state Start {
+        ref End: true
+    }
+    start: Start
+}
+
+model Next {
+    state Start {
+        ref End: true
+    }
+    start: Start
+}
+
+model None {
+    state Template = Owned + Next {
+        ref End: true
+    }
+    start: Template
+}
+
+behavior: Next | None
+
+

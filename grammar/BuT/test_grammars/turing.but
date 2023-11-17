@@ -1,0 +1,28 @@
+model Turing {
+    state Read {
+        ref Read: next
+        ref End : !next
+        enter: {
+            symbol = next_symbol(cs)
+            walk = next_walk(cs)
+            cs = next_step(cs)
+        }
+    }
+    start: Read
+
+    let mut cs: int = 0
+}
+
+#[extern(C), inline(never)]
+fun next_step(s: int) -> int
+#[extern(C), inline(never)]
+fun next_symbol(s: int) -> int
+#[extern(C), inline(never)]
+fun next_walk(s: int) -> int
+
+port next        : rd bool = 0x00
+port symbol      : wr int = 0x02
+port walk        : int = 0x03
+
+
+

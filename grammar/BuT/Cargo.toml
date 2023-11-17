@@ -1,12 +1,12 @@
 [package]
-name = "LTL"
+name = "BuT"
 version = "0.0.1"
 authors = ["Pastor <viruszold@gmail.com>"]
 description = "LTL"
 homepage = "https://but.ru"
 repository = "https://github.com/Pastor/BuT"
 readme = "../../README.md"
-keywords = ["LTL", "BuT", "framework", "code", "generation"]
+keywords = ["BuT", "framework", "code", "generation"]
 license = "BSD"
 edition = "2021"
 rust-version = "1.56"
@@ -14,7 +14,7 @@ exclude = ["src/grammar.lalrpop"]
 include = ["Cargo.toml", "src/**/*", "src/ast.rs", "README.md", "LICENSE*"]
 
 [[bin]]
-name = "LTL-Tooling"
+name = "BuT-Tooling"
 test = false
 bench = false
 path = "bin/tooling/main.rs"
@@ -26,6 +26,17 @@ lalrpop = { version = "0.20.0", features = ["lexer"] }
 lalrpop-util = "0.20.0"
 thiserror = "^1.0"
 clap = { version = "4.2.7", features = ["derive"] }
+phf = { version = "0.11", features = ["macros"] }
+unicode-xid = "0.2"
+itertools = "0.12"
+serde = { version = "1.0", features = ["derive"], optional = true }
 
 [dev-dependencies]
 rstest = "^0.18.2"
+walkdir = "2.3.3"
+regex = "1"
+pretty_assertions = "1.3"
+
+[features]
+default = []
+ast-serde = ["serde"]
