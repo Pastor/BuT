@@ -60,7 +60,7 @@ enum CommentType {
 
 /// From the start to end offset, filter all the doc comments out of the comments and parse
 /// them into tags with values.
-pub fn parse_doccomments(comments: &[Comment], start: usize, end: usize) -> Vec<DocComment> {
+pub fn parse_doc_comments(comments: &[Comment], start: usize, end: usize) -> Vec<DocComment> {
     let mut tags = Vec::with_capacity(comments.len());
 
     for (ty, comment_lines) in filter_comments(comments, start, end) {
@@ -215,7 +215,7 @@ contract Test {
         let (_, comments) = crate::parse(src, 0).unwrap();
         assert_eq!(comments.len(), 6);
 
-        let actual = parse_doccomments(&comments, 0, usize::MAX);
+        let actual = parse_doc_comments(&comments, 0, usize::MAX);
         let expected = vec![
             DocComment::Line {
                 comment: DocCommentTag {

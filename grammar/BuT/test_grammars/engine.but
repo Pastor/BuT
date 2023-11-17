@@ -92,7 +92,7 @@ fun pi() -> real {
     return 3.14159
 }
 
-port port0: rd bit          = 0h:5
+port port0: rd bit         = 0h:5
 port port1: wr [8 : bit]   = 1h
 port port2: wr [32 : bit]  = 2h
 port port3: wr [5 : bit]   = 6h
