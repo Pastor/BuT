@@ -1,8 +1,6 @@
-// SPDX-License-Identifier: Apache-2.0
-
-use std::{fs, path::Path, thread};
 use std::sync::mpsc;
 use std::time::Duration;
+use std::{fs, path::Path, thread};
 
 use pretty_assertions::assert_eq;
 use walkdir::WalkDir;
@@ -1155,7 +1153,7 @@ contract C {
 }
 
 #[test]
-fn parse_random_doccomment() {
+fn parse_random_doc_comment() {
     let src = r#"
 int  /** x */ constant /** x */ y/** dev:  */ = /** x */1 /** x */ + /** x */2/** x */;
     "#;
@@ -1165,12 +1163,12 @@ int  /** x */ constant /** x */ y/** dev:  */ = /** x */1 /** x */ + /** x */2/*
 }
 
 #[test]
-fn test_libsolidity() {
+fn test_lib_but() {
     fn timeout_after<T, F>(d: Duration, f: F) -> Result<T, String>
-        where
-            T: Send + 'static,
-            F: FnOnce() -> T,
-            F: Send + 'static,
+    where
+        T: Send + 'static,
+        F: FnOnce() -> T,
+        F: Send + 'static,
     {
         let (done_tx, done_rx) = mpsc::channel();
         let handle = thread::spawn(move || {
@@ -1188,31 +1186,27 @@ fn test_libsolidity() {
     let source_delimiter = regex::Regex::new(r"====.*====").unwrap();
     let error_matcher = regex::Regex::new(r"// ----\r?\n// \w+( \d+)?:").unwrap();
 
-    let semantic_tests = WalkDir::new(
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../testdata/solidity/test/libsolidity/semanticTests"),
-    )
-        .into_iter()
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap()
-        .into_iter()
-        .map(|entry| (false, entry));
+    let semantic_tests =
+        WalkDir::new(Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests_data/BuT/semantic"))
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap()
+            .into_iter()
+            .map(|entry| (false, entry));
 
-    let syntax_tests = WalkDir::new(
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../testdata/solidity/test/libsolidity/syntaxTests"),
-    )
-        .into_iter()
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap()
-        .into_iter()
-        .map(|entry| (true, entry));
+    let syntax_tests =
+        WalkDir::new(Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests_data/BuT/syntax"))
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap()
+            .into_iter()
+            .map(|entry| (true, entry));
 
     let errors = semantic_tests
         .into_iter()
         .chain(syntax_tests)
         .map::<Result<_, String>, _>(|(syntax_test, entry)| {
-            if entry.file_name().to_string_lossy().ends_with(".sol") {
+            if entry.file_name().to_string_lossy().ends_with(".but") {
                 let source = match fs::read_to_string(entry.path()) {
                     Ok(source) => source,
                     Err(err) if matches!(err.kind(), std::io::ErrorKind::InvalidData) => {
@@ -1328,10 +1322,10 @@ contract MyTest {
                         statements: vec![],
                     }),
                 }
-                    .into(),
+                .into(),
             )],
         }
-            .into(),
+        .into(),
     )]);
 
     assert_eq!(expected_tree, actual_parse_tree);
