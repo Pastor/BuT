@@ -1,9 +1,11 @@
+use std::fmt::Pointer;
 use std::{
     borrow::Cow,
     fmt::{Display, Formatter, Result, Write},
 };
 
 use crate::ast;
+use crate::ast::{Expression, Type};
 
 macro_rules! write_opt {
     // no sep
@@ -66,24 +68,6 @@ impl Display for ast::Base {
     }
 }
 
-impl Display for ast::ContractDefinition {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.ty.fmt(f)?;
-        f.write_char(' ')?;
-
-        write_opt!(f, &self.name, ' ');
-
-        if !self.base.is_empty() {
-            write_separated(&self.base, f, " ")?;
-            f.write_char(' ')?;
-        }
-
-        f.write_char('{')?;
-        write_separated(&self.parts, f, " ")?;
-        f.write_char('}')
-    }
-}
-
 impl Display for ast::EnumDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("enum ")?;
@@ -109,33 +93,6 @@ impl Display for ast::ErrorDefinition {
 impl Display for ast::ErrorParameter {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         self.ty.fmt(f)?;
-        write_opt!(f, ' ', &self.name);
-        Ok(())
-    }
-}
-
-impl Display for ast::EventDefinition {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        f.write_str("event")?;
-        write_opt!(f, ' ', &self.name);
-
-        f.write_char('(')?;
-        write_separated(&self.fields, f, ", ")?;
-        f.write_char(')')?;
-
-        if self.anonymous {
-            f.write_str(" anonymous")?;
-        }
-        f.write_char(';')
-    }
-}
-
-impl Display for ast::EventParameter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.ty.fmt(f)?;
-        if self.indexed {
-            f.write_str(" indexed")?;
-        }
         write_opt!(f, ' ', &self.name);
         Ok(())
     }
@@ -275,7 +232,7 @@ impl Display for ast::UsingFunction {
 
 impl Display for ast::VariableDeclaration {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.ty.fmt(f)?;
+        // self.ty.map(|e| e.fmt(f));
         write_opt!(f, ' ', &self.storage);
         write_opt!(f, ' ', &self.name);
         Ok(())
@@ -394,15 +351,14 @@ impl Display for ast::Comment {
 impl Display for ast::ContractPart {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            Self::StructDefinition(inner) => inner.fmt(f),
-            Self::EventDefinition(inner) => inner.fmt(f),
-            Self::EnumDefinition(inner) => inner.fmt(f),
-            Self::ErrorDefinition(inner) => inner.fmt(f),
-            Self::VariableDefinition(inner) => inner.fmt(f),
-            Self::FunctionDefinition(inner) => inner.fmt(f),
-            Self::TypeDefinition(inner) => inner.fmt(f),
-            Self::Annotation(inner) => inner.fmt(f),
-            Self::Using(inner) => inner.fmt(f),
+            Self::StructDefinition(inner) => Pointer::fmt(&inner, f),
+            Self::EnumDefinition(inner) => Pointer::fmt(&inner, f),
+            Self::ErrorDefinition(inner) => Pointer::fmt(&inner, f),
+            Self::VariableDefinition(inner) => Pointer::fmt(&inner, f),
+            Self::FunctionDefinition(inner) => Pointer::fmt(&inner, f),
+            Self::TypeDefinition(inner) => Pointer::fmt(&inner, f),
+            Self::Annotation(inner) => Pointer::fmt(&inner, f),
+            Self::Using(inner) => Pointer::fmt(&inner, f),
             Self::StraySemicolon(_) => f.write_char(';'),
         }
     }
@@ -431,11 +387,11 @@ impl Display for ast::Expression {
         match self {
             Self::New(_, expr) => {
                 f.write_str("new ")?;
-                expr.fmt(f)
+                Pointer::fmt(&expr, f)
             }
             Self::Delete(_, expr) => {
                 f.write_str("delete ")?;
-                expr.fmt(f)
+                Pointer::fmt(&expr, f)
             }
 
             Self::Type(_, ty) => ty.fmt(f),
@@ -448,13 +404,13 @@ impl Display for ast::Expression {
                 f.write_char(']')
             }
             Self::ArraySubscript(_, expr1, expr2) => {
-                expr1.fmt(f)?;
+                Pointer::fmt(&expr1, f)?;
                 f.write_char('[')?;
                 write_opt!(f, expr2);
                 f.write_char(']')
             }
             Self::ArraySlice(_, arr, l, r) => {
-                arr.fmt(f)?;
+                Pointer::fmt(&arr, f)?;
                 f.write_char('[')?;
                 write_opt!(f, l);
                 f.write_char(':')?;
@@ -463,14 +419,14 @@ impl Display for ast::Expression {
             }
 
             Self::MemberAccess(_, expr, ident) => {
-                expr.fmt(f)?;
+                Pointer::fmt(&expr, f)?;
                 f.write_char('.')?;
                 ident.fmt(f)
             }
 
             Self::Parenthesis(_, expr) => {
                 f.write_char('(')?;
-                expr.fmt(f)?;
+                Pointer::fmt(&expr, f)?;
                 f.write_char(')')
             }
             Self::List(_, list) => {
@@ -482,10 +438,6 @@ impl Display for ast::Expression {
             Self::AddressLiteral(_, lit) => f.write_str(lit),
             Self::StringLiteral(vals) => write_separated(vals, f, " "),
             Self::HexLiteral(vals) => write_separated(vals, f, " "),
-            Self::BoolLiteral(_, bool) => {
-                let s = if *bool { "true" } else { "false" };
-                f.write_str(s)
-            }
             Self::HexNumberLiteral(_, val, unit) => {
                 // TODO: Check with and write the checksummed address when len == 42
                 // ref: https://docs.soliditylang.org/en/latest/types.html#address-literals
@@ -525,28 +477,28 @@ impl Display for ast::Expression {
             }
 
             Self::FunctionCall(_, expr, exprs) => {
-                expr.fmt(f)?;
+                Pointer::fmt(&expr, f)?;
                 f.write_char('(')?;
                 write_separated(exprs, f, ", ")?;
                 f.write_char(')')
             }
             Self::FunctionCallBlock(_, expr, block) => {
-                expr.fmt(f)?;
-                block.fmt(f)
+                Pointer::fmt(&expr, f)?;
+                Pointer::fmt(&block, f)
             }
             Self::NamedFunctionCall(_, expr, args) => {
-                expr.fmt(f)?;
+                Pointer::fmt(&expr, f)?;
                 f.write_str("({")?;
                 write_separated(args, f, ", ")?;
                 f.write_str("})")
             }
 
             Self::ConditionalOperator(_, cond, l, r) => {
-                cond.fmt(f)?;
+                Pointer::fmt(&cond, f)?;
                 f.write_str(" ? ")?;
-                l.fmt(f)?;
+                Pointer::fmt(&l, f)?;
                 f.write_str(" : ")?;
-                r.fmt(f)
+                Pointer::fmt(&r, f)
             }
 
             Self::PreIncrement(..)
@@ -667,7 +619,6 @@ impl ast::Expression {
             | FunctionCallBlock(..)
             | NamedFunctionCall(..)
             | ConditionalOperator(..)
-            | BoolLiteral(..)
             | NumberLiteral(..)
             | RationalNumberLiteral(..)
             | HexNumberLiteral(..)
@@ -792,16 +743,14 @@ impl Display for ast::SourceUnitPart {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Self::ImportDirective(inner) => inner.fmt(f),
-            Self::ContractDefinition(inner) => inner.fmt(f),
-            Self::EnumDefinition(inner) => inner.fmt(f),
-            Self::StructDefinition(inner) => inner.fmt(f),
-            Self::EventDefinition(inner) => inner.fmt(f),
-            Self::ErrorDefinition(inner) => inner.fmt(f),
-            Self::FunctionDefinition(inner) => inner.fmt(f),
-            Self::VariableDefinition(inner) => inner.fmt(f),
-            Self::TypeDefinition(inner) => inner.fmt(f),
-            Self::Annotation(inner) => inner.fmt(f),
-            Self::Using(inner) => inner.fmt(f),
+            Self::EnumDefinition(inner) => Pointer::fmt(&inner, f),
+            Self::StructDefinition(inner) => Pointer::fmt(&inner, f),
+            Self::ErrorDefinition(inner) => Pointer::fmt(&inner, f),
+            Self::FunctionDefinition(inner) => Pointer::fmt(&inner, f),
+            Self::VariableDefinition(inner) => Pointer::fmt(&inner, f),
+            Self::TypeDefinition(inner) => Pointer::fmt(&inner, f),
+            Self::Annotation(inner) => Pointer::fmt(&inner, f),
+            Self::Using(inner) => Pointer::fmt(&inner, f),
             Self::PragmaDirective(_, ident, lit) => {
                 f.write_str("pragma")?;
                 write_opt!(f, ' ', ident);
@@ -856,7 +805,7 @@ impl Display for ast::Statement {
                 f.write_str("if (")?;
                 cond.fmt(f)?;
                 f.write_str(") ")?;
-                block.fmt(f)?;
+                Pointer::fmt(&block, f)?;
                 write_opt!(f, " else ", end_block);
                 Ok(())
             }
@@ -864,7 +813,7 @@ impl Display for ast::Statement {
                 f.write_str("while (")?;
                 cond.fmt(f)?;
                 f.write_str(") ")?;
-                block.fmt(f)
+                Pointer::fmt(&block, f)
             }
             Self::Expression(_, expr) => expr.fmt(f),
             Self::VariableDefinition(_, var, expr) => {
@@ -888,14 +837,14 @@ impl Display for ast::Statement {
                 write_opt!(f, ' ', expr);
                 f.write_str(") ")?;
                 if let Some(block) = block {
-                    block.fmt(f)
+                    Pointer::fmt(&block, f)
                 } else {
                     f.write_char(';')
                 }
             }
             Self::DoWhile(_, block, cond) => {
                 f.write_str("do ")?;
-                block.fmt(f)?;
+                Pointer::fmt(&block, f)?;
                 f.write_str(" while (")?;
                 cond.fmt(f)?;
                 f.write_str(");")
@@ -938,7 +887,7 @@ impl Display for ast::Statement {
                     f.write_str(" returns (")?;
                     fmt_parameter_list(list, f)?;
                     f.write_str(") ")?;
-                    stmt.fmt(f)?;
+                    Pointer::fmt(&stmt, f)?;
                 }
 
                 if !catch.is_empty() {
@@ -1000,12 +949,12 @@ impl Display for ast::Type {
             } => {
                 f.write_str("mapping(")?;
 
-                key.fmt(f)?;
+                Pointer::fmt(&key, f)?;
                 write_opt!(f, ' ', key_name);
 
                 f.write_str(" => ")?;
 
-                value.fmt(f)?;
+                Pointer::fmt(&value, f)?;
                 write_opt!(f, ' ', value_name);
 
                 f.write_char(')')
@@ -1037,6 +986,21 @@ impl Display for ast::Type {
                     }
                 }
                 Ok(())
+            }
+            Type::Alias(name) => {
+                f.write_str(" = ")?;
+                name.fmt(f)
+            }
+            Type::Array {
+                element_type,
+                element_count,
+                loc: _,
+            } => {
+                f.write_str("[ ")?;
+                element_count.fmt(f)?;
+                f.write_str(" : ")?;
+                Pointer::fmt(element_type, f)?;
+                f.write_str(" ]")
             }
         }
     }
@@ -1090,17 +1054,10 @@ impl Display for ast::VariableAttribute {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Self::Visibility(vis) => vis.fmt(f),
-            Self::Constant(_) => f.write_str("constant"),
-            Self::Immutable(_) => f.write_str("immutable"),
-            Self::Override(_, idents) => {
-                f.write_str("override")?;
-                if !idents.is_empty() {
-                    f.write_char('(')?;
-                    write_separated(idents, f, ", ")?;
-                    f.write_char(')')?;
-                }
-                Ok(())
-            }
+            Self::Constant(_) => f.write_str("const"),
+            Self::Readable(_) => f.write_str("ro"),
+            Self::Writable(_) => f.write_str("wo"),
+            Self::Portable(_) => f.write_str("port"),
         }
     }
 }
@@ -1157,11 +1114,11 @@ impl Display for ast::YulExpression {
                 Ok(())
             }
             Self::Variable(ident) => ident.fmt(f),
-            Self::FunctionCall(call) => call.fmt(f),
+            Self::FunctionCall(call) => Pointer::fmt(&call, f),
             Self::SuffixAccess(_, l, r) => {
-                l.fmt(f)?;
+                Pointer::fmt(&l, f)?;
                 f.write_char('.')?;
-                r.fmt(f)
+                Pointer::fmt(&r, f)
             }
         }
     }
@@ -1171,8 +1128,8 @@ impl Display for ast::YulStatement {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Self::Block(inner) => inner.fmt(f),
-            Self::FunctionDefinition(inner) => inner.fmt(f),
-            Self::FunctionCall(inner) => inner.fmt(f),
+            Self::FunctionDefinition(inner) => Pointer::fmt(&inner, f),
+            Self::FunctionCall(inner) => Pointer::fmt(&inner, f),
             Self::For(inner) => inner.fmt(f),
             Self::Switch(inner) => inner.fmt(f),
 
@@ -1240,9 +1197,9 @@ fn write_separated<T: Display>(slice: &[T], f: &mut Formatter<'_>, sep: &str) ->
 }
 
 fn write_separated_iter<T, I>(mut iter: I, f: &mut Formatter<'_>, sep: &str) -> Result
-    where
-        I: Iterator<Item=T>,
-        T: Display,
+where
+    I: Iterator<Item = T>,
+    T: Display,
 {
     if let Some(first) = iter.next() {
         first.fmt(f)?;
@@ -1273,7 +1230,7 @@ mod tests {
     use super::*;
 
     macro_rules! struct_tests {
-        ($(pt::$t:ident { $( $f:ident: $e:expr ),* $(,)? } => $expected:expr),* $(,)?) => {
+        ($(ast::$t:ident { $( $f:ident: $e:expr ),* $(,)? } => $expected:expr),* $(,)?) => {
             $(
                 assert_eq_display(
                     ast::$t {
@@ -1515,105 +1472,84 @@ mod tests {
     #[test]
     fn display_structs_simple() {
         struct_tests![
-            pt::Annotation {
+            ast::Annotation {
                 id: id("name"),
                 value: Some(expr!(value)),
             } => "@name(value)",
 
-            pt::Base {
+            ast::Base {
                 name: idp!("id", "path"),
                 args: None,
             } => "id.path",
-            pt::Base {
+            ast::Base {
                 name: idp!("id", "path"),
                 args: Some(vec![expr!(value)]),
             } => "id.path(value)",
-            pt::Base {
+            ast::Base {
                 name: idp!("id", "path"),
                 args: Some(vec![expr!(value1), expr!(value2)]),
             } => "id.path(value1, value2)",
 
-            pt::ErrorParameter {
+            ast::ErrorParameter {
                 ty: expr_ty!(uint256),
                 name: None,
             } => "uint256",
-            pt::ErrorParameter {
+            ast::ErrorParameter {
                 ty: expr_ty!(uint256),
                 name: Some(id("name")),
             } => "uint256 name",
 
-            pt::EventParameter {
-                ty: expr_ty!(uint256),
-                indexed: false,
-                name: None,
-            } => "uint256",
-            pt::EventParameter {
-                ty: expr_ty!(uint256),
-                indexed: true,
-                name: None,
-            } => "uint256 indexed",
-            pt::EventParameter {
-                ty: expr_ty!(uint256),
-                indexed: false,
-                name: Some(id("name")),
-            } => "uint256 name",
-            pt::EventParameter {
-                ty: expr_ty!(uint256),
-                indexed: true,
-                name: Some(id("name")),
-            } => "uint256 indexed name",
-
-            pt::HexLiteral {
+            ast::HexLiteral {
                 hex: "hex\"1234\"".into(),
             } => "hex\"1234\"",
-            pt::HexLiteral {
+            ast::HexLiteral {
                 hex: "hex\"455318975130845\"".into(),
             } => "hex\"455318975130845\"",
 
-            pt::Identifier {
+            ast::Identifier {
                 name: "name".to_string(),
             } => "name",
 
-            pt::IdentifierPath {
+            ast::IdentifierPath {
                 identifiers: vec![id("id")],
             } => "id",
-            pt::IdentifierPath {
+            ast::IdentifierPath {
                 identifiers: vec![id("id"), id("path")],
             } => "id.path",
-            pt::IdentifierPath {
+            ast::IdentifierPath {
                 identifiers: vec![id("long"), id("id"), id("path")],
             } => "long.id.path",
 
-            pt::NamedArgument {
+            ast::NamedArgument {
                 name: id("name"),
                 expr: expr!(expr),
             } => "name: expr",
 
-            pt::Parameter {
+            ast::Parameter {
                 ty: expr_ty!(uint256),
                 storage: None,
                 name: None,
                 annotation: None,
             } => "uint256",
-            pt::Parameter {
+            ast::Parameter {
                 ty: expr_ty!(uint256),
                 storage: None,
                 name: Some(id("name")),
                 annotation: None,
             } => "uint256 name",
-            pt::Parameter {
+            ast::Parameter {
                 ty: expr_ty!(uint256),
                 storage: Some(ast::StorageLocation::Calldata(Default::default())),
                 name: Some(id("name")),
                 annotation: None,
             } => "uint256 calldata name",
-            pt::Parameter {
+            ast::Parameter {
                 ty: expr_ty!(uint256),
                 storage: Some(ast::StorageLocation::Calldata(Default::default())),
                 name: None,
                 annotation: None,
             } => "uint256 calldata",
-            pt::Parameter {
+            ast::Parameter {
                 ty: expr_ty!(bytes),
                 storage: None,
                 name: Some(id("my_seed")),
@@ -1624,156 +1560,44 @@ mod tests {
                 }),
             } => "@name bytes my_seed",
 
-            pt::StringLiteral {
+            ast::StringLiteral {
                 unicode: false,
                 string: "string".into(),
             } => "\"string\"",
-            pt::StringLiteral {
+            ast::StringLiteral {
                 unicode: true,
                 string: "string".into(),
             } => "unicode\"string\"",
 
-            pt::UsingFunction {
+            ast::UsingFunction {
                 path: idp!["id", "path"],
                 oper: None,
             } => "id.path",
-            pt::UsingFunction {
+            ast::UsingFunction {
                 path: idp!["id", "path"],
                 oper: Some(ast::UserDefinedOperator::Add),
             } => "id.path as +",
 
-            pt::VariableDeclaration {
-                ty: expr_ty!(uint256),
-                storage: None,
-                name: None,
-            } => "uint256",
-            pt::VariableDeclaration {
-                ty: expr_ty!(uint256),
-                storage: None,
-                name: Some(id("name")),
-            } => "uint256 name",
-            pt::VariableDeclaration {
-                ty: expr_ty!(uint256),
-                storage: Some(ast::StorageLocation::Calldata(Default::default())),
-                name: Some(id("name")),
-            } => "uint256 calldata name",
-            pt::VariableDeclaration {
-                ty: expr_ty!(uint256),
-                storage: Some(ast::StorageLocation::Calldata(Default::default())),
-                name: None,
-            } => "uint256 calldata",
-
-            pt::VariableDefinition {
-                ty: expr_ty!(uint256),
-                attrs: vec![],
-                name: None,
-                initializer: None,
-            } => "uint256;",
-            pt::VariableDefinition {
-                ty: expr_ty!(uint256),
-                attrs: vec![],
-                name: Some(id("name")),
-                initializer: None,
-            } => "uint256 name;",
-            pt::VariableDefinition {
-                ty: expr_ty!(uint256),
-                attrs: vec![],
-                name: Some(id("name")),
-                initializer: Some(expr!(value)),
-            } => "uint256 name = value;",
-            pt::VariableDefinition {
-                ty: expr_ty!(uint256),
-                attrs: vec![ast::VariableAttribute::Constant(loc!())],
-                name: Some(id("name")),
-                initializer: Some(expr!(value)),
-            } => "uint256 constant name = value;",
-            pt::VariableDefinition {
-                ty: expr_ty!(uint256),
-                attrs: vec![
-                    ast::VariableAttribute::Visibility(ast::Visibility::Public(None)),
-                    ast::VariableAttribute::Constant(loc!())
-                ],
-                name: Some(id("name")),
-                initializer: Some(expr!(value)),
-            } => "uint256 public constant name = value;",
-
-            pt::YulTypedIdentifier {
-                id: id("name"),
+            ast::VariableDeclaration {
                 ty: None,
-            } => "name",
-            pt::YulTypedIdentifier {
-                id: id("name"),
-                ty: Some(id("uint256")),
-            } => "name: uint256",
+                storage: None,
+                name: None,
+            } => "none"
         ];
     }
 
     #[test]
     fn display_structs_complex() {
         struct_tests![
-            pt::ContractDefinition {
-                ty: ast::ContractTy::Contract(loc!()),
-                name: Some(id("name")),
-                base: vec![],
-                parts: vec![],
-            } => "contract name {}",
-            pt::ContractDefinition {
-                ty: ast::ContractTy::Contract(loc!()),
-                name: Some(id("name")),
-                base: vec![ast::Base {
-                    loc: loc!(),
-                    name: idp!("base"),
-                    args: None
-                }],
-                parts: vec![],
-            } => "contract name base {}",
-            pt::ContractDefinition {
-                ty: ast::ContractTy::Contract(loc!()),
-                name: Some(id("name")),
-                base: vec![ast::Base {
-                    loc: loc!(),
-                    name: idp!("base"),
-                    args: Some(vec![])
-                }],
-                parts: vec![],
-            } => "contract name base() {}",
-            pt::ContractDefinition {
-                ty: ast::ContractTy::Contract(loc!()),
-                name: Some(id("name")),
-                base: vec![ast::Base {
-                    loc: loc!(),
-                    name: idp!("base"),
-                    args: Some(vec![expr!(expr)])
-                }],
-                parts: vec![],
-            } => "contract name base(expr) {}",
-            pt::ContractDefinition {
-                ty: ast::ContractTy::Contract(loc!()),
-                name: Some(id("name")),
-                base: vec![
-                    ast::Base {
-                        loc: loc!(),
-                        name: idp!("base1"),
-                        args: None
-                    },
-                    ast::Base {
-                        loc: loc!(),
-                        name: idp!("base2"),
-                        args: None
-                    },
-                ],
-                parts: vec![],
-            } => "contract name base1 base2 {}",
-
-            pt::EnumDefinition {
+            ast::EnumDefinition {
                 name: Some(id("name")),
                 values: vec![]
             } => "enum name {}",
-            pt::EnumDefinition {
+            ast::EnumDefinition {
                 name: Some(id("name")),
                 values: vec![Some(id("variant"))]
             } => "enum name {variant}",
-            pt::EnumDefinition {
+            ast::EnumDefinition {
                 name: Some(id("name")),
                 values: vec![
                     Some(id("variant1")),
@@ -1781,12 +1605,12 @@ mod tests {
                 ]
             } => "enum name {variant1, variant2}",
 
-            pt::ErrorDefinition {
+            ast::ErrorDefinition {
                 keyword: expr!(error),
                 name: Some(id("name")),
                 fields: vec![],
             } => "error name();",
-            pt::ErrorDefinition {
+            ast::ErrorDefinition {
                 keyword: expr!(error),
                 name: Some(id("name")),
                 fields: vec![ast::ErrorParameter {
@@ -1796,38 +1620,7 @@ mod tests {
                 }],
             } => "error name(uint256);",
 
-            pt::EventDefinition {
-                name: Some(id("name")),
-                fields: vec![],
-                anonymous: false,
-            } => "event name();",
-            pt::EventDefinition {
-                name: Some(id("name")),
-                fields: vec![ast::EventParameter {
-                    loc: loc!(),
-                    ty: expr_ty!(uint256),
-                    indexed: false,
-                    name: None,
-                }],
-                anonymous: false,
-            } => "event name(uint256);",
-            pt::EventDefinition {
-                name: Some(id("name")),
-                fields: vec![ast::EventParameter {
-                    loc: loc!(),
-                    ty: expr_ty!(uint256),
-                    indexed: true,
-                    name: None,
-                }],
-                anonymous: false,
-            } => "event name(uint256 indexed);",
-            pt::EventDefinition {
-                name: Some(id("name")),
-                fields: vec![],
-                anonymous: true,
-            } => "event name() anonymous;",
-
-            pt::FunctionDefinition {
+            ast::FunctionDefinition {
                 ty: ast::FunctionTy::Function,
                 name: Some(id("name")),
                 name_loc: loc!(),
@@ -1837,7 +1630,7 @@ mod tests {
                 returns: vec![],
                 body: None,
             } => "function name();",
-            pt::FunctionDefinition {
+            ast::FunctionDefinition {
                 ty: ast::FunctionTy::Function,
                 name: Some(id("name")),
                 name_loc: loc!(),
@@ -1847,7 +1640,7 @@ mod tests {
                 returns: vec![],
                 body: Some(stmt!({})),
             } => "function name() {}",
-            pt::FunctionDefinition {
+            ast::FunctionDefinition {
                 ty: ast::FunctionTy::Function,
                 name: Some(id("name")),
                 name_loc: loc!(),
@@ -1857,7 +1650,7 @@ mod tests {
                 returns: vec![(loc!(), Some(param!(uint256)))],
                 body: Some(stmt!({})),
             } => "function name() returns (uint256) {}",
-            pt::FunctionDefinition {
+            ast::FunctionDefinition {
                 ty: ast::FunctionTy::Function,
                 name: Some(id("name")),
                 name_loc: loc!(),
@@ -1868,150 +1661,92 @@ mod tests {
                 body: Some(stmt!({})),
             } => "function name() virtual returns (uint256) {}",
 
-            pt::StructDefinition {
+            ast::StructDefinition {
                 name: Some(id("name")),
                 fields: vec![],
             } => "struct name {}",
-            pt::StructDefinition {
+            ast::StructDefinition {
                 name: Some(id("name")),
                 fields: vec![ast::VariableDeclaration {
                     loc: loc!(),
-                    ty: expr_ty!(uint256),
+                    ty: None,
                     storage: None,
                     name: Some(id("a")),
                 }],
             } => "struct name {uint256 a;}",
-            pt::StructDefinition {
+            ast::StructDefinition {
                 name: Some(id("name")),
                 fields: vec![
                     ast::VariableDeclaration {
                         loc: loc!(),
-                        ty: expr_ty!(uint256),
+                        ty: None,
                         storage: None,
                         name: Some(id("a")),
                     },
                     ast::VariableDeclaration {
                         loc: loc!(),
-                        ty: expr_ty!(uint256),
+                        // ty: expr_ty!(uint256),
+                        ty: None,
                         storage: None,
                         name: Some(id("b")),
                     }
                 ],
             } => "struct name {uint256 a; uint256 b;}",
 
-            pt::TypeDefinition {
-                name: id("MyType"),
-                ty: expr_ty!(uint256),
-            } => "type MyType is uint256;",
+            // ast::TypeDefinition {
+            //     name: id("MyType"),
+            //     ty: expr_ty!(uint256),
+            // } => "type MyType is uint256;",
 
-            pt::Using {
-                list: ast::UsingList::Library(idp!["id", "path"]),
-                ty: None,
-                global: None,
-            } => "using id.path for *;",
-            pt::Using {
-                list: ast::UsingList::Library(idp!["id", "path"]),
-                ty: Some(expr_ty!(uint256)),
-                global: None,
-            } => "using id.path for uint256;",
-            pt::Using {
-                list: ast::UsingList::Library(idp!["id", "path"]),
-                ty: Some(expr_ty!(uint256)),
-                global: Some(id("global")),
-            } => "using id.path for uint256 global;",
-            pt::Using {
-                list: ast::UsingList::Functions(vec![]),
-                ty: None,
-                global: None,
-            } => "using {} for *;",
-            pt::Using {
-                list: ast::UsingList::Functions(vec![
-                    ast::UsingFunction {
-                        loc: loc!(),
-                        path: idp!("id", "path"),
-                        oper: None,
-                    }
-                ]),
-                ty: None,
-                global: None,
-            } => "using {id.path} for *;",
-            pt::Using {
-                list: ast::UsingList::Functions(vec![
-                    ast::UsingFunction {
-                        loc: loc!(),
-                        path: idp!("id", "path"),
-                        oper: Some(ast::UserDefinedOperator::Add),
-                    }
-                ]),
-                ty: Some(expr_ty!(uint256)),
-                global: None,
-            } => "using {id.path as +} for uint256;",
-            pt::Using {
-                list: ast::UsingList::Functions(vec![
-                    ast::UsingFunction {
-                        loc: loc!(),
-                        path: idp!("id", "path1"),
-                        oper: None,
-                    },
-                    ast::UsingFunction {
-                        loc: loc!(),
-                        path: idp!("id", "path2"),
-                        oper: None,
-                    }
-                ]),
-                ty: Some(expr_ty!(uint256)),
-                global: Some(id("global")),
-            } => "using {id.path1, id.path2} for uint256 global;",
-
-            pt::YulBlock {
+            ast::YulBlock {
                 statements: vec![]
             } => "{}",
 
-            pt::YulFor {
+            ast::YulFor {
                 init_block: yul_block(),
                 condition: yexpr!(cond),
                 post_block: yul_block(),
                 execution_block: yul_block(),
             } => "for {} cond {} {}",
 
-            pt::YulFunctionCall {
+            ast::YulFunctionCall {
                 id: id("name"),
                 arguments: vec![],
             } => "name()",
-            pt::YulFunctionCall {
+            ast::YulFunctionCall {
                 id: id("name"),
                 arguments: vec![yexpr!(arg)],
             } => "name(arg)",
-            pt::YulFunctionCall {
+            ast::YulFunctionCall {
                 id: id("name"),
                 arguments: vec![yexpr!(arg1), yexpr!(arg2)],
             } => "name(arg1, arg2)",
 
-            pt::YulFunctionDefinition {
+            ast::YulFunctionDefinition {
                 id: id("name"),
                 params: vec![],
                 returns: vec![],
                 body: yul_block(),
             } => "function name() {}",
-            pt::YulFunctionDefinition {
+            ast::YulFunctionDefinition {
                 id: id("name"),
                 params: vec![yid!(param1: a), yid!(param2: b)],
                 returns: vec![],
                 body: yul_block(),
             } => "function name(param1: a, param2: b) {}",
-            pt::YulFunctionDefinition {
+            ast::YulFunctionDefinition {
                 id: id("name"),
                 params: vec![yid!(param1: a), yid!(param2: b)],
                 returns: vec![yid!(ret1: c), yid!(ret2: d)],
                 body: yul_block(),
             } => "function name(param1: a, param2: b) -> (ret1: c, ret2: d) {}",
 
-            pt::YulSwitch {
+            ast::YulSwitch {
                 condition: yexpr!(cond),
                 cases: vec![ast::YulSwitchOptions::Case(loc!(), yexpr!(expr), yul_block())],
                 default: None,
             } => "switch cond case expr {}",
-            pt::YulSwitch {
+            ast::YulSwitch {
                 condition: yexpr!(cond),
                 cases: vec![
                     ast::YulSwitchOptions::Case(loc!(), yexpr!(0), yul_block()),
@@ -2019,7 +1754,7 @@ mod tests {
                 ],
                 default: None,
             } => "switch cond case 0 {} case 1 {}",
-            pt::YulSwitch {
+            ast::YulSwitch {
                 condition: yexpr!(cond),
                 cases: vec![ast::YulSwitchOptions::Case(loc!(), yexpr!(0), yul_block())],
                 default: Some(ast::YulSwitchOptions::Default(loc!(), yul_block())),
@@ -2030,40 +1765,14 @@ mod tests {
     #[test]
     fn display_enums() {
         enum_tests![
-            // https://docs.soliditylang.org/en/latest/control-structures.html#try-catch
-            pt::CatchClause: {
-                ast::CatchClause::Named(loc!(), id("Error"), param!(string memory reason), stmt!({}))
-                    => "catch Error(string memory reason) {}",
-                ast::CatchClause::Named(loc!(), id("Panic"), param!(uint256 errorCode), stmt!({}))
-                    => "catch Panic(uint256 errorCode) {}",
-
-                ast::CatchClause::Simple(loc!(), None, stmt!({})) => "catch {}",
-                ast::CatchClause::Simple(loc!(), Some(param!(uint256)), stmt!({}))
-                    => "catch (uint256) {}",
-                ast::CatchClause::Simple(loc!(), Some(param!(bytes memory data)), stmt!({}))
-                    => "catch (bytes memory data) {}",
-            }
-
-            pt::Comment: {
+            ast::Comment: {
                 ast::Comment::Line(loc!(), "// line".into()) => "// line",
                 ast::Comment::Block(loc!(), "/* \nblock\n*/".into()) => "/* \nblock\n*/",
                 ast::Comment::DocLine(loc!(), "/// doc line".into()) => "/// doc line",
                 ast::Comment::DocBlock(loc!(), "/**\n * doc block\n */".into()) => "/**\n * doc block\n */",
             }
 
-            // tested individually
-            pt::ContractPart: {
-                ast::ContractPart::StraySemicolon(loc!()) => ";",
-            }
-
-            pt::ContractTy: {
-                ast::ContractTy::Abstract(loc!()) => "abstract contract",
-                ast::ContractTy::Contract(loc!()) => "contract",
-                ast::ContractTy::Interface(loc!()) => "interface",
-                ast::ContractTy::Library(loc!()) => "library",
-            }
-
-            pt::Expression: {
+            ast::Expression: {
                 ast::Expression::New(loc!(), Box::new(expr_ty!(uint256))) => "new uint256",
                 ast::Expression::Delete(loc!(), Box::new(expr_ty!(uint256))) => "delete uint256",
 
@@ -2094,8 +1803,6 @@ mod tests {
                 ast::Expression::AddressLiteral(loc!(), "0x1234".into()) => "0x1234",
                 ast::Expression::StringLiteral(vec![lit!(unicode "¹²³")]) => "unicode\"¹²³\"",
                 ast::Expression::HexLiteral(vec![lit!(hex "00112233")]) => "hex\"00112233\"",
-                ast::Expression::BoolLiteral(loc!(), true) => "true",
-                ast::Expression::BoolLiteral(loc!(), false) => "false",
 
                 ast::Expression::HexNumberLiteral(loc!(), "0x1234".into(), None) => "0x1234",
                 ast::Expression::HexNumberLiteral(loc!(), "0x1234".into(), Some(id("gwei"))) => "0x1234 gwei",
@@ -2185,7 +1892,7 @@ mod tests {
                 ast::Expression::AssignModulo(loc!(), var("a"), var("b")) => "a %= b",
             }
 
-            pt::FunctionAttribute: {
+            ast::FunctionAttribute: {
                 ast::FunctionAttribute::Virtual(loc!()) => "virtual",
                 ast::FunctionAttribute::Immutable(loc!()) => "immutable",
 
@@ -2195,7 +1902,7 @@ mod tests {
                     => "override(a.b, c.d)",
             }
 
-            pt::FunctionTy: {
+            ast::FunctionTy: {
                 ast::FunctionTy::Constructor => "constructor",
                 ast::FunctionTy::Function => "function",
                 ast::FunctionTy::Fallback => "fallback",
@@ -2203,7 +1910,7 @@ mod tests {
                 ast::FunctionTy::Modifier => "modifier",
             }
 
-            pt::Import: {
+            ast::Import: {
                 ast::Import::Plain(ast::ImportPath::Filename(lit!("path/to/import")), loc!()) => "import \"path/to/import\";",
 
                 ast::Import::GlobalSymbol(ast::ImportPath::Filename(lit!("path-to-import")), id("ImportedContract"), loc!())
@@ -2225,26 +1932,7 @@ mod tests {
                     => "import {A, B as C} from std.stub;",
             }
 
-            pt::Mutability: {
-                ast::Mutability::Pure(loc!()) => "pure",
-                ast::Mutability::View(loc!()) => "view",
-                ast::Mutability::Constant(loc!()) => "view",
-                ast::Mutability::Payable(loc!()) => "payable",
-            }
-
-            pt::SourceUnitPart: {
-                // rest tested individually
-
-                ast::SourceUnitPart::PragmaDirective(loc!(), None, None) => "pragma;",
-                ast::SourceUnitPart::PragmaDirective(loc!(), Some(id("solidity")), None)
-                    => "pragma solidity;",
-                ast::SourceUnitPart::PragmaDirective(loc!(), Some(id("solidity")), Some(lit!("0.8.0")))
-                    => "pragma solidity 0.8.0;",
-
-                ast::SourceUnitPart::StraySemicolon(loc!()) => ";",
-            }
-
-            pt::Statement: {
+            ast::Statement: {
                 ast::Statement::Assembly {
                     loc: loc!(),
                     dialect: None,
@@ -2295,13 +1983,13 @@ mod tests {
 
                 ast::Statement::VariableDefinition(loc!(), ast::VariableDeclaration {
                     loc: loc!(),
-                    ty: expr_ty!(uint256),
+                    ty: None,
                     storage: None,
                     name: Some(id("a")),
                 }, None) => "uint256 a;",
                 ast::Statement::VariableDefinition(loc!(), ast::VariableDeclaration {
                     loc: loc!(),
-                    ty: expr_ty!(uint256),
+                    ty: None,
                     storage: None,
                     name: Some(id("a")),
                 }, Some(expr!(0))) => "uint256 a = 0;",
@@ -2312,7 +2000,7 @@ mod tests {
                     loc!(),
                     ast::VariableDeclaration {
                         loc: loc!(),
-                        ty: expr_ty!(uint256),
+                        ty: None,
                         storage: None,
                         name: Some(id("a")),
                     },
@@ -2377,13 +2065,7 @@ mod tests {
                 ) => "try true returns (uint256 a) {} catch {}",
             }
 
-            pt::StorageLocation: {
-                ast::StorageLocation::Memory(loc!()) => "memory",
-                ast::StorageLocation::Storage(loc!()) => "storage",
-                ast::StorageLocation::Calldata(loc!()) => "calldata",
-            }
-
-            pt::Type: {
+            ast::Type: {
                 ast::Type::Address => "address",
                 ast::Type::AddressPayable => "address payable",
                 ast::Type::Payable => "payable",
@@ -2464,7 +2146,7 @@ mod tests {
                 } => "function (uint256) returns (uint256, address)",
             }
 
-            pt::UserDefinedOperator: {
+            ast::UserDefinedOperator: {
                 ast::UserDefinedOperator::BitwiseAnd => "&",
                 ast::UserDefinedOperator::BitwiseNot => "~",
                 ast::UserDefinedOperator::Negate => "-",
@@ -2483,41 +2165,11 @@ mod tests {
                 ast::UserDefinedOperator::NotEqual => "!=",
             }
 
-            pt::UsingList: {
-                ast::UsingList::Library(idp!("id", "path")) => "id.path",
-
-                ast::UsingList::Functions(vec![]) => "{}",
-                ast::UsingList::Functions(vec![
-                    ast::UsingFunction {
-                        loc: loc!(),
-                        path: idp!["id", "path"],
-                        oper: None,
-                    },
-                    ast::UsingFunction {
-                        loc: loc!(),
-                        path: idp!["id", "path"],
-                        oper: Some(ast::UserDefinedOperator::Add),
-                }]) => "{id.path, id.path as +}",
-            }
-
-            pt::VariableAttribute: {
+            ast::VariableAttribute: {
                 ast::VariableAttribute::Constant(loc!()) => "constant",
-                ast::VariableAttribute::Immutable(loc!()) => "immutable",
-
-                ast::VariableAttribute::Override(loc!(), vec![]) => "override",
-                ast::VariableAttribute::Override(loc!(), vec![idp!["a", "b"]]) => "override(a.b)",
-                ast::VariableAttribute::Override(loc!(), vec![idp!["a", "b"], idp!["c", "d"]])
-                    => "override(a.b, c.d)",
             }
 
-            pt::Visibility: {
-                ast::Visibility::Public(Some(loc!())) => "public",
-                ast::Visibility::Internal(Some(loc!())) => "internal",
-                ast::Visibility::Private(Some(loc!())) => "private",
-                ast::Visibility::External(Some(loc!())) => "external",
-            }
-
-            pt::YulExpression: {
+            ast::YulExpression: {
                 ast::YulExpression::BoolLiteral(loc!(), false, None) => "false",
                 ast::YulExpression::BoolLiteral(loc!(), true, None) => "true",
                 ast::YulExpression::BoolLiteral(loc!(), false, Some(id("name"))) => "false: name",
@@ -2549,7 +2201,7 @@ mod tests {
                     => "struct.access",
             }
 
-            pt::YulStatement: {
+            ast::YulStatement: {
                 // rest tested individually
 
                 ast::YulStatement::Assign(loc!(), vec![yexpr!(var)], yexpr!(eq))
@@ -2573,7 +2225,7 @@ mod tests {
                 ast::YulStatement::Continue(loc!()) => "continue",
             }
 
-            pt::YulSwitchOptions: {
+            ast::YulSwitchOptions: {
                 ast::YulSwitchOptions::Case(loc!(), yexpr!(expr), yul_block()) => "case expr {}",
                 ast::YulSwitchOptions::Default(loc!(), yul_block()) => "default {}",
             }

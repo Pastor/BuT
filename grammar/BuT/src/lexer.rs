@@ -27,7 +27,6 @@ pub enum Token<'input> {
     RationalNumber(&'input str, &'input str, &'input str),
     HexNumber(&'input str),
     Divide,
-    Contract,
     Library,
     Interface,
     Function,
@@ -35,46 +34,18 @@ pub enum Token<'input> {
     Import,
 
     Struct,
-    Event,
     Enum,
     Type,
 
-    Memory,
-    Storage,
-    Calldata,
-
-    Public,
-    Private,
-    Internal,
-    External,
-
     Constant,
-
-    New,
-    Delete,
-
-    Pure,
-    View,
-    Payable,
 
     Do,
     Continue,
     Break,
 
-    Throw,
     Emit,
     Return,
-    Returns,
-    Revert,
 
-    Uint(u16),
-    Int(u16),
-    Bytes(u8),
-    // prior to 0.8.0 `byte` used to be an alias for `bytes1`
-    Byte,
-    DynamicBytes,
-    Bool,
-    Address,
     String,
 
     Semicolon,
@@ -87,9 +58,6 @@ pub enum Token<'input> {
     BitwiseOr,
     BitwiseOrAssign,
     Or,
-
-    BitwiseXor,
-    BitwiseXorAssign,
 
     BitwiseAnd,
     BitwiseAndAssign,
@@ -112,7 +80,6 @@ pub enum Token<'input> {
 
     Equal,
     Assign,
-    ColonAssign,
 
     NotEqual,
     Not,
@@ -120,7 +87,6 @@ pub enum Token<'input> {
     True,
     False,
     Else,
-    Anonymous,
     For,
     While,
     If,
@@ -135,44 +101,21 @@ pub enum Token<'input> {
     More,
     MoreEqual,
 
-    Constructor,
-    Indexed,
-
     Member,
     Colon,
     OpenBracket,
     CloseBracket,
-    BitwiseNot,
-    Question,
-
-    Mapping,
-    Arrow,
-
-    Try,
-    Catch,
-
-    Receive,
-    Fallback,
 
     As,
     Is,
-    Abstract,
-    Virtual,
-    Override,
-    Using,
-    Modifier,
-    Immutable,
-    Unchecked,
 
     Assembly,
     Let,
-    Leave,
-    Switch,
-    Case,
-    Default,
-    YulArrow,
 
     Annotation(&'input str),
+
+    Port,
+    Mutability,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -192,11 +135,6 @@ impl<'input> fmt::Display for Token<'input> {
                 write!(f, "{integer}.{fraction}e{exp}")
             }
             Token::HexNumber(n) => write!(f, "{n}"),
-            Token::Uint(w) => write!(f, "uint{w}"),
-            Token::Int(w) => write!(f, "int{w}"),
-            Token::Bytes(w) => write!(f, "bytes{w}"),
-            Token::Byte => write!(f, "byte"),
-            Token::DynamicBytes => write!(f, "bytes"),
             Token::Semicolon => write!(f, ";"),
             Token::Comma => write!(f, ","),
             Token::OpenParenthesis => write!(f, "("),
@@ -206,8 +144,6 @@ impl<'input> fmt::Display for Token<'input> {
             Token::BitwiseOr => write!(f, "|"),
             Token::BitwiseOrAssign => write!(f, "|="),
             Token::Or => write!(f, "||"),
-            Token::BitwiseXor => write!(f, "^"),
-            Token::BitwiseXorAssign => write!(f, "^="),
             Token::BitwiseAnd => write!(f, "&"),
             Token::BitwiseAndAssign => write!(f, "&="),
             Token::And => write!(f, "&&"),
@@ -226,7 +162,6 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Modulo => write!(f, "%"),
             Token::Equal => write!(f, "=="),
             Token::Assign => write!(f, "="),
-            Token::ColonAssign => write!(f, ":="),
             Token::NotEqual => write!(f, "!="),
             Token::Not => write!(f, "!"),
             Token::ShiftLeft => write!(f, "<<"),
@@ -237,78 +172,38 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Colon => write!(f, ":"),
             Token::OpenBracket => write!(f, "["),
             Token::CloseBracket => write!(f, "]"),
-            Token::BitwiseNot => write!(f, "~"),
-            Token::Question => write!(f, "?"),
             Token::ShiftRightAssign => write!(f, "<<="),
             Token::ShiftRight => write!(f, "<<"),
             Token::Less => write!(f, "<"),
             Token::LessEqual => write!(f, "<="),
-            Token::Bool => write!(f, "bool"),
-            Token::Address => write!(f, "address"),
             Token::String => write!(f, "string"),
-            Token::Contract => write!(f, "contract"),
             Token::Library => write!(f, "library"),
             Token::Interface => write!(f, "interface"),
             Token::Function => write!(f, "function"),
             Token::Pragma => write!(f, "pragma"),
             Token::Import => write!(f, "import"),
             Token::Struct => write!(f, "struct"),
-            Token::Event => write!(f, "event"),
             Token::Enum => write!(f, "enum"),
             Token::Type => write!(f, "type"),
-            Token::Memory => write!(f, "memory"),
-            Token::Storage => write!(f, "storage"),
-            Token::Calldata => write!(f, "calldata"),
-            Token::Public => write!(f, "public"),
-            Token::Private => write!(f, "private"),
-            Token::Internal => write!(f, "internal"),
-            Token::External => write!(f, "external"),
-            Token::Constant => write!(f, "constant"),
-            Token::New => write!(f, "new"),
-            Token::Delete => write!(f, "delete"),
-            Token::Pure => write!(f, "pure"),
-            Token::View => write!(f, "view"),
-            Token::Payable => write!(f, "payable"),
+            Token::Constant => write!(f, "const"),
             Token::Do => write!(f, "do"),
             Token::Continue => write!(f, "continue"),
             Token::Break => write!(f, "break"),
-            Token::Throw => write!(f, "throw"),
             Token::Emit => write!(f, "emit"),
             Token::Return => write!(f, "return"),
-            Token::Returns => write!(f, "returns"),
-            Token::Revert => write!(f, "revert"),
             Token::True => write!(f, "true"),
             Token::False => write!(f, "false"),
             Token::Else => write!(f, "else"),
-            Token::Anonymous => write!(f, "anonymous"),
             Token::For => write!(f, "for"),
             Token::While => write!(f, "while"),
             Token::If => write!(f, "if"),
-            Token::Constructor => write!(f, "constructor"),
-            Token::Indexed => write!(f, "indexed"),
-            Token::Mapping => write!(f, "mapping"),
-            Token::Arrow => write!(f, "=>"),
-            Token::Try => write!(f, "try"),
-            Token::Catch => write!(f, "catch"),
-            Token::Receive => write!(f, "receive"),
-            Token::Fallback => write!(f, "fallback"),
             Token::As => write!(f, "as"),
             Token::Is => write!(f, "is"),
-            Token::Abstract => write!(f, "abstract"),
-            Token::Virtual => write!(f, "virtual"),
-            Token::Override => write!(f, "override"),
-            Token::Using => write!(f, "using"),
-            Token::Modifier => write!(f, "modifier"),
-            Token::Immutable => write!(f, "immutable"),
-            Token::Unchecked => write!(f, "unchecked"),
             Token::Assembly => write!(f, "assembly"),
             Token::Let => write!(f, "let"),
-            Token::Leave => write!(f, "leave"),
-            Token::Switch => write!(f, "switch"),
-            Token::Case => write!(f, "case"),
-            Token::Default => write!(f, "default"),
-            Token::YulArrow => write!(f, "->"),
             Token::Annotation(name) => write!(f, "@{name}"),
+            Token::Port => write!(f, "port"),
+            Token::Mutability => write!(f, "mut"),
         }
     }
 }
@@ -326,7 +221,6 @@ impl<'input> fmt::Display for Token<'input> {
 /// let mut lexer = Lexer::new(source, 0, &mut comments, &mut errors);
 ///
 /// let mut next_token = || lexer.next().map(|(_, token, _)| token);
-/// assert_eq!(next_token(), Some(Token::Uint(256)));
 /// assert_eq!(next_token(), Some(Token::Identifier("number")));
 /// assert_eq!(next_token(), Some(Token::Assign));
 /// assert_eq!(next_token(), Some(Token::Number("0", "")));
@@ -381,169 +275,33 @@ pub fn is_keyword(word: &str) -> bool {
 }
 
 static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
-    "address" => Token::Address,
-    "anonymous" => Token::Anonymous,
-    "bool" => Token::Bool,
     "break" => Token::Break,
-    "bytes1" => Token::Bytes(1),
-    "bytes2" => Token::Bytes(2),
-    "bytes3" => Token::Bytes(3),
-    "bytes4" => Token::Bytes(4),
-    "bytes5" => Token::Bytes(5),
-    "bytes6" => Token::Bytes(6),
-    "bytes7" => Token::Bytes(7),
-    "bytes8" => Token::Bytes(8),
-    "bytes9" => Token::Bytes(9),
-    "bytes10" => Token::Bytes(10),
-    "bytes11" => Token::Bytes(11),
-    "bytes12" => Token::Bytes(12),
-    "bytes13" => Token::Bytes(13),
-    "bytes14" => Token::Bytes(14),
-    "bytes15" => Token::Bytes(15),
-    "bytes16" => Token::Bytes(16),
-    "bytes17" => Token::Bytes(17),
-    "bytes18" => Token::Bytes(18),
-    "bytes19" => Token::Bytes(19),
-    "bytes20" => Token::Bytes(20),
-    "bytes21" => Token::Bytes(21),
-    "bytes22" => Token::Bytes(22),
-    "bytes23" => Token::Bytes(23),
-    "bytes24" => Token::Bytes(24),
-    "bytes25" => Token::Bytes(25),
-    "bytes26" => Token::Bytes(26),
-    "bytes27" => Token::Bytes(27),
-    "bytes28" => Token::Bytes(28),
-    "bytes29" => Token::Bytes(29),
-    "bytes30" => Token::Bytes(30),
-    "bytes31" => Token::Bytes(31),
-    "bytes32" => Token::Bytes(32),
-    "bytes" => Token::DynamicBytes,
-    "byte" => Token::Byte,
-    "calldata" => Token::Calldata,
-    "case" => Token::Case,
-    "constant" => Token::Constant,
-    "constructor" => Token::Constructor,
+    "const" => Token::Constant,
     "continue" => Token::Continue,
-    "contract" => Token::Contract,
-    "default" => Token::Default,
-    "delete" => Token::Delete,
     "do" => Token::Do,
     "else" => Token::Else,
     "emit" => Token::Emit,
     "enum" => Token::Enum,
-    "event" => Token::Event,
-    "external" => Token::External,
     "false" => Token::False,
     "for" => Token::For,
-    "function" => Token::Function,
+    "fn" => Token::Function,
     "if" => Token::If,
     "import" => Token::Import,
-    "indexed" => Token::Indexed,
-    "int8" => Token::Int(8),
-    "int16" => Token::Int(16),
-    "int24" => Token::Int(24),
-    "int32" => Token::Int(32),
-    "int40" => Token::Int(40),
-    "int48" => Token::Int(48),
-    "int56" => Token::Int(56),
-    "int64" => Token::Int(64),
-    "int72" => Token::Int(72),
-    "int80" => Token::Int(80),
-    "int88" => Token::Int(88),
-    "int96" => Token::Int(96),
-    "int104" => Token::Int(104),
-    "int112" => Token::Int(112),
-    "int120" => Token::Int(120),
-    "int128" => Token::Int(128),
-    "int136" => Token::Int(136),
-    "int144" => Token::Int(144),
-    "int152" => Token::Int(152),
-    "int160" => Token::Int(160),
-    "int168" => Token::Int(168),
-    "int176" => Token::Int(176),
-    "int184" => Token::Int(184),
-    "int192" => Token::Int(192),
-    "int200" => Token::Int(200),
-    "int208" => Token::Int(208),
-    "int216" => Token::Int(216),
-    "int224" => Token::Int(224),
-    "int232" => Token::Int(232),
-    "int240" => Token::Int(240),
-    "int248" => Token::Int(248),
-    "int256" => Token::Int(256),
     "interface" => Token::Interface,
-    "internal" => Token::Internal,
-    "int" => Token::Int(256),
-    "leave" => Token::Leave,
     "library" => Token::Library,
-    "mapping" => Token::Mapping,
-    "memory" => Token::Memory,
-    "new" => Token::New,
-    "payable" => Token::Payable,
     "pragma" => Token::Pragma,
-    "private" => Token::Private,
-    "public" => Token::Public,
-    "pure" => Token::Pure,
-    "returns" => Token::Returns,
     "return" => Token::Return,
-    "revert" => Token::Revert,
-    "storage" => Token::Storage,
     "string" => Token::String,
     "struct" => Token::Struct,
-    "switch" => Token::Switch,
-    "throw" => Token::Throw,
     "true" => Token::True,
     "type" => Token::Type,
-    "uint8" => Token::Uint(8),
-    "uint16" => Token::Uint(16),
-    "uint24" => Token::Uint(24),
-    "uint32" => Token::Uint(32),
-    "uint40" => Token::Uint(40),
-    "uint48" => Token::Uint(48),
-    "uint56" => Token::Uint(56),
-    "uint64" => Token::Uint(64),
-    "uint72" => Token::Uint(72),
-    "uint80" => Token::Uint(80),
-    "uint88" => Token::Uint(88),
-    "uint96" => Token::Uint(96),
-    "uint104" => Token::Uint(104),
-    "uint112" => Token::Uint(112),
-    "uint120" => Token::Uint(120),
-    "uint128" => Token::Uint(128),
-    "uint136" => Token::Uint(136),
-    "uint144" => Token::Uint(144),
-    "uint152" => Token::Uint(152),
-    "uint160" => Token::Uint(160),
-    "uint168" => Token::Uint(168),
-    "uint176" => Token::Uint(176),
-    "uint184" => Token::Uint(184),
-    "uint192" => Token::Uint(192),
-    "uint200" => Token::Uint(200),
-    "uint208" => Token::Uint(208),
-    "uint216" => Token::Uint(216),
-    "uint224" => Token::Uint(224),
-    "uint232" => Token::Uint(232),
-    "uint240" => Token::Uint(240),
-    "uint248" => Token::Uint(248),
-    "uint256" => Token::Uint(256),
-    "uint" => Token::Uint(256),
-    "view" => Token::View,
     "while" => Token::While,
-    "try" => Token::Try,
-    "catch" => Token::Catch,
-    "receive" => Token::Receive,
-    "fallback" => Token::Fallback,
     "as" => Token::As,
     "is" => Token::Is,
-    "abstract" => Token::Abstract,
-    "virtual" => Token::Virtual,
-    "override" => Token::Override,
-    "using" => Token::Using,
-    "modifier" => Token::Modifier,
-    "immutable" => Token::Immutable,
-    "unchecked" => Token::Unchecked,
     "assembly" => Token::Assembly,
     "let" => Token::Let,
+    "mut" => Token::Mutability,
+    "port" => Token::Port,
 };
 
 impl<'input> Lexer<'input> {
@@ -585,18 +343,14 @@ impl<'input> Lexer<'input> {
                 let mut end = match self.chars.next() {
                     Some((end, ch)) if ch.is_ascii_hexdigit() => end,
                     Some((..)) => {
-                        return Err(LexicalError::MissingNumber(Loc::Source(
-                            self.file_no,
-                            start,
-                            start + 1,
-                        )));
+                        return Err(
+                            LexicalError::MissingNumber(Loc::Source(self.file_no, start, start + 1))
+                        );
                     }
                     None => {
-                        return Err(LexicalError::EndofFileInHex(Loc::Source(
-                            self.file_no,
-                            start,
-                            self.input.len(),
-                        )));
+                        return Err(LexicalError::EndofFileInHex(
+                            Loc::Source(self.file_no, start, self.input.len())
+                        ));
                     }
                 };
 
@@ -970,16 +724,11 @@ impl<'input> Lexer<'input> {
                 Some((i, ')')) => return Some((i, Token::CloseParenthesis, i + 1)),
                 Some((i, '{')) => return Some((i, Token::OpenCurlyBrace, i + 1)),
                 Some((i, '}')) => return Some((i, Token::CloseCurlyBrace, i + 1)),
-                Some((i, '~')) => return Some((i, Token::BitwiseNot, i + 1)),
                 Some((i, '=')) => {
                     return match self.chars.peek() {
                         Some((_, '=')) => {
                             self.chars.next();
                             Some((i, Token::Equal, i + 2))
-                        }
-                        Some((_, '>')) => {
-                            self.chars.next();
-                            Some((i, Token::Arrow, i + 2))
                         }
                         _ => Some((i, Token::Assign, i + 1)),
                     };
@@ -1018,15 +767,6 @@ impl<'input> Lexer<'input> {
                         _ => Some((i, Token::BitwiseAnd, i + 1)),
                     };
                 }
-                Some((i, '^')) => {
-                    return match self.chars.peek() {
-                        Some((_, '=')) => {
-                            self.chars.next();
-                            Some((i, Token::BitwiseXorAssign, i + 2))
-                        }
-                        _ => Some((i, Token::BitwiseXor, i + 1)),
-                    };
-                }
                 Some((i, '+')) => {
                     return match self.chars.peek() {
                         Some((_, '=')) => {
@@ -1049,10 +789,6 @@ impl<'input> Lexer<'input> {
                         Some((_, '-')) => {
                             self.chars.next();
                             Some((i, Token::Decrement, i + 2))
-                        }
-                        Some((_, '>')) => {
-                            self.chars.next();
-                            Some((i, Token::YulArrow, i + 2))
                         }
                         _ => Some((i, Token::Subtract, i + 1)),
                     };
@@ -1131,16 +867,7 @@ impl<'input> Lexer<'input> {
                 }
                 Some((i, '[')) => return Some((i, Token::OpenBracket, i + 1)),
                 Some((i, ']')) => return Some((i, Token::CloseBracket, i + 1)),
-                Some((i, ':')) => {
-                    return match self.chars.peek() {
-                        Some((_, '=')) => {
-                            self.chars.next();
-                            Some((i, Token::ColonAssign, i + 2))
-                        }
-                        _ => Some((i, Token::Colon, i + 1)),
-                    };
-                }
-                Some((i, '?')) => return Some((i, Token::Question, i + 1)),
+                Some((i, ':')) => return Some((i, Token::Colon, i + 1)),
                 Some((_, ch)) if ch.is_whitespace() => (),
                 Some((start, _)) => {
                     let mut end;
@@ -1261,16 +988,14 @@ mod tests {
         let mut comments = Vec::new();
         let mut errors = Vec::new();
 
-        let multiple_errors = r#" 9ea -9e € bool hex uint8 hex"g"   /**  "#;
+        let multiple_errors = r#" 9ea -9e € bool hex hex"g"   /**  "#;
         let tokens = Lexer::new(multiple_errors, 0, &mut comments, &mut errors).collect::<Vec<_>>();
         assert_eq!(
             tokens,
             vec![
                 (3, Token::Identifier("a"), 4),
                 (5, Token::Subtract, 6),
-                (13, Token::Bool, 17),
                 (18, Token::Identifier("hex"), 21),
-                (22, Token::Uint(8), 27),
             ]
         );
 
@@ -1286,13 +1011,6 @@ mod tests {
         );
 
         let mut errors = Vec::new();
-        let tokens = Lexer::new("bool", 0, &mut comments, &mut errors).collect::<Vec<_>>();
-
-        assert_eq!(tokens, vec!((0, Token::Bool, 4)));
-
-        let tokens = Lexer::new("uint8", 0, &mut comments, &mut errors).collect::<Vec<_>>();
-
-        assert_eq!(tokens, vec!((0, Token::Uint(8), 5)));
 
         let tokens = Lexer::new("hex", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
@@ -1304,7 +1022,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .collect::<Vec<_>>();
+        .collect::<Vec<_>>();
 
         assert_eq!(tokens, vec!((0, Token::HexLiteral("hex\"cafe_dead\""), 14)));
 
@@ -1314,7 +1032,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .collect::<Vec<_>>();
+        .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1325,12 +1043,13 @@ mod tests {
             )
         );
 
-        let tokens = Lexer::new(
-            "// foo bar\n0x00fead0_12 9.0008 0_0",
-            0,
-            &mut comments,
-            &mut errors,
-        )
+        let tokens =
+            Lexer::new(
+                "// foo bar\n0x00fead0_12 9.0008 0_0",
+                0,
+                &mut comments,
+                &mut errors,
+            )
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -1342,12 +1061,13 @@ mod tests {
             )
         );
 
-        let tokens = Lexer::new(
-            "// foo bar\n0x00fead0_12 .0008 0.9e2",
-            0,
-            &mut comments,
-            &mut errors,
-        )
+        let tokens =
+            Lexer::new(
+                "// foo bar\n0x00fead0_12 .0008 0.9e2",
+                0,
+                &mut comments,
+                &mut errors,
+            )
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -1359,12 +1079,13 @@ mod tests {
             )
         );
 
-        let tokens = Lexer::new(
-            "// foo bar\n0x00fead0_12 .0008 0.9e-2-2",
-            0,
-            &mut comments,
-            &mut errors,
-        )
+        let tokens =
+            Lexer::new(
+                "// foo bar\n0x00fead0_12 .0008 0.9e-2-2",
+                0,
+                &mut comments,
+                &mut errors,
+            )
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -1398,7 +1119,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .collect::<Vec<_>>();
+        .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1410,12 +1131,13 @@ mod tests {
             )
         );
 
-        let tokens = Lexer::new(
-            "pragma solidity \t>=0.5.0 <0.7.0 \n ;",
-            0,
-            &mut comments,
-            &mut errors,
-        )
+        let tokens =
+            Lexer::new(
+                "pragma solidity \t>=0.5.0 <0.7.0 \n ;",
+                0,
+                &mut comments,
+                &mut errors,
+            )
             .collect::<Vec<_>>();
 
         assert_eq!(
@@ -1482,7 +1204,7 @@ mod tests {
 
         assert_eq!(
             tokens,
-            vec!((0, Token::Subtract, 1), (1, Token::Number("4", ""), 2), )
+            vec!((0, Token::Subtract, 1), (1, Token::Number("4", ""), 2),)
         );
 
         let mut errors = Vec::new();
@@ -1570,10 +1292,7 @@ mod tests {
         assert_eq!(tokens, 0);
         assert_eq!(
             comments,
-            vec!(Comment::DocBlock(
-                Loc::Source(0, 0, 10),
-                "/** foo */".to_owned(),
-            ))
+            vec!(Comment::DocBlock(Loc::Source(0, 0, 10), "/** foo */".to_owned()))
         );
 
         comments.truncate(0);
@@ -1584,7 +1303,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .count();
+        .count();
 
         assert_eq!(tokens, 0);
         assert_eq!(
@@ -1616,7 +1335,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .collect::<Vec<_>>();
+        .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1653,7 +1372,7 @@ mod tests {
 
         assert_eq!(
             tokens,
-            vec!((1, Token::Subtract, 2), (2, Token::Number("9", "0123"), 8), )
+            vec!((1, Token::Subtract, 2), (2, Token::Number("9", "0123"), 8),)
         );
 
         let mut errors = Vec::new();
@@ -1728,10 +1447,7 @@ mod tests {
         assert_eq!(tokens, 0);
         assert_eq!(
             comments,
-            vec!(Comment::DocBlock(
-                Loc::Source(0, 0, 10),
-                "/** foo */".to_owned(),
-            ))
+            vec!(Comment::DocBlock(Loc::Source(0, 0, 10), "/** foo */".to_owned()))
         );
 
         comments.truncate(0);
@@ -1742,7 +1458,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .count();
+        .count();
 
         assert_eq!(tokens, 0);
         assert_eq!(
@@ -1774,7 +1490,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .collect::<Vec<(usize, Token, usize)>>();
+        .collect::<Vec<(usize, Token, usize)>>();
 
         assert_eq!(
             tokens,
@@ -1818,7 +1534,7 @@ mod tests {
 
         assert_eq!(
             tokens,
-            vec!((1, Token::Subtract, 2), (2, Token::Number("9", "0123"), 8), )
+            vec!((1, Token::Subtract, 2), (2, Token::Number("9", "0123"), 8),)
         );
 
         let mut errors = Vec::new();
@@ -1876,7 +1592,7 @@ mod tests {
             vec!(LexicalError::InvalidCharacterInHexLiteral(
                 Loc::Source(0, 4, 5),
                 'g',
-            ), )
+            ),)
         );
 
         let mut errors = Vec::new();

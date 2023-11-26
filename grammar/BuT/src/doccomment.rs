@@ -146,17 +146,17 @@ fn filter_comments(
     comments: &[Comment],
     start: usize,
     end: usize,
-) -> impl Iterator<Item=(CommentType, Vec<(usize, &str)>)> {
+) -> impl Iterator<Item = (CommentType, Vec<(usize, &str)>)> {
     comments.iter().filter_map(move |comment| {
         match comment {
             // filter out all non-doc comments
             Comment::Block(..) | Comment::Line(..) => None,
             // filter out doc comments that are outside the given range
             Comment::DocLine(loc, _) | Comment::DocBlock(loc, _)
-            if loc.start() >= end || loc.end() < start =>
-                {
-                    None
-                }
+                if loc.start() >= end || loc.end() < start =>
+            {
+                None
+            }
 
             Comment::DocLine(loc, comment) => {
                 // remove the leading /// and whitespace;
@@ -196,61 +196,52 @@ mod tests {
     #[test]
     fn parse() {
         let src = r#"
-pragma but ^0.8.19;
 /// @name Test
 ///  no tag
-///@notice    Cool contract    
+///@notice    Cool struct    
 ///   @  dev     This is not a dev tag 
 /**
  * @dev line one
  *    line 2
  */
-contract Test {
-    /*** my function    
-          i like whitespace    
-*/
-    function test() {}
-}
 "#;
         let (_, comments) = crate::parse(src, 0).unwrap();
-        assert_eq!(comments.len(), 6);
+        assert_eq!(comments.len(), 5);
 
         let actual = parse_doc_comments(&comments, 0, usize::MAX);
         let expected = vec![
             DocComment::Line {
                 comment: DocCommentTag {
                     tag: "name".into(),
-                    tag_offset: 31,
+                    tag_offset: 6,
                     value: "Test\nno tag".into(),
-                    value_offset: 36,
+                    value_offset: 11,
                 },
             },
             DocComment::Line {
                 comment: DocCommentTag {
                     tag: "notice".into(),
-                    tag_offset: 57,
-                    value: "Cool contract".into(),
-                    value_offset: 67,
+                    tag_offset: 32,
+                    value: "Cool struct".into(),
+                    value_offset: 42,
                 },
             },
             DocComment::Line {
                 comment: DocCommentTag {
                     tag: "".into(),
-                    tag_offset: 92,
+                    tag_offset: 65,
                     value: "dev     This is not a dev tag".into(),
-                    value_offset: 94,
+                    value_offset: 67,
                 },
             },
-            // TODO: Second block is merged into the first
             DocComment::Block {
                 comments: vec![DocCommentTag {
                     tag: "dev".into(),
-                    tag_offset: 133,
-                    value: "line one\nline 2\nmy function\ni like whitespace".into(),
-                    value_offset: 137,
+                    tag_offset: 106,
+                    value: "line one\nline 2".into(),
+                    value_offset: 110,
                 }],
             },
-            DocComment::Block { comments: vec![] },
         ];
 
         assert_eq!(actual, expected);

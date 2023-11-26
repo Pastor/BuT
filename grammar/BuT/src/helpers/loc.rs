@@ -1,5 +1,5 @@
-use std::{borrow::Cow, rc::Rc};
 use std::sync::Arc;
+use std::{borrow::Cow, rc::Rc};
 
 use crate::ast::{self, Loc};
 use crate::lexer::LexicalError;
@@ -85,7 +85,7 @@ impl<T: ?Sized + OptionalCodeLocation> OptionalCodeLocation for Arc<T> {
 
 // would be: `impl<T: CodeLocation> OptionalCodeLocation for T { ... }`
 // but then we wouldn't have the correct implementation for `Box<T>` and the other smart pointers
-macro_rules! impl_optional_for_pt {
+macro_rules! impl_optional_for_ast {
     ($($t:ty),+ $(,)?) => {
         $(
             impl OptionalCodeLocation for $t {
@@ -98,16 +98,13 @@ macro_rules! impl_optional_for_pt {
     };
 }
 
-impl_optional_for_pt!(
+impl_optional_for_ast!(
     // structs
     ast::Annotation,
     ast::Base,
-    ast::ContractDefinition,
     ast::EnumDefinition,
     ast::ErrorDefinition,
     ast::ErrorParameter,
-    ast::EventDefinition,
-    ast::EventParameter,
     ast::FunctionDefinition,
     ast::HexLiteral,
     ast::Identifier,
@@ -215,12 +212,9 @@ macro_rules! impl_for_structs {
 impl_for_structs!(
     ast::Annotation,
     ast::Base,
-    ast::ContractDefinition,
     ast::EnumDefinition,
     ast::ErrorDefinition,
     ast::ErrorParameter,
-    ast::EventDefinition,
-    ast::EventParameter,
     ast::FunctionDefinition,
     ast::HexLiteral,
     ast::Identifier,
@@ -276,7 +270,6 @@ impl_for_enums! {
 
     ast::ContractPart: match self {
         Self::StructDefinition(ref l, ..) => l.loc(),
-        Self::EventDefinition(ref l, ..) => l.loc(),
         Self::EnumDefinition(ref l, ..) => l.loc(),
         Self::ErrorDefinition(ref l, ..) => l.loc(),
         Self::VariableDefinition(ref l, ..) => l.loc(),
@@ -347,7 +340,6 @@ impl_for_enums! {
         | Self::AssignMultiply(l, ..)
         | Self::AssignDivide(l, ..)
         | Self::AssignModulo(l, ..)
-        | Self::BoolLiteral(l, ..)
         | Self::NumberLiteral(l, ..)
         | Self::RationalNumberLiteral(l, ..)
         | Self::HexNumberLiteral(l, ..)
@@ -382,10 +374,8 @@ impl_for_enums! {
 
     ast::SourceUnitPart: match self {
         Self::ImportDirective(ref l, ..) => l.loc(),
-        Self::ContractDefinition(ref l, ..) => l.loc(),
         Self::EnumDefinition(ref l, ..) => l.loc(),
         Self::StructDefinition(ref l, ..) => l.loc(),
-        Self::EventDefinition(ref l, ..) => l.loc(),
         Self::ErrorDefinition(ref l, ..) => l.loc(),
         Self::FunctionDefinition(ref l, ..) => l.loc(),
         Self::VariableDefinition(ref l, ..) => l.loc(),
@@ -431,8 +421,9 @@ impl_for_enums! {
     ast::VariableAttribute: match self {
         Self::Visibility(ref l, ..) => l.loc_opt().unwrap_or_default(),
         Self::Constant(l, ..)
-        | Self::Immutable(l, ..)
-        | Self::Override(l, ..) => l,
+        | Self::Readable(l, ..)
+        | Self::Writable(l, ..)
+        | Self::Portable(l, ..) => l,
     }
 
     ast::YulExpression: match self {

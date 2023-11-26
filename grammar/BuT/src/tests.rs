@@ -106,84 +106,8 @@ fn parse_test() {
     let actual_parse_tree = but::SourceUnitParser::new()
         .parse(src, 0, my_errs, lex)
         .unwrap();
-    let expected_parse_tree = SourceUnit(vec![
-        SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
-            loc: Loc::Source(0, 92, 702),
-            ty: ContractTy::Contract(Loc::Source(0, 92, 100)),
-            name: Some(Identifier {
-                loc: Loc::Source(0, 101, 104),
-                name: "foo".to_string(),
-            }),
-            base: Vec::new(),
-            parts: vec![
-                ContractPart::StructDefinition(Box::new(StructDefinition {
-                    name: Some(Identifier {
-                        loc: Loc::Source(0, 419, 431),
-                        name: "Jurisdiction".to_string(),
-                    }),
-                    loc: Loc::Source(0, 412, 609),
-                    fields: vec![
-                        VariableDeclaration {
-                            loc: Loc::Source(0, 458, 469),
-                            ty: Expression::Type(Loc::Source(0, 458, 462), Type::Bool),
-                            storage: None,
-                            name: Some(Identifier {
-                                loc: Loc::Source(0, 463, 469),
-                                name: "exists".to_string(),
-                            }),
-                        },
-                        VariableDeclaration {
-                            loc: Loc::Source(0, 495, 506),
-                            ty: Expression::Type(Loc::Source(0, 495, 499), Type::Uint(256)),
-                            storage: None,
-                            name: Some(Identifier {
-                                loc: Loc::Source(0, 500, 506),
-                                name: "keyIdx".to_string(),
-                            }),
-                        },
-                        VariableDeclaration {
-                            loc: Loc::Source(0, 532, 546),
-                            ty: Expression::Type(Loc::Source(0, 532, 538), Type::Bytes(2)),
-                            storage: None,
-                            name: Some(Identifier {
-                                loc: Loc::Source(0, 539, 546),
-                                name: "country".to_string(),
-                            }),
-                        },
-                        VariableDeclaration {
-                            loc: Loc::Source(0, 572, 586),
-                            ty: Expression::Type(Loc::Source(0, 572, 579), Type::Bytes(32)),
-                            storage: None,
-                            name: Some(Identifier {
-                                loc: Loc::Source(0, 580, 586),
-                                name: "region".to_string(),
-                            }),
-                        },
-                    ],
-                })),
-                ContractPart::VariableDefinition(Box::new(VariableDefinition {
-                    ty: Expression::Type(Loc::Source(0, 630, 636), Type::String),
-                    attrs: vec![],
-                    name: Some(Identifier {
-                        loc: Loc::Source(0, 637, 645),
-                        name: "__abba_$".to_string(),
-                    }),
-                    loc: Loc::Source(0, 630, 645),
-                    initializer: None,
-                })),
-                ContractPart::VariableDefinition(Box::new(VariableDefinition {
-                    ty: Expression::Type(Loc::Source(0, 667, 672), Type::Int(64)),
-                    attrs: vec![],
-                    name: Some(Identifier {
-                        loc: Loc::Source(0, 673, 683),
-                        name: "$thing_102".to_string(),
-                    }),
-                    loc: Loc::Source(0, 667, 683),
-                    initializer: None,
-                })),
-            ],
-        })),
-        SourceUnitPart::FunctionDefinition(Box::new(FunctionDefinition {
+    let expected_parse_tree = SourceUnit(vec![SourceUnitPart::FunctionDefinition(Box::new(
+        FunctionDefinition {
             loc: Loc::Source(0, 720, 735),
             ty: FunctionTy::Function,
             name: Some(Identifier {
@@ -352,8 +276,8 @@ fn parse_test() {
                     ],
                 )],
             }),
-        })),
-    ]);
+        },
+    ))]);
 
     assert_eq!(actual_parse_tree, expected_parse_tree);
 
@@ -431,8 +355,8 @@ fn parse_error_test() {
     let (actual_parse_tree, comments) = crate::parse(src, 0).unwrap();
     assert_eq!(actual_parse_tree.0.len(), 2);
 
-    let expected_parse_tree = SourceUnit(vec![
-        SourceUnitPart::ErrorDefinition(Box::new(ErrorDefinition {
+    let expected_parse_tree = SourceUnit(vec![SourceUnitPart::ErrorDefinition(Box::new(
+        ErrorDefinition {
             loc: Loc::Source(0, 10, 58),
             keyword: Expression::Variable(Identifier {
                 loc: Loc::Source(0, 10, 15),
@@ -460,60 +384,8 @@ fn parse_error_test() {
                     }),
                 },
             ],
-        })),
-        SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
-            loc: Loc::Source(0, 69, 438),
-            ty: ContractTy::Contract(Loc::Source(0, 69, 77)),
-            name: Some(Identifier {
-                loc: Loc::Source(0, 78, 87),
-                name: "TestToken".to_string(),
-            }),
-            base: vec![],
-            parts: vec![
-                ContractPart::ErrorDefinition(Box::new(ErrorDefinition {
-                    loc: Loc::Source(0, 102, 120),
-                    keyword: Expression::Variable(Identifier {
-                        loc: Loc::Source(0, 102, 107),
-                        name: "error".to_string(),
-                    }),
-                    name: Some(Identifier {
-                        loc: Loc::Source(0, 108, 118),
-                        name: "NotPending".to_string(),
-                    }),
-                    fields: vec![],
-                })),
-                ContractPart::ErrorDefinition(Box::new(ErrorDefinition {
-                    loc: Loc::Source(0, 365, 427),
-                    keyword: Expression::Variable(Identifier {
-                        loc: Loc::Source(0, 365, 370),
-                        name: "error".to_string(),
-                    }),
-                    name: Some(Identifier {
-                        loc: Loc::Source(0, 371, 390),
-                        name: "InsufficientBalance".to_string(),
-                    }),
-                    fields: vec![
-                        ErrorParameter {
-                            ty: Expression::Type(Loc::Source(0, 391, 398), Type::Uint(256)),
-                            loc: Loc::Source(0, 391, 408),
-                            name: Some(Identifier {
-                                loc: Loc::Source(0, 399, 408),
-                                name: "available".to_string(),
-                            }),
-                        },
-                        ErrorParameter {
-                            ty: Expression::Type(Loc::Source(0, 410, 417), Type::Uint(256)),
-                            loc: Loc::Source(0, 410, 426),
-                            name: Some(Identifier {
-                                loc: Loc::Source(0, 418, 426),
-                                name: "required".to_string(),
-                            }),
-                        },
-                    ],
-                })),
-            ],
-        })),
-    ]);
+        },
+    ))]);
 
     assert_eq!(actual_parse_tree, expected_parse_tree);
 
@@ -1004,77 +876,6 @@ fn test_assembly_parser() {
 }
 
 #[test]
-fn parse_revert_test() {
-    let src = r#"
-        contract TestToken {
-            error BAR_ERROR();
-            function foo()  {
-                revert BAR_ERROR();
-            }
-        }
-        "#;
-
-    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
-    assert_eq!(actual_parse_tree.0.len(), 1);
-
-    let expected_parse_tree = SourceUnit(vec![SourceUnitPart::ContractDefinition(Box::new(
-        ContractDefinition {
-            loc: Loc::Source(0, 9, 150),
-            ty: ContractTy::Contract(Loc::Source(0, 9, 17)),
-            name: Some(Identifier {
-                loc: Loc::Source(0, 18, 27),
-                name: "TestToken".to_string(),
-            }),
-            base: vec![],
-            parts: vec![
-                ContractPart::ErrorDefinition(Box::new(ErrorDefinition {
-                    loc: Loc::Source(0, 42, 59),
-                    keyword: Expression::Variable(Identifier {
-                        loc: Loc::Source(0, 42, 47),
-                        name: "error".to_string(),
-                    }),
-                    name: Some(Identifier {
-                        loc: Loc::Source(0, 48, 57),
-                        name: "BAR_ERROR".to_string(),
-                    }),
-                    fields: vec![],
-                })),
-                ContractPart::FunctionDefinition(Box::new(FunctionDefinition {
-                    loc: Loc::Source(0, 73, 89),
-                    ty: FunctionTy::Function,
-                    name: Some(Identifier {
-                        loc: Loc::Source(0, 82, 85),
-                        name: "foo".to_string(),
-                    }),
-                    name_loc: Loc::Source(0, 82, 85),
-                    params: vec![],
-                    attributes: vec![],
-                    return_not_returns: None,
-                    returns: vec![],
-                    body: Some(Statement::Block {
-                        loc: Loc::Source(0, 89, 140),
-                        unchecked: false,
-                        statements: vec![Statement::Revert(
-                            Loc::Source(0, 107, 125),
-                            Some(IdentifierPath {
-                                loc: Loc::Source(0, 114, 123),
-                                identifiers: vec![Identifier {
-                                    loc: Loc::Source(0, 114, 123),
-                                    name: "BAR_ERROR".to_string(),
-                                }],
-                            }),
-                            vec![],
-                        )],
-                    }),
-                })),
-            ],
-        },
-    ))]);
-
-    assert_eq!(actual_parse_tree, expected_parse_tree);
-}
-
-#[test]
 fn parse_byte_function_assembly() {
     let src = r#"
     contract ECDSA {
@@ -1102,33 +903,17 @@ fn parse_user_defined_value_type() {
     let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
     assert_eq!(actual_parse_tree.0.len(), 2);
 
-    let expected_parse_tree = SourceUnit(vec![
-        SourceUnitPart::TypeDefinition(Box::new(TypeDefinition {
-            loc: Loc::Source(0, 9, 32),
-            name: Identifier {
-                loc: Loc::Source(0, 14, 21),
-                name: "Uint256".to_string(),
-            },
-            ty: Expression::Type(Loc::Source(0, 25, 32), Type::Uint(256)),
-        })),
-        SourceUnitPart::ContractDefinition(Box::new(ContractDefinition {
-            loc: Loc::Source(0, 42, 109),
-            ty: ContractTy::Contract(Loc::Source(0, 42, 50)),
-            name: Some(Identifier {
-                loc: Loc::Source(0, 51, 60),
-                name: "TestToken".to_string(),
-            }),
-            base: vec![],
-            parts: vec![ContractPart::TypeDefinition(Box::new(TypeDefinition {
-                loc: Loc::Source(0, 75, 98),
+    let expected_parse_tree =
+        SourceUnit(vec![SourceUnitPart::TypeDefinition(Box::new(
+            TypeDefinition {
+                loc: Loc::Source(0, 9, 32),
                 name: Identifier {
-                    loc: Loc::Source(0, 80, 87),
-                    name: "Bytes32".to_string(),
+                    loc: Loc::Source(0, 14, 21),
+                    name: "Uint256".to_string(),
                 },
-                ty: Expression::Type(Loc::Source(0, 91, 98), Type::Bytes(32)),
-            }))],
-        })),
-    ]);
+                ty: Type::Uint(256),
+            },
+        ))]);
 
     assert_eq!(actual_parse_tree, expected_parse_tree);
 }
@@ -1202,68 +987,69 @@ fn test_lib_but() {
             .into_iter()
             .map(|entry| (true, entry));
 
-    let errors = semantic_tests
-        .into_iter()
-        .chain(syntax_tests)
-        .map::<Result<_, String>, _>(|(syntax_test, entry)| {
-            if entry.file_name().to_string_lossy().ends_with(".but") {
-                let source = match fs::read_to_string(entry.path()) {
-                    Ok(source) => source,
-                    Err(err) if matches!(err.kind(), std::io::ErrorKind::InvalidData) => {
-                        return Ok(vec![]);
-                    }
-                    Err(err) => return Err(err.to_string()),
+    let errors =
+        semantic_tests
+            .into_iter()
+            .chain(syntax_tests)
+            .map::<Result<_, String>, _>(|(syntax_test, entry)| {
+                if entry.file_name().to_string_lossy().ends_with(".but") {
+                    let source = match fs::read_to_string(entry.path()) {
+                        Ok(source) => source,
+                        Err(err) if matches!(err.kind(), std::io::ErrorKind::InvalidData) => {
+                            return Ok(vec![]);
+                        }
+                        Err(err) => return Err(err.to_string()),
+                    };
+
+                    let expect_error = syntax_test && error_matcher.is_match(&source);
+
+                    Ok(source_delimiter
+                        .split(&source)
+                        .filter(|source_part| !source_part.is_empty())
+                        .map(|part| {
+                            (
+                                entry.path().to_string_lossy().to_string(),
+                                expect_error,
+                                part.to_string(),
+                            )
+                        })
+                        .collect::<Vec<_>>())
+                } else {
+                    Ok(vec![])
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap()
+            .into_iter()
+            .flatten()
+            .filter_map(|(path, expect_error, source_part)| {
+                let result = match timeout_after(Duration::from_secs(5), move || {
+                    crate::parse(&source_part, 0)
+                }) {
+                    Ok(result) => result,
+                    Err(err) => return Some(format!("{path:?}: \n\t{err}")),
                 };
 
-                let expect_error = syntax_test && error_matcher.is_match(&source);
-
-                Ok(source_delimiter
-                    .split(&source)
-                    .filter(|source_part| !source_part.is_empty())
-                    .map(|part| {
-                        (
-                            entry.path().to_string_lossy().to_string(),
-                            expect_error,
-                            part.to_string(),
+                if let (Err(err), false) = (
+                    result.map_err(|diags| {
+                        format!(
+                            "{:?}:\n\t{}",
+                            path,
+                            diags
+                                .iter()
+                                .map(|diag| format!("{diag:?}"))
+                                .collect::<Vec<_>>()
+                                .join("\n\t")
                         )
-                    })
-                    .collect::<Vec<_>>())
-            } else {
-                Ok(vec![])
-            }
-        })
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap()
-        .into_iter()
-        .flatten()
-        .filter_map(|(path, expect_error, source_part)| {
-            let result = match timeout_after(Duration::from_secs(5), move || {
-                crate::parse(&source_part, 0)
-            }) {
-                Ok(result) => result,
-                Err(err) => return Some(format!("{path:?}: \n\t{err}")),
-            };
+                    }),
+                    expect_error,
+                ) {
+                    return Some(err);
+                }
 
-            if let (Err(err), false) = (
-                result.map_err(|diags| {
-                    format!(
-                        "{:?}:\n\t{}",
-                        path,
-                        diags
-                            .iter()
-                            .map(|diag| format!("{diag:?}"))
-                            .collect::<Vec<_>>()
-                            .join("\n\t")
-                    )
-                }),
-                expect_error,
-            ) {
-                return Some(err);
-            }
-
-            None
-        })
-        .collect::<Vec<_>>();
+                None
+            })
+            .collect::<Vec<_>>();
 
     assert!(errors.is_empty(), "{}", errors.join("\n"));
 }
@@ -1276,57 +1062,57 @@ contract MyTest {
 }
     "#;
 
-    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
-
-    let expected_tree = SourceUnit(vec![SourceUnitPart::ContractDefinition(
-        ContractDefinition {
-            loc: Source(0, 1, 59),
-            ty: ContractTy::Contract(Source(0, 1, 9)),
-            name: Some(Identifier {
-                loc: Source(0, 10, 16),
-                name: "MyTest".to_string(),
-            }),
-            base: vec![],
-            parts: vec![ContractPart::FunctionDefinition(
-                FunctionDefinition {
-                    loc: Source(0, 23, 55),
-                    ty: FunctionTy::Constructor,
-                    name: None,
-                    name_loc: Source(0, 34, 34),
-                    params: (vec![(
-                        Source(0, 35, 53),
-                        Some(Parameter {
-                            loc: Source(0, 35, 53),
-                            ty: Expression::Type(Source(0, 41, 46), Type::DynamicBytes),
-                            storage: None,
-                            name: Some(Identifier {
-                                loc: Source(0, 47, 53),
-                                name: "mySeed".to_string(),
-                            }),
-                            annotation: Some(Annotation {
-                                loc: Source(0, 35, 40),
-                                id: Identifier {
-                                    loc: Source(0, 35, 40),
-                                    name: "seed".to_string(),
-                                },
-                                value: None,
-                            }),
-                        }),
-                    )]),
-                    attributes: vec![],
-                    return_not_returns: None,
-                    returns: vec![],
-                    body: Some(Statement::Block {
-                        loc: Source(0, 55, 57),
-                        unchecked: false,
-                        statements: vec![],
-                    }),
-                }
-                .into(),
-            )],
-        }
-        .into(),
-    )]);
-
-    assert_eq!(expected_tree, actual_parse_tree);
+    // let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+    //
+    // let expected_tree = SourceUnit(vec![SourceUnitPart::ContractDefinition(
+    //     ContractDefinition {
+    //         loc: Source(0, 1, 59),
+    //         ty: ContractTy::Contract(Source(0, 1, 9)),
+    //         name: Some(Identifier {
+    //             loc: Source(0, 10, 16),
+    //             name: "MyTest".to_string(),
+    //         }),
+    //         base: vec![],
+    //         parts: vec![ContractPart::FunctionDefinition(
+    //             FunctionDefinition {
+    //                 loc: Source(0, 23, 55),
+    //                 ty: FunctionTy::Constructor,
+    //                 name: None,
+    //                 name_loc: Source(0, 34, 34),
+    //                 params: (vec![(
+    //                     Source(0, 35, 53),
+    //                     Some(Parameter {
+    //                         loc: Source(0, 35, 53),
+    //                         ty: Expression::Type(Source(0, 41, 46), Type::DynamicBytes),
+    //                         storage: None,
+    //                         name: Some(Identifier {
+    //                             loc: Source(0, 47, 53),
+    //                             name: "mySeed".to_string(),
+    //                         }),
+    //                         annotation: Some(Annotation {
+    //                             loc: Source(0, 35, 40),
+    //                             id: Identifier {
+    //                                 loc: Source(0, 35, 40),
+    //                                 name: "seed".to_string(),
+    //                             },
+    //                             value: None,
+    //                         }),
+    //                     }),
+    //                 )]),
+    //                 attributes: vec![],
+    //                 return_not_returns: None,
+    //                 returns: vec![],
+    //                 body: Some(Statement::Block {
+    //                     loc: Source(0, 55, 57),
+    //                     unchecked: false,
+    //                     statements: vec![],
+    //                 }),
+    //             }
+    //             .into(),
+    //         )],
+    //     }
+    //     .into(),
+    // )]);
+    //
+    // assert_eq!(expected_tree, actual_parse_tree);
 }

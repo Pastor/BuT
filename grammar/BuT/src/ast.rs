@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[doc(hidden)]
 pub use crate::helpers::{CodeLocation, OptionalCodeLocation};
+use crate::lexer::Token;
 
 /// A code location.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -329,17 +330,11 @@ pub enum SourceUnitPart {
     /// An import directive.
     ImportDirective(Import),
 
-    /// A contract definition.
-    ContractDefinition(Box<ContractDefinition>),
-
     /// An enum definition.
     EnumDefinition(Box<EnumDefinition>),
 
     /// A struct definition.
     StructDefinition(Box<StructDefinition>),
-
-    /// An event definition.
-    EventDefinition(Box<EventDefinition>),
 
     /// An error definition.
     ErrorDefinition(Box<ErrorDefinition>),
@@ -443,6 +438,13 @@ pub enum Type {
     /// `bytes`
     DynamicBytes,
 
+    Alias(Identifier),
+    Array {
+        loc: Loc,
+        element_count: u16,
+        element_type: Box<Type>,
+    },
+
     /// `mapping(<key> [key_name] => <value> [value_name])`
     Mapping {
         /// The code location.
@@ -493,7 +495,7 @@ pub struct VariableDeclaration {
     /// The code location.
     pub loc: Loc,
     /// The type.
-    pub ty: Expression,
+    pub ty: Option<Expression>,
     /// The optional memory location.
     pub storage: Option<StorageLocation>,
     /// The identifier.
@@ -524,9 +526,6 @@ pub struct StructDefinition {
 pub enum ContractPart {
     /// A struct definition.
     StructDefinition(Box<StructDefinition>),
-
-    /// An event definition.
-    EventDefinition(Box<EventDefinition>),
 
     /// An enum definition.
     EnumDefinition(Box<EnumDefinition>),
@@ -737,60 +736,6 @@ pub struct Base {
     pub args: Option<Vec<Expression>>,
 }
 
-/// A contract definition.
-///
-/// `<ty> <name> [<base>,*] { <parts>,* }`
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub struct ContractDefinition {
-    /// The code location.
-    pub loc: Loc,
-    /// The contract type.
-    pub ty: ContractTy,
-    /// The identifier.
-    ///
-    /// This field is `None` only if an error occurred during parsing.
-    pub name: Option<Identifier>,
-    /// The list of inheritance specifiers.
-    pub base: Vec<Base>,
-    /// The list of contract parts.
-    pub parts: Vec<ContractPart>,
-}
-
-/// An event parameter.
-///
-/// `<ty> [indexed] [name]`
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub struct EventParameter {
-    /// The code location.
-    pub loc: Loc,
-    /// The type.
-    pub ty: Expression,
-    /// Whether this parameter is indexed.
-    pub indexed: bool,
-    /// The optional identifier.
-    pub name: Option<Identifier>,
-}
-
-/// An event definition.
-///
-/// `event <name>(<fields>,*) [anonymous];`
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub struct EventDefinition {
-    /// The code location.
-    pub loc: Loc,
-    /// The identifier.
-    ///
-    /// This field is `None` only if an error occurred during parsing.
-    pub name: Option<Identifier>,
-    /// The list of event parameters.
-    pub fields: Vec<EventParameter>,
-    /// Whether this event is anonymous.
-    pub anonymous: bool,
-}
-
 /// An error parameter.
 ///
 /// `<ty> [name]`
@@ -853,12 +798,12 @@ pub enum VariableAttribute {
 
     /// `constant`
     Constant(Loc),
-
-    /// `immutable`
-    Immutable(Loc),
-
-    /// `ovveride(<1>,*)`
-    Override(Loc, Vec<IdentifierPath>),
+    /// `portable`
+    Portable(Loc),
+    /// `readable`
+    Readable(Loc),
+    /// `writable`
+    Writable(Loc),
 }
 
 /// A variable definition.
@@ -892,7 +837,7 @@ pub struct TypeDefinition {
     /// The user-defined type name.
     pub name: Identifier,
     /// The type expression.
-    pub ty: Expression,
+    pub ty: Type,
 }
 
 /// An annotation.
@@ -1064,8 +1009,6 @@ pub enum Expression {
     /// `<1> %= <2>`
     AssignModulo(Loc, Box<Expression>, Box<Expression>),
 
-    /// `true` or `false`
-    BoolLiteral(Loc, bool),
     /// ``
     NumberLiteral(Loc, String, String, Option<Identifier>),
     /// ``
@@ -1150,7 +1093,6 @@ macro_rules! expr_components {
             | FunctionCall(..)
             | FunctionCallBlock(..)
             | NamedFunctionCall(..)
-            | BoolLiteral(..)
             | NumberLiteral(..)
             | RationalNumberLiteral(..)
             | HexNumberLiteral(..)
@@ -1230,8 +1172,7 @@ impl Expression {
         use Expression::*;
         matches!(
             self,
-            BoolLiteral(..)
-                | NumberLiteral(..)
+            NumberLiteral(..)
                 | RationalNumberLiteral(..)
                 | HexNumberLiteral(..)
                 | StringLiteral(..)
@@ -1264,7 +1205,6 @@ impl Expression {
             self,
             Expression::AddressLiteral(..)
                 | Expression::HexLiteral(..)
-                | Expression::BoolLiteral(..)
                 | Expression::NumberLiteral(..)
                 | Expression::ArrayLiteral(..)
                 | Expression::HexNumberLiteral(..)
