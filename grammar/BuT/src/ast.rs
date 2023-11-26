@@ -815,7 +815,7 @@ pub struct VariableDefinition {
     /// The code location.
     pub loc: Loc,
     /// The type.
-    pub ty: Expression,
+    pub ty: Box<Type>,
     /// The list of variable attributes.
     pub attrs: Vec<VariableAttribute>,
     /// The identifier.

@@ -13,6 +13,7 @@ SourceUnitPart: SourceUnitPart = {
     EnumDefinition => SourceUnitPart::EnumDefinition(<>),
     StructDefinition => SourceUnitPart::StructDefinition(<>),
     TypeDefinition => SourceUnitPart::TypeDefinition(<>),
+    VariableDefinition => SourceUnitPart::VariableDefinition(<>),
 }
 
 ImportPath: ImportPath = {
@@ -90,6 +91,25 @@ VariableDeclaration: VariableDeclaration = {
     },
 }
 
+VariableDefinition: Box<VariableDefinition> = {
+    <l:@L> "let" <attrs:VariableAttribute*> <name:ButIdentifierOrError> <ty:Type> <e:("=" <Expression>)?> <r:@R> ";" => {
+        Box::new(VariableDefinition{
+            loc: Loc::Source(file_no, l, r), ty: Box::new(ty), attrs, name, initializer: e,
+        })
+    },
+}
+
+Visibility: Visibility = {
+    <l:@L> "external" <r:@R> => Visibility::External(Some(Loc::Source(file_no, l, r))),
+}
+
+VariableAttribute: VariableAttribute = {
+    Visibility => VariableAttribute::Visibility(<>),
+    <l:@L> "constant" <r:@R> => VariableAttribute::Constant(Loc::Source(file_no, l, r)),
+    <l:@L> "readable" <r:@R> => VariableAttribute::Readable(Loc::Source(file_no, l, r)),
+    <l:@L> "writable" <r:@R> => VariableAttribute::Writable(Loc::Source(file_no, l, r)),
+}
+
 StructDefinition: Box<StructDefinition> = {
     <l:@L> "struct" <name:ButIdentifierOrError> "{" <fields:(<VariableDeclaration> ";")*> "}" <r:@R> => {
         Box::new(StructDefinition{loc: Loc::Source(file_no, l, r), name, fields})
@@ -114,6 +134,9 @@ Type: Type = {
             element_type: Box::new(ty)
         }
     }
+}
+
+Expression: Expression = {
 }
 
 StringLiteral: StringLiteral = {
@@ -212,7 +235,10 @@ extern {
         "library" => Token::Library,
         "enum" => Token::Enum,
         "type" => Token::Type,
-        "const" => Token::Constant,
+        "constant" => Token::Constant,
+        "readable" => Token::Readable,
+        "writable" => Token::Writable,
+        "external" => Token::External,
         "true" => Token::True,
         "false" => Token::False,
         "fn" => Token::Function,

@@ -241,7 +241,7 @@ impl Display for ast::VariableDeclaration {
 
 impl Display for ast::VariableDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.ty.fmt(f)?;
+        Pointer::fmt(&self.ty, f)?;
         if !self.attrs.is_empty() {
             f.write_char(' ')?;
             write_separated(&self.attrs, f, " ")?;
