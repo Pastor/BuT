@@ -92,9 +92,9 @@ VariableDeclaration: VariableDeclaration = {
 }
 
 VariableDefinition: Box<VariableDefinition> = {
-    <l:@L> "let" <attrs:VariableAttribute*> <name:ButIdentifierOrError> <ty:Type> <e:("=" <Expression>)?> <r:@R> ";" => {
+    <l:@L> <attrs:VariableAttribute*> <name:ButIdentifierOrError>  <ty:(":" <Type>)?> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
-            loc: Loc::Source(file_no, l, r), ty: Box::new(ty), attrs, name, initializer: e,
+            loc: Loc::Source(file_no, l, r), ty, attrs, name, initializer: e,
         })
     },
 }
@@ -105,9 +105,10 @@ Visibility: Visibility = {
 
 VariableAttribute: VariableAttribute = {
     Visibility => VariableAttribute::Visibility(<>),
-    <l:@L> "constant" <r:@R> => VariableAttribute::Constant(Loc::Source(file_no, l, r)),
-    <l:@L> "readable" <r:@R> => VariableAttribute::Readable(Loc::Source(file_no, l, r)),
-    <l:@L> "writable" <r:@R> => VariableAttribute::Writable(Loc::Source(file_no, l, r)),
+    <l:@L> "const" <r:@R> => VariableAttribute::Constant(Loc::Source(file_no, l, r)),
+    <l:@L> "let" <r:@R> => VariableAttribute::Readable(Loc::Source(file_no, l, r)),
+    <l:@L> "mut" <r:@R> => VariableAttribute::Writable(Loc::Source(file_no, l, r)),
+    <l:@L> "pio" <r:@R> => VariableAttribute::Portable(Loc::Source(file_no, l, r)),
 }
 
 StructDefinition: Box<StructDefinition> = {
@@ -137,6 +138,48 @@ Type: Type = {
 }
 
 Expression: Expression = {
+    Precedence1
+}
+
+Precedence1: Expression = {
+    <l:@L> <n:number> <bit:(":" <number>)?> <r:@R> => {
+        let integer: String = n.0.chars().filter(|v| *v != '_').collect();
+        let exp: String = n.1.chars().filter(|v| *v != '_').collect();
+        let bit = if let Some(bit) = bit {
+            let bit: String = bit.0.chars().filter(|v| *v != '_').collect();
+            Some(u128::from_str_radix(&bit, 10).unwrap())
+        } else {
+            None
+        };
+
+        if let Some(bit) = bit {
+            Expression::AddressLiteral(Loc::Source(file_no, l, r), integer.parse().unwrap(), bit)
+        } else {
+            Expression::NumberLiteral(Loc::Source(file_no, l, r), integer, exp, None)
+        }
+    },
+    <l:@L> <n:rational> <r:@R> => {
+        let integer: String = n.0.chars().filter(|v| *v != '_').collect();
+        let fraction: String = n.1.chars().filter(|v| *v != '_').collect();
+        let exp: String = n.2.chars().filter(|v| *v != '_').collect();
+
+        Expression::RationalNumberLiteral(Loc::Source(file_no, l, r), integer, fraction, exp, None)
+    },
+    <l:@L> <n:hexnumber> <r:@R> => {
+        Expression::HexNumberLiteral(Loc::Source(file_no, l, r), n.to_owned(), None)
+    },
+    Precedence0
+}
+
+Precedence0: Expression = {
+    LiteralExpression
+}
+
+LiteralExpression: Expression = {
+    <a:@L> "true" <b:@R> => Expression::BoolLiteral(Loc::Source(file_no, a, b), true),
+    <a:@L> "false" <b:@R> => Expression::BoolLiteral(Loc::Source(file_no, a, b), false),
+    <StringLiteral+> => Expression::StringLiteral(<>),
+    <HexLiteral+> => Expression::HexLiteral(<>),
 }
 
 StringLiteral: StringLiteral = {
@@ -184,6 +227,7 @@ extern {
         identifier => Token::Identifier(<&'input str>),
         annotation => Token::Annotation(<&'input str>),
         string => Token::StringLiteral(<bool>, <&'input str>),
+        address => Token::AddressLiteral(<&'input str>),
         hexstring => Token::HexLiteral(<&'input str>),
         number => Token::Number(<&'input str>, <&'input str>),
         rational => Token::RationalNumber(<&'input str>, <&'input str>, <&'input str>),
@@ -235,9 +279,10 @@ extern {
         "library" => Token::Library,
         "enum" => Token::Enum,
         "type" => Token::Type,
-        "constant" => Token::Constant,
-        "readable" => Token::Readable,
-        "writable" => Token::Writable,
+        "const" => Token::Constant,
+        "let" => Token::Readable,
+        "mut" => Token::Writable,
+        "pio" => Token::Portable,
         "external" => Token::External,
         "true" => Token::True,
         "false" => Token::False,
@@ -254,6 +299,5 @@ extern {
         "as" => Token::As,
         "is" => Token::Is,
         "assembly" => Token::Assembly,
-        "let" => Token::Let
     }
 }

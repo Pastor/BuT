@@ -815,7 +815,7 @@ pub struct VariableDefinition {
     /// The code location.
     pub loc: Loc,
     /// The type.
-    pub ty: Box<Type>,
+    pub ty: Option<Type>,
     /// The list of variable attributes.
     pub attrs: Vec<VariableAttribute>,
     /// The identifier.
@@ -1026,7 +1026,8 @@ pub enum Expression {
     /// This [should be correctly checksummed][ref], but it currently isn't being enforced in the parser.
     ///
     /// [ref]: https://docs.soliditylang.org/en/latest/types.html#address-literals
-    AddressLiteral(Loc, String),
+    AddressLiteral(Loc, u128, u128),
+    BoolLiteral(Loc, bool),
     /// Any valid [Identifier].
     Variable(Identifier),
     /// `(<1>,*)`
@@ -1099,6 +1100,7 @@ macro_rules! expr_components {
             | StringLiteral(..)
             | Type(..)
             | HexLiteral(..)
+            | BoolLiteral(..)
             | AddressLiteral(..)
             | Variable(..)
             | List(..)

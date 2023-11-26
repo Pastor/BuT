@@ -19,6 +19,7 @@ pub mod lexer;
 #[cfg(test)]
 mod tests;
 mod typing;
+mod variables;
 
 #[allow(
     clippy::needless_lifetimes,

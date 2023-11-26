@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::ast::{
-        Expression, Identifier, Loc, SourceUnit, SourceUnitPart, Type, TypeDefinition,
-    };
+    use crate::ast::{Identifier, Loc, SourceUnit, SourceUnitPart, Type, TypeDefinition};
 
     #[test]
     fn parse_alias_type() {

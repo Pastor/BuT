@@ -292,6 +292,7 @@ impl_for_enums! {
         Self::StringLiteral(ref l, ..) => l.loc_opt().unwrap(),
         Self::HexLiteral(ref l, ..) => l.loc_opt().unwrap(),
         Self::Variable(ref l, ..) => l.loc(),
+        Self::BoolLiteral(ref l, ..) => l.loc(),
         Self::PostIncrement(l, ..)
         | Self::PostDecrement(l, ..)
         | Self::New(l, ..)

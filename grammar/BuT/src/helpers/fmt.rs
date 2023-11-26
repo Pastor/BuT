@@ -1,4 +1,4 @@
-use std::fmt::Pointer;
+use std::fmt::{Debug, Pointer};
 use std::{
     borrow::Cow,
     fmt::{Display, Formatter, Result, Write},
@@ -45,10 +45,10 @@ macro_rules! write_opt {
 impl Display for ast::Annotation {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_char('@')?;
-        self.id.fmt(f)?;
+        std::fmt::Display::fmt(&self.id, f)?;
         if let Some(value) = &self.value {
             f.write_char('(')?;
-            value.fmt(f)?;
+            std::fmt::Display::fmt(&value, f)?;
             f.write_char(')')?;
         }
 
@@ -58,7 +58,7 @@ impl Display for ast::Annotation {
 
 impl Display for ast::Base {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.name.fmt(f)?;
+        std::fmt::Display::fmt(&self.name, f)?;
         if let Some(args) = &self.args {
             f.write_char('(')?;
             write_separated(args, f, ", ")?;
@@ -81,7 +81,7 @@ impl Display for ast::EnumDefinition {
 
 impl Display for ast::ErrorDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.keyword.fmt(f)?;
+        std::fmt::Display::fmt(&self.keyword, f)?;
         write_opt!(f, ' ', &self.name);
 
         f.write_char('(')?;
@@ -92,7 +92,7 @@ impl Display for ast::ErrorDefinition {
 
 impl Display for ast::ErrorParameter {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.ty.fmt(f)?;
+        std::fmt::Display::fmt(&self.ty, f)?;
         write_opt!(f, ' ', &self.name);
         Ok(())
     }
@@ -100,7 +100,7 @@ impl Display for ast::ErrorParameter {
 
 impl Display for ast::FunctionDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.ty.fmt(f)?;
+        std::fmt::Display::fmt(&self.ty, f)?;
         write_opt!(f, ' ', &self.name);
 
         f.write_char('(')?;
@@ -120,7 +120,7 @@ impl Display for ast::FunctionDefinition {
 
         if let Some(body) = &self.body {
             f.write_char(' ')?;
-            body.fmt(f)
+            std::fmt::Display::fmt(&body, f)
         } else {
             f.write_char(';')
         }
@@ -147,16 +147,16 @@ impl Display for ast::IdentifierPath {
 
 impl Display for ast::NamedArgument {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.name.fmt(f)?;
+        std::fmt::Display::fmt(&self.name, f)?;
         f.write_str(": ")?;
-        self.expr.fmt(f)
+        std::fmt::Display::fmt(&self.expr, f)
     }
 }
 
 impl Display for ast::Parameter {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write_opt!(f, &self.annotation, ' ');
-        self.ty.fmt(f)?;
+        Debug::fmt(&self.ty, f)?;
         write_opt!(f, ' ', &self.storage);
         write_opt!(f, ' ', &self.name);
         Ok(())
@@ -197,9 +197,9 @@ impl Display for ast::StructDefinition {
 impl Display for ast::TypeDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("type ")?;
-        self.name.fmt(f)?;
+        std::fmt::Display::fmt(&self.name, f)?;
         f.write_str(" is ")?;
-        self.ty.fmt(f)?;
+        std::fmt::Display::fmt(&self.ty, f)?;
         f.write_char(';')
     }
 }
@@ -208,7 +208,7 @@ impl Display for ast::Using {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("using ")?;
 
-        self.list.fmt(f)?;
+        std::fmt::Display::fmt(&self.list, f)?;
 
         f.write_str(" for ")?;
 
@@ -224,7 +224,7 @@ impl Display for ast::Using {
 
 impl Display for ast::UsingFunction {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.path.fmt(f)?;
+        std::fmt::Display::fmt(&self.path, f)?;
         write_opt!(f, " as ", &self.oper);
         Ok(())
     }
@@ -241,10 +241,12 @@ impl Display for ast::VariableDeclaration {
 
 impl Display for ast::VariableDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        Pointer::fmt(&self.ty, f)?;
         if !self.attrs.is_empty() {
             f.write_char(' ')?;
             write_separated(&self.attrs, f, " ")?;
+        }
+        if let Some(ty) = &self.ty {
+            Display::fmt(ty, f)?;
         }
         write_opt!(f, ' ', &self.name);
         write_opt!(f, " = ", &self.initializer);
@@ -263,19 +265,19 @@ impl Display for ast::YulBlock {
 impl Display for ast::YulFor {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("for ")?;
-        self.init_block.fmt(f)?;
+        std::fmt::Display::fmt(&self.init_block, f)?;
         f.write_char(' ')?;
-        self.condition.fmt(f)?;
+        std::fmt::Display::fmt(&self.condition, f)?;
         f.write_char(' ')?;
-        self.post_block.fmt(f)?;
+        std::fmt::Display::fmt(&self.post_block, f)?;
         f.write_char(' ')?;
-        self.execution_block.fmt(f)
+        std::fmt::Display::fmt(&self.execution_block, f)
     }
 }
 
 impl Display for ast::YulFunctionCall {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.id.fmt(f)?;
+        std::fmt::Display::fmt(&self.id, f)?;
         f.write_char('(')?;
         write_separated(&self.arguments, f, ", ")?;
         f.write_char(')')
@@ -285,7 +287,7 @@ impl Display for ast::YulFunctionCall {
 impl Display for ast::YulFunctionDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("function ")?;
-        self.id.fmt(f)?;
+        std::fmt::Display::fmt(&self.id, f)?;
         f.write_char('(')?;
         write_separated(&self.params, f, ", ")?;
         f.write_str(") ")?;
@@ -296,14 +298,14 @@ impl Display for ast::YulFunctionDefinition {
             f.write_str(") ")?;
         }
 
-        self.body.fmt(f)
+        std::fmt::Display::fmt(&self.body, f)
     }
 }
 
 impl Display for ast::YulSwitch {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("switch ")?;
-        self.condition.fmt(f)?;
+        std::fmt::Display::fmt(&self.condition, f)?;
         if !self.cases.is_empty() {
             f.write_char(' ')?;
             write_separated(&self.cases, f, " ")?;
@@ -315,7 +317,7 @@ impl Display for ast::YulSwitch {
 
 impl Display for ast::YulTypedIdentifier {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        self.id.fmt(f)?;
+        std::fmt::Display::fmt(&self.id, f)?;
         write_opt!(f, ": ", &self.ty);
         Ok(())
     }
@@ -328,15 +330,15 @@ impl Display for ast::CatchClause {
             Self::Simple(_, param, block) => {
                 f.write_str("catch ")?;
                 write_opt!(f, '(', param, ") ");
-                block.fmt(f)
+                std::fmt::Display::fmt(&block, f)
             }
             Self::Named(_, ident, param, block) => {
                 f.write_str("catch ")?;
-                ident.fmt(f)?;
+                std::fmt::Display::fmt(&ident, f)?;
                 f.write_char('(')?;
-                param.fmt(f)?;
+                std::fmt::Display::fmt(&param, f)?;
                 f.write_str(") ")?;
-                block.fmt(f)
+                std::fmt::Display::fmt(&block, f)
             }
         }
     }
@@ -394,9 +396,9 @@ impl Display for ast::Expression {
                 Pointer::fmt(&expr, f)
             }
 
-            Self::Type(_, ty) => ty.fmt(f),
+            Self::Type(_, ty) => std::fmt::Display::fmt(&ty, f),
 
-            Self::Variable(ident) => ident.fmt(f),
+            Self::Variable(ident) => std::fmt::Display::fmt(&ident, f),
 
             Self::ArrayLiteral(_, exprs) => {
                 f.write_char('[')?;
@@ -421,7 +423,7 @@ impl Display for ast::Expression {
             Self::MemberAccess(_, expr, ident) => {
                 Pointer::fmt(&expr, f)?;
                 f.write_char('.')?;
-                ident.fmt(f)
+                std::fmt::Display::fmt(&ident, f)
             }
 
             Self::Parenthesis(_, expr) => {
@@ -435,7 +437,13 @@ impl Display for ast::Expression {
                 f.write_char(')')
             }
 
-            Self::AddressLiteral(_, lit) => f.write_str(lit),
+            Self::AddressLiteral(_, address, bit) => {
+                Display::fmt(address, f)?;
+                f.write_char(':')?;
+                Display::fmt(bit, f)?;
+                Ok(())
+            }
+            Self::BoolLiteral(_, b) => Display::fmt(b, f),
             Self::StringLiteral(vals) => write_separated(vals, f, " "),
             Self::HexLiteral(vals) => write_separated(vals, f, " "),
             Self::HexNumberLiteral(_, val, unit) => {
@@ -543,7 +551,7 @@ impl Display for ast::Expression {
                 let has_spaces = self.has_space_around();
 
                 if let Some(left) = left {
-                    left.fmt(f)?;
+                    std::fmt::Display::fmt(&left, f)?;
                     if has_spaces {
                         f.write_char(' ')?;
                     }
@@ -556,7 +564,7 @@ impl Display for ast::Expression {
                     if has_spaces {
                         f.write_char(' ')?;
                     }
-                    right.fmt(f)?;
+                    std::fmt::Display::fmt(&right, f)?;
                 }
 
                 Ok(())
@@ -625,6 +633,7 @@ impl ast::Expression {
             | StringLiteral(..)
             | Type(..)
             | HexLiteral(..)
+            | BoolLiteral(..)
             | AddressLiteral(..)
             | Variable(..)
             | List(..)
@@ -638,8 +647,8 @@ impl ast::Expression {
 impl Display for ast::FunctionAttribute {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            Self::Mutability(mutability) => mutability.fmt(f),
-            Self::Visibility(visibility) => visibility.fmt(f),
+            Self::Mutability(mutability) => std::fmt::Display::fmt(&mutability, f),
+            Self::Visibility(visibility) => std::fmt::Display::fmt(&visibility, f),
             Self::Virtual(_) => f.write_str("virtual"),
             Self::Immutable(_) => f.write_str("immutable"),
             Self::Override(_, idents) => {
@@ -651,7 +660,7 @@ impl Display for ast::FunctionAttribute {
                 }
                 Ok(())
             }
-            Self::BaseOrModifier(_, base) => base.fmt(f),
+            Self::BaseOrModifier(_, base) => std::fmt::Display::fmt(&base, f),
             Self::Error(_) => Ok(()),
         }
     }
@@ -681,14 +690,14 @@ impl Display for ast::Import {
         match self {
             Self::Plain(lit, _) => {
                 f.write_str("import ")?;
-                lit.fmt(f)?;
+                std::fmt::Display::fmt(&lit, f)?;
                 f.write_char(';')
             }
             Self::GlobalSymbol(lit, ident, _) => {
                 f.write_str("import ")?;
-                lit.fmt(f)?;
+                std::fmt::Display::fmt(&lit, f)?;
                 f.write_str(" as ")?;
-                ident.fmt(f)?;
+                std::fmt::Display::fmt(&ident, f)?;
                 f.write_char(';')
             }
             Self::Rename(lit, idents, _) => {
@@ -697,16 +706,16 @@ impl Display for ast::Import {
                 // same as `write_separated_iter`
                 let mut idents = idents.iter();
                 if let Some((ident, as_ident)) = idents.next() {
-                    ident.fmt(f)?;
+                    std::fmt::Display::fmt(&ident, f)?;
                     write_opt!(f, " as ", as_ident);
                     for (ident, as_ident) in idents {
                         f.write_str(", ")?;
-                        ident.fmt(f)?;
+                        std::fmt::Display::fmt(&ident, f)?;
                         write_opt!(f, " as ", as_ident);
                     }
                 }
                 f.write_str("} from ")?;
-                lit.fmt(f)?;
+                std::fmt::Display::fmt(&lit, f)?;
                 f.write_char(';')
             }
         }
@@ -716,8 +725,8 @@ impl Display for ast::Import {
 impl Display for ast::ImportPath {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            Self::Filename(lit) => lit.fmt(f),
-            Self::Path(path) => path.fmt(f),
+            Self::Filename(lit) => std::fmt::Display::fmt(&lit, f),
+            Self::Path(path) => std::fmt::Display::fmt(&path, f),
         }
     }
 }
@@ -742,7 +751,7 @@ impl ast::Mutability {
 impl Display for ast::SourceUnitPart {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            Self::ImportDirective(inner) => inner.fmt(f),
+            Self::ImportDirective(inner) => Pointer::fmt(&inner, f),
             Self::EnumDefinition(inner) => Pointer::fmt(&inner, f),
             Self::StructDefinition(inner) => Pointer::fmt(&inner, f),
             Self::ErrorDefinition(inner) => Pointer::fmt(&inner, f),
@@ -794,7 +803,7 @@ impl Display for ast::Statement {
                         f.write_str(") ")?;
                     }
                 }
-                block.fmt(f)
+                std::fmt::Display::fmt(&block, f)
             }
             Self::Args(_, args) => {
                 f.write_char('{')?;
@@ -803,7 +812,7 @@ impl Display for ast::Statement {
             }
             Self::If(_, cond, block, end_block) => {
                 f.write_str("if (")?;
-                cond.fmt(f)?;
+                std::fmt::Display::fmt(&cond, f)?;
                 f.write_str(") ")?;
                 Pointer::fmt(&block, f)?;
                 write_opt!(f, " else ", end_block);
@@ -811,13 +820,13 @@ impl Display for ast::Statement {
             }
             Self::While(_, cond, block) => {
                 f.write_str("while (")?;
-                cond.fmt(f)?;
+                std::fmt::Display::fmt(&cond, f)?;
                 f.write_str(") ")?;
                 Pointer::fmt(&block, f)
             }
-            Self::Expression(_, expr) => expr.fmt(f),
+            Self::Expression(_, expr) => std::fmt::Display::fmt(&expr, f),
             Self::VariableDefinition(_, var, expr) => {
-                var.fmt(f)?;
+                std::fmt::Display::fmt(&var, f)?;
                 write_opt!(f, " = ", expr);
                 f.write_char(';')
             }
@@ -825,9 +834,11 @@ impl Display for ast::Statement {
                 f.write_str("for (")?;
                 // edge case, don't write semicolon on a variable definition
                 match init.as_deref() {
-                    Some(var @ ast::Statement::VariableDefinition(..)) => var.fmt(f),
+                    Some(var @ ast::Statement::VariableDefinition(..)) => {
+                        std::fmt::Display::fmt(&var, f)
+                    }
                     Some(stmt) => {
-                        stmt.fmt(f)?;
+                        std::fmt::Display::fmt(&stmt, f)?;
                         f.write_char(';')
                     }
                     None => f.write_char(';'),
@@ -846,7 +857,7 @@ impl Display for ast::Statement {
                 f.write_str("do ")?;
                 Pointer::fmt(&block, f)?;
                 f.write_str(" while (")?;
-                cond.fmt(f)?;
+                std::fmt::Display::fmt(&cond, f)?;
                 f.write_str(");")
             }
             Self::Continue(_) => f.write_str("continue;"),
@@ -876,12 +887,12 @@ impl Display for ast::Statement {
             }
             Self::Emit(_, expr) => {
                 f.write_str("emit ")?;
-                expr.fmt(f)?;
+                std::fmt::Display::fmt(&expr, f)?;
                 f.write_char(';')
             }
             Self::Try(_, expr, returns, catch) => {
                 f.write_str("try ")?;
-                expr.fmt(f)?;
+                std::fmt::Display::fmt(&expr, f)?;
 
                 if let Some((list, stmt)) = returns {
                     f.write_str(" returns (")?;
@@ -930,15 +941,15 @@ impl Display for ast::Type {
             Self::DynamicBytes => f.write_str("bytes"),
             Self::Bytes(n) => {
                 f.write_str("bytes")?;
-                n.fmt(f)
+                std::fmt::Display::fmt(&n, f)
             }
             Self::Int(n) => {
                 f.write_str("int")?;
-                n.fmt(f)
+                std::fmt::Display::fmt(&n, f)
             }
             Self::Uint(n) => {
                 f.write_str("uint")?;
-                n.fmt(f)
+                std::fmt::Display::fmt(&n, f)
             }
             Self::Mapping {
                 key,
@@ -989,7 +1000,7 @@ impl Display for ast::Type {
             }
             Type::Alias(name) => {
                 f.write_str(" = ")?;
-                name.fmt(f)
+                std::fmt::Display::fmt(&name, f)
             }
             Type::Array {
                 element_type,
@@ -997,7 +1008,7 @@ impl Display for ast::Type {
                 loc: _,
             } => {
                 f.write_str("[ ")?;
-                element_count.fmt(f)?;
+                std::fmt::Display::fmt(&element_count, f)?;
                 f.write_str(" : ")?;
                 Pointer::fmt(element_type, f)?;
                 f.write_str(" ]")
@@ -1039,7 +1050,7 @@ impl ast::UserDefinedOperator {
 impl Display for ast::UsingList {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            Self::Library(ident) => ident.fmt(f),
+            Self::Library(ident) => std::fmt::Display::fmt(&ident, f),
             Self::Functions(list) => {
                 f.write_char('{')?;
                 write_separated(list, f, ", ")?;
@@ -1053,7 +1064,7 @@ impl Display for ast::UsingList {
 impl Display for ast::VariableAttribute {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            Self::Visibility(vis) => vis.fmt(f),
+            Self::Visibility(vis) => std::fmt::Display::fmt(&vis, f),
             Self::Constant(_) => f.write_str("const"),
             Self::Readable(_) => f.write_str("ro"),
             Self::Writable(_) => f.write_str("wo"),
@@ -1104,16 +1115,16 @@ impl Display for ast::YulExpression {
                 Ok(())
             }
             Self::HexStringLiteral(value, ident) => {
-                value.fmt(f)?;
+                std::fmt::Display::fmt(&value, f)?;
                 write_opt!(f, ": ", ident);
                 Ok(())
             }
             Self::StringLiteral(value, ident) => {
-                value.fmt(f)?;
+                std::fmt::Display::fmt(&value, f)?;
                 write_opt!(f, ": ", ident);
                 Ok(())
             }
-            Self::Variable(ident) => ident.fmt(f),
+            Self::Variable(ident) => std::fmt::Display::fmt(&ident, f),
             Self::FunctionCall(call) => Pointer::fmt(&call, f),
             Self::SuffixAccess(_, l, r) => {
                 Pointer::fmt(&l, f)?;
@@ -1127,16 +1138,16 @@ impl Display for ast::YulExpression {
 impl Display for ast::YulStatement {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            Self::Block(inner) => inner.fmt(f),
+            Self::Block(inner) => std::fmt::Display::fmt(&inner, f),
             Self::FunctionDefinition(inner) => Pointer::fmt(&inner, f),
             Self::FunctionCall(inner) => Pointer::fmt(&inner, f),
-            Self::For(inner) => inner.fmt(f),
-            Self::Switch(inner) => inner.fmt(f),
+            Self::For(inner) => std::fmt::Display::fmt(&inner, f),
+            Self::Switch(inner) => std::fmt::Display::fmt(&inner, f),
 
             Self::Assign(_, exprs, eq_expr) => {
                 write_separated(exprs, f, ", ")?;
                 f.write_str(" := ")?;
-                eq_expr.fmt(f)
+                std::fmt::Display::fmt(&eq_expr, f)
             }
             Self::VariableDeclaration(_, vars, eq_expr) => {
                 f.write_str("let")?;
@@ -1150,9 +1161,9 @@ impl Display for ast::YulStatement {
 
             Self::If(_, expr, block) => {
                 f.write_str("if ")?;
-                expr.fmt(f)?;
+                std::fmt::Display::fmt(&expr, f)?;
                 f.write_char(' ')?;
-                block.fmt(f)
+                std::fmt::Display::fmt(&block, f)
             }
 
             Self::Leave(_) => f.write_str("leave"),
@@ -1169,13 +1180,13 @@ impl Display for ast::YulSwitchOptions {
         match self {
             Self::Case(_, expr, block) => {
                 f.write_str("case ")?;
-                expr.fmt(f)?;
+                std::fmt::Display::fmt(&expr, f)?;
                 f.write_str(" ")?;
-                block.fmt(f)
+                std::fmt::Display::fmt(&block, f)
             }
             Self::Default(_, block) => {
                 f.write_str("default ")?;
-                block.fmt(f)
+                std::fmt::Display::fmt(&block, f)
             }
         }
     }
@@ -1800,7 +1811,7 @@ mod tests {
                 ast::Expression::List(loc!(), vec![(loc!(), Some(param!(address))), (loc!(), Some(param!(uint256)))])
                     => "(address, uint256)",
 
-                ast::Expression::AddressLiteral(loc!(), "0x1234".into()) => "0x1234",
+                ast::Expression::AddressLiteral(loc!(), "0x1234".parse().unwrap(), 0) => "0x1234",
                 ast::Expression::StringLiteral(vec![lit!(unicode "¹²³")]) => "unicode\"¹²³\"",
                 ast::Expression::HexLiteral(vec![lit!(hex "00112233")]) => "hex\"00112233\"",
 

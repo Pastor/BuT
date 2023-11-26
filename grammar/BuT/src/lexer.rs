@@ -108,13 +108,13 @@ pub enum Token<'input> {
     Is,
 
     Assembly,
-    Let,
 
     Annotation(&'input str),
 
     Constant,
     Writable,
     Readable,
+    Portable,
     External,
 }
 
@@ -185,7 +185,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Struct => write!(f, "struct"),
             Token::Enum => write!(f, "enum"),
             Token::Type => write!(f, "type"),
-            Token::Constant => write!(f, "constant"),
+            Token::Constant => write!(f, "const"),
             Token::Do => write!(f, "do"),
             Token::Continue => write!(f, "continue"),
             Token::Break => write!(f, "break"),
@@ -200,11 +200,11 @@ impl<'input> fmt::Display for Token<'input> {
             Token::As => write!(f, "as"),
             Token::Is => write!(f, "is"),
             Token::Assembly => write!(f, "assembly"),
-            Token::Let => write!(f, "let"),
             Token::Annotation(name) => write!(f, "@{name}"),
             Token::External => write!(f, "external"),
-            Token::Readable => write!(f, "readable"),
-            Token::Writable => write!(f, "writable"),
+            Token::Readable => write!(f, "let"),
+            Token::Writable => write!(f, "mut"),
+            Token::Portable => write!(f, "pio"),
         }
     }
 }
@@ -277,7 +277,7 @@ pub fn is_keyword(word: &str) -> bool {
 
 static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "break" => Token::Break,
-    "constant" => Token::Constant,
+    "const" => Token::Constant,
     "continue" => Token::Continue,
     "do" => Token::Do,
     "else" => Token::Else,
@@ -300,9 +300,9 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "as" => Token::As,
     "is" => Token::Is,
     "assembly" => Token::Assembly,
-    "let" => Token::Let,
-    "readable" => Token::Readable,
-    "writable" => Token::Writable,
+    "let" => Token::Readable,
+    "mut" => Token::Writable,
+    "pio" => Token::Portable,
     "external" => Token::External,
 };
 
