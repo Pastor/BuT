@@ -1,4 +1,5 @@
 use std::{fmt, str::CharIndices};
+use std::str::FromStr;
 
 use itertools::{peek_nth, PeekNth};
 use phf::phf_map;
@@ -21,10 +22,8 @@ pub enum Token<'input> {
     StringLiteral(bool, &'input str),
     AddressLiteral(&'input str),
     HexLiteral(&'input str),
-    /// `(number, exponent)`
-    Number(&'input str, &'input str),
-    /// `(number, fraction, exponent)`
-    RationalNumber(&'input str, &'input str, &'input str),
+    Number(i64),
+    RationalNumber(&'input str),
     HexNumber(&'input str),
     Divide,
     Library,
@@ -126,14 +125,8 @@ impl<'input> fmt::Display for Token<'input> {
             Token::StringLiteral(true, s) => write!(f, "unicode\"{s}\""),
             Token::HexLiteral(hex) => write!(f, "{hex}"),
             Token::AddressLiteral(address) => write!(f, "{address}"),
-            Token::Number(integer, exp) if exp.is_empty() => write!(f, "{integer}"),
-            Token::Number(integer, exp) => write!(f, "{integer}e{exp}"),
-            Token::RationalNumber(integer, fraction, exp) if exp.is_empty() => {
-                write!(f, "{integer}.{fraction}")
-            }
-            Token::RationalNumber(integer, fraction, exp) => {
-                write!(f, "{integer}.{fraction}e{exp}")
-            }
+            Token::Number(n) => write!(f, "{n}"),
+            Token::RationalNumber(n) => write!(f, "{n}"),
             Token::HexNumber(n) => write!(f, "{n}"),
             Token::Semicolon => write!(f, ";"),
             Token::Comma => write!(f, ","),
@@ -216,7 +209,7 @@ impl<'input> fmt::Display for Token<'input> {
 /// ```
 /// use BuT::lexer::{Lexer, Token};
 ///
-/// let source = "uint256 number = 0;";
+/// let source = "int number = 0;";
 /// let mut comments = Vec::new();
 /// let mut errors = Vec::new();
 /// let mut lexer = Lexer::new(source, 0, &mut comments, &mut errors);
@@ -224,7 +217,7 @@ impl<'input> fmt::Display for Token<'input> {
 /// let mut next_token = || lexer.next().map(|(_, token, _)| token);
 /// assert_eq!(next_token(), Some(Token::Identifier("number")));
 /// assert_eq!(next_token(), Some(Token::Assign));
-/// assert_eq!(next_token(), Some(Token::Number("0", "")));
+/// assert_eq!(next_token(), Some(Token::Number(0i64)));
 /// assert_eq!(next_token(), Some(Token::Semicolon));
 /// assert_eq!(next_token(), None);
 /// assert!(errors.is_empty());
@@ -364,7 +357,8 @@ impl<'input> Lexer<'input> {
                     self.chars.next();
                 }
 
-                return Ok((start, Token::HexNumber(&self.input[start..=end]), end + 1));
+                let hex = &self.input[start + 2..=end];
+                return Ok((start, Token::Number(i64::from_str_radix(hex, 16).unwrap()), end + 1));
             }
         }
 
@@ -442,7 +436,7 @@ impl<'input> Lexer<'input> {
 
             return Ok((
                 start,
-                Token::RationalNumber(integer, fraction, exp),
+                Token::RationalNumber(&self.input[start..=rational_end]),
                 end + 1,
             ));
         }
@@ -450,7 +444,7 @@ impl<'input> Lexer<'input> {
         let integer = &self.input[start..=old_end];
         let exp = &self.input[exp_start..=end];
 
-        Ok((start, Token::Number(integer, exp), end + 1))
+        Ok((start, Token::Number(i64::from_str(&integer).unwrap()), end + 1))
     }
 
     fn string(
@@ -1024,92 +1018,10 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         assert_eq!(tokens, vec!((0, Token::HexLiteral("hex\"cafe_dead\""), 14)));
 
-        let tokens = Lexer::new(
-            "// foo bar\n0x00fead0_12 00090 0_0",
-            0,
-            &mut comments,
-            &mut errors,
-        )
-        .collect::<Vec<_>>();
-
-        assert_eq!(
-            tokens,
-            vec!(
-                (11, Token::HexNumber("0x00fead0_12"), 23),
-                (24, Token::Number("00090", ""), 29),
-                (30, Token::Number("0_0", ""), 33)
-            )
-        );
-
-        let tokens =
-            Lexer::new(
-                "// foo bar\n0x00fead0_12 9.0008 0_0",
-                0,
-                &mut comments,
-                &mut errors,
-            )
-            .collect::<Vec<_>>();
-
-        assert_eq!(
-            tokens,
-            vec!(
-                (11, Token::HexNumber("0x00fead0_12"), 23),
-                (24, Token::RationalNumber("9", "0008", ""), 30),
-                (31, Token::Number("0_0", ""), 34)
-            )
-        );
-
-        let tokens =
-            Lexer::new(
-                "// foo bar\n0x00fead0_12 .0008 0.9e2",
-                0,
-                &mut comments,
-                &mut errors,
-            )
-            .collect::<Vec<_>>();
-
-        assert_eq!(
-            tokens,
-            vec!(
-                (11, Token::HexNumber("0x00fead0_12"), 23),
-                (24, Token::RationalNumber("", "0008", ""), 29),
-                (30, Token::RationalNumber("0", "9", "2"), 35)
-            )
-        );
-
-        let tokens =
-            Lexer::new(
-                "// foo bar\n0x00fead0_12 .0008 0.9e-2-2",
-                0,
-                &mut comments,
-                &mut errors,
-            )
-            .collect::<Vec<_>>();
-
-        assert_eq!(
-            tokens,
-            vec!(
-                (11, Token::HexNumber("0x00fead0_12"), 23),
-                (24, Token::RationalNumber("", "0008", ""), 29),
-                (30, Token::RationalNumber("0", "9", "-2"), 36),
-                (36, Token::Subtract, 37),
-                (37, Token::Number("2", ""), 38)
-            )
-        );
-
-        let tokens = Lexer::new("1.2_3e2-", 0, &mut comments, &mut errors).collect::<Vec<_>>();
-
-        assert_eq!(
-            tokens,
-            vec!(
-                (0, Token::RationalNumber("1", "2_3", "2"), 7),
-                (7, Token::Subtract, 8)
-            )
-        );
 
         let tokens = Lexer::new("\"foo\"", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
@@ -1121,7 +1033,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1140,7 +1052,7 @@ mod tests {
                 &mut comments,
                 &mut errors,
             )
-            .collect::<Vec<_>>();
+                .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1195,7 +1107,7 @@ mod tests {
             tokens,
             vec!(
                 (0, Token::Subtract, 1),
-                (1, Token::Number("16", ""), 3),
+                (1, Token::Number(-16i64), 3),
                 (4, Token::Decrement, 6),
                 (7, Token::Subtract, 8),
                 (9, Token::SubtractAssign, 11),
@@ -1206,7 +1118,7 @@ mod tests {
 
         assert_eq!(
             tokens,
-            vec!((0, Token::Subtract, 1), (1, Token::Number("4", ""), 2),)
+            vec!((0, Token::Subtract, 1), (1, Token::Number(-4i64), 2), )
         );
 
         let mut errors = Vec::new();
@@ -1305,7 +1217,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .count();
+            .count();
 
         assert_eq!(tokens, 0);
         assert_eq!(
@@ -1337,7 +1249,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1368,14 +1280,7 @@ mod tests {
         // scientific notation
         let tokens = Lexer::new(r#" 1e0 "#, 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
-        assert_eq!(tokens, vec!((1, Token::Number("1", "0"), 4)));
-
-        let tokens = Lexer::new(r#" -9e0123"#, 0, &mut comments, &mut errors).collect::<Vec<_>>();
-
-        assert_eq!(
-            tokens,
-            vec!((1, Token::Subtract, 2), (2, Token::Number("9", "0123"), 8),)
-        );
+        assert_eq!(tokens, vec!((1, Token::Number(1i64), 4)));
 
         let mut errors = Vec::new();
         let tokens = Lexer::new(r#" -9e"#, 0, &mut comments, &mut errors).collect::<Vec<_>>();
@@ -1401,23 +1306,12 @@ mod tests {
         assert_eq!(
             tokens,
             vec!(
-                (0, Token::Number("42", ""), 2),
+                (0, Token::Number(42i64), 2),
                 (2, Token::Member, 3),
                 (3, Token::Identifier("a"), 4)
             )
         );
 
-        let tokens = Lexer::new(r#"42..a"#, 0, &mut comments, &mut errors).collect::<Vec<_>>();
-
-        assert_eq!(
-            tokens,
-            vec!(
-                (0, Token::Number("42", ""), 2),
-                (2, Token::Member, 3),
-                (3, Token::Member, 4),
-                (4, Token::Identifier("a"), 5)
-            )
-        );
 
         comments.truncate(0);
 
@@ -1460,7 +1354,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .count();
+            .count();
 
         assert_eq!(tokens, 0);
         assert_eq!(
@@ -1492,7 +1386,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<(usize, Token, usize)>>();
+            .collect::<Vec<(usize, Token, usize)>>();
 
         assert_eq!(
             tokens,
@@ -1523,22 +1417,6 @@ mod tests {
             )
         );
 
-        // scientific notation
-        let tokens =
-            Lexer::new(r#" 1e0 "#, 0, &mut comments, &mut errors)
-                .collect::<Vec<(usize, Token, usize)>>();
-
-        assert_eq!(tokens, vec!((1, Token::Number("1", "0"), 4)));
-
-        let tokens =
-            Lexer::new(r#" -9e0123"#, 0, &mut comments, &mut errors)
-                .collect::<Vec<(usize, Token, usize)>>();
-
-        assert_eq!(
-            tokens,
-            vec!((1, Token::Subtract, 2), (2, Token::Number("9", "0123"), 8),)
-        );
-
         let mut errors = Vec::new();
         let tokens = Lexer::new(r#" -9e"#, 0, &mut comments, &mut errors)
             .collect::<Vec<(usize, Token, usize)>>();
@@ -1560,17 +1438,6 @@ mod tests {
         );
 
         let mut errors = Vec::new();
-        let tokens = Lexer::new(r#"42.a"#, 0, &mut comments, &mut errors)
-            .collect::<Vec<(usize, Token, usize)>>();
-
-        assert_eq!(
-            tokens,
-            vec!(
-                (0, Token::Number("42", ""), 2),
-                (2, Token::Member, 3),
-                (3, Token::Identifier("a"), 4)
-            )
-        );
 
         let tokens =
             Lexer::new(r#"42..a"#, 0, &mut comments, &mut errors)
@@ -1579,7 +1446,7 @@ mod tests {
         assert_eq!(
             tokens,
             vec!(
-                (0, Token::Number("42", ""), 2),
+                (0, Token::Number(42i64), 2),
                 (2, Token::Member, 3),
                 (3, Token::Member, 4),
                 (4, Token::Identifier("a"), 5)
@@ -1594,30 +1461,18 @@ mod tests {
             vec!(LexicalError::InvalidCharacterInHexLiteral(
                 Loc::Source(0, 4, 5),
                 'g',
-            ),)
+            ), )
         );
-
-        let mut errors = Vec::new();
-        let tokens =
-            Lexer::new(".9", 0, &mut comments, &mut errors).collect::<Vec<(usize, Token, usize)>>();
-
-        assert_eq!(tokens, vec!((0, Token::RationalNumber("", "9", ""), 2)));
-
-        let mut errors = Vec::new();
-        let tokens = Lexer::new(".9e10", 0, &mut comments, &mut errors)
-            .collect::<Vec<(usize, Token, usize)>>();
-
-        assert_eq!(tokens, vec!((0, Token::RationalNumber("", "9", "10"), 5)));
 
         let mut errors = Vec::new();
         let tokens = Lexer::new(".9", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
-        assert_eq!(tokens, vec!((0, Token::RationalNumber("", "9", ""), 2)));
+        assert_eq!(tokens, vec!((0, Token::RationalNumber(".9"), 2)));
 
         let mut errors = Vec::new();
         let tokens = Lexer::new(".9e10", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
-        assert_eq!(tokens, vec!((0, Token::RationalNumber("", "9", "10"), 5)));
+        assert_eq!(tokens, vec!((0, Token::RationalNumber(".9"), 5)));
 
         errors.clear();
         comments.clear();

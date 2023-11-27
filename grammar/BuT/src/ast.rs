@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 
 #[doc(hidden)]
 pub use crate::helpers::{CodeLocation, OptionalCodeLocation};
-use crate::lexer::Token;
 
 /// A code location.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -1010,9 +1009,9 @@ pub enum Expression {
     AssignModulo(Loc, Box<Expression>, Box<Expression>),
 
     /// ``
-    NumberLiteral(Loc, String, String, Option<Identifier>),
+    NumberLiteral(Loc, i64),
     /// ``
-    RationalNumberLiteral(Loc, String, String, String, Option<Identifier>),
+    RationalNumberLiteral(Loc, String),
     /// ``
     HexNumberLiteral(Loc, String, Option<Identifier>),
     /// `<1>+`. See [StringLiteral].
@@ -1026,7 +1025,7 @@ pub enum Expression {
     /// This [should be correctly checksummed][ref], but it currently isn't being enforced in the parser.
     ///
     /// [ref]: https://docs.soliditylang.org/en/latest/types.html#address-literals
-    AddressLiteral(Loc, u128, u128),
+    AddressLiteral(Loc, i64, i64),
     BoolLiteral(Loc, bool),
     /// Any valid [Identifier].
     Variable(Identifier),

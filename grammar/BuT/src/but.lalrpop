@@ -128,10 +128,9 @@ TypeDefinition: Box<TypeDefinition> = {
 Type: Type = {
     <name:ButIdentifier> => Type::Alias(name),
     <l:@L> "[" <n:number> ":" <ty:Type> "]" <r:@R> => {
-        let integer: String = n.0.chars().filter(|v| *v != '_').collect();
         Type::Array {
             loc: Loc::Source(file_no, l, r),
-            element_count: integer.parse().unwrap(),
+            element_count: n as u16,
             element_type: Box::new(ty)
         }
     }
@@ -143,27 +142,20 @@ Expression: Expression = {
 
 Precedence1: Expression = {
     <l:@L> <n:number> <bit:(":" <number>)?> <r:@R> => {
-        let integer: String = n.0.chars().filter(|v| *v != '_').collect();
-        let exp: String = n.1.chars().filter(|v| *v != '_').collect();
         let bit = if let Some(bit) = bit {
-            let bit: String = bit.0.chars().filter(|v| *v != '_').collect();
-            Some(u128::from_str_radix(&bit, 10).unwrap())
+            Some(bit)
         } else {
             None
         };
 
         if let Some(bit) = bit {
-            Expression::AddressLiteral(Loc::Source(file_no, l, r), integer.parse().unwrap(), bit)
+            Expression::AddressLiteral(Loc::Source(file_no, l, r), n, bit)
         } else {
-            Expression::NumberLiteral(Loc::Source(file_no, l, r), integer, exp, None)
+            Expression::NumberLiteral(Loc::Source(file_no, l, r), n)
         }
     },
     <l:@L> <n:rational> <r:@R> => {
-        let integer: String = n.0.chars().filter(|v| *v != '_').collect();
-        let fraction: String = n.1.chars().filter(|v| *v != '_').collect();
-        let exp: String = n.2.chars().filter(|v| *v != '_').collect();
-
-        Expression::RationalNumberLiteral(Loc::Source(file_no, l, r), integer, fraction, exp, None)
+        Expression::RationalNumberLiteral(Loc::Source(file_no, l, r), n.to_string())
     },
     <l:@L> <n:hexnumber> <r:@R> => {
         Expression::HexNumberLiteral(Loc::Source(file_no, l, r), n.to_owned(), None)
@@ -229,8 +221,8 @@ extern {
         string => Token::StringLiteral(<bool>, <&'input str>),
         address => Token::AddressLiteral(<&'input str>),
         hexstring => Token::HexLiteral(<&'input str>),
-        number => Token::Number(<&'input str>, <&'input str>),
-        rational => Token::RationalNumber(<&'input str>, <&'input str>, <&'input str>),
+        number => Token::Number(<i64>),
+        rational => Token::RationalNumber(<&'input str>),
         hexnumber => Token::HexNumber(<&'input str>),
         ";" => Token::Semicolon,
         ":" => Token::Colon,

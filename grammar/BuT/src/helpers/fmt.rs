@@ -1,11 +1,11 @@
-use std::fmt::{Debug, Pointer};
 use std::{
     borrow::Cow,
     fmt::{Display, Formatter, Result, Write},
 };
+use std::fmt::{Debug, Pointer};
 
 use crate::ast;
-use crate::ast::{Expression, Type};
+use crate::ast::Type;
 
 macro_rules! write_opt {
     // no sep
@@ -453,34 +453,13 @@ impl Display for ast::Expression {
                 write_opt!(f, ' ', unit);
                 Ok(())
             }
-            Self::NumberLiteral(_, val, exp, unit) => {
-                let val = rm_underscores(val);
-                f.write_str(&val)?;
-                if !exp.is_empty() {
-                    f.write_char('e')?;
-                    let exp = rm_underscores(exp);
-                    f.write_str(&exp)?;
-                }
-                write_opt!(f, ' ', unit);
+            Self::NumberLiteral(_, val) => {
+                Display::fmt(val, f)?;
                 Ok(())
             }
-            Self::RationalNumberLiteral(_, val, fraction, exp, unit) => {
+            Self::RationalNumberLiteral(_, val) => {
                 let val = rm_underscores(val);
                 f.write_str(&val)?;
-
-                let mut fraction = fraction.trim_end_matches('0');
-                if fraction.is_empty() {
-                    fraction = "0"
-                }
-                f.write_char('.')?;
-                f.write_str(fraction)?;
-
-                if !exp.is_empty() {
-                    f.write_char('e')?;
-                    let exp = rm_underscores(exp);
-                    f.write_str(&exp)?;
-                }
-                write_opt!(f, ' ', unit);
                 Ok(())
             }
 
@@ -1208,9 +1187,9 @@ fn write_separated<T: Display>(slice: &[T], f: &mut Formatter<'_>, sep: &str) ->
 }
 
 fn write_separated_iter<T, I>(mut iter: I, f: &mut Formatter<'_>, sep: &str) -> Result
-where
-    I: Iterator<Item = T>,
-    T: Display,
+    where
+        I: Iterator<Item=T>,
+        T: Display,
 {
     if let Some(first) = iter.next() {
         first.fmt(f)?;
@@ -1817,23 +1796,10 @@ mod tests {
 
                 ast::Expression::HexNumberLiteral(loc!(), "0x1234".into(), None) => "0x1234",
                 ast::Expression::HexNumberLiteral(loc!(), "0x1234".into(), Some(id("gwei"))) => "0x1234 gwei",
-                ast::Expression::NumberLiteral(loc!(), "_123_4_".into(), "".into(), None)
+                ast::Expression::NumberLiteral(loc!(), "1234".parse().unwrap())
                     => "1234",
-                ast::Expression::NumberLiteral(loc!(), "_1_234_".into(), "_2".into(), None)
-                    => "1234e2",
-                ast::Expression::NumberLiteral(loc!(), "_1_23_4".into(), "".into(), Some(id("gwei")))
-                    => "1234 gwei",
-                ast::Expression::NumberLiteral(loc!(), "1_23_4_".into(), "2_".into(), Some(id("gwei")))
-                    => "1234e2 gwei",
-                ast::Expression::RationalNumberLiteral(loc!(), "1_23_4_".into(), "".into(), "".into(), None)
-                    => "1234.0",
-                ast::Expression::RationalNumberLiteral(loc!(), "_1_23_4".into(), "0".into(), "_2".into(), None)
-                    => "1234.0e2",
-                ast::Expression::RationalNumberLiteral(loc!(), "_1_234_".into(), "09".into(), "".into(), Some(id("gwei")))
-                    => "1234.09 gwei",
-                ast::Expression::RationalNumberLiteral(loc!(), "_123_4_".into(), "90".into(), "2_".into(), Some(id("gwei")))
-                    => "1234.9e2 gwei",
-
+                ast::Expression::RationalNumberLiteral(loc!(), ".9".into())
+                    => "0.9",
                 ast::Expression::FunctionCall(loc!(), Box::new(expr!(func)), vec![]) => "func()",
                 ast::Expression::FunctionCall(loc!(), Box::new(expr!(func)), vec![expr!(arg)])
                     => "func(arg)",

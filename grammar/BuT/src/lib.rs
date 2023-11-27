@@ -22,11 +22,11 @@ mod typing;
 mod variables;
 
 #[allow(
-    clippy::needless_lifetimes,
-    clippy::type_complexity,
-    clippy::ptr_arg,
-    clippy::redundant_clone,
-    clippy::just_underscores_and_digits
+clippy::needless_lifetimes,
+clippy::type_complexity,
+clippy::ptr_arg,
+clippy::redundant_clone,
+clippy::just_underscores_and_digits
 )]
 mod but {
     // include!(concat!(env!("OUT_DIR"), "/but.rs"));

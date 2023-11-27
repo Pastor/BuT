@@ -1,6 +1,6 @@
+use std::{fs, path::Path, thread};
 use std::sync::mpsc;
 use std::time::Duration;
-use std::{fs, path::Path, thread};
 
 use pretty_assertions::assert_eq;
 use walkdir::WalkDir;
@@ -108,79 +108,73 @@ fn parse_test() {
         .unwrap();
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::FunctionDefinition(Box::new(
         FunctionDefinition {
-            loc: Loc::Source(0, 720, 735),
+            loc: Source(0, 720, 735),
             ty: FunctionTy::Function,
             name: Some(Identifier {
-                loc: Loc::Source(0, 729, 732),
+                loc: Source(0, 729, 732),
                 name: "bar".to_string(),
             }),
-            name_loc: Loc::Source(0, 729, 732),
+            name_loc: Source(0, 729, 732),
             params: vec![],
             attributes: vec![],
             return_not_returns: None,
             returns: vec![],
             body: Some(Statement::Block {
-                loc: Loc::Source(0, 735, 1147),
+                loc: Source(0, 735, 1147),
                 unchecked: false,
                 statements: vec![Statement::Try(
-                    Loc::Source(0, 757, 1129),
+                    Source(0, 757, 1129),
                     Expression::FunctionCall(
-                        Loc::Source(0, 761, 770),
+                        Source(0, 761, 770),
                         Box::new(Expression::Variable(Identifier {
-                            loc: Loc::Source(0, 761, 764),
+                            loc: Source(0, 761, 764),
                             name: "sum".to_string(),
                         })),
                         vec![
                             Expression::NumberLiteral(
-                                Loc::Source(0, 765, 766),
-                                "1".to_string(),
-                                "".to_string(),
-                                None,
+                                Source(0, 765, 766),
+                                1,
                             ),
                             Expression::NumberLiteral(
-                                Loc::Source(0, 768, 769),
-                                "1".to_string(),
-                                "".to_string(),
-                                None,
+                                Source(0, 768, 769),
+                                1,
                             ),
                         ],
                     ),
                     Some((
                         vec![(
-                            Loc::Source(0, 780, 788),
+                            Source(0, 780, 788),
                             Some(Parameter {
-                                loc: Loc::Source(0, 780, 788),
-                                ty: Expression::Type(Loc::Source(0, 780, 784), Type::Uint(256)),
+                                loc: Source(0, 780, 788),
+                                ty: Expression::Type(Source(0, 780, 784), Type::Uint(256)),
                                 storage: None,
                                 name: Some(Identifier {
-                                    loc: Loc::Source(0, 785, 788),
+                                    loc: Source(0, 785, 788),
                                     name: "sum".to_string(),
                                 }),
                                 annotation: None,
                             }),
                         )],
                         Box::new(Statement::Block {
-                            loc: Loc::Source(0, 790, 855),
+                            loc: Source(0, 790, 855),
                             unchecked: false,
                             statements: vec![Statement::Expression(
-                                Loc::Source(0, 816, 832),
+                                Source(0, 816, 832),
                                 Expression::FunctionCall(
-                                    Loc::Source(0, 816, 832),
+                                    Source(0, 816, 832),
                                     Box::new(Expression::Variable(Identifier {
-                                        loc: Loc::Source(0, 816, 822),
+                                        loc: Source(0, 816, 822),
                                         name: "assert".to_string(),
                                     })),
                                     vec![Expression::Equal(
-                                        Loc::Source(0, 823, 831),
+                                        Source(0, 823, 831),
                                         Box::new(Expression::Variable(Identifier {
-                                            loc: Loc::Source(0, 823, 826),
+                                            loc: Source(0, 823, 826),
                                             name: "sum".to_string(),
                                         })),
                                         Box::new(Expression::NumberLiteral(
-                                            Loc::Source(0, 830, 831),
-                                            "2".to_string(),
-                                            "".to_string(),
-                                            None,
+                                            Source(0, 830, 831),
+                                            2,
                                         )),
                                     )],
                                 ),
@@ -189,25 +183,25 @@ fn parse_test() {
                     )),
                     vec![
                         CatchClause::Simple(
-                            Loc::Source(0, 856, 950),
+                            Source(0, 856, 950),
                             Some(Parameter {
-                                loc: Loc::Source(0, 863, 877),
-                                ty: Expression::Type(Loc::Source(0, 863, 868), Type::DynamicBytes),
-                                storage: Some(StorageLocation::Memory(Loc::Source(0, 869, 875))),
+                                loc: Source(0, 863, 877),
+                                ty: Expression::Type(Source(0, 863, 868), Type::DynamicBytes),
+                                storage: Some(StorageLocation::Memory(Source(0, 869, 875))),
                                 name: Some(Identifier {
-                                    loc: Loc::Source(0, 876, 877),
+                                    loc: Source(0, 876, 877),
                                     name: "b".to_string(),
                                 }),
                                 annotation: None,
                             }),
                             Statement::Block {
-                                loc: Loc::Source(0, 879, 950),
+                                loc: Source(0, 879, 950),
                                 unchecked: false,
                                 statements: vec![Statement::Revert(
-                                    Loc::Source(0, 905, 927),
+                                    Source(0, 905, 927),
                                     None,
                                     vec![Expression::StringLiteral(vec![StringLiteral {
-                                        loc: Loc::Source(0, 912, 926),
+                                        loc: Source(0, 912, 926),
                                         unicode: true,
                                         string: "très".to_string(),
                                     }])],
@@ -215,58 +209,58 @@ fn parse_test() {
                             },
                         ),
                         CatchClause::Named(
-                            Loc::Source(0, 951, 1046),
+                            Source(0, 951, 1046),
                             Identifier {
-                                loc: Loc::Source(0, 957, 962),
+                                loc: Source(0, 957, 962),
                                 name: "Error".to_string(),
                             },
                             Parameter {
-                                loc: Loc::Source(0, 963, 982),
-                                ty: Expression::Type(Loc::Source(0, 963, 969), Type::String),
-                                storage: Some(StorageLocation::Memory(Loc::Source(0, 970, 976))),
+                                loc: Source(0, 963, 982),
+                                ty: Expression::Type(Source(0, 963, 969), Type::String),
+                                storage: Some(StorageLocation::Memory(Source(0, 970, 976))),
                                 name: Some(Identifier {
-                                    loc: Loc::Source(0, 977, 982),
+                                    loc: Source(0, 977, 982),
                                     name: "error".to_string(),
                                 }),
                                 annotation: None,
                             },
                             Statement::Block {
-                                loc: Loc::Source(0, 984, 1046),
+                                loc: Source(0, 984, 1046),
                                 unchecked: false,
                                 statements: vec![Statement::Revert(
-                                    Loc::Source(0, 1010, 1023),
+                                    Source(0, 1010, 1023),
                                     None,
                                     vec![Expression::Variable(Identifier {
-                                        loc: Loc::Source(0, 1017, 1022),
+                                        loc: Source(0, 1017, 1022),
                                         name: "error".to_string(),
                                     })],
                                 )],
                             },
                         ),
                         CatchClause::Named(
-                            Loc::Source(0, 1047, 1129),
+                            Source(0, 1047, 1129),
                             Identifier {
-                                loc: Loc::Source(0, 1053, 1058),
+                                loc: Source(0, 1053, 1058),
                                 name: "Panic".to_string(),
                             },
                             Parameter {
-                                loc: Loc::Source(0, 1059, 1065),
-                                ty: Expression::Type(Loc::Source(0, 1059, 1063), Type::Uint(256)),
+                                loc: Source(0, 1059, 1065),
+                                ty: Expression::Type(Source(0, 1059, 1063), Type::Uint(256)),
                                 storage: None,
                                 name: Some(Identifier {
-                                    loc: Loc::Source(0, 1064, 1065),
+                                    loc: Source(0, 1064, 1065),
                                     name: "x".to_string(),
                                 }),
                                 annotation: None,
                             },
                             Statement::Block {
-                                loc: Loc::Source(0, 1067, 1129),
+                                loc: Source(0, 1067, 1129),
                                 unchecked: false,
                                 statements: vec![Statement::Revert(
-                                    Loc::Source(0, 1093, 1106),
+                                    Source(0, 1093, 1106),
                                     None,
                                     vec![Expression::StringLiteral(vec![StringLiteral {
-                                        loc: Loc::Source(0, 1100, 1105),
+                                        loc: Source(0, 1100, 1105),
                                         unicode: false,
                                         string: "feh".to_string(),
                                     }])],
@@ -285,7 +279,7 @@ fn parse_test() {
         comments,
         vec![
             Comment::DocLine(
-                Loc::Source(
+                Source(
                     0,
                     0,
                     14,
@@ -293,7 +287,7 @@ fn parse_test() {
                 "/// @title Foo".to_string(),
             ),
             Comment::DocLine(
-                Loc::Source(
+                Source(
                     0,
                     31,
                     51,
@@ -301,7 +295,7 @@ fn parse_test() {
                 "/// @description Foo".to_string(),
             ),
             Comment::DocLine(
-                Loc::Source(
+                Source(
                     0,
                     68,
                     75,
@@ -309,7 +303,7 @@ fn parse_test() {
                 "/// Bar".to_string(),
             ),
             Comment::DocBlock(
-                Loc::Source(
+                Source(
                     0,
                     127,
                     193,
@@ -317,7 +311,7 @@ fn parse_test() {
                 "/**\n                    @title Jurisdiction\n                    */".to_string(),
             ),
             Comment::DocLine(
-                Loc::Source(
+                Source(
                     0,
                     214,
                     230,
@@ -325,7 +319,7 @@ fn parse_test() {
                 "/// @author Anon".to_string(),
             ),
             Comment::DocBlock(
-                Loc::Source(
+                Source(
                     0,
                     251,
                     391,
@@ -357,29 +351,29 @@ fn parse_error_test() {
 
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::ErrorDefinition(Box::new(
         ErrorDefinition {
-            loc: Loc::Source(0, 10, 58),
+            loc: Source(0, 10, 58),
             keyword: Expression::Variable(Identifier {
-                loc: Loc::Source(0, 10, 15),
+                loc: Source(0, 10, 15),
                 name: "error".to_string(),
             }),
             name: Some(Identifier {
-                loc: Loc::Source(0, 16, 21),
+                loc: Source(0, 16, 21),
                 name: "Outer".to_string(),
             }),
             fields: vec![
                 ErrorParameter {
-                    ty: Expression::Type(Loc::Source(0, 22, 29), Type::Uint(256)),
-                    loc: Loc::Source(0, 22, 39),
+                    ty: Expression::Type(Source(0, 22, 29), Type::Uint(256)),
+                    loc: Source(0, 22, 39),
                     name: Some(Identifier {
-                        loc: Loc::Source(0, 30, 39),
+                        loc: Source(0, 30, 39),
                         name: "available".to_string(),
                     }),
                 },
                 ErrorParameter {
-                    ty: Expression::Type(Loc::Source(0, 41, 48), Type::Uint(256)),
-                    loc: Loc::Source(0, 41, 57),
+                    ty: Expression::Type(Source(0, 41, 48), Type::Uint(256)),
+                    loc: Source(0, 41, 57),
                     name: Some(Identifier {
-                        loc: Loc::Source(0, 49, 57),
+                        loc: Source(0, 49, 57),
                         name: "required".to_string(),
                     }),
                 },
@@ -393,19 +387,19 @@ fn parse_error_test() {
         comments,
         vec![
             Comment::DocLine(
-                Loc::Source(0, 134, 199),
+                Source(0, 134, 199),
                 "/// Insufficient balance for transfer. Needed `required` but only".to_owned(),
             ),
             Comment::DocLine(
-                Loc::Source(0, 212, 238),
+                Source(0, 212, 238),
                 "/// `available` available.".to_owned(),
             ),
             Comment::DocLine(
-                Loc::Source(0, 251, 290),
+                Source(0, 251, 290),
                 "/// @param available balance available.".to_owned(),
             ),
             Comment::DocLine(
-                Loc::Source(0, 303, 352),
+                Source(0, 303, 352),
                 "/// @param required requested amount to transfer.".to_owned(),
             ),
         ]
@@ -459,103 +453,103 @@ fn test_assembly_parser() {
 
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::FunctionDefinition(Box::new(
         FunctionDefinition {
-            loc: Loc::Source(0, 17, 32),
+            loc: Source(0, 17, 32),
             ty: FunctionTy::Function,
             name: Some(Identifier {
-                loc: Loc::Source(0, 26, 29),
+                loc: Source(0, 26, 29),
                 name: "bar".to_string(),
             }),
-            name_loc: Loc::Source(0, 26, 29),
+            name_loc: Source(0, 26, 29),
             params: vec![],
             attributes: vec![],
             return_not_returns: None,
             returns: vec![],
             body: Some(Statement::Block {
-                loc: Loc::Source(0, 32, 1045),
+                loc: Source(0, 32, 1045),
                 unchecked: false,
                 statements: vec![
                     Statement::Assembly {
-                        loc: Loc::Source(0, 54, 736),
+                        loc: Source(0, 54, 736),
                         block: YulBlock {
-                            loc: Loc::Source(0, 72, 736),
+                            loc: Source(0, 72, 736),
                             statements: vec![
                                 YulStatement::VariableDeclaration(
-                                    Loc::Source(0, 98, 108),
+                                    Source(0, 98, 108),
                                     vec![YulTypedIdentifier {
-                                        loc: Loc::Source(0, 102, 103),
+                                        loc: Source(0, 102, 103),
                                         id: Identifier {
-                                            loc: Loc::Source(0, 102, 103),
+                                            loc: Source(0, 102, 103),
                                             name: "x".to_string(),
                                         },
                                         ty: None,
                                     }],
                                     Some(YulExpression::NumberLiteral(
-                                        Loc::Source(0, 107, 108),
+                                        Source(0, 107, 108),
                                         "0".to_string(), "".to_string(),
                                         None,
                                     )),
                                 ),
                                 YulStatement::For(YulFor {
-                                    loc: Loc::Source(0, 133, 388),
+                                    loc: Source(0, 133, 388),
                                     init_block: YulBlock {
-                                        loc: Loc::Source(0, 137, 151),
+                                        loc: Source(0, 137, 151),
                                         statements: vec![YulStatement::VariableDeclaration(
-                                            Loc::Source(0, 139, 149),
+                                            Source(0, 139, 149),
                                             vec![YulTypedIdentifier {
-                                                loc: Loc::Source(0, 143, 144),
+                                                loc: Source(0, 143, 144),
                                                 id: Identifier {
-                                                    loc: Loc::Source(0, 143, 144),
+                                                    loc: Source(0, 143, 144),
                                                     name: "i".to_string(),
                                                 },
                                                 ty: None,
                                             }],
                                             Some(YulExpression::NumberLiteral(
-                                                Loc::Source(0, 148, 149),
+                                                Source(0, 148, 149),
                                                 "0".to_string(), "".to_string(),
                                                 None,
                                             )),
                                         )],
                                     },
                                     condition: YulExpression::FunctionCall(Box::new(YulFunctionCall {
-                                        loc: Loc::Source(0, 152, 164),
+                                        loc: Source(0, 152, 164),
                                         id: Identifier {
-                                            loc: Loc::Source(0, 152, 154),
+                                            loc: Source(0, 152, 154),
                                             name: "lt".to_string(),
                                         },
                                         arguments: vec![
                                             YulExpression::Variable(Identifier {
-                                                loc: Loc::Source(0, 155, 156),
+                                                loc: Source(0, 155, 156),
                                                 name: "i".to_string(),
                                             }),
                                             YulExpression::HexNumberLiteral(
-                                                Loc::Source(0, 158, 163),
+                                                Source(0, 158, 163),
                                                 "0x100".to_string(),
                                                 None,
                                             ),
                                         ],
                                     })),
                                     post_block: YulBlock {
-                                        loc: Loc::Source(0, 165, 186),
+                                        loc: Source(0, 165, 186),
                                         statements: vec![YulStatement::Assign(
-                                            Loc::Source(0, 167, 184),
+                                            Source(0, 167, 184),
                                             vec![YulExpression::Variable(Identifier {
-                                                loc: Loc::Source(0, 167, 168),
+                                                loc: Source(0, 167, 168),
                                                 name: "i".to_string(),
                                             })],
                                             YulExpression::FunctionCall(Box::new(
                                                 YulFunctionCall {
-                                                    loc: Loc::Source(0, 172, 184),
+                                                    loc: Source(0, 172, 184),
                                                     id: Identifier {
-                                                        loc: Loc::Source(0, 172, 175),
+                                                        loc: Source(0, 172, 175),
                                                         name: "add".to_string(),
                                                     },
                                                     arguments: vec![
                                                         YulExpression::Variable(Identifier {
-                                                            loc: Loc::Source(0, 176, 177),
+                                                            loc: Source(0, 176, 177),
                                                             name: "i".to_string(),
                                                         }),
                                                         YulExpression::HexNumberLiteral(
-                                                            Loc::Source(0, 179, 183),
+                                                            Source(0, 179, 183),
                                                             "0x20".to_string(),
                                                             None,
                                                         ),
@@ -565,37 +559,37 @@ fn test_assembly_parser() {
                                         )],
                                     },
                                     execution_block: YulBlock {
-                                        loc: Loc::Source(0, 187, 388),
+                                        loc: Source(0, 187, 388),
                                         statements: vec![
                                             YulStatement::Assign(
-                                                Loc::Source(0, 217, 248),
+                                                Source(0, 217, 248),
                                                 vec![YulExpression::Variable(Identifier {
-                                                    loc: Loc::Source(0, 217, 218),
+                                                    loc: Source(0, 217, 218),
                                                     name: "x".to_string(),
                                                 })],
                                                 YulExpression::FunctionCall(Box::new(
                                                     YulFunctionCall {
-                                                        loc: Loc::Source(0, 232, 248),
+                                                        loc: Source(0, 232, 248),
                                                         id: Identifier {
-                                                            loc: Loc::Source(0, 232, 235),
+                                                            loc: Source(0, 232, 235),
                                                             name: "add".to_string(),
                                                         },
                                                         arguments: vec![
                                                             YulExpression::Variable(Identifier {
-                                                                loc: Loc::Source(0, 236, 237),
+                                                                loc: Source(0, 236, 237),
                                                                 name: "x".to_string(),
                                                             }),
                                                             YulExpression::FunctionCall(Box::new(
                                                                 YulFunctionCall {
-                                                                    loc: Loc::Source(0, 239, 247),
+                                                                    loc: Source(0, 239, 247),
                                                                     id: Identifier {
-                                                                        loc: Loc::Source(0, 239, 244),
+                                                                        loc: Source(0, 239, 244),
                                                                         name: "mload".to_string(),
                                                                     },
                                                                     arguments: vec![
                                                                         YulExpression::Variable(
                                                                             Identifier {
-                                                                                loc: Loc::Source(0, 245, 246),
+                                                                                loc: Source(0, 245, 246),
                                                                                 name: "i".to_string(),
                                                                             },
                                                                         ),
@@ -607,21 +601,21 @@ fn test_assembly_parser() {
                                                 )),
                                             ),
                                             YulStatement::If(
-                                                Loc::Source(0, 278, 362),
+                                                Source(0, 278, 362),
                                                 YulExpression::FunctionCall(Box::new(
                                                     YulFunctionCall {
-                                                        loc: Loc::Source(0, 281, 292),
+                                                        loc: Source(0, 281, 292),
                                                         id: Identifier {
-                                                            loc: Loc::Source(0, 281, 283),
+                                                            loc: Source(0, 281, 283),
                                                             name: "gt".to_string(),
                                                         },
                                                         arguments: vec![
                                                             YulExpression::Variable(Identifier {
-                                                                loc: Loc::Source(0, 284, 285),
+                                                                loc: Source(0, 284, 285),
                                                                 name: "i".to_string(),
                                                             }),
                                                             YulExpression::HexNumberLiteral(
-                                                                Loc::Source(0, 287, 291),
+                                                                Source(0, 287, 291),
                                                                 "0x10".to_string(),
                                                                 None,
                                                             ),
@@ -629,52 +623,52 @@ fn test_assembly_parser() {
                                                     },
                                                 )),
                                                 YulBlock {
-                                                    loc: Loc::Source(0, 293, 362),
-                                                    statements: vec![YulStatement::Break(Loc::Source(0, 327, 332))],
+                                                    loc: Source(0, 293, 362),
+                                                    statements: vec![YulStatement::Break(Source(0, 327, 332))],
                                                 },
                                             ),
                                         ],
                                     },
                                 }),
                                 YulStatement::VariableDeclaration(
-                                    Loc::Source(0, 414, 451),
+                                    Source(0, 414, 451),
                                     vec![
                                         YulTypedIdentifier {
-                                            loc: Loc::Source(0, 418, 425),
+                                            loc: Source(0, 418, 425),
                                             id: Identifier {
-                                                loc: Loc::Source(0, 418, 419),
+                                                loc: Source(0, 418, 419),
                                                 name: "h".to_string(),
                                             },
                                             ty: Some(Identifier {
-                                                loc: Loc::Source(0, 422, 425),
+                                                loc: Source(0, 422, 425),
                                                 name: "u32".to_string(),
                                             }),
                                         },
                                         YulTypedIdentifier {
-                                            loc: Loc::Source(0, 427, 428),
+                                            loc: Source(0, 427, 428),
                                             id: Identifier {
-                                                loc: Loc::Source(0, 427, 428),
+                                                loc: Source(0, 427, 428),
                                                 name: "y".to_string(),
                                             },
                                             ty: None,
                                         },
                                         YulTypedIdentifier {
-                                            loc: Loc::Source(0, 430, 437),
+                                            loc: Source(0, 430, 437),
                                             id: Identifier {
-                                                loc: Loc::Source(0, 430, 431),
+                                                loc: Source(0, 430, 431),
                                                 name: "z".to_string(),
                                             },
                                             ty: Some(Identifier {
-                                                loc: Loc::Source(0, 434, 437),
+                                                loc: Source(0, 434, 437),
                                                 name: "u16".to_string(),
                                             }),
                                         },
                                     ],
                                     Some(YulExpression::FunctionCall(Box::new(
                                         YulFunctionCall {
-                                            loc: Loc::Source(0, 441, 451),
+                                            loc: Source(0, 441, 451),
                                             id: Identifier {
-                                                loc: Loc::Source(0, 441, 449),
+                                                loc: Source(0, 441, 449),
                                                 name: "funcCall".to_string(),
                                             },
                                             arguments: vec![],
@@ -682,35 +676,35 @@ fn test_assembly_parser() {
                                     ))),
                                 ),
                                 YulStatement::Switch(YulSwitch {
-                                    loc: Loc::Source(0, 477, 714),
+                                    loc: Source(0, 477, 714),
                                     condition: YulExpression::Variable(Identifier {
-                                        loc: Loc::Source(0, 484, 485),
+                                        loc: Source(0, 484, 485),
                                         name: "x".to_string(),
                                     }),
                                     cases: vec![YulSwitchOptions::Case(
-                                        Loc::Source(0, 510, 620),
+                                        Source(0, 510, 620),
                                         YulExpression::NumberLiteral(
-                                            Loc::Source(0, 515, 516),
+                                            Source(0, 515, 516),
                                             "0".to_string(), "".to_string(),
                                             None,
                                         ),
                                         YulBlock {
-                                            loc: Loc::Source(0, 517, 620),
+                                            loc: Source(0, 517, 620),
                                             statements: vec![YulStatement::FunctionCall(Box::new(
                                                 YulFunctionCall {
-                                                    loc: Loc::Source(0, 547, 559),
+                                                    loc: Source(0, 547, 559),
                                                     id: Identifier {
-                                                        loc: Loc::Source(0, 547, 553),
+                                                        loc: Source(0, 547, 553),
                                                         name: "revert".to_string(),
                                                     },
                                                     arguments: vec![
                                                         YulExpression::NumberLiteral(
-                                                            Loc::Source(0, 554, 555),
+                                                            Source(0, 554, 555),
                                                             "0".to_string(), "".to_string(),
                                                             None,
                                                         ),
                                                         YulExpression::NumberLiteral(
-                                                            Loc::Source(0, 557, 558),
+                                                            Source(0, 557, 558),
                                                             "0".to_string(), "".to_string(),
                                                             None,
                                                         ),
@@ -720,115 +714,115 @@ fn test_assembly_parser() {
                                         },
                                     )],
                                     default: Some(YulSwitchOptions::Default(
-                                        Loc::Source(0, 645, 714),
+                                        Source(0, 645, 714),
                                         YulBlock {
-                                            loc: Loc::Source(0, 653, 714),
-                                            statements: vec![YulStatement::Leave(Loc::Source(0, 683, 688))],
+                                            loc: Source(0, 653, 714),
+                                            statements: vec![YulStatement::Leave(Source(0, 683, 688))],
                                         },
                                     )),
                                 }),
                             ],
                         },
                         dialect: Some(StringLiteral {
-                            loc: Loc::Source(0, 63, 71),
+                            loc: Source(0, 63, 71),
                             unicode: false,
                             string: "evmasm".to_string(),
                         }),
                         flags: None,
                     },
                     Statement::Assembly {
-                        loc: Loc::Source(0, 758, 1027),
+                        loc: Source(0, 758, 1027),
                         block: YulBlock {
-                            loc: Loc::Source(0, 767, 1027),
+                            loc: Source(0, 767, 1027),
                             statements: vec![YulStatement::FunctionDefinition(Box::new(
                                 YulFunctionDefinition {
-                                    loc: Loc::Source(0, 794, 1005),
+                                    loc: Source(0, 794, 1005),
                                     id: Identifier {
-                                        loc: Loc::Source(0, 803, 808),
+                                        loc: Source(0, 803, 808),
                                         name: "power".to_string(),
                                     },
                                     params: vec![
                                         YulTypedIdentifier {
-                                            loc: Loc::Source(0, 809, 820),
+                                            loc: Source(0, 809, 820),
                                             id: Identifier {
-                                                loc: Loc::Source(0, 809, 813),
+                                                loc: Source(0, 809, 813),
                                                 name: "base".to_string(),
                                             },
                                             ty: Some(Identifier {
-                                                loc: Loc::Source(0, 816, 820),
+                                                loc: Source(0, 816, 820),
                                                 name: "u256".to_string(),
                                             }),
                                         },
                                         YulTypedIdentifier {
-                                            loc: Loc::Source(0, 822, 830),
+                                            loc: Source(0, 822, 830),
                                             id: Identifier {
-                                                loc: Loc::Source(0, 822, 830),
+                                                loc: Source(0, 822, 830),
                                                 name: "exponent".to_string(),
                                             },
                                             ty: None,
                                         },
                                     ],
                                     returns: vec![YulTypedIdentifier {
-                                        loc: Loc::Source(0, 835, 841),
+                                        loc: Source(0, 835, 841),
                                         id: Identifier {
-                                            loc: Loc::Source(0, 835, 841),
+                                            loc: Source(0, 835, 841),
                                             name: "result".to_string(),
                                         },
                                         ty: None,
                                     }],
                                     body: YulBlock {
-                                        loc: Loc::Source(0, 866, 1005),
+                                        loc: Source(0, 866, 1005),
                                         statements: vec![
                                             YulStatement::VariableDeclaration(
-                                                Loc::Source(0, 896, 940),
+                                                Source(0, 896, 940),
                                                 vec![YulTypedIdentifier {
-                                                    loc: Loc::Source(0, 900, 901),
+                                                    loc: Source(0, 900, 901),
                                                     id: Identifier {
-                                                        loc: Loc::Source(0, 900, 901),
+                                                        loc: Source(0, 900, 901),
                                                         name: "y".to_string(),
                                                     },
                                                     ty: None,
                                                 }],
                                                 Some(YulExpression::FunctionCall(Box::new(
                                                     YulFunctionCall {
-                                                        loc: Loc::Source(0, 905, 940),
+                                                        loc: Source(0, 905, 940),
                                                         id: Identifier {
-                                                            loc: Loc::Source(0, 905, 908),
+                                                            loc: Source(0, 905, 908),
                                                             name: "and".to_string(),
                                                         },
                                                         arguments: vec![
                                                             YulExpression::StringLiteral(
                                                                 StringLiteral {
-                                                                    loc: Loc::Source(0, 909, 914),
+                                                                    loc: Source(0, 909, 914),
                                                                     unicode: false,
                                                                     string: "abc".to_string(),
                                                                 },
                                                                 Some(Identifier {
-                                                                    loc: Loc::Source(0, 915, 918),
+                                                                    loc: Source(0, 915, 918),
                                                                     name: "u32".to_string(),
                                                                 }),
                                                             ),
                                                             YulExpression::FunctionCall(Box::new(
                                                                 YulFunctionCall {
-                                                                    loc: Loc::Source(0, 920, 939),
+                                                                    loc: Source(0, 920, 939),
                                                                     id: Identifier {
-                                                                        loc: Loc::Source(0, 920, 923),
+                                                                        loc: Source(0, 920, 923),
                                                                         name: "add".to_string(),
                                                                     },
                                                                     arguments: vec![
                                                                         YulExpression::NumberLiteral(
-                                                                            Loc::Source(0, 924, 930),
+                                                                            Source(0, 924, 930),
                                                                             "3".to_string(), "".to_string(),
                                                                             Some(Identifier {
-                                                                                loc: Loc::Source(0, 926, 930),
+                                                                                loc: Source(0, 926, 930),
                                                                                 name: "u256".to_string(),
                                                                             }),
                                                                         ),
                                                                         YulExpression::NumberLiteral(
-                                                                            Loc::Source(0, 932, 938),
+                                                                            Source(0, 932, 938),
                                                                             "2".to_string(), "".to_string(),
                                                                             Some(Identifier {
-                                                                                loc: Loc::Source(0, 934, 938),
+                                                                                loc: Source(0, 934, 938),
                                                                                 name: "u256".to_string(),
                                                                             }),
                                                                         ),
@@ -840,11 +834,11 @@ fn test_assembly_parser() {
                                                 ))),
                                             ),
                                             YulStatement::VariableDeclaration(
-                                                Loc::Source(0, 969, 979),
+                                                Source(0, 969, 979),
                                                 vec![YulTypedIdentifier {
-                                                    loc: Loc::Source(0, 973, 979),
+                                                    loc: Source(0, 973, 979),
                                                     id: Identifier {
-                                                        loc: Loc::Source(0, 973, 979),
+                                                        loc: Source(0, 973, 979),
                                                         name: "result".to_string(),
                                                     },
                                                     ty: None,
@@ -869,8 +863,8 @@ fn test_assembly_parser() {
     assert_eq!(
         comments,
         vec![
-            Comment::Block(Loc::Source(0, 222, 231), "/* meh */".to_string()),
-            Comment::Line(Loc::Source(0, 588, 594), "// feh".to_string()),
+            Comment::Block(Source(0, 222, 231), "/* meh */".to_string()),
+            Comment::Line(Source(0, 588, 594), "// feh".to_string()),
         ]
     );
 }
@@ -906,9 +900,9 @@ fn parse_user_defined_value_type() {
     let expected_parse_tree =
         SourceUnit(vec![SourceUnitPart::TypeDefinition(Box::new(
             TypeDefinition {
-                loc: Loc::Source(0, 9, 32),
+                loc: Source(0, 9, 32),
                 name: Identifier {
-                    loc: Loc::Source(0, 14, 21),
+                    loc: Source(0, 14, 21),
                     name: "Uint256".to_string(),
                 },
                 ty: Type::Uint(256),
@@ -950,10 +944,10 @@ int  /** x */ constant /** x */ y/** dev:  */ = /** x */1 /** x */ + /** x */2/*
 #[test]
 fn test_lib_but() {
     fn timeout_after<T, F>(d: Duration, f: F) -> Result<T, String>
-    where
-        T: Send + 'static,
-        F: FnOnce() -> T,
-        F: Send + 'static,
+        where
+            T: Send + 'static,
+            F: FnOnce() -> T,
+            F: Send + 'static,
     {
         let (done_tx, done_rx) = mpsc::channel();
         let handle = thread::spawn(move || {

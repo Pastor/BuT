@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::{borrow::Cow, rc::Rc};
+use std::sync::Arc;
 
 use crate::ast::{self, Loc};
 use crate::lexer::LexicalError;
