@@ -345,6 +345,7 @@ impl_for_enums! {
         | Self::RationalNumberLiteral(l, ..)
         | Self::HexNumberLiteral(l, ..)
         | Self::ArrayLiteral(l, ..)
+        | Self::Initializer(l, ..)
         | Self::List(l, ..)
         | Self::Type(l, ..)
         | Self::AddressLiteral(l, ..) => l,

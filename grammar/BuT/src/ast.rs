@@ -1,5 +1,6 @@
 #[cfg(feature = "ast-serde")]
 use serde::{Deserialize, Serialize};
+use crate::ast::Expression::Initializer;
 
 #[doc(hidden)]
 pub use crate::helpers::{CodeLocation, OptionalCodeLocation};
@@ -1033,6 +1034,7 @@ pub enum Expression {
     List(Loc, ParameterList),
     /// `\[ <1>.* \]`
     ArrayLiteral(Loc, Vec<Expression>),
+    Initializer(Loc, Vec<Expression>),
 }
 
 /// See `Expression::components`.
@@ -1103,6 +1105,7 @@ macro_rules! expr_components {
             | AddressLiteral(..)
             | Variable(..)
             | List(..)
+            | Initializer(..)
             | ArrayLiteral(..) => (None, None),
         }
     };

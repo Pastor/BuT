@@ -160,6 +160,9 @@ Precedence1: Expression = {
     <l:@L> <n:hexnumber> <r:@R> => {
         Expression::HexNumberLiteral(Loc::Source(file_no, l, r), n.to_owned(), None)
     },
+    <l:@L> "{" <v:CommaOne<Expression>> "}" <r:@R> => {
+        Expression::Initializer(Loc::Source(file_no, l, r), v)
+    },
     Precedence0
 }
 

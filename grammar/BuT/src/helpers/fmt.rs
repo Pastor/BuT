@@ -405,6 +405,11 @@ impl Display for ast::Expression {
                 write_separated(exprs, f, ", ")?;
                 f.write_char(']')
             }
+            Self::Initializer(_, exprs) => {
+                f.write_char('{')?;
+                write_separated(exprs, f, ", ")?;
+                f.write_char('}')
+            }
             Self::ArraySubscript(_, expr1, expr2) => {
                 Pointer::fmt(&expr1, f)?;
                 f.write_char('[')?;
@@ -617,6 +622,7 @@ impl ast::Expression {
             | Variable(..)
             | List(..)
             | ArrayLiteral(..)
+            | Initializer(..)
             | Parenthesis(..) => return None,
         };
         Some(operator)

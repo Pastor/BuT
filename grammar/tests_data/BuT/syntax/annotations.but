@@ -1,0 +1,9 @@
+#![fsm(Table)]
+#![guard = "timer >= 0"]
+#![ltl = "G(timer)"]
+
+#[extern(C), unused, inline(never)]
+let      var1: bit = 1;
+#[unused]
+let      var2: bit = 0;
+
