@@ -99,6 +99,12 @@ VariableDefinition: Box<VariableDefinition> = {
     },
 }
 
+ParameterAnnotation: Annotation = {
+    <l:@L> <id:annotation> <r:@R> => Annotation {
+        loc: Loc::Source(file_no, l, r), id, value: None,
+    }
+}
+
 Visibility: Visibility = {
     <l:@L> "external" <r:@R> => Visibility::External(Some(Loc::Source(file_no, l, r))),
 }

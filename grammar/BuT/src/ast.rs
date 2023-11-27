@@ -1,6 +1,5 @@
 #[cfg(feature = "ast-serde")]
 use serde::{Deserialize, Serialize};
-use crate::ast::Expression::Initializer;
 
 #[doc(hidden)]
 pub use crate::helpers::{CodeLocation, OptionalCodeLocation};

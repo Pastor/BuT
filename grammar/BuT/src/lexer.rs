@@ -703,7 +703,7 @@ impl<'input> Lexer<'input> {
                         Ok(parse_result) => return Some(parse_result),
                     }
                 }
-                Some((start, '@')) => {
+                Some((start, '#')) => {
                     let (id, end) = self.match_identifier(start);
                     if id.len() == 1 {
                         self.errors.push(LexicalError::UnrecognisedToken(
