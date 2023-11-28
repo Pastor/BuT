@@ -1,4 +1,4 @@
-#![doc = include_str!("../README.md")]
+#![doc = include_str!("../README.adoc")]
 #![warn(missing_debug_implementations, missing_docs)]
 
 use lalrpop_util::ParseError;
@@ -16,17 +16,18 @@ pub mod doccomment;
 pub mod helpers;
 pub mod lexer;
 
+mod annotations;
 #[cfg(test)]
 mod tests;
 mod typing;
 mod variables;
 
 #[allow(
-clippy::needless_lifetimes,
-clippy::type_complexity,
-clippy::ptr_arg,
-clippy::redundant_clone,
-clippy::just_underscores_and_digits
+    clippy::needless_lifetimes,
+    clippy::type_complexity,
+    clippy::ptr_arg,
+    clippy::redundant_clone,
+    clippy::just_underscores_and_digits
 )]
 mod but {
     // include!(concat!(env!("OUT_DIR"), "/but.rs"));
@@ -47,7 +48,10 @@ pub fn parse(
 
     let mut diagnostics = Vec::with_capacity(lex.errors.len() + parser_errors.len());
     for lexical_error in lex.errors {
-        diagnostics.push(Diagnostic::parser_error(lexical_error.loc(), lexical_error.to_string()))
+        diagnostics.push(Diagnostic::parser_error(
+            lexical_error.loc(),
+            lexical_error.to_string(),
+        ))
     }
 
     for e in parser_errors {
@@ -77,16 +81,14 @@ fn parser_error_to_diagnostic(
         ParseError::UnrecognizedToken {
             token: (l, token, r),
             expected,
-        } => {
-            Diagnostic::parser_error(
-                Loc::Source(file_no, *l, *r),
-                format!(
-                    "unrecognised token '{}', expected {}",
-                    token,
-                    expected.join(", ")
-                ),
-            )
-        }
+        } => Diagnostic::parser_error(
+            Loc::Source(file_no, *l, *r),
+            format!(
+                "unrecognised token '{}', expected {}",
+                token,
+                expected.join(", ")
+            ),
+        ),
         ParseError::User { error } => Diagnostic::parser_error(error.loc(), error.to_string()),
         ParseError::ExtraToken { token } => Diagnostic::parser_error(
             Loc::Source(file_no, token.0, token.2),

@@ -1,5 +1,5 @@
-use std::{borrow::Cow, rc::Rc};
 use std::sync::Arc;
+use std::{borrow::Cow, rc::Rc};
 
 use crate::ast::{self, Loc};
 use crate::lexer::LexicalError;
@@ -100,7 +100,7 @@ macro_rules! impl_optional_for_ast {
 
 impl_optional_for_ast!(
     // structs
-    ast::Annotation,
+    ast::AnnotationDefinition,
     ast::Base,
     ast::EnumDefinition,
     ast::ErrorDefinition,
@@ -210,7 +210,7 @@ macro_rules! impl_for_structs {
 
 // all structs except for SourceUnit
 impl_for_structs!(
-    ast::Annotation,
+    ast::AnnotationDefinition,
     ast::Base,
     ast::EnumDefinition,
     ast::ErrorDefinition,
@@ -275,7 +275,7 @@ impl_for_enums! {
         Self::VariableDefinition(ref l, ..) => l.loc(),
         Self::FunctionDefinition(ref l, ..) => l.loc(),
         Self::TypeDefinition(ref l, ..) => l.loc(),
-        Self::Annotation(ref l, ..) => l.loc(),
+        Self::AnnotationDefinition(ref l, ..) => l.loc(),
         Self::Using(ref l, ..) => l.loc(),
         Self::StraySemicolon(l, ..) => l,
     }
@@ -382,7 +382,7 @@ impl_for_enums! {
         Self::FunctionDefinition(ref l, ..) => l.loc(),
         Self::VariableDefinition(ref l, ..) => l.loc(),
         Self::TypeDefinition(ref l, ..) => l.loc(),
-        Self::Annotation(ref l, ..) => l.loc(),
+        Self::AnnotationDefinition(ref l, ..) => l.loc(),
         Self::Using(ref l, ..) => l.loc(),
         Self::PragmaDirective(l, ..)
         | Self::StraySemicolon(l, ..) => l,

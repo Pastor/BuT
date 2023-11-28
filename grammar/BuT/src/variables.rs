@@ -22,7 +22,10 @@ mod tests {
                     loc: Source(0, 6, 8),
                     name: "PI".to_string(),
                 }),
-                initializer: Some(RationalNumberLiteral(Source(0, 11, 17), "3.1415".to_string())),
+                initializer: Some(RationalNumberLiteral(
+                    Source(0, 11, 17),
+                    "3.1415".to_string(),
+                )),
             },
         ))]);
         assert_eq!(actual_parse_tree, expected_parse_tree);
@@ -53,32 +56,31 @@ mod tests {
         let src = r#"pio port6: [8: bit] = 0xFFC0; "#;
         let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
         assert_eq!(actual_parse_tree.0.len(), 1);
-        let expected_parse_tree =
-            SourceUnit(vec![SourceUnitPart::VariableDefinition(Box::new(
-                VariableDefinition {
-                    loc: Source(0, 0, 28),
-                    ty: Some(Array {
-                        loc: Source(0, 11, 19),
-                        element_count: 8,
-                        element_type: Box::new(Alias(Identifier {
-                            loc: Source(0, 15, 18),
-                            name: "bit".to_string(),
-                        })),
-                    }),
-                    attrs: vec![Portable(Source(0, 0, 3))],
-                    name: Some(Identifier {
-                        loc: Source(0, 4, 9),
-                        name: "port6".to_string(),
-                    }),
-                    initializer: Some(NumberLiteral(Source(0, 22, 28), 65472)),
-                },
-            ))]);
+        let expected_parse_tree = SourceUnit(vec![SourceUnitPart::VariableDefinition(Box::new(
+            VariableDefinition {
+                loc: Source(0, 0, 28),
+                ty: Some(Array {
+                    loc: Source(0, 11, 19),
+                    element_count: 8,
+                    element_type: Box::new(Alias(Identifier {
+                        loc: Source(0, 15, 18),
+                        name: "bit".to_string(),
+                    })),
+                }),
+                attrs: vec![Portable(Source(0, 0, 3))],
+                name: Some(Identifier {
+                    loc: Source(0, 4, 9),
+                    name: "port6".to_string(),
+                }),
+                initializer: Some(NumberLiteral(Source(0, 22, 28), 65472)),
+            },
+        ))]);
         assert_eq!(actual_parse_tree, expected_parse_tree);
     }
 
     #[test]
     fn parse_variable_with_initializer() {
-        let src = r#"let mut  var6: [ 3: [3: u8] ] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}};"#;
+        let src = r#"let mut  var6: [ 3: [3: u8] ] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};"#;
         let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
         assert_eq!(actual_parse_tree.0.len(), 1);
         let expected_parse_tree = SourceUnit(vec![SourceUnitPart::VariableDefinition(Box::new(
@@ -96,9 +98,7 @@ mod tests {
                         })),
                     }),
                 }),
-                attrs: vec![
-                    Readable(Source(0, 0, 3)), 
-                    Writable(Source(0, 4, 7))],
+                attrs: vec![Readable(Source(0, 0, 3)), Writable(Source(0, 4, 7))],
                 name: Some(Identifier {
                     loc: Source(0, 9, 13),
                     name: "var6".to_string(),
@@ -109,25 +109,25 @@ mod tests {
                         Initializer(
                             Source(0, 33, 42),
                             vec![
-                                NumberLiteral(Source(0, 34, 35), 0),
-                                NumberLiteral(Source(0, 37, 38), 0),
-                                NumberLiteral(Source(0, 40, 41), 0),
+                                NumberLiteral(Source(0, 34, 35), 1),
+                                NumberLiteral(Source(0, 37, 38), 2),
+                                NumberLiteral(Source(0, 40, 41), 3),
                             ],
                         ),
                         Initializer(
                             Source(0, 44, 53),
                             vec![
-                                NumberLiteral(Source(0, 45, 46), 0),
-                                NumberLiteral(Source(0, 48, 49), 0),
-                                NumberLiteral(Source(0, 51, 52), 0),
+                                NumberLiteral(Source(0, 45, 46), 4),
+                                NumberLiteral(Source(0, 48, 49), 5),
+                                NumberLiteral(Source(0, 51, 52), 6),
                             ],
                         ),
                         Initializer(
                             Source(0, 55, 64),
                             vec![
-                                NumberLiteral(Source(0, 56, 57), 0),
-                                NumberLiteral(Source(0, 59, 60), 0),
-                                NumberLiteral(Source(0, 62, 63), 0),
+                                NumberLiteral(Source(0, 56, 57), 7),
+                                NumberLiteral(Source(0, 59, 60), 8),
+                                NumberLiteral(Source(0, 62, 63), 9),
                             ],
                         ),
                     ],

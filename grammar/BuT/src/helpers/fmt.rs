@@ -1,11 +1,11 @@
+use std::fmt::{Debug, Pointer};
 use std::{
     borrow::Cow,
     fmt::{Display, Formatter, Result, Write},
 };
-use std::fmt::{Debug, Pointer};
 
 use crate::ast;
-use crate::ast::Type;
+use crate::ast::{Annotation, Type};
 
 macro_rules! write_opt {
     // no sep
@@ -44,14 +44,29 @@ macro_rules! write_opt {
 // structs
 impl Display for ast::Annotation {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        f.write_char('@')?;
-        std::fmt::Display::fmt(&self.id, f)?;
-        if let Some(value) = &self.value {
-            f.write_char('(')?;
-            std::fmt::Display::fmt(&value, f)?;
-            f.write_char(')')?;
+        match self {
+            Annotation::Identifier(_, id) => {
+                Display::fmt(id, f)?;
+            }
+            Annotation::Function { name, args, loc: _ } => {
+                Display::fmt(name, f)?;
+                f.write_str("(")?;
+                for i in args.iter() {
+                    Display::fmt(i, f)?;
+                    f.write_str(", ")?;
+                }
+                f.write_str(")")?;
+            }
+            Annotation::Assign {
+                name,
+                value,
+                loc: _,
+            } => {
+                Display::fmt(name, f)?;
+                f.write_str(" = ")?;
+                Display::fmt(value, f)?;
+            }
         }
-
         Ok(())
     }
 }
@@ -359,7 +374,7 @@ impl Display for ast::ContractPart {
             Self::VariableDefinition(inner) => Pointer::fmt(&inner, f),
             Self::FunctionDefinition(inner) => Pointer::fmt(&inner, f),
             Self::TypeDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::Annotation(inner) => Pointer::fmt(&inner, f),
+            Self::AnnotationDefinition(inner) => Pointer::fmt(&inner, f),
             Self::Using(inner) => Pointer::fmt(&inner, f),
             Self::StraySemicolon(_) => f.write_char(';'),
         }
@@ -743,7 +758,7 @@ impl Display for ast::SourceUnitPart {
             Self::FunctionDefinition(inner) => Pointer::fmt(&inner, f),
             Self::VariableDefinition(inner) => Pointer::fmt(&inner, f),
             Self::TypeDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::Annotation(inner) => Pointer::fmt(&inner, f),
+            Self::AnnotationDefinition(inner) => Pointer::fmt(&inner, f),
             Self::Using(inner) => Pointer::fmt(&inner, f),
             Self::PragmaDirective(_, ident, lit) => {
                 f.write_str("pragma")?;
@@ -1193,9 +1208,9 @@ fn write_separated<T: Display>(slice: &[T], f: &mut Formatter<'_>, sep: &str) ->
 }
 
 fn write_separated_iter<T, I>(mut iter: I, f: &mut Formatter<'_>, sep: &str) -> Result
-    where
-        I: Iterator<Item=T>,
-        T: Display,
+where
+    I: Iterator<Item = T>,
+    T: Display,
 {
     if let Some(first) = iter.next() {
         first.fmt(f)?;
@@ -1468,11 +1483,6 @@ mod tests {
     #[test]
     fn display_structs_simple() {
         struct_tests![
-            ast::Annotation {
-                id: id("name"),
-                value: Some(expr!(value)),
-            } => "@name(value)",
-
             ast::Base {
                 name: idp!("id", "path"),
                 args: None,
@@ -1545,16 +1555,6 @@ mod tests {
                 name: None,
                 annotation: None,
             } => "uint256 calldata",
-            ast::Parameter {
-                ty: expr_ty!(bytes),
-                storage: None,
-                name: Some(id("my_seed")),
-                annotation: Some(Annotation {
-                    loc: Loc::Builtin,
-                    id: id("name"),
-                    value: None,
-                }),
-            } => "@name bytes my_seed",
 
             ast::StringLiteral {
                 unicode: false,

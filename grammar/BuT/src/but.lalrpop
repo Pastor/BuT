@@ -14,6 +14,7 @@ SourceUnitPart: SourceUnitPart = {
     StructDefinition => SourceUnitPart::StructDefinition(<>),
     TypeDefinition => SourceUnitPart::TypeDefinition(<>),
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
+    GlobalAnnotationDefinition => SourceUnitPart::AnnotationDefinition(<>)
 }
 
 ImportPath: ImportPath = {
@@ -56,7 +57,7 @@ ImportRename: (Identifier, Option<Identifier>) = {
 }
 
 EnumDefinition: Box<EnumDefinition> = {
-    <l:@L> "enum" <name:ButIdentifierOrError> "{" <values:Comma<ButIdentifierOrError>> "}" <r:@R> => {
+    <l:@L> <annotations:AnnotationDefinition*> "enum" <name:ButIdentifierOrError> "{" <values:Comma<ButIdentifierOrError>> "}" <r:@R> => {
         Box::new(EnumDefinition{loc: Loc::Source(file_no, l, r), name, values})
     }
 }
@@ -92,17 +93,35 @@ VariableDeclaration: VariableDeclaration = {
 }
 
 VariableDefinition: Box<VariableDefinition> = {
-    <l:@L> <attrs:VariableAttribute*> <name:ButIdentifierOrError>  <ty:(":" <Type>)?> <e:("=" <Expression>)?> <r:@R> ";" => {
+    <l:@L> <annotations:AnnotationDefinition*> <attrs:VariableAttribute*> <name:ButIdentifierOrError>  <ty:(":" <Type>)?> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
             loc: Loc::Source(file_no, l, r), ty, attrs, name, initializer: e,
         })
     },
 }
 
-ParameterAnnotation: Annotation = {
-    <l:@L> <id:annotation> <r:@R> => Annotation {
-        loc: Loc::Source(file_no, l, r), id, value: None,
-    }
+Annotation: Annotation = {
+    <l:@L> <id:Identifier> <r:@R> => {
+        Annotation::Identifier(Loc::Source(file_no, l, r), id)
+    },
+    <l:@L> <id:Identifier> "(" <v:CommaOne<Annotation>> ")" <r:@R> => {
+        Annotation::Function{loc: Loc::Source(file_no, l, r), name: id, args: v}
+    },
+    <l:@L> <id:Identifier> "=" <e:Expression> <r:@R> => {
+        Annotation::Assign{loc: Loc::Source(file_no, l, r), name: id, value: e}
+    },
+}
+
+AnnotationDefinition: Box<AnnotationDefinition> = {
+    <l:@L> "#" "[" <args:CommaOne<Annotation>> "]" <r:@R> => {
+        Box::new(AnnotationDefinition{loc: Loc::Source(file_no, l, r), args: args, glob: false})
+    },
+}
+
+GlobalAnnotationDefinition: Box<AnnotationDefinition> = {
+    <l:@L> "#" "!" "[" <args:CommaOne<Annotation>> "]" <r:@R> => {
+        Box::new(AnnotationDefinition{loc: Loc::Source(file_no, l, r), args: args, glob: true})
+    },
 }
 
 Visibility: Visibility = {
@@ -118,7 +137,7 @@ VariableAttribute: VariableAttribute = {
 }
 
 StructDefinition: Box<StructDefinition> = {
-    <l:@L> "struct" <name:ButIdentifierOrError> "{" <fields:(<VariableDeclaration> ";")*> "}" <r:@R> => {
+    <l:@L> <annotations:AnnotationDefinition*> "struct" <name:ButIdentifierOrError> "{" <fields:(<VariableDeclaration> ";")*> "}" <r:@R> => {
         Box::new(StructDefinition{loc: Loc::Source(file_no, l, r), name, fields})
     }
 }
@@ -226,13 +245,13 @@ extern {
 
     enum Token<'input> {
         identifier => Token::Identifier(<&'input str>),
-        annotation => Token::Annotation(<&'input str>),
         string => Token::StringLiteral(<bool>, <&'input str>),
         address => Token::AddressLiteral(<&'input str>),
         hexstring => Token::HexLiteral(<&'input str>),
         number => Token::Number(<i64>),
         rational => Token::RationalNumber(<&'input str>),
         hexnumber => Token::HexNumber(<&'input str>),
+        "#" => Token::Sharp,
         ";" => Token::Semicolon,
         ":" => Token::Colon,
         "{" => Token::OpenCurlyBrace,

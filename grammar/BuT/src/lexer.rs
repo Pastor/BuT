@@ -1,5 +1,5 @@
-use std::{fmt, str::CharIndices};
 use std::str::FromStr;
+use std::{fmt, str::CharIndices};
 
 use itertools::{peek_nth, PeekNth};
 use phf::phf_map;
@@ -45,6 +45,7 @@ pub enum Token<'input> {
 
     String,
 
+    Sharp,
     Semicolon,
     Comma,
     OpenParenthesis,
@@ -130,6 +131,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::HexNumber(n) => write!(f, "{n}"),
             Token::Semicolon => write!(f, ";"),
             Token::Comma => write!(f, ","),
+            Token::Sharp => write!(f, "#"),
             Token::OpenParenthesis => write!(f, "("),
             Token::CloseParenthesis => write!(f, ")"),
             Token::OpenCurlyBrace => write!(f, "{{"),
@@ -338,14 +340,18 @@ impl<'input> Lexer<'input> {
                 let mut end = match self.chars.next() {
                     Some((end, ch)) if ch.is_ascii_hexdigit() => end,
                     Some((..)) => {
-                        return Err(
-                            LexicalError::MissingNumber(Loc::Source(self.file_no, start, start + 1))
-                        );
+                        return Err(LexicalError::MissingNumber(Loc::Source(
+                            self.file_no,
+                            start,
+                            start + 1,
+                        )));
                     }
                     None => {
-                        return Err(LexicalError::EndofFileInHex(
-                            Loc::Source(self.file_no, start, self.input.len())
-                        ));
+                        return Err(LexicalError::EndofFileInHex(Loc::Source(
+                            self.file_no,
+                            start,
+                            self.input.len(),
+                        )));
                     }
                 };
 
@@ -358,7 +364,11 @@ impl<'input> Lexer<'input> {
                 }
 
                 let hex = &self.input[start + 2..=end];
-                return Ok((start, Token::Number(i64::from_str_radix(hex, 16).unwrap()), end + 1));
+                return Ok((
+                    start,
+                    Token::Number(i64::from_str_radix(hex, 16).unwrap()),
+                    end + 1,
+                ));
             }
         }
 
@@ -444,7 +454,11 @@ impl<'input> Lexer<'input> {
         let integer = &self.input[start..=old_end];
         let exp = &self.input[exp_start..=end];
 
-        Ok((start, Token::Number(i64::from_str(&integer).unwrap()), end + 1))
+        Ok((
+            start,
+            Token::Number(i64::from_str(&integer).unwrap()),
+            end + 1,
+        ))
     }
 
     fn string(
@@ -703,17 +717,7 @@ impl<'input> Lexer<'input> {
                         Ok(parse_result) => return Some(parse_result),
                     }
                 }
-                Some((start, '#')) => {
-                    let (id, end) = self.match_identifier(start);
-                    if id.len() == 1 {
-                        self.errors.push(LexicalError::UnrecognisedToken(
-                            Loc::Source(self.file_no, start, start + 1),
-                            id.to_owned(),
-                        ));
-                    } else {
-                        return Some((start, Token::Annotation(&id[1..]), end));
-                    };
-                }
+                Some((i, '#')) => return Some((i, Token::Sharp, i + 1)),
                 Some((i, ';')) => return Some((i, Token::Semicolon, i + 1)),
                 Some((i, ',')) => return Some((i, Token::Comma, i + 1)),
                 Some((i, '(')) => return Some((i, Token::OpenParenthesis, i + 1)),
@@ -1018,10 +1022,9 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .collect::<Vec<_>>();
+        .collect::<Vec<_>>();
 
         assert_eq!(tokens, vec!((0, Token::HexLiteral("hex\"cafe_dead\""), 14)));
-
 
         let tokens = Lexer::new("\"foo\"", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
@@ -1033,7 +1036,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .collect::<Vec<_>>();
+        .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1045,14 +1048,13 @@ mod tests {
             )
         );
 
-        let tokens =
-            Lexer::new(
-                "pragma solidity \t>=0.5.0 <0.7.0 \n ;",
-                0,
-                &mut comments,
-                &mut errors,
-            )
-                .collect::<Vec<_>>();
+        let tokens = Lexer::new(
+            "pragma solidity \t>=0.5.0 <0.7.0 \n ;",
+            0,
+            &mut comments,
+            &mut errors,
+        )
+        .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1118,7 +1120,7 @@ mod tests {
 
         assert_eq!(
             tokens,
-            vec!((0, Token::Subtract, 1), (1, Token::Number(-4i64), 2), )
+            vec!((0, Token::Subtract, 1), (1, Token::Number(-4i64), 2),)
         );
 
         let mut errors = Vec::new();
@@ -1206,7 +1208,10 @@ mod tests {
         assert_eq!(tokens, 0);
         assert_eq!(
             comments,
-            vec!(Comment::DocBlock(Loc::Source(0, 0, 10), "/** foo */".to_owned()))
+            vec!(Comment::DocBlock(
+                Loc::Source(0, 0, 10),
+                "/** foo */".to_owned()
+            ))
         );
 
         comments.truncate(0);
@@ -1217,7 +1222,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .count();
+        .count();
 
         assert_eq!(tokens, 0);
         assert_eq!(
@@ -1249,7 +1254,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .collect::<Vec<_>>();
+        .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1312,7 +1317,6 @@ mod tests {
             )
         );
 
-
         comments.truncate(0);
 
         let tokens = Lexer::new("/// jadajadadjada\n// bar", 0, &mut comments, &mut errors).count();
@@ -1343,7 +1347,10 @@ mod tests {
         assert_eq!(tokens, 0);
         assert_eq!(
             comments,
-            vec!(Comment::DocBlock(Loc::Source(0, 0, 10), "/** foo */".to_owned()))
+            vec!(Comment::DocBlock(
+                Loc::Source(0, 0, 10),
+                "/** foo */".to_owned()
+            ))
         );
 
         comments.truncate(0);
@@ -1354,7 +1361,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .count();
+        .count();
 
         assert_eq!(tokens, 0);
         assert_eq!(
@@ -1386,7 +1393,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .collect::<Vec<(usize, Token, usize)>>();
+        .collect::<Vec<(usize, Token, usize)>>();
 
         assert_eq!(
             tokens,
@@ -1461,7 +1468,7 @@ mod tests {
             vec!(LexicalError::InvalidCharacterInHexLiteral(
                 Loc::Source(0, 4, 5),
                 'g',
-            ), )
+            ),)
         );
 
         let mut errors = Vec::new();

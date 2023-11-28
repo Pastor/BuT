@@ -2,16 +2,16 @@
 name = "BuT"
 version = "0.0.1"
 authors = ["Pastor <viruszold@gmail.com>"]
-description = "LTL"
+description = "BuT"
 homepage = "https://but.ru"
 repository = "https://github.com/Pastor/BuT"
-readme = "../../README.md"
+readme = "../../README.adoc"
 keywords = ["BuT", "framework", "code", "generation"]
 license = "BSD"
 edition = "2021"
 rust-version = "1.71.0"
 exclude = ["src/grammar.lalrpop"]
-include = ["Cargo.toml", "src/**/*", "src/ast.rs", "README.md", "LICENSE*"]
+include = ["Cargo.toml", "src/**/*", "src/ast.rs", "README.adoc", "LICENSE*"]
 
 [[bin]]
 name = "BuT-Tooling"

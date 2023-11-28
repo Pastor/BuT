@@ -344,11 +344,10 @@ pub enum SourceUnitPart {
     /// A variable definition.
     VariableDefinition(Box<VariableDefinition>),
 
+    AnnotationDefinition(Box<AnnotationDefinition>),
+
     /// A type definition.
     TypeDefinition(Box<TypeDefinition>),
-
-    /// An annotation.
-    Annotation(Box<Annotation>),
 
     /// A `using` directive.
     Using(Box<Using>),
@@ -542,7 +541,7 @@ pub enum ContractPart {
     TypeDefinition(Box<TypeDefinition>),
 
     /// A definition.
-    Annotation(Box<Annotation>),
+    AnnotationDefinition(Box<AnnotationDefinition>),
 
     /// A `using` directive.
     Using(Box<Using>),
@@ -825,6 +824,14 @@ pub struct VariableDefinition {
     pub initializer: Option<Expression>,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
+pub struct AnnotationDefinition {
+    pub loc: Loc,
+    pub args: Vec<Annotation>,
+    pub glob: bool,
+}
+
 /// A user type definition.
 ///
 /// `type <name> is <ty>;`
@@ -840,17 +847,20 @@ pub struct TypeDefinition {
 }
 
 /// An annotation.
-///
-/// `@<id>(<value>)`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub struct Annotation {
-    /// The code location.
-    pub loc: Loc,
-    /// The identifier.
-    pub id: Identifier,
-    /// The value.
-    pub value: Option<Expression>,
+pub enum Annotation {
+    Identifier(Loc, Identifier),
+    Function {
+        loc: Loc,
+        name: Identifier,
+        args: Vec<Annotation>,
+    },
+    Assign {
+        loc: Loc,
+        name: Identifier,
+        value: Expression,
+    },
 }
 
 /// A string literal.
