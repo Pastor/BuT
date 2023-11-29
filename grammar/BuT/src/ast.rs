@@ -516,6 +516,7 @@ pub struct StructDefinition {
     pub name: Option<Identifier>,
     /// The list of fields.
     pub fields: Vec<VariableDeclaration>,
+    pub annotations: Vec<AnnotationDefinition>,
 }
 
 /// A contract part.
@@ -782,6 +783,7 @@ pub struct EnumDefinition {
     ///
     /// This field contains `None` only if an error occurred during parsing.
     pub values: Vec<Option<Identifier>>,
+    pub annotations: Vec<AnnotationDefinition>,
 }
 
 /// A variable attribute.
@@ -822,6 +824,7 @@ pub struct VariableDefinition {
     pub name: Option<Identifier>,
     /// The optional initializer.
     pub initializer: Option<Expression>,
+    pub annotations: Vec<AnnotationDefinition>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -850,7 +853,7 @@ pub struct TypeDefinition {
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
 pub enum Annotation {
-    Identifier(Loc, Identifier),
+    Identifier(Loc, IdentifierPath),
     Function {
         loc: Loc,
         name: Identifier,
@@ -858,7 +861,7 @@ pub enum Annotation {
     },
     Assign {
         loc: Loc,
-        name: Identifier,
+        name: IdentifierPath,
         value: Expression,
     },
 }

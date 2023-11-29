@@ -17,6 +17,7 @@ mod tests {
             VariableDefinition {
                 loc: Source(0, 0, 17),
                 ty: None,
+                annotations: vec![],
                 attrs: vec![Constant(Source(0, 0, 5))],
                 name: Some(Identifier {
                     loc: Source(0, 6, 8),
@@ -43,6 +44,7 @@ mod tests {
                     loc: Source(0, 12, 15),
                     name: "bit".to_string(),
                 })),
+                annotations: vec![],
                 attrs: vec![Portable(Source(0, 0, 3))],
                 name: Some(Identifier {
                     loc: Source(0, 5, 10),
@@ -67,6 +69,7 @@ mod tests {
                         name: "bit".to_string(),
                     })),
                 }),
+                annotations: vec![],
                 attrs: vec![Portable(Source(0, 0, 3))],
                 name: Some(Identifier {
                     loc: Source(0, 4, 9),
@@ -98,6 +101,7 @@ mod tests {
                         })),
                     }),
                 }),
+                annotations: vec![],
                 attrs: vec![Readable(Source(0, 0, 3)), Writable(Source(0, 4, 7))],
                 name: Some(Identifier {
                     loc: Source(0, 9, 13),

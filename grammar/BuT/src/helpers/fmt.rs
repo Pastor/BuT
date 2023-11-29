@@ -156,7 +156,7 @@ impl Display for ast::Identifier {
 
 impl Display for ast::IdentifierPath {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write_separated(&self.identifiers, f, ".")
+        write_separated(&self.identifiers, f, "::")
     }
 }
 
@@ -1236,8 +1236,6 @@ fn rm_underscores(s: &str) -> Cow<'_, str> {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{Annotation, Loc};
-
     use super::*;
 
     macro_rules! struct_tests {
@@ -1587,18 +1585,21 @@ mod tests {
         struct_tests![
             ast::EnumDefinition {
                 name: Some(id("name")),
-                values: vec![]
+                values: vec![],
+                annotations: vec![]
             } => "enum name {}",
             ast::EnumDefinition {
                 name: Some(id("name")),
-                values: vec![Some(id("variant"))]
+                values: vec![Some(id("variant"))],
+                annotations: vec![]
             } => "enum name {variant}",
             ast::EnumDefinition {
                 name: Some(id("name")),
                 values: vec![
                     Some(id("variant1")),
                     Some(id("variant2")),
-                ]
+                ],
+                annotations: vec![]
             } => "enum name {variant1, variant2}",
 
             ast::ErrorDefinition {
@@ -1660,6 +1661,7 @@ mod tests {
             ast::StructDefinition {
                 name: Some(id("name")),
                 fields: vec![],
+                annotations: vec![]
             } => "struct name {}",
             ast::StructDefinition {
                 name: Some(id("name")),
@@ -1669,6 +1671,7 @@ mod tests {
                     storage: None,
                     name: Some(id("a")),
                 }],
+                annotations: vec![]
             } => "struct name {uint256 a;}",
             ast::StructDefinition {
                 name: Some(id("name")),
@@ -1687,6 +1690,7 @@ mod tests {
                         name: Some(id("b")),
                     }
                 ],
+                annotations: vec![]
             } => "struct name {uint256 a; uint256 b;}",
 
             // ast::TypeDefinition {

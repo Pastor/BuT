@@ -14,7 +14,7 @@ SourceUnitPart: SourceUnitPart = {
     StructDefinition => SourceUnitPart::StructDefinition(<>),
     TypeDefinition => SourceUnitPart::TypeDefinition(<>),
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
-    GlobalAnnotationDefinition => SourceUnitPart::AnnotationDefinition(<>)
+    GlobalAnnotationDefinition => SourceUnitPart::AnnotationDefinition(Box::new(<>))
 }
 
 ImportPath: ImportPath = {
@@ -58,12 +58,12 @@ ImportRename: (Identifier, Option<Identifier>) = {
 
 EnumDefinition: Box<EnumDefinition> = {
     <l:@L> <annotations:AnnotationDefinition*> "enum" <name:ButIdentifierOrError> "{" <values:Comma<ButIdentifierOrError>> "}" <r:@R> => {
-        Box::new(EnumDefinition{loc: Loc::Source(file_no, l, r), name, values})
+        Box::new(EnumDefinition{loc: Loc::Source(file_no, l, r), name, values, annotations})
     }
 }
 
 ButIdentifierPath: IdentifierPath = {
-    <l:@L> <e:ButIdentifier> <v:("." <ButIdentifier>)*> <r:@R> => {
+    <l:@L> <e:ButIdentifier> <v:(":" ":" <ButIdentifier>)*> <r:@R> => {
         let mut v = v;
         v.insert(0, e);
         IdentifierPath { loc: Loc::Source(file_no, l, r), identifiers: v }
@@ -95,32 +95,32 @@ VariableDeclaration: VariableDeclaration = {
 VariableDefinition: Box<VariableDefinition> = {
     <l:@L> <annotations:AnnotationDefinition*> <attrs:VariableAttribute*> <name:ButIdentifierOrError>  <ty:(":" <Type>)?> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
-            loc: Loc::Source(file_no, l, r), ty, attrs, name, initializer: e,
+            loc: Loc::Source(file_no, l, r), ty, attrs, name, initializer: e, annotations: annotations
         })
     },
 }
 
 Annotation: Annotation = {
-    <l:@L> <id:Identifier> <r:@R> => {
+    <l:@L> <id:ButIdentifierPath> <r:@R> => {
         Annotation::Identifier(Loc::Source(file_no, l, r), id)
     },
     <l:@L> <id:Identifier> "(" <v:CommaOne<Annotation>> ")" <r:@R> => {
         Annotation::Function{loc: Loc::Source(file_no, l, r), name: id, args: v}
     },
-    <l:@L> <id:Identifier> "=" <e:Expression> <r:@R> => {
+    <l:@L> <id:ButIdentifierPath> "=" <e:Expression> <r:@R> => {
         Annotation::Assign{loc: Loc::Source(file_no, l, r), name: id, value: e}
     },
 }
 
-AnnotationDefinition: Box<AnnotationDefinition> = {
+AnnotationDefinition: AnnotationDefinition = {
     <l:@L> "#" "[" <args:CommaOne<Annotation>> "]" <r:@R> => {
-        Box::new(AnnotationDefinition{loc: Loc::Source(file_no, l, r), args: args, glob: false})
+        AnnotationDefinition{loc: Loc::Source(file_no, l, r), args: args, glob: false}
     },
 }
 
-GlobalAnnotationDefinition: Box<AnnotationDefinition> = {
+GlobalAnnotationDefinition: AnnotationDefinition = {
     <l:@L> "#" "!" "[" <args:CommaOne<Annotation>> "]" <r:@R> => {
-        Box::new(AnnotationDefinition{loc: Loc::Source(file_no, l, r), args: args, glob: true})
+        AnnotationDefinition{loc: Loc::Source(file_no, l, r), args: args, glob: true}
     },
 }
 
@@ -138,7 +138,7 @@ VariableAttribute: VariableAttribute = {
 
 StructDefinition: Box<StructDefinition> = {
     <l:@L> <annotations:AnnotationDefinition*> "struct" <name:ButIdentifierOrError> "{" <fields:(<VariableDeclaration> ";")*> "}" <r:@R> => {
-        Box::new(StructDefinition{loc: Loc::Source(file_no, l, r), name, fields})
+        Box::new(StructDefinition{loc: Loc::Source(file_no, l, r), name, fields, annotations})
     }
 }
 
