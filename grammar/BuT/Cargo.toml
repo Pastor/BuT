@@ -1,5 +1,5 @@
 [package]
-name = "BuT"
+name = "but"
 version = "0.0.1"
 authors = ["Pastor <viruszold@gmail.com>"]
 description = "BuT"
@@ -14,7 +14,7 @@ exclude = ["src/grammar.lalrpop"]
 include = ["Cargo.toml", "src/**/*", "src/ast.rs", "README.adoc", "LICENSE*"]
 
 [[bin]]
-name = "BuT-Tooling"
+name = "but-tooling"
 test = false
 bench = false
 path = "bin/tooling/main.rs"

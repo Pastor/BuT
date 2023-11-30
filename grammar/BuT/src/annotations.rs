@@ -126,7 +126,7 @@ mod tests {
                 args: vec![Annotation::Assign {
                     loc: Source(0, 3, 23),
                     name: IdentifierPath {
-                        loc: Source(0, 3, 23),
+                        loc: Source(0, 3, 8),
                         identifiers: vec![Identifier {
                             loc: Source(0, 3, 8),
                             name: "guard".to_string(),

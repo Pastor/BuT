@@ -1,5 +1,5 @@
 [package]
-name = "LTL"
+name = "ltl"
 version = "0.0.1"
 authors = ["Pastor <viruszold@gmail.com>"]
 description = "LTL"
@@ -14,7 +14,7 @@ exclude = ["src/grammar.lalrpop"]
 include = ["Cargo.toml", "src/**/*", "src/ast.rs", "README.md", "LICENSE*"]
 
 [[bin]]
-name = "LTL-Tooling"
+name = "ltl-tooling"
 test = false
 bench = false
 path = "bin/tooling/main.rs"

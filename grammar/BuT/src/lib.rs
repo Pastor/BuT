@@ -30,8 +30,8 @@ mod variables;
     clippy::just_underscores_and_digits
 )]
 mod but {
-    // include!(concat!(env!("OUT_DIR"), "/but.rs"));
-    include!("but.rs");
+    include!(concat!(env!("OUT_DIR"), "/but.rs"));
+    // include!("but.rs");
 }
 
 pub fn parse(

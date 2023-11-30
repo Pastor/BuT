@@ -209,7 +209,7 @@ impl<'input> fmt::Display for Token<'input> {
 /// # Examples
 ///
 /// ```
-/// use BuT::lexer::{Lexer, Token};
+/// use but::lexer::{Lexer, Token};
 ///
 /// let source = "int number = 0;";
 /// let mut comments = Vec::new();
@@ -217,6 +217,7 @@ impl<'input> fmt::Display for Token<'input> {
 /// let mut lexer = Lexer::new(source, 0, &mut comments, &mut errors);
 ///
 /// let mut next_token = || lexer.next().map(|(_, token, _)| token);
+/// assert_eq!(next_token(), Some(Token::Identifier("int")));
 /// assert_eq!(next_token(), Some(Token::Identifier("number")));
 /// assert_eq!(next_token(), Some(Token::Assign));
 /// assert_eq!(next_token(), Some(Token::Number(0i64)));
@@ -307,7 +308,7 @@ impl<'input> Lexer<'input> {
     /// # Examples
     ///
     /// ```
-    /// use BuT::lexer::Lexer;
+    /// use but::lexer::Lexer;
     ///
     /// let source = "uint256 number = 0;";
     /// let mut comments = Vec::new();
