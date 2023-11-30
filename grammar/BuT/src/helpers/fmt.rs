@@ -1484,15 +1484,15 @@ mod tests {
             ast::Base {
                 name: idp!("id", "path"),
                 args: None,
-            } => "id.path",
+            } => "id::path",
             ast::Base {
                 name: idp!("id", "path"),
                 args: Some(vec![expr!(value)]),
-            } => "id.path(value)",
+            } => "id::path(value)",
             ast::Base {
                 name: idp!("id", "path"),
                 args: Some(vec![expr!(value1), expr!(value2)]),
-            } => "id.path(value1, value2)",
+            } => "id::path(value1, value2)",
 
             ast::ErrorParameter {
                 ty: expr_ty!(uint256),
@@ -1519,10 +1519,10 @@ mod tests {
             } => "id",
             ast::IdentifierPath {
                 identifiers: vec![id("id"), id("path")],
-            } => "id.path",
+            } => "id::path",
             ast::IdentifierPath {
                 identifiers: vec![id("long"), id("id"), id("path")],
-            } => "long.id.path",
+            } => "long::id::path",
 
             ast::NamedArgument {
                 name: id("name"),
@@ -1566,11 +1566,11 @@ mod tests {
             ast::UsingFunction {
                 path: idp!["id", "path"],
                 oper: None,
-            } => "id.path",
+            } => "id::path",
             ast::UsingFunction {
                 path: idp!["id", "path"],
                 oper: Some(ast::UserDefinedOperator::Add),
-            } => "id.path as +",
+            } => "id::path as +",
 
             ast::VariableDeclaration {
                 ty: None,

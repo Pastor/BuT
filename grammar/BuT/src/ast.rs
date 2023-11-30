@@ -1149,7 +1149,7 @@ impl Expression {
     /// # Examples
     ///
     /// ```
-    /// use BuT::ast::{Expression, Identifier, Loc};
+    /// use but::ast::{Expression, Identifier, Loc};
     ///
     /// // `a++`
     /// let var = Expression::Variable(Identifier::new("a"));
