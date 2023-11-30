@@ -996,6 +996,7 @@ mod tests {
             vec![
                 (3, Token::Identifier("a"), 4),
                 (5, Token::Subtract, 6),
+                (13, Token::Identifier("bool"), 17),
                 (18, Token::Identifier("hex"), 21),
             ]
         );
@@ -1003,11 +1004,11 @@ mod tests {
         assert_eq!(
             errors,
             vec![
-                LexicalError::MissingExponent(Loc::Source(0, 1, 42)),
-                LexicalError::MissingExponent(Loc::Source(0, 6, 42)),
+                LexicalError::MissingExponent(Loc::Source(0, 1, 36)),
+                LexicalError::MissingExponent(Loc::Source(0, 6, 36)),
                 LexicalError::UnrecognisedToken(Loc::Source(0, 9, 12), '€'.to_string()),
-                LexicalError::InvalidCharacterInHexLiteral(Loc::Source(0, 32, 33), 'g'),
-                LexicalError::EndOfFileInComment(Loc::Source(0, 37, 42)),
+                LexicalError::InvalidCharacterInHexLiteral(Loc::Source(0, 26, 27), 'g'),
+                LexicalError::EndOfFileInComment(Loc::Source(0, 31, 36)),
             ]
         );
 
