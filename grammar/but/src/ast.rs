@@ -493,13 +493,14 @@ pub struct VariableDeclaration {
     /// The code location.
     pub loc: Loc,
     /// The type.
-    pub ty: Option<Expression>,
+    pub ty: Option<Type>,
     /// The optional memory location.
     pub storage: Option<StorageLocation>,
     /// The identifier.
     ///
     /// This field is `None` only if an error occurred during parsing.
     pub name: Option<Identifier>,
+    pub annotations: Vec<AnnotationDefinition>,
 }
 
 /// A struct definition.

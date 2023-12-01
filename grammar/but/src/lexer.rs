@@ -315,7 +315,7 @@ impl<'input> Lexer<'input> {
     /// ```
     /// use but::lexer::Lexer;
     ///
-    /// let source = "uint256 number = 0;";
+    /// let source = "let number: uint256 = 0;";
     /// let mut comments = Vec::new();
     /// let mut errors = Vec::new();
     /// let mut lexer = Lexer::new(source, 0, &mut comments, &mut errors);

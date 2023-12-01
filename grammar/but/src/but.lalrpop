@@ -87,8 +87,8 @@ ButIdentifierOrError: Option<Identifier> = {
 }
 
 VariableDeclaration: VariableDeclaration = {
-    <l:@L> <name:ButIdentifierOrError> <r:@R> => VariableDeclaration {
-        loc: Loc::Source(file_no, l, r), ty: None, storage: None, name: name
+    <l:@L> <annotations:AnnotationDefinition*> <attrs:VariableAttribute*> <name:ButIdentifierOrError> <ty:(":" <Type>)?> <r:@R> => VariableDeclaration {
+        loc: Loc::Source(file_no, l, r), ty: ty, storage: None, name: name, annotations: annotations
     },
 }
 

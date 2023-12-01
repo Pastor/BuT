@@ -171,7 +171,7 @@ impl Display for ast::NamedArgument {
 impl Display for ast::Parameter {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         write_opt!(f, &self.annotation, ' ');
-        Debug::fmt(&self.ty, f)?;
+        Display::fmt(&self.ty, f)?;
         write_opt!(f, ' ', &self.storage);
         write_opt!(f, ' ', &self.name);
         Ok(())
@@ -201,7 +201,7 @@ impl Display for ast::StructDefinition {
         write_opt!(f, &self.name, ' ');
 
         f.write_char('{')?;
-        write_separated(&self.fields, f, "; ")?;
+        write_separated(&self.fields, f, ";")?;
         if !self.fields.is_empty() {
             f.write_char(';')?;
         }
@@ -250,6 +250,10 @@ impl Display for ast::VariableDeclaration {
         // self.ty.map(|e| e.fmt(f));
         write_opt!(f, ' ', &self.storage);
         write_opt!(f, ' ', &self.name);
+        if self.ty.is_some() {
+            f.write_char(':')?;
+            write_opt!(f, ' ', &self.ty);
+        }
         Ok(())
     }
 }
@@ -426,6 +430,7 @@ impl Display for ast::Expression {
                 f.write_char('}')
             }
             Self::ArraySubscript(_, expr1, expr2) => {
+                let v = expr1.to_owned();
                 Pointer::fmt(&expr1, f)?;
                 f.write_char('[')?;
                 write_opt!(f, expr2);
@@ -1235,6 +1240,8 @@ fn rm_underscores(s: &str) -> Cow<'_, str> {
 mod tests {
     use super::*;
     use crate::ast::Identifier;
+    use crate::ast::Type::Alias;
+    use crate::lexer::Token::Type;
 
     macro_rules! struct_tests {
         ($(ast::$t:ident { $( $f:ident: $e:expr ),* $(,)? } => $expected:expr),* $(,)?) => {
@@ -1299,9 +1306,6 @@ mod tests {
     macro_rules! ty {
         ($i:ident) => {
             ast::Type::Alias(id(stringify!($i)))
-        };
-        (uint256) => {
-            ast::Type::Uint(256)
         };
         (string) => {
             ast::Type::String
@@ -1577,7 +1581,8 @@ mod tests {
                 ty: None,
                 storage: None,
                 name: None,
-            } => "none"
+                annotations: vec![]
+            } => ""
         ];
     }
 
@@ -1668,31 +1673,33 @@ mod tests {
                 name: Some(id("name")),
                 fields: vec![ast::VariableDeclaration {
                     loc: loc!(),
-                    ty: None,
+                    ty: Some(Alias(id("uint256"))),
                     storage: None,
                     name: Some(id("a")),
+                    annotations: vec![]
                 }],
                 annotations: vec![]
-            } => "struct name {uint256 a;}",
+            } => "struct name { a: uint256;}",
             ast::StructDefinition {
                 name: Some(id("name")),
                 fields: vec![
                     ast::VariableDeclaration {
                         loc: loc!(),
-                        ty: None,
+                        ty: Some(Alias(id("uint256"))),
                         storage: None,
                         name: Some(id("a")),
+                        annotations: vec![]
                     },
                     ast::VariableDeclaration {
                         loc: loc!(),
-                        // ty: expr_ty!(uint256),
-                        ty: None,
+                        ty: Some(Alias(id("uint256"))),
                         storage: None,
                         name: Some(id("b")),
+                        annotations: vec![]
                     }
                 ],
                 annotations: vec![]
-            } => "struct name {uint256 a; uint256 b;}",
+            } => "struct name { a: uint256; b: uint256;}",
 
             // ast::TypeDefinition {
             //     name: id("MyType"),
@@ -1971,13 +1978,15 @@ mod tests {
                     ty: None,
                     storage: None,
                     name: Some(id("a")),
-                }, None) => "uint256 a;",
+                    annotations: vec![]
+                }, None) => "a: uint256;",
                 ast::Statement::VariableDefinition(loc!(), ast::VariableDeclaration {
                     loc: loc!(),
                     ty: None,
                     storage: None,
                     name: Some(id("a")),
-                }, Some(expr!(0))) => "uint256 a = 0;",
+                    annotations: vec![]
+                }, Some(expr!(0))) => "a: uint256 = 0;",
 
                 ast::Statement::For(loc!(), None, None, None, Some(Box::new(stmt!({}))))
                     => "for (;;) {}",
@@ -1988,6 +1997,7 @@ mod tests {
                         ty: None,
                         storage: None,
                         name: Some(id("a")),
+                        annotations: vec![]
                     },
                     None
                 ))), None, None, Some(Box::new(stmt!({}))))
