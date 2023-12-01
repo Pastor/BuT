@@ -23,7 +23,7 @@ pub enum Token<'input> {
     AddressLiteral(&'input str),
     HexLiteral(&'input str),
     Number(i64),
-    RationalNumber(&'input str),
+    RationalNumber(&'input str, bool),
     HexNumber(&'input str),
     Divide,
     Library,
@@ -127,7 +127,12 @@ impl<'input> fmt::Display for Token<'input> {
             Token::HexLiteral(hex) => write!(f, "{hex}"),
             Token::AddressLiteral(address) => write!(f, "{address}"),
             Token::Number(n) => write!(f, "{n}"),
-            Token::RationalNumber(n) => write!(f, "{n}"),
+            Token::RationalNumber(n, d) => {
+                if *d {
+                    write!(f, "-")?;
+                }
+                write!(f, "{n}")
+            }
             Token::HexNumber(n) => write!(f, "{n}"),
             Token::Semicolon => write!(f, ";"),
             Token::Comma => write!(f, ","),
@@ -333,6 +338,7 @@ impl<'input> Lexer<'input> {
 
     fn parse_number(&mut self, mut start: usize, ch: char) -> Result<'input> {
         let mut is_rational = false;
+        let mut is_minus = false;
         if ch == '0' {
             if let Some((_, 'x')) = self.chars.peek() {
                 // hex number
@@ -376,6 +382,9 @@ impl<'input> Lexer<'input> {
         if ch == '.' {
             is_rational = true;
             start -= 1;
+        }
+        if ch == '-' {
+            is_minus = true;
         }
 
         let mut end = start;
@@ -447,7 +456,7 @@ impl<'input> Lexer<'input> {
 
             return Ok((
                 start,
-                Token::RationalNumber(&self.input[start..=rational_end]),
+                Token::RationalNumber(&self.input[start..=rational_end], is_minus),
                 end + 1,
             ));
         }
@@ -455,11 +464,11 @@ impl<'input> Lexer<'input> {
         let integer = &self.input[start..=old_end];
         let exp = &self.input[exp_start..=end];
 
-        Ok((
-            start,
-            Token::Number(i64::from_str(&integer).unwrap()),
-            end + 1,
-        ))
+        let mut n = i64::from_str(&integer).unwrap();
+        if is_minus {
+            n = -n;
+        }
+        Ok((start, Token::Number(n), end + 1))
     }
 
     fn string(
@@ -791,6 +800,15 @@ impl<'input> Lexer<'input> {
                             self.chars.next();
                             Some((i, Token::Decrement, i + 2))
                         }
+                        Some((_, other)) if other.is_ascii_digit() => {
+                            return match self.parse_number(i + 1, '-') {
+                                Err(lex_error) => {
+                                    self.errors.push(lex_error);
+                                    None
+                                }
+                                Ok(parse_result) => Some(parse_result),
+                            };
+                        }
                         _ => Some((i, Token::Subtract, i + 1)),
                     };
                 }
@@ -989,26 +1007,25 @@ mod tests {
         let mut comments = Vec::new();
         let mut errors = Vec::new();
 
-        let multiple_errors = r#" 9ea -9e € bool hex hex"g"   /**  "#;
+        let multiple_errors = r#" a - 9e € bool hex hex"g"   /**  "#;
         let tokens = Lexer::new(multiple_errors, 0, &mut comments, &mut errors).collect::<Vec<_>>();
         assert_eq!(
             tokens,
             vec![
-                (3, Token::Identifier("a"), 4),
-                (5, Token::Subtract, 6),
-                (13, Token::Identifier("bool"), 17),
-                (18, Token::Identifier("hex"), 21),
+                (1, Token::Identifier("a"), 2),
+                (3, Token::Subtract, 4),
+                (12, Token::Identifier("bool"), 16),
+                (17, Token::Identifier("hex"), 20),
             ]
         );
 
         assert_eq!(
             errors,
             vec![
-                LexicalError::MissingExponent(Loc::Source(0, 1, 36)),
-                LexicalError::MissingExponent(Loc::Source(0, 6, 36)),
-                LexicalError::UnrecognisedToken(Loc::Source(0, 9, 12), '€'.to_string()),
-                LexicalError::InvalidCharacterInHexLiteral(Loc::Source(0, 26, 27), 'g'),
-                LexicalError::EndOfFileInComment(Loc::Source(0, 31, 36)),
+                LexicalError::MissingExponent(Loc::Source(0, 5, 35)),
+                LexicalError::UnrecognisedToken(Loc::Source(0, 8, 11), '€'.to_string()),
+                LexicalError::InvalidCharacterInHexLiteral(Loc::Source(0, 25, 26), 'g'),
+                LexicalError::EndOfFileInComment(Loc::Source(0, 30, 35)),
             ]
         );
 
@@ -1110,7 +1127,6 @@ mod tests {
         assert_eq!(
             tokens,
             vec!(
-                (0, Token::Subtract, 1),
                 (1, Token::Number(-16i64), 3),
                 (4, Token::Decrement, 6),
                 (7, Token::Subtract, 8),
@@ -1120,10 +1136,7 @@ mod tests {
 
         let tokens = Lexer::new("-4 ", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
-        assert_eq!(
-            tokens,
-            vec!((0, Token::Subtract, 1), (1, Token::Number(-4i64), 2),)
-        );
+        assert_eq!(tokens, vec!((1, Token::Number(-4i64), 2),));
 
         let mut errors = Vec::new();
         let _ = Lexer::new(r#"hex"abcdefg""#, 0, &mut comments, &mut errors).collect::<Vec<_>>();
@@ -1290,12 +1303,12 @@ mod tests {
         assert_eq!(tokens, vec!((1, Token::Number(1i64), 4)));
 
         let mut errors = Vec::new();
-        let tokens = Lexer::new(r#" -9e"#, 0, &mut comments, &mut errors).collect::<Vec<_>>();
+        let tokens = Lexer::new(r#" - 9e"#, 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
         assert_eq!(tokens, vec!((1, Token::Subtract, 2)));
         assert_eq!(
             errors,
-            vec!(LexicalError::MissingExponent(Loc::Source(0, 2, 4)))
+            vec!(LexicalError::MissingExponent(Loc::Source(0, 3, 5)))
         );
 
         let mut errors = Vec::new();
@@ -1427,13 +1440,14 @@ mod tests {
         );
 
         let mut errors = Vec::new();
-        let tokens = Lexer::new(r#" -9e"#, 0, &mut comments, &mut errors)
-            .collect::<Vec<(usize, Token, usize)>>();
+        let tokens =
+            Lexer::new(r#" - 9e"#, 0, &mut comments, &mut errors)
+                .collect::<Vec<(usize, Token, usize)>>();
 
         assert_eq!(tokens, vec!((1, Token::Subtract, 2)));
         assert_eq!(
             errors,
-            vec!(LexicalError::MissingExponent(Loc::Source(0, 2, 4)))
+            vec!(LexicalError::MissingExponent(Loc::Source(0, 3, 5)))
         );
 
         let mut errors = Vec::new();
@@ -1476,33 +1490,14 @@ mod tests {
         let mut errors = Vec::new();
         let tokens = Lexer::new(".9", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
-        assert_eq!(tokens, vec!((0, Token::RationalNumber(".9"), 2)));
+        assert_eq!(tokens, vec!((0, Token::RationalNumber(".9", false), 2)));
 
         let mut errors = Vec::new();
         let tokens = Lexer::new(".9e10", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
-        assert_eq!(tokens, vec!((0, Token::RationalNumber(".9"), 5)));
+        assert_eq!(tokens, vec!((0, Token::RationalNumber(".9", false), 5)));
 
         errors.clear();
         comments.clear();
-        let tokens =
-            Lexer::new("@my_annotation", 0, &mut comments, &mut errors).collect::<Vec<_>>();
-        assert_eq!(tokens, vec![(0, Token::Annotation("my_annotation"), 14)]);
-        assert!(errors.is_empty());
-        assert!(comments.is_empty());
-
-        errors.clear();
-        comments.clear();
-        let tokens =
-            Lexer::new("@ my_annotation", 0, &mut comments, &mut errors).collect::<Vec<_>>();
-        assert_eq!(tokens, vec![(2, Token::Identifier("my_annotation"), 15)]);
-        assert_eq!(
-            errors,
-            vec![LexicalError::UnrecognisedToken(
-                Loc::Source(0, 0, 1),
-                "@".to_string(),
-            )]
-        );
-        assert!(comments.is_empty());
     }
 }

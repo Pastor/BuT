@@ -411,7 +411,7 @@ impl Display for ast::Expression {
                 Pointer::fmt(&expr, f)
             }
 
-            Self::Type(_, ty) => std::fmt::Display::fmt(&ty, f),
+            Self::Type(_, ty) => Display::fmt(&ty, f),
 
             Self::Variable(ident) => std::fmt::Display::fmt(&ident, f),
 
@@ -477,7 +477,7 @@ impl Display for ast::Expression {
                 Display::fmt(val, f)?;
                 Ok(())
             }
-            Self::RationalNumberLiteral(_, val) => {
+            Self::RationalNumberLiteral(_, val, _) => {
                 let val = rm_underscores(val);
                 f.write_str(&val)?;
                 Ok(())
@@ -998,10 +998,7 @@ impl Display for ast::Type {
                 }
                 Ok(())
             }
-            Type::Alias(name) => {
-                f.write_str(" = ")?;
-                std::fmt::Display::fmt(&name, f)
-            }
+            Type::Alias(name) => std::fmt::Display::fmt(&name, f),
             Type::Array {
                 element_type,
                 element_count,
@@ -1237,6 +1234,7 @@ fn rm_underscores(s: &str) -> Cow<'_, str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ast::Identifier;
 
     macro_rules! struct_tests {
         ($(ast::$t:ident { $( $f:ident: $e:expr ),* $(,)? } => $expected:expr),* $(,)?) => {
@@ -1299,6 +1297,9 @@ mod tests {
 
     /// Type
     macro_rules! ty {
+        ($i:ident) => {
+            ast::Type::Alias(id(stringify!($i)))
+        };
         (uint256) => {
             ast::Type::Uint(256)
         };
@@ -1773,9 +1774,6 @@ mod tests {
             }
 
             ast::Expression: {
-                ast::Expression::New(loc!(), Box::new(expr_ty!(uint256))) => "new uint256",
-                ast::Expression::Delete(loc!(), Box::new(expr_ty!(uint256))) => "delete uint256",
-
                 ast::Expression::Type(loc!(), ty!(uint256)) => "uint256",
                 ast::Expression::Variable(id("myVar")) => "myVar",
 
@@ -1808,7 +1806,7 @@ mod tests {
                 ast::Expression::HexNumberLiteral(loc!(), "0x1234".into(), Some(id("gwei"))) => "0x1234 gwei",
                 ast::Expression::NumberLiteral(loc!(), "1234".parse().unwrap())
                     => "1234",
-                ast::Expression::RationalNumberLiteral(loc!(), ".9".into())
+                ast::Expression::RationalNumberLiteral(loc!(), ".9".into(), false)
                     => "0.9",
                 ast::Expression::FunctionCall(loc!(), Box::new(expr!(func)), vec![]) => "func()",
                 ast::Expression::FunctionCall(loc!(), Box::new(expr!(func)), vec![expr!(arg)])

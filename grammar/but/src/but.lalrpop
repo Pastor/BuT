@@ -180,7 +180,7 @@ Precedence1: Expression = {
         }
     },
     <l:@L> <n:rational> <r:@R> => {
-        Expression::RationalNumberLiteral(Loc::Source(file_no, l, r), n.to_string())
+        Expression::RationalNumberLiteral(Loc::Source(file_no, l, r), n.0.to_string(), n.1)
     },
     <l:@L> <n:hexnumber> <r:@R> => {
         Expression::HexNumberLiteral(Loc::Source(file_no, l, r), n.to_owned(), None)
@@ -249,7 +249,7 @@ extern {
         address => Token::AddressLiteral(<&'input str>),
         hexstring => Token::HexLiteral(<&'input str>),
         number => Token::Number(<i64>),
-        rational => Token::RationalNumber(<&'input str>),
+        rational => Token::RationalNumber(<&'input str>, <bool>),
         hexnumber => Token::HexNumber(<&'input str>),
         "#" => Token::Sharp,
         ";" => Token::Semicolon,

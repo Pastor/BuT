@@ -26,6 +26,7 @@ mod tests {
                 initializer: Some(RationalNumberLiteral(
                     Source(0, 11, 17),
                     "3.1415".to_string(),
+                    false,
                 )),
             },
         ))]);

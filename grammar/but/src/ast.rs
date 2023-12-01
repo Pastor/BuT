@@ -1024,7 +1024,7 @@ pub enum Expression {
     /// ``
     NumberLiteral(Loc, i64),
     /// ``
-    RationalNumberLiteral(Loc, String),
+    RationalNumberLiteral(Loc, String, bool),
     /// ``
     HexNumberLiteral(Loc, String, Option<Identifier>),
     /// `<1>+`. See [StringLiteral].
