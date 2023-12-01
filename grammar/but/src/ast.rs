@@ -865,6 +865,9 @@ pub enum Annotation {
         name: IdentifierPath,
         value: Expression,
     },
+    String(StringLiteral),
+    Number(Loc, i64),
+    Rational(Loc, String, bool),
 }
 
 /// A string literal.

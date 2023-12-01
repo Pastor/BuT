@@ -68,6 +68,15 @@ impl Display for ast::Annotation {
                 f.write_str(" = ")?;
                 Display::fmt(value, f)?;
             }
+            Annotation::String(s) => {
+                Display::fmt(s, f)?;
+            }
+            Annotation::Number(_, n) => {
+                Display::fmt(n, f)?;
+            }
+            Annotation::Rational(_, n, _) => {
+                Display::fmt(n, f)?;
+            }
         }
         Ok(())
     }

@@ -13,4 +13,5 @@ let mut  var3: u8  = 0;
 let      var4: [2: u8] = {0, 0};  // place initialize
 let      var5: [1024: u8];
 let mut  var6: [ 3: [3: u8] ] = {{0, 0, 0}, {0, 0, 0}, {0, 0, 0}}; // var6.2.1 => var6[2][1]
+let mut  var7: int = 5 + 6;
 
