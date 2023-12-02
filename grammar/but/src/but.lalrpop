@@ -14,7 +14,8 @@ SourceUnitPart: SourceUnitPart = {
     StructDefinition => SourceUnitPart::StructDefinition(<>),
     TypeDefinition => SourceUnitPart::TypeDefinition(<>),
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
-    GlobalAnnotationDefinition => SourceUnitPart::AnnotationDefinition(Box::new(<>))
+    GlobalAnnotationDefinition => SourceUnitPart::AnnotationDefinition(Box::new(<>)),
+    PropertyDefinition => SourceUnitPart::PropertyDefinition(Box::new(<>)),
 }
 
 ImportPath: ImportPath = {
@@ -86,14 +87,20 @@ ButIdentifierOrError: Option<Identifier> = {
     }
 }
 
+PropertyDefinition: PropertyDefinition = {
+    <l:@L> <annotations:AnnotationDefinition*> <name:ButIdentifierOrError> "-" ">" <e:(Expression)?> <r:@R> ";" => PropertyDefinition {
+        loc: Loc::Source(file_no, l, r), name: name, value: e, annotations: annotations
+    },
+}
+
 VariableDeclaration: VariableDeclaration = {
-    <l:@L> <annotations:AnnotationDefinition*> <attrs:VariableAttribute*> <name:ButIdentifierOrError> <ty:(":" <Type>)?> <r:@R> => VariableDeclaration {
+    <l:@L> <annotations:AnnotationDefinition*> <attrs:VariableAttribute*> <name:ButIdentifierOrError> ":" <ty:Type> <r:@R> => VariableDeclaration {
         loc: Loc::Source(file_no, l, r), ty: ty, storage: None, name: name, annotations: annotations
     },
 }
 
 VariableDefinition: Box<VariableDefinition> = {
-    <l:@L> <annotations:AnnotationDefinition*> <attrs:VariableAttribute*> <name:ButIdentifierOrError>  <ty:(":" <Type>)?> <e:("=" <Expression>)?> <r:@R> ";" => {
+    <l:@L> <annotations:AnnotationDefinition*> <attrs:VariableAttribute*> <name:ButIdentifierOrError> ":" <ty:Type> <e:("=" <Expression>)?> <r:@R> ";" => {
         Box::new(VariableDefinition{
             loc: Loc::Source(file_no, l, r), ty, attrs, name, initializer: e, annotations: annotations
         })
@@ -282,7 +289,67 @@ Precedence1: Expression = {
 }
 
 Precedence0: Expression = {
-    LiteralExpression
+   <Identifier> => Expression::Variable(<>),
+   <l:@L> <a:NamedParameterList> <r:@R> => {
+       if a.len() == 1 {
+           if let Some(Parameter{ ty, storage: None, name: None, .. }) = &a[0].1 {
+               // this means "(" Expression ")"
+               return Expression::Parenthesis(ty.loc(), Box::new(ty.clone()));
+           }
+       }
+
+       Expression::List(Loc::Source(file_no, l, r), a)
+   },
+   LiteralExpression
+}
+
+Parameter: Parameter = {
+    <l:@L> <annotation:ParameterAnnotation?> <ty:Precedence0> <name:ButIdentifier?> <r:@R> => {
+        let loc = Loc::Source(file_no, l, r);
+        Parameter{loc, annotation, ty, storage: None, name}
+    }
+}
+
+OptParameter: (Loc, Option<Parameter>) = {
+    <l:@L> <p:Parameter?> <r:@R> => (Loc::Source(file_no, l, r), p),
+}
+
+ParameterList: Vec<(Loc, Option<Parameter>)> = {
+    "(" ")" => Vec::new(),
+    "(" <l:@L> <p:Parameter> <r:@R> ")" => vec!((Loc::Source(file_no, l, r), Some(p))),
+    "(" <CommaTwo<OptParameter>> ")" => <>,
+    "(" <false_token:!> ")"=> {
+        parser_errors.push(<>);
+        Vec::new()
+    }
+}
+
+ParameterAnnotation: Annotation = {
+}
+
+NamedParameter: Parameter = {
+    <l:@L> <ty:Precedence0> <name:ButIdentifier> <r:@R> => {
+        let loc = Loc::Source(file_no, l, r);
+        Parameter{ loc, annotation: None, ty, storage: None, name: Some(name) }
+    },
+    <l:@L> <ty:Expression> <r:@R> => {
+        let loc = Loc::Source(file_no, l, r);
+        Parameter{ loc, annotation: None, ty, storage: None, name: None }
+    }
+}
+
+OptNamedParameter: (Loc, Option<Parameter>) = {
+    <l:@L> <p:NamedParameter?> <r:@R> => (Loc::Source(file_no, l, r), p),
+}
+
+NamedParameterList: Vec<(Loc, Option<Parameter>)> = {
+    "(" ")" => Vec::new(),
+    "(" <l:@L> <p:NamedParameter> <r:@R> ")" => vec!((Loc::Source(file_no, l, r), Some(p))),
+    "(" <CommaTwo<OptNamedParameter>> ")" => <>,
+    "(" <false_token:!> ")"=> {
+        parser_errors.push(<>);
+        Vec::new()
+    }
 }
 
 LiteralExpression: Expression = {
@@ -341,6 +408,7 @@ extern {
         number => Token::Number(<i64>),
         rational => Token::RationalNumber(<&'input str>, <bool>),
         hexnumber => Token::HexNumber(<&'input str>),
+        "->" => Token::PeirceArrow,
         "#" => Token::Sharp,
         ";" => Token::Semicolon,
         ":" => Token::Colon,

@@ -22,10 +22,10 @@ mod tests {
         let expected_parse_tree = SourceUnit(vec![SourceUnitPart::VariableDefinition(Box::new(
             VariableDefinition {
                 loc: Source(0, 9, 71),
-                ty: Some(Alias(Identifier {
+                ty: Alias(Identifier {
                     loc: Source(0, 64, 67),
                     name: "bit".to_string(),
-                })),
+                }),
                 attrs: vec![Readable(Source(0, 53, 56))],
                 name: Some(Identifier {
                     loc: Source(0, 58, 62),

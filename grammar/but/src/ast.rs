@@ -345,6 +345,7 @@ pub enum SourceUnitPart {
     VariableDefinition(Box<VariableDefinition>),
 
     AnnotationDefinition(Box<AnnotationDefinition>),
+    PropertyDefinition(Box<PropertyDefinition>),
 
     /// A type definition.
     TypeDefinition(Box<TypeDefinition>),
@@ -493,7 +494,7 @@ pub struct VariableDeclaration {
     /// The code location.
     pub loc: Loc,
     /// The type.
-    pub ty: Option<Type>,
+    pub ty: Type,
     /// The optional memory location.
     pub storage: Option<StorageLocation>,
     /// The identifier.
@@ -816,7 +817,7 @@ pub struct VariableDefinition {
     /// The code location.
     pub loc: Loc,
     /// The type.
-    pub ty: Option<Type>,
+    pub ty: Type,
     /// The list of variable attributes.
     pub attrs: Vec<VariableAttribute>,
     /// The identifier.
@@ -834,6 +835,15 @@ pub struct AnnotationDefinition {
     pub loc: Loc,
     pub args: Vec<Annotation>,
     pub glob: bool,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
+pub struct PropertyDefinition {
+    pub loc: Loc,
+    pub name: Option<Identifier>,
+    pub value: Option<Expression>,
+    pub annotations: Vec<AnnotationDefinition>,
 }
 
 /// A user type definition.

@@ -20,6 +20,6 @@ model None {
     start: Template
 }
 
-behavior: Next | None
+behavior -> Next | None
 
 

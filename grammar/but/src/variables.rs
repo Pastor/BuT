@@ -10,13 +10,16 @@ mod tests {
 
     #[test]
     fn parse_const_variable() {
-        let src = r#"const PI = 3.1415;"#;
+        let src = r#"const PI: float = 3.1415;"#;
         let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
         assert_eq!(actual_parse_tree.0.len(), 1);
         let expected_parse_tree = SourceUnit(vec![SourceUnitPart::VariableDefinition(Box::new(
             VariableDefinition {
-                loc: Source(0, 0, 17),
-                ty: None,
+                loc: Source(0, 0, 24),
+                ty: Alias(Identifier {
+                    loc: Source(0, 10, 15),
+                    name: "float".to_string(),
+                }),
                 annotations: vec![],
                 attrs: vec![Constant(Source(0, 0, 5))],
                 name: Some(Identifier {
@@ -24,7 +27,7 @@ mod tests {
                     name: "PI".to_string(),
                 }),
                 initializer: Some(RationalNumberLiteral(
-                    Source(0, 11, 17),
+                    Source(0, 18, 24),
                     "3.1415".to_string(),
                     false,
                 )),
@@ -41,10 +44,10 @@ mod tests {
         let expected_parse_tree = SourceUnit(vec![SourceUnitPart::VariableDefinition(Box::new(
             VariableDefinition {
                 loc: Source(0, 0, 26),
-                ty: Some(Alias(Identifier {
+                ty: Alias(Identifier {
                     loc: Source(0, 12, 15),
                     name: "bit".to_string(),
-                })),
+                }),
                 annotations: vec![],
                 attrs: vec![Portable(Source(0, 0, 3))],
                 name: Some(Identifier {
@@ -62,14 +65,14 @@ mod tests {
         let expected_parse_tree = SourceUnit(vec![SourceUnitPart::VariableDefinition(Box::new(
             VariableDefinition {
                 loc: Source(0, 0, 28),
-                ty: Some(Array {
+                ty: Array {
                     loc: Source(0, 11, 19),
                     element_count: 8,
                     element_type: Box::new(Alias(Identifier {
                         loc: Source(0, 15, 18),
                         name: "bit".to_string(),
                     })),
-                }),
+                },
                 annotations: vec![],
                 attrs: vec![Portable(Source(0, 0, 3))],
                 name: Some(Identifier {
@@ -90,7 +93,7 @@ mod tests {
         let expected_parse_tree = SourceUnit(vec![SourceUnitPart::VariableDefinition(Box::new(
             VariableDefinition {
                 loc: Source(0, 0, 65),
-                ty: Some(Array {
+                ty: Array {
                     loc: Source(0, 15, 29),
                     element_count: 3,
                     element_type: Box::new(Array {
@@ -101,7 +104,7 @@ mod tests {
                             name: "u8".to_string(),
                         })),
                     }),
-                }),
+                },
                 annotations: vec![],
                 attrs: vec![Readable(Source(0, 0, 3)), Writable(Source(0, 4, 7))],
                 name: Some(Identifier {

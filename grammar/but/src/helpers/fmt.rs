@@ -7,7 +7,7 @@ use std::{
 };
 
 use crate::ast;
-use crate::ast::{Annotation, Expression, Type};
+use crate::ast::{Annotation, Expression, SourceUnitPart, Type};
 
 macro_rules! write_opt {
     // no sep
@@ -261,10 +261,8 @@ impl Display for ast::VariableDeclaration {
         // self.ty.map(|e| e.fmt(f));
         write_opt!(f, ' ', &self.storage);
         write_opt!(f, ' ', &self.name);
-        if self.ty.is_some() {
-            f.write_char(':')?;
-            write_opt!(f, ' ', &self.ty);
-        }
+        f.write_str(": ")?;
+        Display::fmt(&self.ty, f)?;
         Ok(())
     }
 }
@@ -275,9 +273,8 @@ impl Display for ast::VariableDefinition {
             f.write_char(' ')?;
             write_separated(&self.attrs, f, " ")?;
         }
-        if let Some(ty) = &self.ty {
-            Display::fmt(ty, f)?;
-        }
+        f.write_str(": ")?;
+        Display::fmt(&self.ty, f)?;
         write_opt!(f, ' ', &self.name);
         write_opt!(f, " = ", &self.initializer);
         f.write_char(';')
@@ -795,6 +792,7 @@ impl Display for ast::SourceUnitPart {
                 f.write_char(';')
             }
             Self::StraySemicolon(_) => f.write_char(';'),
+            SourceUnitPart::PropertyDefinition(inner) => Pointer::fmt(&inner, f),
         }
     }
 }
@@ -1599,11 +1597,11 @@ mod tests {
             } => "id::path as +",
 
             ast::VariableDeclaration {
-                ty: None,
+                ty: Alias(id("uint256")),
                 storage: None,
                 name: None,
                 annotations: vec![]
-            } => ""
+            } => ": uint256"
         ];
     }
 
@@ -1694,7 +1692,7 @@ mod tests {
                 name: Some(id("name")),
                 fields: vec![ast::VariableDeclaration {
                     loc: loc!(),
-                    ty: Some(Alias(id("uint256"))),
+                    ty: Alias(id("uint256")),
                     storage: None,
                     name: Some(id("a")),
                     annotations: vec![]
@@ -1706,14 +1704,14 @@ mod tests {
                 fields: vec![
                     ast::VariableDeclaration {
                         loc: loc!(),
-                        ty: Some(Alias(id("uint256"))),
+                        ty: Alias(id("uint256")),
                         storage: None,
                         name: Some(id("a")),
                         annotations: vec![]
                     },
                     ast::VariableDeclaration {
                         loc: loc!(),
-                        ty: Some(Alias(id("uint256"))),
+                        ty: Alias(id("uint256")),
                         storage: None,
                         name: Some(id("b")),
                         annotations: vec![]
@@ -1996,14 +1994,14 @@ mod tests {
 
                 ast::Statement::VariableDefinition(loc!(), ast::VariableDeclaration {
                     loc: loc!(),
-                    ty: Some(Alias(id("uint256"))),
+                    ty: Alias(id("uint256")),
                     storage: None,
                     name: Some(id("a")),
                     annotations: vec![]
                 }, None) => " a: uint256;",
                 ast::Statement::VariableDefinition(loc!(), ast::VariableDeclaration {
                     loc: loc!(),
-                    ty: Some(Alias(id("uint256"))),
+                    ty: Alias(id("uint256")),
                     storage: None,
                     name: Some(id("a")),
                     annotations: vec![]

@@ -383,6 +383,7 @@ impl_for_enums! {
         Self::VariableDefinition(ref l, ..) => l.loc(),
         Self::TypeDefinition(ref l, ..) => l.loc(),
         Self::AnnotationDefinition(ref l, ..) => l.loc(),
+        Self::PropertyDefinition(ref l, ..) => l.loc.loc(),
         Self::Using(ref l, ..) => l.loc(),
         Self::PragmaDirective(l, ..)
         | Self::StraySemicolon(l, ..) => l,

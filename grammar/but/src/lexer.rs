@@ -116,6 +116,8 @@ pub enum Token<'input> {
     Readable,
     Portable,
     External,
+
+    PeirceArrow,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -205,6 +207,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Readable => write!(f, "let"),
             Token::Writable => write!(f, "mut"),
             Token::Portable => write!(f, "pio"),
+            Token::PeirceArrow => write!(f, "-->"),
         }
     }
 }
@@ -1225,7 +1228,7 @@ mod tests {
             comments,
             vec!(Comment::DocBlock(
                 Loc::Source(0, 0, 10),
-                "/** foo */".to_owned()
+                "/** foo */".to_owned(),
             ))
         );
 
@@ -1364,7 +1367,7 @@ mod tests {
             comments,
             vec!(Comment::DocBlock(
                 Loc::Source(0, 0, 10),
-                "/** foo */".to_owned()
+                "/** foo */".to_owned(),
             ))
         );
 
