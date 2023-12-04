@@ -16,6 +16,7 @@ SourceUnitPart: SourceUnitPart = {
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
     GlobalAnnotationDefinition => SourceUnitPart::AnnotationDefinition(Box::new(<>)),
     PropertyDefinition => SourceUnitPart::PropertyDefinition(Box::new(<>)),
+    FunctionDefinition => SourceUnitPart::FunctionDefinition(<>),
 }
 
 ImportPath: ImportPath = {
@@ -177,6 +178,144 @@ Type: Type = {
     }
 }
 
+NamedArgument: NamedArgument = {
+    <l:@L> <name:ButIdentifier> ":" <expr:Expression> <r:@R> => {
+        NamedArgument{ loc: Loc::Source(file_no, l, r), name, expr }
+    },
+}
+
+FunctionCall: Expression = {
+    <a:@L> <i:FunctionCallPrecedence> "(" <v:Comma<Expression>> ")" <b:@R> => {
+        Expression::FunctionCall(Loc::Source(file_no, a, b), Box::new(i), v)
+    },
+    <l:@L> <i:FunctionCallPrecedence> <block:BlockStatement> <r:@R> => {
+        Expression::FunctionCallBlock(Loc::Source(file_no, l, r), Box::new(i), Box::new(block))
+    },
+    <a:@L> <i:FunctionCallPrecedence> "(" "{" <v:Comma<NamedArgument>> "}" ")" <b:@R> => {
+        Expression::NamedFunctionCall(Loc::Source(file_no, a, b), Box::new(i), v)
+    },
+}
+
+FunctionDefinition: Box<FunctionDefinition> = {
+    <l:@L> <annotations:AnnotationDefinition*>  "fn" <nl:@L> <name:ButIdentifierOrError> <nr:@R> <params:ParameterList>
+    <r:@R> <body:BlockStatementOrSemiColon> => {
+        let (return_not_returns, returns) = returns.unwrap_or((None, Vec::new()));
+
+        Box::new(FunctionDefinition{
+            loc: Loc::Source(file_no, l, r),
+            ty: FunctionTy::Function,
+            name,
+            name_loc: Loc::Source(file_no, nl, nr),
+            params,
+            attributes,
+            return_not_returns,
+            returns,
+            body,
+        })
+    },
+}
+
+BlockStatementOrSemiColon: Option<Statement> = {
+    <@L> <@R> ";" => None,
+    BlockStatement => Some(<>),
+}
+
+BlockStatement: Statement = {
+    <l:@L> "{" <statements:Statement*> "}" <r:@R> => {
+        Statement::Block { loc: Loc::Source(file_no, l, r), unchecked: false, statements }
+    },
+    <l:@L> "{" <v:CommaOne<NamedArgument>> "}" <r:@R> => Statement::Args(Loc::Source(file_no, l, r), v),
+}
+
+OpenStatement: Statement = {
+    <l:@L> "if" "(" <cond:Expression> ")" <body:Statement> <r:@R> => {
+        Statement::If(Loc::Source(file_no, l, r), cond, Box::new(body), None)
+    },
+    <l:@L> "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:OpenStatement> <r:@R> => {
+        Statement::If(Loc::Source(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
+    },
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Expression?> ")" <block:OpenStatement> <r:@R> => {
+        Statement::For(Loc::Source(file_no, l, r), b.map(Box::new), c.map(Box::new), n.map(Box::new), Some(Box::new(block)))
+    },
+    <l:@L> "while" "(" <e:Expression> ")" <b:OpenStatement> <r:@R> => {
+        Statement::While(Loc::Source(file_no, l, r), e, Box::new(b))
+    }
+}
+
+ClosedStatement: Statement = {
+    NonIfStatement,
+    <l:@L> "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:ClosedStatement> <r:@R> => {
+        Statement::If(Loc::Source(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
+    },
+    <l:@L> "while" "(" <e:Expression> ")" <b:ClosedStatement> <r:@R> => {
+        Statement::While(Loc::Source(file_no, l, r), e, Box::new(b))
+    },
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Expression?> ")" <block:ClosedStatement> <r:@R> => {
+        Statement::For(Loc::Source(file_no, l, r), b.map(Box::new), c.map(Box::new), n.map(Box::new), Some(Box::new(block)))
+    },
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Expression?> ")" <r:@R> ";" => {
+        Statement::For(Loc::Source(file_no, l, r), b.map(Box::new), c.map(Box::new), n.map(Box::new), None)
+    }
+}
+
+Statement: Statement = {
+    OpenStatement,
+    ClosedStatement,
+    <l:@L> <false_token:!> <r:@R> => {
+        parser_errors.push(false_token);
+        Statement::Error(Loc::Source(file_no, l, r))
+    },
+}
+
+SimpleStatement: Statement = {
+    <l:@L> <v:VariableDeclaration> <e:("=" <Expression>)?> <r:@R> => {
+        Statement::VariableDefinition(Loc::Source(file_no, l, r), v, e)
+    },
+    <l:@L> <e:Expression> <r:@R> => {
+        Statement::Expression(Loc::Source(file_no, l, r), e)
+    }
+}
+
+AssemblyFlags: Vec<StringLiteral> = {
+    "(" <CommaOne<StringLiteral>> ")" => <>,
+}
+
+NonIfStatement: Statement = {
+    BlockStatement => <>,
+    <l:@L> "assembly" <dialect:StringLiteral?> <flags:AssemblyFlags?> <r:@R> => {
+        Statement::Assembly {
+            loc: Loc::Source(file_no, l, r),
+            dialect: dialect.map(|dialect| dialect.to_owned()),
+            flags: flags.map(|flag| flag.to_owned()),
+            block: None
+        }
+    },
+    <SimpleStatement> ";" => <>,
+    <l:@L> "do" <b:Statement> "while" "(" <e:Expression> ")" <r:@R> ";" => {
+        Statement::DoWhile(Loc::Source(file_no, l, r), Box::new(b), e)
+    },
+    <l:@L> "continue" <r:@R> ";" => {
+        Statement::Continue(Loc::Source(file_no, l, r))
+    },
+    <l:@L> "break" <r:@R> ";" => {
+        Statement::Break(Loc::Source(file_no, l, r))
+    },
+    <l:@L> "return" <r:@R> ";" => {
+        Statement::Return(Loc::Source(file_no, l, r), None)
+    },
+    <l:@L> "return" <e:Expression> <r:@R> ";" => {
+        Statement::Return(Loc::Source(file_no, l, r), Some(e))
+    },
+    <l:@L> "emit" <ty:FunctionCall> <r:@R> ";" => {
+        Statement::Emit(Loc::Source(file_no, l, r), ty)
+    },
+}
+
+FunctionCallPrecedence: Expression = {
+    NoFunctionTyPrecedence0,
+    <l:@L> "type" <r:@R> => Expression::Variable(Identifier{loc: Loc::Source(file_no, l, r), name: "type".to_string()}),
+}
+
 Expression: Expression = {
     Precedence14
 }
@@ -300,7 +439,31 @@ Precedence0: Expression = {
 
        Expression::List(Loc::Source(file_no, l, r), a)
    },
-   LiteralExpression
+   NoFunctionTyPrecedence0,
+}
+
+NoFunctionTyPrecedence0: Expression = {
+    <a:@L> <e:Precedence1> "++" <b:@R> => Expression::PostIncrement(Loc::Source(file_no, a, b), Box::new(e)),
+    <a:@L> <e:Precedence1> "--" <b:@R> => Expression::PostDecrement(Loc::Source(file_no, a, b), Box::new(e)),
+    <FunctionCall> => <>,
+    <a:@L> <e:Precedence1> "[" <i:Expression?> "]" <b:@R> => Expression::ArraySubscript(Loc::Source(file_no, a, b), Box::new(e), i.map(Box::new)),
+    <a:@L> <e:Precedence1> "[" <l:Expression?> ":" <r:Expression?> "]" <b:@R> => Expression::ArraySlice(Loc::Source(file_no, a, b), Box::new(e), l.map(Box::new), r.map(Box::new)),
+    <a:@L> <e:Precedence1> "." <i:ButIdentifier> <b:@R> => Expression::MemberAccess(Loc::Source(file_no, a, b), Box::new(e), i),
+    <a:@L> "[" <v:CommaOne<Expression>> "]" <b:@R> => {
+        Expression::ArrayLiteral(Loc::Source(file_no, a, b), v)
+    },
+    <ButIdentifier> => Expression::Variable(<>),
+    <l:@L> <a:NamedParameterList> <r:@R> => {
+        if a.len() == 1 {
+            if let Some(Parameter{ ty, storage: None, name: None, .. }) = &a[0].1 {
+                // this means "(" Expression ")"
+                return Expression::Parenthesis(ty.loc(), Box::new(ty.clone()));
+            }
+        }
+
+        Expression::List(Loc::Source(file_no, l, r), a)
+    },
+    LiteralExpression
 }
 
 Parameter: Parameter = {

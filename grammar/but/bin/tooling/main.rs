@@ -1,4 +1,4 @@
-extern crate BuT;
+extern crate but;
 
 use std::fs;
 

@@ -1,10 +1,10 @@
-extern crate LTL;
+extern crate ltl;
 
 use std::fs;
 
 use clap::Parser;
 
-use LTL::ast::grammar;
+use ltl::ast::grammar;
 
 #[derive(Debug, Parser)]
 #[clap(name = "LTL tooling", about, verbatim_doc_comment)]
