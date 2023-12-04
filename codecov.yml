@@ -1,4 +1,4 @@
-comment: off
+comment: false
 
 ignore:
   - derive/src/lib.rs

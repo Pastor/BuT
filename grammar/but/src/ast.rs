@@ -948,7 +948,7 @@ pub enum Expression {
     /// `<1>.<2>`
     MemberAccess(Loc, Box<Expression>, Identifier),
     /// `<1>(<2>,*)`
-    FunctionCall(Loc, Box<Expression>, Vec<Expression>),
+    FunctionCall(Loc, Identifier, Vec<Expression>),
     /// `<1><2>` where <2> is a block.
     FunctionCallBlock(Loc, Box<Expression>, Box<Statement>),
     /// `<1>({ <2>,* })`

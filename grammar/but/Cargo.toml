@@ -20,10 +20,10 @@ bench = false
 path = "bin/tooling/main.rs"
 
 [build-dependencies]
-lalrpop = { version = "0.20.0", features = ["lexer"] }
+lalrpop = { git = "https://github.com/lalrpop/lalrpop.git", package = "lalrpop", version = "^0.20.1", features = ["lexer"] }
 
 [dependencies]
-lalrpop-util = "0.20.0"
+lalrpop-util = { git = "https://github.com/lalrpop/lalrpop.git", package = "lalrpop-util", version = "^0.20.1"}
 thiserror = "^1.0"
 clap = { version = "4.4.10", features = ["derive"] }
 phf = { version = "0.11", features = ["macros"] }
