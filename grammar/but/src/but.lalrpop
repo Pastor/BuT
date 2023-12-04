@@ -429,7 +429,7 @@ Precedence1: Expression = {
 
 Precedence0: Expression = {
    <Identifier> => Expression::Variable(<>),
-   <l:@L> <a:NamedParameterList> <r:@R> => {
+   <l:@L> <a:ParameterList> <r:@R> => {
        if a.len() == 1 {
            if let Some(Parameter{ ty, storage: None, name: None, .. }) = &a[0].1 {
                // this means "(" Expression ")"
@@ -453,7 +453,7 @@ NoFunctionTyPrecedence0: Expression = {
         Expression::ArrayLiteral(Loc::Source(file_no, a, b), v)
     },
     <ButIdentifier> => Expression::Variable(<>),
-    <l:@L> <a:NamedParameterList> <r:@R> => {
+    <l:@L> <a:ParameterList> <r:@R> => {
         if a.len() == 1 {
             if let Some(Parameter{ ty, storage: None, name: None, .. }) = &a[0].1 {
                 // this means "(" Expression ")"
@@ -488,31 +488,6 @@ ParameterList: Vec<(Loc, Option<Parameter>)> = {
 }
 
 ParameterAnnotation: Annotation = {
-}
-
-NamedParameter: Parameter = {
-    <l:@L> <ty:Precedence0> <name:ButIdentifier> <r:@R> => {
-        let loc = Loc::Source(file_no, l, r);
-        Parameter{ loc, annotation: None, ty, storage: None, name: Some(name) }
-    },
-    <l:@L> <ty:Expression> <r:@R> => {
-        let loc = Loc::Source(file_no, l, r);
-        Parameter{ loc, annotation: None, ty, storage: None, name: None }
-    }
-}
-
-OptNamedParameter: (Loc, Option<Parameter>) = {
-    <l:@L> <p:NamedParameter?> <r:@R> => (Loc::Source(file_no, l, r), p),
-}
-
-NamedParameterList: Vec<(Loc, Option<Parameter>)> = {
-    "(" ")" => Vec::new(),
-    "(" <l:@L> <p:NamedParameter> <r:@R> ")" => vec!((Loc::Source(file_no, l, r), Some(p))),
-    "(" <CommaTwo<OptNamedParameter>> ")" => <>,
-    "(" <false_token:!> ")"=> {
-        parser_errors.push(<>);
-        Vec::new()
-    }
 }
 
 LiteralExpression: Expression = {
