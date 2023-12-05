@@ -139,7 +139,7 @@ impl Display for ast::FunctionDefinition {
         }
 
         if self.return_type.is_some() {
-            write_opt!(f, ' ', &self.return_type);
+            write_opt!(f, " : ", &self.return_type);
         }
 
         if let Some(body) = &self.body {

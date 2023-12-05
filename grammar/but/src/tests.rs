@@ -1,6 +1,6 @@
-use std::{fs, path::Path, thread};
 use std::sync::mpsc;
 use std::time::Duration;
+use std::{fs, path::Path, thread};
 
 use pretty_assertions::assert_eq;
 use walkdir::WalkDir;
@@ -35,6 +35,7 @@ fn parser_error_recovery() {
 #[test]
 fn parse_function_assembly() {
     let src = r#"
+        #[unused, always_inline, align(4)]
         fn try_recover() {
             assembly {
 
@@ -59,10 +60,10 @@ fn parse_random_doc_comment() {
 #[test]
 fn test_lib_but() {
     fn timeout_after<T, F>(d: Duration, f: F) -> Result<T, String>
-        where
-            T: Send + 'static,
-            F: FnOnce() -> T,
-            F: Send + 'static,
+    where
+        T: Send + 'static,
+        F: FnOnce() -> T,
+        F: Send + 'static,
     {
         let (done_tx, done_rx) = mpsc::channel();
         let handle = thread::spawn(move || {
@@ -96,69 +97,68 @@ fn test_lib_but() {
             .into_iter()
             .map(|entry| (true, entry));
 
-    let errors =
-        semantic_tests
-            .into_iter()
-            .chain(syntax_tests)
-            .map::<Result<_, String>, _>(|(syntax_test, entry)| {
-                if entry.file_name().to_string_lossy().ends_with(".but") {
-                    let source = match fs::read_to_string(entry.path()) {
-                        Ok(source) => source,
-                        Err(err) if matches!(err.kind(), std::io::ErrorKind::InvalidData) => {
-                            return Ok(vec![]);
-                        }
-                        Err(err) => return Err(err.to_string()),
-                    };
-
-                    let expect_error = syntax_test && error_matcher.is_match(&source);
-
-                    Ok(source_delimiter
-                        .split(&source)
-                        .filter(|source_part| !source_part.is_empty())
-                        .map(|part| {
-                            (
-                                entry.path().to_string_lossy().to_string(),
-                                expect_error,
-                                part.to_string(),
-                            )
-                        })
-                        .collect::<Vec<_>>())
-                } else {
-                    Ok(vec![])
-                }
-            })
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap()
-            .into_iter()
-            .flatten()
-            .filter_map(|(path, expect_error, source_part)| {
-                let result = match timeout_after(Duration::from_secs(5), move || {
-                    crate::parse(&source_part, 0)
-                }) {
-                    Ok(result) => result,
-                    Err(err) => return Some(format!("{path:?}: \n\t{err}")),
+    let errors = semantic_tests
+        .into_iter()
+        .chain(syntax_tests)
+        .map::<Result<_, String>, _>(|(syntax_test, entry)| {
+            if entry.file_name().to_string_lossy().ends_with(".but") {
+                let source = match fs::read_to_string(entry.path()) {
+                    Ok(source) => source,
+                    Err(err) if matches!(err.kind(), std::io::ErrorKind::InvalidData) => {
+                        return Ok(vec![]);
+                    }
+                    Err(err) => return Err(err.to_string()),
                 };
 
-                if let (Err(err), false) = (
-                    result.map_err(|diags| {
-                        format!(
-                            "{:?}:\n\t{}",
-                            path,
-                            diags
-                                .iter()
-                                .map(|diag| format!("{diag:?}"))
-                                .collect::<Vec<_>>()
-                                .join("\n\t")
-                        )
-                    }),
-                    expect_error,
-                ) {
-                    return Some(err);
-                }
+                let expect_error = syntax_test && error_matcher.is_match(&source);
 
-                None
-            })
-            .collect::<Vec<_>>();
+                Ok(source_delimiter
+                    .split(&source)
+                    .filter(|source_part| !source_part.is_empty())
+                    .map(|part| {
+                        (
+                            entry.path().to_string_lossy().to_string(),
+                            expect_error,
+                            part.to_string(),
+                        )
+                    })
+                    .collect::<Vec<_>>())
+            } else {
+                Ok(vec![])
+            }
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+        .into_iter()
+        .flatten()
+        .filter_map(|(path, expect_error, source_part)| {
+            let result = match timeout_after(Duration::from_secs(5), move || {
+                crate::parse(&source_part, 0)
+            }) {
+                Ok(result) => result,
+                Err(err) => return Some(format!("{path:?}: \n\t{err}")),
+            };
+
+            if let (Err(err), false) = (
+                result.map_err(|diags| {
+                    format!(
+                        "{:?}:\n\t{}",
+                        path,
+                        diags
+                            .iter()
+                            .map(|diag| format!("{diag:?}"))
+                            .collect::<Vec<_>>()
+                            .join("\n\t")
+                    )
+                }),
+                expect_error,
+            ) {
+                return Some(err);
+            }
+
+            None
+        })
+        .collect::<Vec<_>>();
 
     assert!(errors.is_empty(), "{}", errors.join("\n"));
 }
