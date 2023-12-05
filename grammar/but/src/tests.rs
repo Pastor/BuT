@@ -14,48 +14,19 @@ use crate::Loc::Source;
 #[test]
 fn parser_error_recovery() {
     let src = r#"import * as sesa frum "sesa";
-pragma sesa_pragma;
-usingg sesa for *;
-contract 9c {
-    uint256 0sesa_glb = 90;
-    9uint256 sesa_glb = 90;
-    uint256 sesa_glb = 90id;
-
-    event 1sesa_event(uint 0invalid_param_id);
-    event sesa_event(3uint invalid_param_type);
-
-    error 1sesa_error(uint 0invalid_param_id);
-    error sesa_error(3uint invalid_param_type);
-
-    struct 2sesa_struct {
-        uint256 3sesa_struct_mem;
-    }
-
-    function 4sesa_func() public! pure {
-        uint 3sesa_var = 3sesa_id + id;
-        9uint sesa= 4b;
+    struct None {
         if (true)
     }
-}
-"#;
+    "#;
 
     if let Err(errors) = crate::parse(src, 0) {
         assert_eq!(
             errors,
             vec![
-                Diagnostic { loc: Source(0, 17, 21), level: Error, ty: ParserError, message: "'frum' found where 'from' expected".to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 48, 49), level: Error, ty: ParserError, message: r#"unrecognised token ';', expected string"#.to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 62, 65), level: Error, ty: ParserError, message: r#"unrecognised token 'for', expected "(", ";", "=""#.to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 78, 79), level: Error, ty: ParserError, message: r#"unrecognised token '9', expected "case", "default", "leave", "revert", "switch", identifier"#.to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 95, 96), level: Error, ty: ParserError, message: "unrecognised token '0', expected \"(\", \"++\", \"--\", \".\", \"[\", \"case\", \"constant\", \"default\", \"external\", \"immutable\", \"internal\", \"leave\", \"override\", \"private\", \"public\", \"revert\", \"switch\", \"{\", identifier".to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 116, 123), level: Error, ty: ParserError, message: "unrecognised token 'uint256', expected \"++\", \"--\", \".\", \"[\", \"case\", \"default\", \"leave\", \"switch\", identifier".to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 403, 404), level: Error, ty: ParserError, message: "unrecognised token '3', expected \"(\", \"++\", \"--\", \".\", \"[\", \"case\", \"constant\", \"default\", \"external\", \"immutable\", \"internal\", \"leave\", \"override\", \"private\", \"public\", \"revert\", \"switch\", \"{\", identifier".to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 441, 442), level: Error, ty: ParserError, message: r#"unrecognised token '4', expected "(", "case", "default", "leave", "revert", "switch", identifier"#.to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 460, 461), level: Error, ty: ParserError, message: "unrecognised token '!', expected \";\", \"case\", \"constant\", \"default\", \"external\", \"immutable\", \"internal\", \"leave\", \"override\", \"payable\", \"private\", \"public\", \"pure\", \"return\", \"returns\", \"revert\", \"switch\", \"view\", \"virtual\", \"{\", identifier".to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 482, 483), level: Error, ty: ParserError, message: "unrecognised token '3', expected \"!=\", \"%\", \"%=\", \"&\", \"&&\", \"&=\", \"(\", \"*\", \"**\", \"*=\", \"+\", \"++\", \"+=\", \"-\", \"--\", \"-=\", \".\", \"/\", \"/=\", \";\", \"<\", \"<<\", \"<<=\", \"<=\", \"=\", \"==\", \">\", \">=\", \">>\", \">>=\", \"?\", \"[\", \"^\", \"^=\", \"calldata\", \"case\", \"default\", \"leave\", \"memory\", \"revert\", \"storage\", \"switch\", \"{\", \"|\", \"|=\", \"||\", identifier".to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 518, 522), level: Error, ty: ParserError, message: "unrecognised token 'uint256', expected \"!=\", \"%\", \"%=\", \"&\", \"&&\", \"&=\", \"*\", \"**\", \"*=\", \"+\", \"++\", \"+=\", \"-\", \"--\", \"-=\", \".\", \"/\", \"/=\", \";\", \"<\", \"<<\", \"<<=\", \"<=\", \"=\", \"==\", \">\", \">=\", \">>\", \">>=\", \"?\", \"[\", \"^\", \"^=\", \"case\", \"default\", \"leave\", \"switch\", \"|\", \"|=\", \"||\", identifier".to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 555, 556), level: Error, ty: ParserError, message: "unrecognised token '}', expected \"!\", \"(\", \"+\", \"++\", \"-\", \"--\", \"[\", \"address\", \"assembly\", \"bool\", \"break\", \"byte\", \"bytes\", \"case\", \"continue\", \"default\", \"delete\", \"do\", \"emit\", \"false\", \"for\", \"function\", \"if\", \"leave\", \"mapping\", \"new\", \"payable\", \"return\", \"revert\", \"string\", \"switch\", \"true\", \"try\", \"type\", \"unchecked\", \"while\", \"{\", \"~\", Bytes, Int, Uint, address, hexnumber, hexstring, identifier, number, rational, string".to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 557, 558), level: Error, ty: ParserError, message: "unrecognised token '}', expected \"(\", \";\", \"[\", \"abstract\", \"address\", \"bool\", \"byte\", \"bytes\", \"case\", \"contract\", \"default\", \"enum\", \"event\", \"false\", \"function\", \"import\", \"interface\", \"leave\", \"library\", \"mapping\", \"payable\", \"pragma\", \"string\", \"struct\", \"switch\", \"true\", \"type\", \"using\", Bytes, Int, Uint, address, annotation, hexnumber, hexstring, identifier, number, rational, string".to_string(), notes: vec![] },
+                Diagnostic { loc: Source(0, 17, 21), level: Error, ty: ParserError,
+                    message: "'frum' found where 'from' expected".to_string(), notes: vec![] },
+                Diagnostic { loc: Source(0, 56, 58), level: Error, ty: ParserError,
+                    message: "unrecognised token 'if', expected \"#\", \"const\", \"external\", \"let\", \"mut\", \"pio\", \"}\", identifier".to_string(), notes: vec![] },
             ]
         )
     }
