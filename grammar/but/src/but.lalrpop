@@ -16,6 +16,7 @@ SourceUnitPart: SourceUnitPart = {
     VariableDefinition => SourceUnitPart::VariableDefinition(<>),
     GlobalAnnotationDefinition => SourceUnitPart::AnnotationDefinition(Box::new(<>)),
     PropertyDefinition => SourceUnitPart::PropertyDefinition(Box::new(<>)),
+    <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc::Source(file_no, l, r)),
 }
 
 ImportPath: ImportPath = {
@@ -172,6 +173,28 @@ TypeDefinition: Box<TypeDefinition> = {
     },
 }
 
+BlockStatementOrSemiColon: Option<Statement> = {
+    <@L> <@R> ";" => None,
+    BlockStatement => Some(<>),
+}
+
+FunctionDefinition: Box<FunctionDefinition> = {
+    <l:@L> <annotations:AnnotationDefinition*> "fn" <nl:@L> <name:ButIdentifierOrError> <nr:@R> <params:ParameterList>
+    <return_type:(":" <Type>)?> <r:@R> <body:BlockStatementOrSemiColon> => {
+        Box::new(FunctionDefinition{
+            loc: Loc::Source(file_no, l, r),
+            ty: FunctionTy::Function,
+            name,
+            name_loc: Loc::Source(file_no, nl, nr),
+            params,
+            annotations,
+            return_type,
+            body,
+        })
+    },
+}
+
+
 Type: Type = {
     <name:ButIdentifier> => Type::Alias(name),
     <l:@L> "[" <n:number> ":" <ty:Type> "]" <r:@R> => {
@@ -275,18 +298,11 @@ Precedence2: Expression = {
 }
 
 Precedence1: Expression = {
-    <l:@L> <n:number> <bit:(":" <number>)?> <r:@R> => {
-        let bit = if let Some(bit) = bit {
-            Some(bit)
-        } else {
-            None
-        };
-
-        if let Some(bit) = bit {
-            Expression::AddressLiteral(Loc::Source(file_no, l, r), n, bit)
-        } else {
-            Expression::NumberLiteral(Loc::Source(file_no, l, r), n)
-        }
+    <l:@L> <n:number> ":" <bit:number> <r:@R> => {
+        Expression::AddressLiteral(Loc::Source(file_no, l, r), n, bit)
+    },
+    <l:@L> <n:number> <r:@R> => {
+        Expression::NumberLiteral(Loc::Source(file_no, l, r), n)
     },
     <l:@L> <n:rational> <r:@R> => {
         Expression::RationalNumberLiteral(Loc::Source(file_no, l, r), n.0.to_string(), n.1)
@@ -313,7 +329,8 @@ Precedence0: Expression = {
 
       Expression::List(Loc::Source(file_no, l, r), a)
   },
-   LiteralExpression,
+  <a:@L> <e:Precedence0> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc::Source(file_no, a, b), Box::new(e), i),
+  LiteralExpression,
 }
 
 Parameter: Parameter = {
@@ -346,6 +363,91 @@ LiteralExpression: Expression = {
     <StringLiteral+> => Expression::StringLiteral(<>),
     <HexLiteral+> => Expression::HexLiteral(<>),
 }
+
+BlockStatement: Statement = {
+    <l:@L> "{" <statements:Statement*> "}" <r:@R> => {
+        Statement::Block { loc: Loc::Source(file_no, l, r), unchecked: false, statements }
+    },
+    <l:@L> "{" <v:CommaOne<NamedArgument>> "}" <r:@R> => Statement::Args(Loc::Source(file_no, l, r), v),
+}
+
+OpenStatement: Statement = {
+    <l:@L> "if" "(" <cond:Expression> ")" <body:Statement> <r:@R> => {
+        Statement::If(Loc::Source(file_no, l, r), cond, Box::new(body), None)
+    },
+    <l:@L> "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:OpenStatement> <r:@R> => {
+        Statement::If(Loc::Source(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
+    },
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Expression?> ")" <block:OpenStatement> <r:@R> => {
+        Statement::For(Loc::Source(file_no, l, r), b.map(Box::new), c.map(Box::new), n.map(Box::new), Some(Box::new(block)))
+    },
+    <l:@L> "while" "(" <e:Expression> ")" <b:OpenStatement> <r:@R> => {
+        Statement::While(Loc::Source(file_no, l, r), e, Box::new(b))
+    }
+}
+
+ClosedStatement: Statement = {
+    NonIfStatement,
+    <l:@L> "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:ClosedStatement> <r:@R> => {
+        Statement::If(Loc::Source(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
+    },
+    <l:@L> "while" "(" <e:Expression> ")" <b:ClosedStatement> <r:@R> => {
+        Statement::While(Loc::Source(file_no, l, r), e, Box::new(b))
+    },
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Expression?> ")" <block:ClosedStatement> <r:@R> => {
+        Statement::For(Loc::Source(file_no, l, r), b.map(Box::new), c.map(Box::new), n.map(Box::new), Some(Box::new(block)))
+    },
+    <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Expression?> ")" <r:@R> ";" => {
+        Statement::For(Loc::Source(file_no, l, r), b.map(Box::new), c.map(Box::new), n.map(Box::new), None)
+    }
+}
+
+Statement: Statement = {
+    OpenStatement,
+    ClosedStatement,
+    <l:@L> <false_token:!> <r:@R> => {
+        parser_errors.push(false_token);
+        Statement::Error(Loc::Source(file_no, l, r))
+    },
+}
+
+SimpleStatement: Statement = {
+    <l:@L> <v:VariableDeclaration> <e:("=" <Expression>)?> <r:@R> => {
+        Statement::VariableDefinition(Loc::Source(file_no, l, r), v, e)
+    },
+    <l:@L> <e:Expression> <r:@R> => {
+        Statement::Expression(Loc::Source(file_no, l, r), e)
+    }
+}
+
+NonIfStatement: Statement = {
+    BlockStatement => <>,
+    <l:@L> "assembly" <dialect:StringLiteral?> <block:BlockStatement> <r:@R> => {
+        Statement::Assembly {
+            loc: Loc::Source(file_no, l, r),
+            dialect: dialect.map(|dialect| dialect.to_owned()),
+            flags: None,
+            block: Box::new(block)
+        }
+    },
+    <SimpleStatement> ";" => <>,
+    <l:@L> "do" <b:Statement> "while" "(" <e:Expression> ")" <r:@R> ";" => {
+        Statement::DoWhile(Loc::Source(file_no, l, r), Box::new(b), e)
+    },
+    <l:@L> "continue" <r:@R> ";" => {
+        Statement::Continue(Loc::Source(file_no, l, r))
+    },
+    <l:@L> "break" <r:@R> ";" => {
+        Statement::Break(Loc::Source(file_no, l, r))
+    },
+    <l:@L> "return" <r:@R> ";" => {
+        Statement::Return(Loc::Source(file_no, l, r), None)
+    },
+    <l:@L> "return" <e:Expression> <r:@R> ";" => {
+        Statement::Return(Loc::Source(file_no, l, r), Some(e))
+    },
+}
+
 
 StringLiteral: StringLiteral = {
     <l:@L> <s:string> <r:@R> => {

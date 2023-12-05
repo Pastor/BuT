@@ -17,6 +17,7 @@ pub mod helpers;
 pub mod lexer;
 
 mod annotations;
+mod functions;
 mod properties;
 #[cfg(test)]
 mod tests;

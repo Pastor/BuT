@@ -1365,11 +1365,9 @@ pub struct FunctionDefinition {
     /// The parameter list.
     pub params: ParameterList,
     /// The function attributes.
-    pub attributes: Vec<FunctionAttribute>,
-    /// The `returns` keyword's location. `Some` if this was `return`, not `returns`.
-    pub return_not_returns: Option<Loc>,
+    pub annotations: Vec<AnnotationDefinition>,
     /// The return parameter list.
-    pub returns: ParameterList,
+    pub return_type: Option<Type>,
     /// The function body.
     ///
     /// If `None`, the declaration ended with a semicolon.
@@ -1380,21 +1378,13 @@ impl FunctionDefinition {
     /// Returns `true` if the function has no return parameters.
     #[inline]
     pub fn is_void(&self) -> bool {
-        self.returns.is_empty()
+        self.return_type.is_none()
     }
 
     /// Returns `true` if the function body is empty.
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.body.as_ref().map_or(true, Statement::is_empty)
-    }
-
-    /// Sorts the function attributes.
-    #[inline]
-    pub fn sort_attributes(&mut self) {
-        // we don't use unstable sort since there may be more that one `BaseOrModifier` attributes
-        // which we want to preserve the order of
-        self.attributes.sort();
     }
 }
 
@@ -1421,7 +1411,7 @@ pub enum Statement {
         /// The assembly flags.
         flags: Option<Vec<StringLiteral>>,
         /// The assembly block.
-        block: YulBlock,
+        block: Box<Statement>,
     },
     /// `{ <1>,* }`
     Args(Loc, Vec<NamedArgument>),

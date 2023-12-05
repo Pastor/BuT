@@ -133,15 +133,13 @@ impl Display for ast::FunctionDefinition {
         fmt_parameter_list(&self.params, f)?;
         f.write_char(')')?;
 
-        if !self.attributes.is_empty() {
+        if !self.annotations.is_empty() {
             f.write_char(' ')?;
-            write_separated(&self.attributes, f, " ")?;
+            write_separated(&self.annotations, f, " ")?;
         }
 
-        if !self.returns.is_empty() {
-            f.write_str(" returns (")?;
-            fmt_parameter_list(&self.returns, f)?;
-            f.write_char(')')?;
+        if self.return_type.is_some() {
+            write_opt!(f, ' ', &self.return_type);
         }
 
         if let Some(body) = &self.body {
@@ -396,6 +394,25 @@ impl Display for ast::ContractPart {
 impl Display for ast::ContractTy {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str(self.as_str())
+    }
+}
+
+impl Display for ast::AnnotationDefinition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        f.write_str("#")?;
+        if self.glob {
+            f.write_str("!")?;
+        }
+        f.write_str("[")?;
+        let mut iter = self.args.iter();
+        if let Some(first) = iter.next() {
+            Display::fmt(first, f)?;
+            for item in iter {
+                f.write_str(", ")?;
+                Display::fmt(item, f)?;
+            }
+        }
+        f.write_str("]")
     }
 }
 
@@ -1493,6 +1510,14 @@ mod tests {
         }
     }
 
+    fn block() -> Box<ast::Statement> {
+        Box::new(ast::Statement::Block {
+            loc: loc!(),
+            unchecked: false,
+            statements: vec![],
+        })
+    }
+
     fn assert_eq_display<T: Display + std::fmt::Debug>(item: T, expected: &str) {
         let ty = std::any::type_name::<T>();
         let actual = item.to_string();
@@ -1647,9 +1672,8 @@ mod tests {
                 name: Some(id("name")),
                 name_loc: loc!(),
                 params: vec![],
-                attributes: vec![],
-                return_not_returns: None,
-                returns: vec![],
+                annotations: vec![],
+                return_type: None,
                 body: None,
             } => "function name();",
             ast::FunctionDefinition {
@@ -1657,9 +1681,8 @@ mod tests {
                 name: Some(id("name")),
                 name_loc: loc!(),
                 params: vec![],
-                attributes: vec![],
-                return_not_returns: None,
-                returns: vec![],
+                annotations: vec![],
+                return_type: None,
                 body: Some(stmt!({})),
             } => "function name() {}",
             ast::FunctionDefinition {
@@ -1667,21 +1690,19 @@ mod tests {
                 name: Some(id("name")),
                 name_loc: loc!(),
                 params: vec![],
-                attributes: vec![],
-                return_not_returns: None,
-                returns: vec![(loc!(), Some(param!(uint256)))],
+                annotations: vec![],
+                return_type: Some(Type::Alias(id("uint256"))),
                 body: Some(stmt!({})),
-            } => "function name() returns (uint256) {}",
+            } => "function name() : uint256 {}",
             ast::FunctionDefinition {
                 ty: ast::FunctionTy::Function,
                 name: Some(id("name")),
                 name_loc: loc!(),
                 params: vec![],
-                attributes: vec![ast::FunctionAttribute::Virtual(loc!())],
-                return_not_returns: None,
-                returns: vec![(loc!(), Some(param!(uint256)))],
+                annotations: vec![],
+                return_type: Some(Type::Alias(id("uint256"))),
                 body: Some(stmt!({})),
-            } => "function name() virtual returns (uint256) {}",
+            } => "function name() : uint256 {}",
 
             ast::StructDefinition {
                 name: Some(id("name")),
@@ -1948,19 +1969,19 @@ mod tests {
                     loc: loc!(),
                     dialect: None,
                     flags: None,
-                    block: yul_block(),
+                    block: block(),
                 } => "assembly {}",
                 ast::Statement::Assembly {
                     loc: loc!(),
                     dialect: None,
                     flags: Some(vec![lit!("memory-safe")]),
-                    block: yul_block(),
+                    block: block(),
                 } => "assembly (\"memory-safe\") {}",
                 ast::Statement::Assembly {
                     loc: loc!(),
                     dialect: None,
                     flags: Some(vec![lit!("memory-safe"), lit!("second-flag")]),
-                    block: yul_block(),
+                    block: block(),
                 } => "assembly (\"memory-safe\", \"second-flag\") {}",
 
                 ast::Statement::Args(loc!(), vec![]) => "{}",
