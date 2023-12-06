@@ -1,6 +1,8 @@
 #![doc = include_str!("../README.adoc")]
 #![warn(missing_debug_implementations, missing_docs)]
 
+extern crate core;
+
 use lalrpop_util::ParseError;
 
 use diagnostics::Diagnostic;

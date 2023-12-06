@@ -324,7 +324,11 @@ Precedence0: Expression = {
 
       Expression::List(Loc::Source(file_no, l, r), a)
   },
+  <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc::Source(file_no, a, b), Box::new(e)),
+  <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc::Source(file_no, a, b), Box::new(e)),
   <a:@L> <e:Precedence0> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc::Source(file_no, a, b), Box::new(e), i),
+  <a:@L> <i:Identifier> "[" <n:number> "]" <b:@R> => Expression::ArraySubscript(Loc::Source(file_no, a, b), i, n),
+  <a:@L> <i:Identifier> "[" <l:number?> ":" <r:number?> "]" <b:@R> => Expression::ArraySlice(Loc::Source(file_no, a, b), i, l, r),
   LiteralExpression,
 }
 

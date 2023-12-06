@@ -935,13 +935,13 @@ pub enum Expression {
     /// `new <1>`
     New(Loc, Box<Expression>),
     /// `<1>\[ [2] \]`
-    ArraySubscript(Loc, Box<Expression>, Option<Box<Expression>>),
+    ArraySubscript(Loc, Identifier, i64),
     /// `<1>\[ [2] : [3] \]`
     ArraySlice(
         Loc,
-        Box<Expression>,
-        Option<Box<Expression>>,
-        Option<Box<Expression>>,
+        Identifier,
+        Option<i64>,
+        Option<i64>,
     ),
     /// `(<1>)`
     Parenthesis(Loc, Box<Expression>),

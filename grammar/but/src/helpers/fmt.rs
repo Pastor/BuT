@@ -454,14 +454,14 @@ impl Display for ast::Expression {
                 write_separated(exprs, f, ", ")?;
                 f.write_char('}')
             }
-            Self::ArraySubscript(_, expr1, expr2) => {
-                Self::format_expr(f, &expr1);
+            Self::ArraySubscript(_, id, n) => {
+                Display::fmt(id, f)?;
                 f.write_char('[')?;
-                write_opt!(f, expr2);
+                Display::fmt(n, f)?;
                 f.write_char(']')
             }
-            Self::ArraySlice(_, arr, l, r) => {
-                Self::format_expr(f, &arr);
+            Self::ArraySlice(_, id, l, r) => {
+                Display::fmt(id, f)?;
                 f.write_char('[')?;
                 write_opt!(f, l);
                 f.write_char(':')?;
@@ -1826,15 +1826,14 @@ mod tests {
 
                 ast::Expression::ArrayLiteral(loc!(), vec![expr!(1), expr!(2)]) => "[1, 2]",
 
-                ast::Expression::ArraySubscript(loc!(), Box::new(ast::Expression::Variable(id("arr"))), None) => "arr[]",
-                ast::Expression::ArraySubscript(loc!(), Box::new(expr!(arr)), Some(Box::new(expr!(0)))) => "arr[0]",
-                ast::Expression::ArraySlice(loc!(), Box::new(expr!(arr)), None, None) => "arr[:]",
-                ast::Expression::ArraySlice(loc!(), Box::new(expr!(arr)), Some(Box::new(expr!(left))), None)
-                    => "arr[left:]",
-                ast::Expression::ArraySlice(loc!(), Box::new(expr!(arr)), None, Some(Box::new(expr!(right))))
-                    => "arr[:right]",
-                ast::Expression::ArraySlice(loc!(), Box::new(expr!(arr)), Some(Box::new(expr!(left))), Some(Box::new(expr!(right))))
-                    => "arr[left:right]",
+                ast::Expression::ArraySubscript(loc!(), id("arr"), 0) => "arr[0]",
+                ast::Expression::ArraySlice(loc!(), id("arr"), None, None) => "arr[:]",
+                ast::Expression::ArraySlice(loc!(), id("arr"), Some(1), None)
+                    => "arr[1:]",
+                ast::Expression::ArraySlice(loc!(), id("arr"), None, Some(1))
+                    => "arr[:1]",
+                ast::Expression::ArraySlice(loc!(), id("arr"), Some(1), Some(2))
+                    => "arr[1:2]",
 
                 ast::Expression::MemberAccess(loc!(), Box::new(expr!(struct)), id("access")) => "struct.access",
 
