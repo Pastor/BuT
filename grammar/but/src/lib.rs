@@ -17,13 +17,8 @@ pub mod diagnostics;
 pub mod doccomment;
 pub mod helpers;
 pub mod lexer;
-
-mod annotations;
-mod properties;
 #[cfg(test)]
 mod tests;
-mod typing;
-mod variables;
 
 #[allow(
     clippy::needless_lifetimes,
