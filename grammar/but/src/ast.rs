@@ -319,13 +319,6 @@ pub struct SourceUnit(pub Vec<SourceUnitPart>);
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
 pub enum SourceUnitPart {
-    /// A pragma directive.
-    ///
-    /// `pragma <1> <2>;`
-    ///
-    /// `1` and `2` are `None` only if an error occurred during parsing.
-    PragmaDirective(Loc, Option<Identifier>, Option<StringLiteral>),
-
     /// An import directive.
     ImportDirective(Import),
 
@@ -408,34 +401,14 @@ pub enum Type {
     /// `address`
     Address,
 
-    /// `address payable`
-    AddressPayable,
-
-    /// `payable`
-    ///
-    /// Only used as a cast.
-    Payable,
-
     /// `bool`
     Bool,
 
     /// `string`
     String,
 
-    /// `int<n>`
-    Int(u16),
-
-    /// `uint<n>`
-    Uint(u16),
-
-    /// `bytes<n>`
-    Bytes(u8),
-
     /// `fixed`
     Rational,
-
-    /// `bytes`
-    DynamicBytes,
 
     Alias(Identifier),
     Array {
@@ -444,30 +417,14 @@ pub enum Type {
         element_type: Box<Type>,
     },
 
-    /// `mapping(<key> [key_name] => <value> [value_name])`
-    Mapping {
-        /// The code location.
-        loc: Loc,
-        /// The key expression.
-        ///
-        /// This is only allowed to be an elementary type or a user defined type.
-        key: Box<Expression>,
-        /// The optional key identifier.
-        key_name: Option<Identifier>,
-        /// The value expression.
-        value: Box<Expression>,
-        /// The optional value identifier.
-        value_name: Option<Identifier>,
-    },
-
-    /// `function (<params>) <attributes> [returns]`
+    /// `function (<params>) [returns]`
     Function {
         /// The list of parameters.
         params: ParameterList,
         /// The list of attributes.
-        attributes: Vec<FunctionAttribute>,
+        annotations: Vec<AnnotationDefinition>,
         /// The optional list of return parameters.
-        returns: Option<(ParameterList, Vec<FunctionAttribute>)>,
+        returns: Option<(ParameterList, Vec<AnnotationDefinition>)>,
     },
 }
 
@@ -477,12 +434,6 @@ pub enum Type {
 pub enum StorageLocation {
     /// `memory`
     Memory(Loc),
-
-    /// `storage`
-    Storage(Loc),
-
-    /// `calldata`
-    Calldata(Loc),
 }
 
 /// A variable declaration.
@@ -519,38 +470,6 @@ pub struct StructDefinition {
     /// The list of fields.
     pub fields: Vec<VariableDeclaration>,
     pub annotations: Vec<AnnotationDefinition>,
-}
-
-/// A contract part.
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub enum ContractPart {
-    /// A struct definition.
-    StructDefinition(Box<StructDefinition>),
-
-    /// An enum definition.
-    EnumDefinition(Box<EnumDefinition>),
-
-    /// An error definition.
-    ErrorDefinition(Box<ErrorDefinition>),
-
-    /// A variable definition.
-    VariableDefinition(Box<VariableDefinition>),
-
-    /// A function definition.
-    FunctionDefinition(Box<FunctionDefinition>),
-
-    /// A type definition.
-    TypeDefinition(Box<TypeDefinition>),
-
-    /// A definition.
-    AnnotationDefinition(Box<AnnotationDefinition>),
-
-    /// A `using` directive.
-    Using(Box<Using>),
-
-    /// A stray semicolon.
-    StraySemicolon(Loc),
 }
 
 /// A `using` list. See [Using].
@@ -932,17 +851,10 @@ pub enum Expression {
     PostIncrement(Loc, Box<Expression>),
     /// `<1>--`
     PostDecrement(Loc, Box<Expression>),
-    /// `new <1>`
-    New(Loc, Box<Expression>),
     /// `<1>\[ [2] \]`
     ArraySubscript(Loc, Identifier, i64),
     /// `<1>\[ [2] : [3] \]`
-    ArraySlice(
-        Loc,
-        Identifier,
-        Option<i64>,
-        Option<i64>,
-    ),
+    ArraySlice(Loc, Identifier, Option<i64>, Option<i64>),
     /// `(<1>)`
     Parenthesis(Loc, Box<Expression>),
     /// `<1>.<2>`
@@ -957,8 +869,6 @@ pub enum Expression {
     Not(Loc, Box<Expression>),
     /// `~<1>`
     BitwiseNot(Loc, Box<Expression>),
-    /// `delete <1>`
-    Delete(Loc, Box<Expression>),
     /// `++<1>`
     PreIncrement(Loc, Box<Expression>),
     /// `--<1>`
@@ -1073,8 +983,6 @@ macro_rules! expr_components {
             // (None, Some)
             Not(_, expr)
             | BitwiseNot(_, expr)
-            | New(_, expr)
-            | Delete(_, expr)
             | UnaryPlus(_, expr)
             | Negate(_, expr)
             | PreDecrement(_, expr)
@@ -1335,15 +1243,6 @@ pub enum FunctionTy {
 
     /// `function`
     Function,
-
-    /// `fallback`
-    Fallback,
-
-    /// `receive`
-    Receive,
-
-    /// `modifier`
-    Modifier,
 }
 
 /// A function definition.
@@ -1413,6 +1312,16 @@ pub enum Statement {
         /// The assembly block.
         block: Box<Statement>,
     },
+    Formula {
+        /// The code location.
+        loc: Loc,
+        /// The assembly dialect.
+        dialect: Option<StringLiteral>,
+        /// The assembly flags.
+        flags: Option<Vec<StringLiteral>>,
+        /// The assembly block.
+        block: Box<FormulaStatement>,
+    },
     /// `{ <1>,* }`
     Args(Loc, Vec<NamedArgument>),
     /// `if ({1}) <2> [else <3>]`
@@ -1447,23 +1356,6 @@ pub enum Statement {
     Break(Loc),
     /// `return [1];`
     Return(Loc, Option<Expression>),
-    /// `revert [1] (<2>,*);`
-    Revert(Loc, Option<IdentifierPath>, Vec<Expression>),
-    /// `revert [1] ({ <2>,* });`
-    RevertNamedArgs(Loc, Option<IdentifierPath>, Vec<NamedArgument>),
-    /// `emit <1>;`
-    ///
-    /// `<1>` is `FunctionCall`.
-    Emit(Loc, Expression),
-    /// `try <1> [returns (<2.1>,*) <2.2>] <3>*`
-    ///
-    /// `<1>` is either `New(FunctionCall)` or `FunctionCall`.
-    Try(
-        Loc,
-        Expression,
-        Option<(ParameterList, Box<Statement>)>,
-        Vec<CatchClause>,
-    ),
     /// An error occurred during parsing.
     Error(Loc),
 }
@@ -1481,100 +1373,33 @@ impl Statement {
     }
 }
 
-/// A catch clause. See [Statement].
+/// A Formula statement.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub enum CatchClause {
-    /// `catch [(<1>)] <2>`
-    Simple(Loc, Option<Parameter>, Statement),
-
-    /// `catch <1> (<2>) <3>`
-    Named(Loc, Identifier, Parameter, Statement),
-}
-
-/// A Yul statement.
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub enum YulStatement {
+pub enum FormulaStatement {
     /// `<1>,+ = <2>`
-    Assign(Loc, Vec<YulExpression>, YulExpression),
-    /// `let <1>,+ [:= <2>]`
-    VariableDeclaration(Loc, Vec<YulTypedIdentifier>, Option<YulExpression>),
-    /// `if <1> <2>`
-    If(Loc, YulExpression, YulBlock),
-    /// A [YulFor] statement.
-    For(YulFor),
-    /// A [YulSwitch] statement.
-    Switch(YulSwitch),
-    /// `leave`
-    Leave(Loc),
-    /// `break`
-    Break(Loc),
-    /// `continue`
-    Continue(Loc),
+    Assign(Loc, Vec<FormulaExpression>, FormulaExpression),
     /// A [YulBlock] statement.
-    Block(YulBlock),
-    /// A [YulFunctionDefinition] statement.
-    FunctionDefinition(Box<YulFunctionDefinition>),
+    Block(FormulaBlock),
     /// A [YulFunctionCall] statement.
-    FunctionCall(Box<YulFunctionCall>),
+    FunctionCall(Box<FormulaFunctionCall>),
     /// An error occurred during parsing.
     Error(Loc),
 }
 
-/// A Yul switch statement.
-///
-/// `switch <condition> <cases>* [default <default>]`
-///
-/// Enforced by the parser:
-///
-/// - `cases` is guaranteed to be a `Vec` of `YulSwitchOptions::Case`.
-/// - `default` is guaranteed to be `YulSwitchOptions::Default`.
-/// - At least one of `cases` or `default` must be non-empty/`Some` respectively.
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub struct YulSwitch {
-    /// The code location.
-    pub loc: Loc,
-    /// The switch condition.
-    pub condition: YulExpression,
-    /// The switch cases.
-    pub cases: Vec<YulSwitchOptions>,
-    /// The optional default case.
-    pub default: Option<YulSwitchOptions>,
-}
-
-/// A Yul for statement.
-///
-/// `for <init_block> <condition> <post_block> <execution_block>`
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub struct YulFor {
-    /// The code location.
-    pub loc: Loc,
-    /// The for statement init block.
-    pub init_block: YulBlock,
-    /// The for statement condition.
-    pub condition: YulExpression,
-    /// The for statement post block.
-    pub post_block: YulBlock,
-    /// The for statement execution block.
-    pub execution_block: YulBlock,
-}
-
-/// A Yul block statement.
+/// A Formula block statement.
 ///
 /// `{ <statements>* }`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub struct YulBlock {
+pub struct FormulaBlock {
     /// The code location.
     pub loc: Loc,
     /// The block statements.
-    pub statements: Vec<YulStatement>,
+    pub statements: Vec<FormulaStatement>,
 }
 
-impl YulBlock {
+impl FormulaBlock {
     /// Returns `true` if the block contains no elements.
     #[inline]
     pub fn is_empty(&self) -> bool {
@@ -1582,14 +1407,14 @@ impl YulBlock {
     }
 }
 
-/// A Yul expression.
+/// A Formula expression.
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub enum YulExpression {
+pub enum FormulaExpression {
     /// `<1> [: <2>]`
     BoolLiteral(Loc, bool, Option<Identifier>),
     /// `<1>[e<2>] [: <2>]`
-    NumberLiteral(Loc, String, String, Option<Identifier>),
+    NumberLiteral(Loc, i64, Option<Identifier>),
     /// `<1> [: <2>]`
     HexNumberLiteral(Loc, String, Option<Identifier>),
     /// `<0> [: <1>]`
@@ -1599,77 +1424,22 @@ pub enum YulExpression {
     /// Any valid [Identifier].
     Variable(Identifier),
     /// [YulFunctionCall].
-    FunctionCall(Box<YulFunctionCall>),
+    FunctionCall(Box<FormulaFunctionCall>),
     /// `<1>.<2>`
-    SuffixAccess(Loc, Box<YulExpression>, Identifier),
+    SuffixAccess(Loc, Box<FormulaExpression>, Identifier),
+    Parenthesis(Loc, Box<FormulaExpression>),
 }
 
-/// A Yul typed identifier.
-///
-/// `<id> [: <ty>]`
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub struct YulTypedIdentifier {
-    /// The code location.
-    pub loc: Loc,
-    /// The identifier.
-    pub id: Identifier,
-    /// The optional type.
-    pub ty: Option<Identifier>,
-}
-
-/// A Yul function definition.
-///
-/// `function <name> (<params>,*) [-> (<returns>,*)] <body>`
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub struct YulFunctionDefinition {
-    /// The code location.
-    pub loc: Loc,
-    /// The identifier.
-    pub id: Identifier,
-    /// The parameters.
-    pub params: Vec<YulTypedIdentifier>,
-    /// The return parameters.
-    pub returns: Vec<YulTypedIdentifier>,
-    /// The function body.
-    pub body: YulBlock,
-}
-
-impl YulFunctionDefinition {
-    /// Returns `true` if the function has no return parameters.
-    #[inline]
-    pub fn is_void(&self) -> bool {
-        self.returns.is_empty()
-    }
-
-    /// Returns `true` if the function body is empty.
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.body.is_empty()
-    }
-}
-
-/// A Yul function call.
+/// A Formula function call.
 ///
 /// `<id>(<arguments>,*)`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub struct YulFunctionCall {
+pub struct FormulaFunctionCall {
     /// The code location.
     pub loc: Loc,
     /// The identifier.
     pub id: Identifier,
     /// The function call arguments.
-    pub arguments: Vec<YulExpression>,
-}
-
-/// A Yul switch case or default statement. See [YulSwitch].
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub enum YulSwitchOptions {
-    /// `case <1> <2>`
-    Case(Loc, YulExpression, YulBlock),
-    /// `default <1>`
-    Default(Loc, YulBlock),
+    pub arguments: Vec<FormulaExpression>,
 }

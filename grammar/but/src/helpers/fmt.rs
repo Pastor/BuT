@@ -1,5 +1,3 @@
-use std::error::Error;
-use std::fmt::{Debug, Pointer};
 use std::str::FromStr;
 use std::{
     borrow::Cow,
@@ -7,7 +5,7 @@ use std::{
 };
 
 use crate::ast;
-use crate::ast::{Annotation, Expression, SourceUnitPart, Type};
+use crate::ast::{Annotation, Expression, FormulaExpression, SourceUnitPart, Type};
 
 macro_rules! write_opt {
     // no sep
@@ -279,7 +277,7 @@ impl Display for ast::VariableDefinition {
     }
 }
 
-impl Display for ast::YulBlock {
+impl Display for ast::FormulaBlock {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_char('{')?;
         write_separated(&self.statements, f, " ")?;
@@ -287,20 +285,7 @@ impl Display for ast::YulBlock {
     }
 }
 
-impl Display for ast::YulFor {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        f.write_str("for ")?;
-        std::fmt::Display::fmt(&self.init_block, f)?;
-        f.write_char(' ')?;
-        std::fmt::Display::fmt(&self.condition, f)?;
-        f.write_char(' ')?;
-        std::fmt::Display::fmt(&self.post_block, f)?;
-        f.write_char(' ')?;
-        std::fmt::Display::fmt(&self.execution_block, f)
-    }
-}
-
-impl Display for ast::YulFunctionCall {
+impl Display for ast::FormulaFunctionCall {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         std::fmt::Display::fmt(&self.id, f)?;
         f.write_char('(')?;
@@ -309,85 +294,9 @@ impl Display for ast::YulFunctionCall {
     }
 }
 
-impl Display for ast::YulFunctionDefinition {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        f.write_str("function ")?;
-        std::fmt::Display::fmt(&self.id, f)?;
-        f.write_char('(')?;
-        write_separated(&self.params, f, ", ")?;
-        f.write_str(") ")?;
-
-        if !self.returns.is_empty() {
-            f.write_str("-> (")?;
-            write_separated(&self.returns, f, ", ")?;
-            f.write_str(") ")?;
-        }
-
-        std::fmt::Display::fmt(&self.body, f)
-    }
-}
-
-impl Display for ast::YulSwitch {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        f.write_str("switch ")?;
-        std::fmt::Display::fmt(&self.condition, f)?;
-        if !self.cases.is_empty() {
-            f.write_char(' ')?;
-            write_separated(&self.cases, f, " ")?;
-        }
-        write_opt!(f, " ", &self.default);
-        Ok(())
-    }
-}
-
-impl Display for ast::YulTypedIdentifier {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        std::fmt::Display::fmt(&self.id, f)?;
-        write_opt!(f, ": ", &self.ty);
-        Ok(())
-    }
-}
-
-// enums
-impl Display for ast::CatchClause {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        match self {
-            Self::Simple(_, param, block) => {
-                f.write_str("catch ")?;
-                write_opt!(f, '(', param, ") ");
-                std::fmt::Display::fmt(&block, f)
-            }
-            Self::Named(_, ident, param, block) => {
-                f.write_str("catch ")?;
-                std::fmt::Display::fmt(&ident, f)?;
-                f.write_char('(')?;
-                std::fmt::Display::fmt(&param, f)?;
-                f.write_str(") ")?;
-                std::fmt::Display::fmt(&block, f)
-            }
-        }
-    }
-}
-
 impl Display for ast::Comment {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str(self.value())
-    }
-}
-
-impl Display for ast::ContractPart {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        match self {
-            Self::StructDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::EnumDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::ErrorDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::VariableDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::FunctionDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::TypeDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::AnnotationDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::Using(inner) => Pointer::fmt(&inner, f),
-            Self::StraySemicolon(_) => f.write_char(';'),
-        }
     }
 }
 
@@ -431,15 +340,6 @@ impl ast::ContractTy {
 impl Display for ast::Expression {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            Self::New(_, expr) => {
-                f.write_str("new ")?;
-                Pointer::fmt(&expr, f)
-            }
-            Self::Delete(_, expr) => {
-                f.write_str("delete ")?;
-                Pointer::fmt(&expr, f)
-            }
-
             Self::Type(_, ty) => Display::fmt(&ty, f),
 
             Self::Variable(ident) => std::fmt::Display::fmt(&ident, f),
@@ -515,28 +415,28 @@ impl Display for ast::Expression {
             }
 
             Self::FunctionCall(_, expr, exprs) => {
-                Pointer::fmt(&expr, f)?;
+                Display::fmt(&expr, f)?;
                 f.write_char('(')?;
                 write_separated(exprs, f, ", ")?;
                 f.write_char(')')
             }
             Self::FunctionCallBlock(_, expr, block) => {
-                Pointer::fmt(&expr, f)?;
-                Pointer::fmt(&block, f)
+                Display::fmt(&expr, f)?;
+                Display::fmt(&block, f)
             }
             Self::NamedFunctionCall(_, expr, args) => {
-                Pointer::fmt(&expr, f)?;
+                Display::fmt(&expr, f)?;
                 f.write_str("({")?;
                 write_separated(args, f, ", ")?;
                 f.write_str("})")
             }
 
             Self::ConditionalOperator(_, cond, l, r) => {
-                Pointer::fmt(&cond, f)?;
+                Display::fmt(&cond, f)?;
                 f.write_str(" ? ")?;
-                Pointer::fmt(&l, f)?;
+                Display::fmt(&l, f)?;
                 f.write_str(" : ")?;
-                Pointer::fmt(&r, f)
+                Display::fmt(&r, f)
             }
 
             Self::PreIncrement(..)
@@ -609,9 +509,6 @@ impl ast::Expression {
     pub const fn operator(&self) -> Option<&'static str> {
         use ast::Expression::*;
         let operator = match self {
-            New(..) => "new",
-            Delete(..) => "delete",
-
             PreIncrement(..) | PostIncrement(..) => "++",
             PreDecrement(..) | PostDecrement(..) => "--",
 
@@ -679,31 +576,9 @@ impl ast::Expression {
         let r = if let Expression::Variable(id) = v {
             Display::fmt(id, f)
         } else {
-            Pointer::fmt(&expr, f)
+            Display::fmt(&expr, f)
         };
         r.unwrap()
-    }
-}
-
-impl Display for ast::FunctionAttribute {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        match self {
-            Self::Mutability(mutability) => std::fmt::Display::fmt(&mutability, f),
-            Self::Visibility(visibility) => std::fmt::Display::fmt(&visibility, f),
-            Self::Virtual(_) => f.write_str("virtual"),
-            Self::Immutable(_) => f.write_str("immutable"),
-            Self::Override(_, idents) => {
-                f.write_str("override")?;
-                if !idents.is_empty() {
-                    f.write_char('(')?;
-                    write_separated(idents, f, ", ")?;
-                    f.write_char(')')?;
-                }
-                Ok(())
-            }
-            Self::BaseOrModifier(_, base) => std::fmt::Display::fmt(&base, f),
-            Self::Error(_) => Ok(()),
-        }
     }
 }
 
@@ -719,9 +594,6 @@ impl ast::FunctionTy {
         match self {
             Self::Constructor => "constructor",
             Self::Function => "function",
-            Self::Fallback => "fallback",
-            Self::Receive => "receive",
-            Self::Modifier => "modifier",
         }
     }
 }
@@ -772,44 +644,31 @@ impl Display for ast::ImportPath {
     }
 }
 
-impl Display for ast::Mutability {
+impl Display for ast::PropertyDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        f.write_str(self.as_str())
-    }
-}
-
-impl ast::Mutability {
-    /// Returns the string representation of this type.
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Pure(_) => "pure",
-            Self::Constant(_) | Self::View(_) => "view",
-            Self::Payable(_) => "payable",
+        for i in self.annotations.iter() {
+            Display::fmt(i, f)?;
         }
+        write_opt!(f, "", &self.name);
+        write_opt!(f, ": ", &self.value);
+        f.write_char(';')
     }
 }
 
 impl Display for ast::SourceUnitPart {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            Self::ImportDirective(inner) => Pointer::fmt(&inner, f),
-            Self::EnumDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::StructDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::ErrorDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::FunctionDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::VariableDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::TypeDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::AnnotationDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::Using(inner) => Pointer::fmt(&inner, f),
-            Self::PragmaDirective(_, ident, lit) => {
-                f.write_str("pragma")?;
-                write_opt!(f, ' ', ident);
-                // this isn't really a string literal, it's just parsed as one by the lexer
-                write_opt!(f, ' ', lit.as_ref().map(|lit| &lit.string));
-                f.write_char(';')
-            }
+            Self::ImportDirective(inner) => Display::fmt(&inner, f),
+            Self::EnumDefinition(inner) => Display::fmt(&inner, f),
+            Self::StructDefinition(inner) => Display::fmt(&inner, f),
+            Self::ErrorDefinition(inner) => Display::fmt(&inner, f),
+            Self::FunctionDefinition(inner) => Display::fmt(&inner, f),
+            Self::VariableDefinition(inner) => Display::fmt(&inner, f),
+            Self::TypeDefinition(inner) => Display::fmt(&inner, f),
+            Self::AnnotationDefinition(inner) => Display::fmt(&inner, f),
+            Self::Using(inner) => Display::fmt(&inner, f),
             Self::StraySemicolon(_) => f.write_char(';'),
-            SourceUnitPart::PropertyDefinition(inner) => Pointer::fmt(&inner, f),
+            SourceUnitPart::PropertyDefinition(inner) => Display::fmt(&inner, f),
         }
     }
 }
@@ -856,7 +715,7 @@ impl Display for ast::Statement {
                 f.write_str("if (")?;
                 std::fmt::Display::fmt(&cond, f)?;
                 f.write_str(") ")?;
-                Pointer::fmt(&block, f)?;
+                Display::fmt(&block, f)?;
                 write_opt!(f, " else ", end_block);
                 Ok(())
             }
@@ -864,7 +723,7 @@ impl Display for ast::Statement {
                 f.write_str("while (")?;
                 std::fmt::Display::fmt(&cond, f)?;
                 f.write_str(") ")?;
-                Pointer::fmt(&block, f)
+                Display::fmt(&block, f)
             }
             Self::Expression(_, expr) => std::fmt::Display::fmt(&expr, f),
             Self::VariableDefinition(_, var, expr) => {
@@ -890,14 +749,14 @@ impl Display for ast::Statement {
                 write_opt!(f, ' ', expr);
                 f.write_str(") ")?;
                 if let Some(block) = block {
-                    Pointer::fmt(&block, f)
+                    Display::fmt(&block, f)
                 } else {
                     f.write_char(';')
                 }
             }
             Self::DoWhile(_, block, cond) => {
                 f.write_str("do ")?;
-                Pointer::fmt(&block, f)?;
+                Display::fmt(&block, f)?;
                 f.write_str(" while (")?;
                 std::fmt::Display::fmt(&cond, f)?;
                 f.write_str(");")
@@ -909,45 +768,9 @@ impl Display for ast::Statement {
                 write_opt!(f, ' ', expr);
                 f.write_char(';')
             }
-            Self::Revert(_, ident, exprs) => {
-                f.write_str("revert")?;
-                write_opt!(f, ' ', ident);
-                f.write_char('(')?;
-                write_separated(exprs, f, ", ")?;
-                f.write_str(");")
-            }
-            Self::RevertNamedArgs(_, ident, args) => {
-                f.write_str("revert")?;
-                write_opt!(f, ' ', ident);
-                f.write_char('(')?;
-                if !args.is_empty() {
-                    f.write_char('{')?;
-                    write_separated(args, f, ", ")?;
-                    f.write_char('}')?;
-                }
-                f.write_str(");")
-            }
-            Self::Emit(_, expr) => {
-                f.write_str("emit ")?;
-                std::fmt::Display::fmt(&expr, f)?;
-                f.write_char(';')
-            }
-            Self::Try(_, expr, returns, catch) => {
-                f.write_str("try ")?;
-                std::fmt::Display::fmt(&expr, f)?;
-
-                if let Some((list, stmt)) = returns {
-                    f.write_str(" returns (")?;
-                    fmt_parameter_list(list, f)?;
-                    f.write_str(") ")?;
-                    Pointer::fmt(&stmt, f)?;
-                }
-
-                if !catch.is_empty() {
-                    f.write_char(' ')?;
-                    write_separated(catch, f, " ")?;
-                }
-                Ok(())
+            Self::Formula { block, .. } => {
+                f.write_str("formula")?;
+                Display::fmt(block, f)
             }
             Self::Error(_) => Ok(()),
         }
@@ -965,8 +788,6 @@ impl ast::StorageLocation {
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Memory(_) => "memory",
-            Self::Storage(_) => "storage",
-            Self::Calldata(_) => "calldata",
         }
     }
 }
@@ -975,49 +796,15 @@ impl Display for ast::Type {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Self::Address => f.write_str("address"),
-            Self::AddressPayable => f.write_str("address payable"),
-            Self::Payable => f.write_str("payable"),
             Self::Bool => f.write_str("bool"),
             Self::String => f.write_str("string"),
-            Self::Rational => f.write_str("fixed"),
-            Self::DynamicBytes => f.write_str("bytes"),
-            Self::Bytes(n) => {
-                f.write_str("bytes")?;
-                std::fmt::Display::fmt(&n, f)
-            }
-            Self::Int(n) => {
-                f.write_str("int")?;
-                std::fmt::Display::fmt(&n, f)
-            }
-            Self::Uint(n) => {
-                f.write_str("uint")?;
-                std::fmt::Display::fmt(&n, f)
-            }
-            Self::Mapping {
-                key,
-                key_name,
-                value,
-                value_name,
-                ..
-            } => {
-                f.write_str("mapping(")?;
-
-                Pointer::fmt(&key, f)?;
-                write_opt!(f, ' ', key_name);
-
-                f.write_str(" => ")?;
-
-                Pointer::fmt(&value, f)?;
-                write_opt!(f, ' ', value_name);
-
-                f.write_char(')')
-            }
+            Self::Rational => f.write_str("rational"),
             Self::Function {
                 params,
-                attributes,
+                annotations: attributes,
                 returns,
             } => {
-                f.write_str("function (")?;
+                f.write_str("fn (")?;
                 fmt_parameter_list(params, f)?;
                 f.write_char(')')?;
 
@@ -1049,7 +836,7 @@ impl Display for ast::Type {
                 f.write_str("[ ")?;
                 std::fmt::Display::fmt(&element_count, f)?;
                 f.write_str(" : ")?;
-                Pointer::fmt(element_type, f)?;
+                Display::fmt(element_type, f)?;
                 f.write_str(" ]")
             }
         }
@@ -1130,7 +917,7 @@ impl ast::Visibility {
     }
 }
 
-impl Display for ast::YulExpression {
+impl Display for ast::FormulaExpression {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Self::BoolLiteral(_, value, ident) => {
@@ -1139,12 +926,8 @@ impl Display for ast::YulExpression {
                 write_opt!(f, ": ", ident);
                 Ok(())
             }
-            Self::NumberLiteral(_, value, exponent, ident) => {
-                f.write_str(value)?;
-                if !exponent.is_empty() {
-                    f.write_char('e')?;
-                    f.write_str(exponent)?;
-                }
+            Self::NumberLiteral(_, value, ident) => {
+                Display::fmt(value, f)?;
                 write_opt!(f, ": ", ident);
                 Ok(())
             }
@@ -1164,69 +947,32 @@ impl Display for ast::YulExpression {
                 Ok(())
             }
             Self::Variable(ident) => std::fmt::Display::fmt(&ident, f),
-            Self::FunctionCall(call) => Pointer::fmt(&call, f),
+            Self::FunctionCall(call) => Display::fmt(&call, f),
             Self::SuffixAccess(_, l, r) => {
-                Pointer::fmt(&l, f)?;
+                Display::fmt(&l, f)?;
                 f.write_char('.')?;
-                Pointer::fmt(&r, f)
+                Display::fmt(&r, f)
+            }
+            FormulaExpression::Parenthesis(_, p) => {
+                f.write_str("{")?;
+                Display::fmt(&p, f)?;
+                f.write_str("}")
             }
         }
     }
 }
 
-impl Display for ast::YulStatement {
+impl Display for ast::FormulaStatement {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Self::Block(inner) => std::fmt::Display::fmt(&inner, f),
-            Self::FunctionDefinition(inner) => Pointer::fmt(&inner, f),
-            Self::FunctionCall(inner) => Pointer::fmt(&inner, f),
-            Self::For(inner) => std::fmt::Display::fmt(&inner, f),
-            Self::Switch(inner) => std::fmt::Display::fmt(&inner, f),
-
+            Self::FunctionCall(inner) => Display::fmt(&inner, f),
             Self::Assign(_, exprs, eq_expr) => {
                 write_separated(exprs, f, ", ")?;
                 f.write_str(" := ")?;
                 std::fmt::Display::fmt(&eq_expr, f)
             }
-            Self::VariableDeclaration(_, vars, eq_expr) => {
-                f.write_str("let")?;
-                if !vars.is_empty() {
-                    f.write_char(' ')?;
-                    write_separated(vars, f, ", ")?;
-                }
-                write_opt!(f, " := ", eq_expr);
-                Ok(())
-            }
-
-            Self::If(_, expr, block) => {
-                f.write_str("if ")?;
-                std::fmt::Display::fmt(&expr, f)?;
-                f.write_char(' ')?;
-                std::fmt::Display::fmt(&block, f)
-            }
-
-            Self::Leave(_) => f.write_str("leave"),
-            Self::Break(_) => f.write_str("break"),
-            Self::Continue(_) => f.write_str("continue"),
-
             Self::Error(_) => Ok(()),
-        }
-    }
-}
-
-impl Display for ast::YulSwitchOptions {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        match self {
-            Self::Case(_, expr, block) => {
-                f.write_str("case ")?;
-                std::fmt::Display::fmt(&expr, f)?;
-                f.write_str(" ")?;
-                std::fmt::Display::fmt(&block, f)
-            }
-            Self::Default(_, block) => {
-                f.write_str("default ")?;
-                std::fmt::Display::fmt(&block, f)
-            }
         }
     }
 }
@@ -1261,7 +1007,7 @@ where
     Ok(())
 }
 
-fn rm_underscores(s: &str) -> Cow<'_, str> {
+fn _rm_underscores(s: &str) -> Cow<'_, str> {
     if s.is_empty() {
         Cow::Borrowed("0")
     } else if s.contains('_') {
@@ -1329,12 +1075,12 @@ mod tests {
             ast::Expression::PostIncrement(loc!(), Box::new(expr!($($t)+)))
         };
     }
-    macro_rules! yexpr {
+    macro_rules! fexpr {
         ($i:ident) => {
-            ast::YulExpression::Variable(id(stringify!($i)))
+            ast::FormulaExpression::Variable(id(stringify!($i)))
         };
         ($l:literal) => {
-            ast::YulExpression::Variable(id(stringify!($l)))
+            ast::FormulaExpression::Variable(id(stringify!($l)))
         };
     }
 
@@ -1481,7 +1227,7 @@ mod tests {
         }
     }
 
-    macro_rules! yid {
+    macro_rules! fid {
         ($i:ident) => {
             ast::YulTypedIdentifier {
                 loc: loc!(),
@@ -1503,8 +1249,8 @@ mod tests {
         Box::new(ast::Expression::Variable(id(s)))
     }
 
-    fn yul_block() -> ast::YulBlock {
-        ast::YulBlock {
+    fn f_block() -> ast::FormulaBlock {
+        ast::FormulaBlock {
             loc: loc!(),
             statements: vec![],
         }
@@ -1592,16 +1338,16 @@ mod tests {
             } => "uint256 name",
             ast::Parameter {
                 ty: expr_ty!(uint256),
-                storage: Some(ast::StorageLocation::Calldata(Default::default())),
+                storage: Some(ast::StorageLocation::Memory(Default::default())),
                 name: Some(id("name")),
                 annotation: None,
-            } => "uint256 calldata name",
+            } => "uint256 memory name",
             ast::Parameter {
                 ty: expr_ty!(uint256),
-                storage: Some(ast::StorageLocation::Calldata(Default::default())),
+                storage: Some(ast::StorageLocation::Memory(Default::default())),
                 name: None,
                 annotation: None,
-            } => "uint256 calldata",
+            } => "uint256 memory",
 
             ast::StringLiteral {
                 unicode: false,
@@ -1746,67 +1492,22 @@ mod tests {
             //     ty: expr_ty!(uint256),
             // } => "type MyType is uint256;",
 
-            ast::YulBlock {
+            ast::FormulaBlock {
                 statements: vec![]
             } => "{}",
 
-            ast::YulFor {
-                init_block: yul_block(),
-                condition: yexpr!(cond),
-                post_block: yul_block(),
-                execution_block: yul_block(),
-            } => "for {} cond {} {}",
-
-            ast::YulFunctionCall {
+            ast::FormulaFunctionCall {
                 id: id("name"),
                 arguments: vec![],
             } => "name()",
-            ast::YulFunctionCall {
+            ast::FormulaFunctionCall {
                 id: id("name"),
-                arguments: vec![yexpr!(arg)],
+                arguments: vec![fexpr!(arg)],
             } => "name(arg)",
-            ast::YulFunctionCall {
+            ast::FormulaFunctionCall {
                 id: id("name"),
-                arguments: vec![yexpr!(arg1), yexpr!(arg2)],
+                arguments: vec![fexpr!(arg1), fexpr!(arg2)],
             } => "name(arg1, arg2)",
-
-            ast::YulFunctionDefinition {
-                id: id("name"),
-                params: vec![],
-                returns: vec![],
-                body: yul_block(),
-            } => "function name() {}",
-            ast::YulFunctionDefinition {
-                id: id("name"),
-                params: vec![yid!(param1: a), yid!(param2: b)],
-                returns: vec![],
-                body: yul_block(),
-            } => "function name(param1: a, param2: b) {}",
-            ast::YulFunctionDefinition {
-                id: id("name"),
-                params: vec![yid!(param1: a), yid!(param2: b)],
-                returns: vec![yid!(ret1: c), yid!(ret2: d)],
-                body: yul_block(),
-            } => "function name(param1: a, param2: b) -> (ret1: c, ret2: d) {}",
-
-            ast::YulSwitch {
-                condition: yexpr!(cond),
-                cases: vec![ast::YulSwitchOptions::Case(loc!(), yexpr!(expr), yul_block())],
-                default: None,
-            } => "switch cond case expr {}",
-            ast::YulSwitch {
-                condition: yexpr!(cond),
-                cases: vec![
-                    ast::YulSwitchOptions::Case(loc!(), yexpr!(0), yul_block()),
-                    ast::YulSwitchOptions::Case(loc!(), yexpr!(1), yul_block()),
-                ],
-                default: None,
-            } => "switch cond case 0 {} case 1 {}",
-            ast::YulSwitch {
-                condition: yexpr!(cond),
-                cases: vec![ast::YulSwitchOptions::Case(loc!(), yexpr!(0), yul_block())],
-                default: Some(ast::YulSwitchOptions::Default(loc!(), yul_block())),
-            } => "switch cond case 0 {} default {}",
         ];
     }
 
@@ -1923,22 +1624,9 @@ mod tests {
                 ast::Expression::AssignModulo(loc!(), var("a"), var("b")) => "a %= b",
             }
 
-            ast::FunctionAttribute: {
-                ast::FunctionAttribute::Virtual(loc!()) => "virtual",
-                ast::FunctionAttribute::Immutable(loc!()) => "immutable",
-
-                ast::FunctionAttribute::Override(loc!(), vec![]) => "override",
-                ast::FunctionAttribute::Override(loc!(), vec![idp!["a", "b"]]) => "override(a::b)",
-                ast::FunctionAttribute::Override(loc!(), vec![idp!["a", "b"], idp!["c", "d"]])
-                    => "override(a::b, c::d)",
-            }
-
             ast::FunctionTy: {
                 ast::FunctionTy::Constructor => "constructor",
                 ast::FunctionTy::Function => "function",
-                ast::FunctionTy::Fallback => "fallback",
-                ast::FunctionTy::Receive => "receive",
-                ast::FunctionTy::Modifier => "modifier",
             }
 
             ast::Import: {
@@ -2027,112 +1715,45 @@ mod tests {
                     annotations: vec![]
                 }, Some(expr!(0))) => " a: uint256 = 0;",
 
-                // ast::Statement::For(loc!(), None, None, None, Some(Box::new(stmt!({}))))
-                //     => "for (;;) {}",
-                // ast::Statement::For(loc!(), Some(Box::new(ast::Statement::VariableDefinition(
-                //     loc!(),
-                //     ast::VariableDeclaration {
-                //         loc: loc!(),
-                //         ty: None,
-                //         storage: None,
-                //         name: Some(id("a")),
-                //         annotations: vec![]
-                //     },
-                //     None
-                // ))), None, None, Some(Box::new(stmt!({}))))
-                //     => "for (uint256 a;;) {}",
-                // ast::Statement::For(loc!(), None, Some(Box::new(expr!(true))), None, Some(Box::new(stmt!({}))))
-                //     => "for (; true;) {}",
-                // ast::Statement::For(
-                //     loc!(),
-                //     None,
-                //     Some(Box::new(expr!(true))),
-                //     Some(Box::new(expr!(++i))),
-                //     Some(Box::new(stmt!({})))
-                // ) => "for (; true; ++i) {}",
-                //
-                // ast::Statement::DoWhile(loc!(), Box::new(stmt!({})), expr!(true))
-                //     => "do {} while (true);",
+                ast::Statement::For(loc!(), None, None, None, Some(Box::new(stmt!({}))))
+                    => "for (;;) {}",
+                ast::Statement::For(loc!(), Some(Box::new(ast::Statement::VariableDefinition(
+                    loc!(),
+                    ast::VariableDeclaration {
+                        loc: loc!(),
+                        ty: Alias(id("uint256")),
+                        storage: None,
+                        name: Some(id("a")),
+                        annotations: vec![]
+                    },
+                    None
+                ))), None, None, Some(Box::new(stmt!({}))))
+                    => "for ( a: uint256;;) {}",
+                ast::Statement::For(loc!(), None, Some(Box::new(expr!(true))), None, Some(Box::new(stmt!({}))))
+                    => "for (; true;) {}",
+                ast::Statement::For(
+                    loc!(),
+                    None,
+                    Some(Box::new(expr!(true))),
+                    Some(Box::new(expr!(++i))),
+                    Some(Box::new(stmt!({})))
+                ) => "for (; true; ++i) {}",
+
+                ast::Statement::DoWhile(loc!(), Box::new(stmt!({})), expr!(true))
+                    => "do {} while (true);",
 
                 ast::Statement::Continue(loc!()) => "continue;",
                 ast::Statement::Break(loc!()) => "break;",
 
                 ast::Statement::Return(loc!(), None) => "return;",
                 ast::Statement::Return(loc!(), Some(expr!(true))) => "return true;",
-
-                // ast::Statement::Revert(loc!(), None, vec![]) => "revert();",
-                // ast::Statement::Revert(loc!(), None, vec![expr!("error")])
-                //     => "revert(\"error\");",
-                // ast::Statement::Revert(loc!(), Some(idp!("my", "error")), vec![expr!("error")])
-                //     => "revert my.error(\"error\");",
-
-                // ast::Statement::RevertNamedArgs(loc!(), None, vec![]) => "revert();",
-                // ast::Statement::RevertNamedArgs(loc!(), None, vec![ast::NamedArgument {
-                //     loc: loc!(),
-                //     name: id("name"),
-                //     expr: expr!(value),
-                // }]) => "revert({name: value});",
-                // ast::Statement::RevertNamedArgs(loc!(), Some(idp!("my", "error")), vec![ast::NamedArgument {
-                //     loc: loc!(),
-                //     name: id("name"),
-                //     expr: expr!(value),
-                // }]) => "revert my.error({name: value});",
-
-                ast::Statement::Emit(loc!(), expr!(true)) => "emit true;",
-
-                // ast::Statement::Try(loc!(), expr!(true), None, vec![]) => "try true",
-                // ast::Statement::Try(loc!(), expr!(true), None, vec![ast::CatchClause::Simple(loc!(), None, stmt!({}))])
-                //     => "try true catch {}",
-                // ast::Statement::Try(loc!(), expr!(true), Some((vec![], Box::new(stmt!({})))), vec![])
-                //     => "try true returns () {}",
-                // ast::Statement::Try(
-                //     loc!(),
-                //     expr!(true),
-                //     Some((vec![], Box::new(stmt!({})))),
-                //     vec![ast::CatchClause::Simple(loc!(), None, stmt!({}))]
-                // ) => "try true returns () {} catch {}",
-                // ast::Statement::Try(
-                //     loc!(),
-                //     expr!(true),
-                //     Some((vec![(loc!(), Some(param!(uint256 a)))], Box::new(stmt!({})))),
-                //     vec![ast::CatchClause::Simple(loc!(), None, stmt!({}))]
-                // ) => "try true returns (uint256 a) {} catch {}",
             }
 
             ast::Type: {
                 ast::Type::Address => "address",
-                ast::Type::AddressPayable => "address payable",
-                ast::Type::Payable => "payable",
                 ast::Type::Bool => "bool",
                 ast::Type::String => "string",
-                ast::Type::Int(256) => "int256",
-                ast::Type::Uint(256) => "uint256",
-                ast::Type::Bytes(32) => "bytes32",
-                ast::Type::Rational => "fixed",
-                ast::Type::DynamicBytes => "bytes",
-
-                // ast::Type::Mapping {
-                //     loc: loc!(),
-                //     key: Box::new(expr_ty!(uint256)),
-                //     key_name: None,
-                //     value: Box::new(expr_ty!(uint256)),
-                //     value_name: None,
-                // } => "mapping(uint256 => uint256)",
-                // ast::Type::Mapping {
-                //     loc: loc!(),
-                //     key: Box::new(expr_ty!(uint256)),
-                //     key_name: Some(id("key")),
-                //     value: Box::new(expr_ty!(uint256)),
-                //     value_name: None,
-                // } => "mapping(uint256 key => uint256)",
-                // ast::Type::Mapping {
-                //     loc: loc!(),
-                //     key: Box::new(expr_ty!(uint256)),
-                //     key_name: Some(id("key")),
-                //     value: Box::new(expr_ty!(uint256)),
-                //     value_name: Some(id("value")),
-                // } => "mapping(uint256 key => uint256 value)",
-                //
+                ast::Type::Rational => "rational",
                 // ast::Type::Function {
                 //     params: vec![],
                 //     attributes: vec![],
@@ -2204,64 +1825,33 @@ mod tests {
             }
 
             ast::YulExpression: {
-                ast::YulExpression::BoolLiteral(loc!(), false, None) => "false",
-                ast::YulExpression::BoolLiteral(loc!(), true, None) => "true",
-                ast::YulExpression::BoolLiteral(loc!(), false, Some(id("name"))) => "false: name",
-                ast::YulExpression::BoolLiteral(loc!(), true, Some(id("name"))) => "true: name",
+                ast::FormulaExpression::BoolLiteral(loc!(), false, None) => "false",
+                ast::FormulaExpression::BoolLiteral(loc!(), true, None) => "true",
+                ast::FormulaExpression::BoolLiteral(loc!(), false, Some(id("name"))) => "false: name",
+                ast::FormulaExpression::BoolLiteral(loc!(), true, Some(id("name"))) => "true: name",
 
-                ast::YulExpression::NumberLiteral(loc!(), "1234".into(), "".into(), None) => "1234",
-                ast::YulExpression::NumberLiteral(loc!(), "1234".into(), "9".into(), None) => "1234e9",
-                ast::YulExpression::NumberLiteral(loc!(), "1234".into(), "".into(), Some(id("name"))) => "1234: name",
-                ast::YulExpression::NumberLiteral(loc!(), "1234".into(), "9".into(), Some(id("name"))) => "1234e9: name",
+                ast::FormulaExpression::NumberLiteral(loc!(), "1234".parse().unwrap(), None) => "1234",
+                ast::FormulaExpression::NumberLiteral(loc!(), "1234".parse().unwrap(), Some(id("name"))) => "1234: name",
 
-                ast::YulExpression::HexNumberLiteral(loc!(), "0x1234".into(), None) => "0x1234",
-                ast::YulExpression::HexNumberLiteral(loc!(), "0x1234".into(), Some(id("name"))) => "0x1234: name",
+                ast::FormulaExpression::HexNumberLiteral(loc!(), "0x1234".into(), None) => "0x1234",
+                ast::FormulaExpression::HexNumberLiteral(loc!(), "0x1234".into(), Some(id("name"))) => "0x1234: name",
 
-                ast::YulExpression::HexStringLiteral(lit!(hex "1234"), None) => "hex\"1234\"",
-                ast::YulExpression::HexStringLiteral(lit!(hex "1234"), Some(id("name"))) => "hex\"1234\": name",
+                ast::FormulaExpression::HexStringLiteral(lit!(hex "1234"), None) => "hex\"1234\"",
+                ast::FormulaExpression::HexStringLiteral(lit!(hex "1234"), Some(id("name"))) => "hex\"1234\": name",
 
-                ast::YulExpression::StringLiteral(lit!("1234"), None) => "\"1234\"",
-                ast::YulExpression::StringLiteral(lit!("1234"), Some(id("name"))) => "\"1234\": name",
+                ast::FormulaExpression::StringLiteral(lit!("1234"), None) => "\"1234\"",
+                ast::FormulaExpression::StringLiteral(lit!("1234"), Some(id("name"))) => "\"1234\": name",
 
-                ast::YulExpression::Variable(id("name")) => "name",
-
-                // ast::YulExpression::FunctionCall(Box::new(ast::YulFunctionCall {
-                //     loc: loc!(),
-                //     id: id("name"),
-                //     arguments: vec![],
-                // })) => "name()",
-
-                // ast::YulExpression::SuffixAccess(loc!(), Box::new(yexpr!(struct)), id("access"))
-                //     => "struct.access",
+                ast::FormulaExpression::Variable(id("name")) => "name",
             }
 
-            ast::YulStatement: {
+            ast::FormulaStatement: {
                 // rest tested individually
 
-                ast::YulStatement::Assign(loc!(), vec![yexpr!(var)], yexpr!(eq))
+                ast::FormulaStatement::Assign(loc!(), vec![fexpr!(var)], fexpr!(eq))
                     => "var := eq",
-                ast::YulStatement::Assign(loc!(), vec![yexpr!(a), yexpr!(b)], yexpr!(eq))
+                ast::FormulaStatement::Assign(loc!(), vec![fexpr!(a), fexpr!(b)], fexpr!(eq))
                     => "a, b := eq",
-
-                ast::YulStatement::VariableDeclaration(loc!(), vec![yid!(var)], None)
-                    => "let var",
-                ast::YulStatement::VariableDeclaration(loc!(), vec![yid!(a), yid!(b)], None)
-                    => "let a, b",
-                ast::YulStatement::VariableDeclaration(loc!(), vec![yid!(var)], Some(yexpr!(eq)))
-                    => "let var := eq",
-                ast::YulStatement::VariableDeclaration(loc!(), vec![yid!(a), yid!(b)], Some(yexpr!(eq)))
-                    => "let a, b := eq",
-
-                ast::YulStatement::If(loc!(), yexpr!(expr), yul_block()) => "if expr {}",
-
-                ast::YulStatement::Leave(loc!()) => "leave",
-                ast::YulStatement::Break(loc!()) => "break",
-                ast::YulStatement::Continue(loc!()) => "continue",
-            }
-
-            ast::YulSwitchOptions: {
-                ast::YulSwitchOptions::Case(loc!(), yexpr!(expr), yul_block()) => "case expr {}",
-                ast::YulSwitchOptions::Default(loc!(), yul_block()) => "default {}",
             }
         ];
     }

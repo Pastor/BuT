@@ -5,14 +5,15 @@ use std::{fs, path::Path, thread};
 use pretty_assertions::assert_eq;
 use walkdir::WalkDir;
 
-use crate::ast::*;
 use crate::ast::Annotation::Function;
-use crate::ast::Expression::{AddressLiteral, BitwiseAnd, BitwiseOr, Initializer, NumberLiteral, Parenthesis, RationalNumberLiteral, Variable};
+use crate::ast::Expression::{
+    AddressLiteral, BitwiseAnd, BitwiseOr, Initializer, NumberLiteral, Parenthesis,
+    RationalNumberLiteral, Variable,
+};
 use crate::ast::Type::{Alias, Array};
 use crate::ast::VariableAttribute::{Constant, Portable, Readable, Writable};
-use crate::but;
+use crate::ast::*;
 use crate::diagnostics::{Diagnostic, ErrorType::ParserError, Level::Error};
-use crate::lexer::Lexer;
 use crate::Loc::Source;
 
 #[test]
@@ -44,6 +45,45 @@ fn parse_function_assembly() {
             assembly {
 
             }
+        }
+        "#;
+
+    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+    assert_eq!(actual_parse_tree.0.len(), 1);
+}
+
+#[test]
+fn parse_struct() {
+    let src = r#"
+        #[repr(C)]
+        struct None {
+        }
+        "#;
+
+    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+    assert_eq!(actual_parse_tree.0.len(), 1);
+}
+
+#[test]
+fn parse_enum() {
+    let src = r#"
+        #[repr(C)]
+        enum None {
+           First, Second
+        }
+        "#;
+
+    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+    assert_eq!(actual_parse_tree.0.len(), 1);
+}
+
+#[test]
+fn parse_function() {
+    let src = r#"
+        #[extern(C)]
+        #[unused]
+        fn none(args: str) {
+            return none("");
         }
         "#;
 

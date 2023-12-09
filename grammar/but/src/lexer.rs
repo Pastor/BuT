@@ -108,6 +108,7 @@ pub enum Token<'input> {
     Is,
 
     Assembly,
+    Formula,
 
     Annotation(&'input str),
 
@@ -202,6 +203,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::As => write!(f, "as"),
             Token::Is => write!(f, "is"),
             Token::Assembly => write!(f, "assembly"),
+            Token::Formula => write!(f, "formula"),
             Token::Annotation(name) => write!(f, "@{name}"),
             Token::External => write!(f, "external"),
             Token::Readable => write!(f, "let"),
@@ -453,9 +455,9 @@ impl<'input> Lexer<'input> {
         }
 
         if is_rational {
-            let integer = &self.input[start..end_before_rational];
-            let fraction = &self.input[rational_start..=rational_end];
-            let exp = &self.input[exp_start..=end];
+            let _integer = &self.input[start..end_before_rational];
+            let _fraction = &self.input[rational_start..=rational_end];
+            let _exp = &self.input[exp_start..=end];
 
             return Ok((
                 start,
@@ -464,10 +466,10 @@ impl<'input> Lexer<'input> {
             ));
         }
 
-        let integer = &self.input[start..=old_end];
-        let exp = &self.input[exp_start..=end];
+        let n = &self.input[start..=old_end];
+        let _exp = &self.input[exp_start..=end];
 
-        let mut n = i64::from_str(&integer).unwrap();
+        let mut n = i64::from_str(&n).unwrap();
         if is_minus {
             n = -n;
         }

@@ -118,16 +118,10 @@ impl_optional_for_ast!(
     ast::UsingFunction,
     ast::VariableDeclaration,
     ast::VariableDefinition,
-    ast::YulBlock,
-    ast::YulFor,
-    ast::YulFunctionCall,
-    ast::YulFunctionDefinition,
-    ast::YulSwitch,
-    ast::YulTypedIdentifier,
+    ast::FormulaBlock,
+    ast::FormulaFunctionCall,
     // enums
-    ast::CatchClause,
     ast::Comment,
-    ast::ContractPart,
     ast::ContractTy,
     ast::Expression,
     ast::FunctionAttribute,
@@ -139,9 +133,8 @@ impl_optional_for_ast!(
     ast::StorageLocation,
     ast::UsingList,
     ast::VariableAttribute,
-    ast::YulExpression,
-    ast::YulStatement,
-    ast::YulSwitchOptions,
+    ast::FormulaExpression,
+    ast::FormulaStatement,
     // other
     LexicalError,
 );
@@ -228,12 +221,8 @@ impl_for_structs!(
     ast::UsingFunction,
     ast::VariableDeclaration,
     ast::VariableDefinition,
-    ast::YulBlock,
-    ast::YulFor,
-    ast::YulFunctionCall,
-    ast::YulFunctionDefinition,
-    ast::YulSwitch,
-    ast::YulTypedIdentifier,
+    ast::FormulaBlock,
+    ast::FormulaFunctionCall,
 );
 
 macro_rules! impl_for_enums {
@@ -256,28 +245,12 @@ macro_rules! impl_for_enums {
 
 // all enums except for Type, UserDefinedOperator and FunctionTy
 impl_for_enums! {
-    ast::CatchClause: match self {
-        Self::Simple(l, ..)
-        | Self::Named(l, ..) => l,
-    }
 
     ast::Comment: match self {
         Self::Line(l, ..)
         | Self::Block(l, ..)
         | Self::DocLine(l, ..)
         | Self::DocBlock(l, ..) => l,
-    }
-
-    ast::ContractPart: match self {
-        Self::StructDefinition(ref l, ..) => l.loc(),
-        Self::EnumDefinition(ref l, ..) => l.loc(),
-        Self::ErrorDefinition(ref l, ..) => l.loc(),
-        Self::VariableDefinition(ref l, ..) => l.loc(),
-        Self::FunctionDefinition(ref l, ..) => l.loc(),
-        Self::TypeDefinition(ref l, ..) => l.loc(),
-        Self::AnnotationDefinition(ref l, ..) => l.loc(),
-        Self::Using(ref l, ..) => l.loc(),
-        Self::StraySemicolon(l, ..) => l,
     }
 
     ast::ContractTy: match self {
@@ -295,7 +268,6 @@ impl_for_enums! {
         Self::BoolLiteral(ref l, ..) => l.loc(),
         Self::PostIncrement(l, ..)
         | Self::PostDecrement(l, ..)
-        | Self::New(l, ..)
         | Self::Parenthesis(l, ..)
         | Self::ArraySubscript(l, ..)
         | Self::ArraySlice(l, ..)
@@ -305,7 +277,6 @@ impl_for_enums! {
         | Self::NamedFunctionCall(l, ..)
         | Self::Not(l, ..)
         | Self::BitwiseNot(l, ..)
-        | Self::Delete(l, ..)
         | Self::PreIncrement(l, ..)
         | Self::PreDecrement(l, ..)
         | Self::UnaryPlus(l, ..)
@@ -385,7 +356,6 @@ impl_for_enums! {
         Self::AnnotationDefinition(ref l, ..) => l.loc(),
         Self::PropertyDefinition(ref l, ..) => l.loc.loc(),
         Self::Using(ref l, ..) => l.loc(),
-        Self::PragmaDirective(l, ..)
         | Self::StraySemicolon(l, ..) => l,
     }
 
@@ -402,17 +372,12 @@ impl_for_enums! {
         | Self::Continue(l, ..)
         | Self::Break(l, ..)
         | Self::Return(l, ..)
-        | Self::Revert(l, ..)
-        | Self::RevertNamedArgs(l, ..)
-        | Self::Emit(l, ..)
-        | Self::Try(l, ..)
+        | Self::Formula{loc: l, ..}
         | Self::Error(l, ..) => l,
     }
 
     ast::StorageLocation: match self {
-        Self::Calldata(l, ..)
-        | Self::Memory(l, ..)
-        | Self::Storage(l, ..) => l,
+        | Self::Memory(l, ..) => l,
     }
 
     ast::UsingList: match self {
@@ -429,35 +394,23 @@ impl_for_enums! {
         | Self::Portable(l, ..) => l,
     }
 
-    ast::YulExpression: match self {
+    ast::FormulaExpression: match self {
         Self::HexStringLiteral(ref l, ..) => l.loc(),
         Self::StringLiteral(ref l, ..) => l.loc(),
         Self::Variable(ref l, ..) => l.loc(),
         Self::FunctionCall(ref l, ..) => l.loc(),
+        Self::Parenthesis(ref l, ..) => l.loc(),
         Self::BoolLiteral(l, ..)
         | Self::NumberLiteral(l, ..)
         | Self::HexNumberLiteral(l, ..)
         | Self::SuffixAccess(l, ..) => l,
     }
 
-    ast::YulStatement: match self {
+    ast::FormulaStatement: match self {
         Self::Block(ref l, ..) => l.loc(),
-        Self::FunctionDefinition(ref l, ..) => l.loc(),
         Self::FunctionCall(ref l, ..) => l.loc(),
-        Self::For(ref l, ..) => l.loc(),
-        Self::Switch(ref l, ..) => l.loc(),
         Self::Assign(l, ..)
-        | Self::VariableDeclaration(l, ..)
-        | Self::If(l, ..)
-        | Self::Leave(l, ..)
-        | Self::Break(l, ..)
-        | Self::Continue(l, ..)
         | Self::Error(l, ..) => l,
-    }
-
-    ast::YulSwitchOptions: match self {
-        Self::Case(l, ..)
-        | Self::Default(l, ..) => l,
     }
 
     // other

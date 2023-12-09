@@ -333,9 +333,13 @@ Precedence0: Expression = {
 }
 
 Parameter: Parameter = {
-    <l:@L> <annotation:ParameterAnnotation?> <ty:Precedence9> <name:ButIdentifier?> <r:@R> => {
+    <l:@L> <annotation:ParameterAnnotation?> <name:ButIdentifier> ":" <ty:Precedence9> <r:@R> => {
         let loc = Loc::Source(file_no, l, r);
-        Parameter{loc, annotation, ty, storage: None, name}
+        Parameter{loc, annotation, ty, storage: None, name: Some(name)}
+    },
+    <l:@L> <annotation:ParameterAnnotation?> <ty:Precedence9> <r:@R> => {
+        let loc = Loc::Source(file_no, l, r);
+        Parameter{loc, annotation, ty: ty, storage: None, name: None}
     }
 }
 
@@ -428,6 +432,14 @@ NonIfStatement: Statement = {
             block: Box::new(block)
         }
     },
+    <l:@L> "formula" <dialect:StringLiteral?> <block:FormulaStatement> <r:@R> => {
+        Statement::Formula {
+            loc: Loc::Source(file_no, l, r),
+            dialect: dialect.map(|dialect| dialect.to_owned()),
+            flags: None,
+            block: Box::new(block)
+        }
+    },
     <SimpleStatement> ";" => <>,
     <l:@L> "do" <b:Statement> "while" "(" <e:Expression> ")" <r:@R> ";" => {
         Statement::DoWhile(Loc::Source(file_no, l, r), Box::new(b), e)
@@ -462,6 +474,64 @@ HexLiteral: HexLiteral = {
     }
 }
 
+FormulaIdentifier: Identifier = {
+    <l:@L> <n:identifier> <r:@R> => Identifier{loc: Loc::Source(file_no, l, r), name: n.to_string()},
+    <l:@L> "external" <r:@L> => Identifier{loc: Loc::Source(file_no, l, r), name: "external".to_string()},
+    <l:@L> "import" <r:@L> => Identifier{loc: Loc::Source(file_no, l, r), name: "import".to_string()},
+    <l:@L> "is" <r:@L> => Identifier{loc: Loc::Source(file_no, l, r), name: "is".to_string()},
+}
+
+FormulaStatement: FormulaStatement = {
+    <FormulaBlock> => FormulaStatement::Block(<>),
+    <FormulaFunctionCall> => FormulaStatement::FunctionCall(Box::new(<>)),
+    <l:@L><false_token:!><r:@R> => {
+        parser_errors.push(false_token);
+        FormulaStatement::Error(Loc::Source(file_no, l ,r))
+    },
+}
+
+FormulaBlock: FormulaBlock = {
+    <l:@L> "{" <statements:FormulaStatement*> "}" <r:@R> => FormulaBlock{loc: Loc::Source(file_no, l, r), statements},
+}
+
+FormulaLiteral: FormulaExpression = {
+    <a:@L> "true" <t_type:(":" <FormulaIdentifier>)?> <b:@R> => FormulaExpression::BoolLiteral(Loc::Source(file_no, a, b), true, t_type),
+    <a:@L> "false" <t_type:(":" <FormulaIdentifier>)?> <b:@R> => FormulaExpression::BoolLiteral(Loc::Source(file_no, a, b), false, t_type),
+    <l:@L> <n:number> <t_type:(":" <FormulaIdentifier>)?> <r:@R> => {
+        FormulaExpression::NumberLiteral(Loc::Source(file_no, l, r), n, t_type)
+    },
+    <l:@L> <n:hexnumber> <t_type:(":" <FormulaIdentifier>)?> <r:@R> => {
+        FormulaExpression::HexNumberLiteral(Loc::Source(file_no, l, r), n.to_owned(), t_type)
+    },
+    <l:@L> <s:hexstring> <t_type:(":" <FormulaIdentifier>)?> <r:@R> => {
+        let v = s.to_string();
+        let hex_len = v.len() - 5;
+        FormulaExpression::HexStringLiteral(HexLiteral{ loc: Loc::Source(file_no, l, r), hex: v.chars().skip(4).filter(|c| *c != '_' && *c != '"' && *c != '\'').collect()},
+        t_type)
+    },
+    <str:StringLiteral> <t_type:(":" <FormulaIdentifier>)?> => {
+        FormulaExpression::StringLiteral(str, t_type)
+    },
+}
+
+FormulaFunctionCall: FormulaFunctionCall = {
+    <l:@L> <id:FormulaIdentifier> "(" <arguments:Comma<FormulaExpression>> ")" <r:@R> => {
+        FormulaFunctionCall{loc: Loc::Source(file_no, l, r), id, arguments}
+    }
+}
+
+FormulaPath: FormulaExpression = {
+    <FormulaIdentifier> => FormulaExpression::Variable(<>),
+    <l:@L> <array:FormulaPath> "." <member:FormulaIdentifier> <r:@R> => {
+        FormulaExpression::SuffixAccess(Loc::Source(file_no, l, r), Box::new(array), member)
+    },
+}
+
+FormulaExpression: FormulaExpression = {
+    <FormulaPath> => <>,
+    <FormulaFunctionCall> => FormulaExpression::FunctionCall(Box::new(<>)),
+    <FormulaLiteral> => <>,
+}
 
 Comma<T>: Vec<T> = {
     => Vec::new(),
@@ -491,7 +561,6 @@ extern {
     enum Token<'input> {
         identifier => Token::Identifier(<&'input str>),
         string => Token::StringLiteral(<bool>, <&'input str>),
-        address => Token::AddressLiteral(<&'input str>),
         hexstring => Token::HexLiteral(<&'input str>),
         number => Token::Number(<i64>),
         rational => Token::RationalNumber(<&'input str>, <bool>),
@@ -565,5 +634,6 @@ extern {
         "as" => Token::As,
         "is" => Token::Is,
         "assembly" => Token::Assembly,
+        "formula" => Token::Formula,
     }
 }
