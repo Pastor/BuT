@@ -122,9 +122,7 @@ impl_optional_for_ast!(
     ast::FormulaFunctionCall,
     // enums
     ast::Comment,
-    ast::ContractTy,
     ast::Expression,
-    ast::FunctionAttribute,
     ast::Import,
     ast::Loc,
     ast::Mutability,
@@ -253,13 +251,6 @@ impl_for_enums! {
         | Self::DocBlock(l, ..) => l,
     }
 
-    ast::ContractTy: match self {
-        Self::Abstract(l, ..)
-        | Self::Contract(l, ..)
-        | Self::Library(l, ..)
-        | Self::Interface(l, ..) => l,
-    }
-
     ast::Expression: match self {
         // literals have at least one item
         Self::StringLiteral(ref l, ..) => l.loc_opt().unwrap(),
@@ -320,16 +311,6 @@ impl_for_enums! {
         | Self::List(l, ..)
         | Self::Type(l, ..)
         | Self::AddressLiteral(l, ..) => l,
-    }
-
-    ast::FunctionAttribute: match self {
-        Self::Mutability(ref l) => l.loc(),
-        Self::Visibility(ref l) => l.loc_opt().unwrap_or_default(),
-        Self::Virtual(l, ..)
-        | Self::Immutable(l, ..)
-        | Self::Override(l, ..,)
-        | Self::BaseOrModifier(l, ..)
-        | Self::Error(l, ..) => l,
     }
 
     ast::Import: match self {
@@ -408,8 +389,8 @@ impl_for_enums! {
 
     ast::FormulaStatement: match self {
         Self::Block(ref l, ..) => l.loc(),
+        Self::Expression(ref l, ..) => l.loc(),
         Self::FunctionCall(ref l, ..) => l.loc(),
-        Self::Assign(l, ..)
         | Self::Error(l, ..) => l,
     }
 

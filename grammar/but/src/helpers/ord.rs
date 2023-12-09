@@ -34,8 +34,4 @@ macro_rules! impl_with_cast {
 }
 
 // SAFETY: every type must be `repr(u8)` for this to be safe, see comments in macro implementation.
-impl_with_cast!(
-    ast::Visibility,
-    ast::VariableAttribute,
-    ast::FunctionAttribute
-);
+impl_with_cast!(ast::Visibility, ast::VariableAttribute);

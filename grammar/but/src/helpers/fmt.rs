@@ -300,12 +300,6 @@ impl Display for ast::Comment {
     }
 }
 
-impl Display for ast::ContractTy {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        f.write_str(self.as_str())
-    }
-}
-
 impl Display for ast::AnnotationDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("#")?;
@@ -322,18 +316,6 @@ impl Display for ast::AnnotationDefinition {
             }
         }
         f.write_str("]")
-    }
-}
-
-impl ast::ContractTy {
-    /// Returns the string representation of this type.
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Abstract(..) => "abstract contract",
-            Self::Contract(..) => "contract",
-            Self::Interface(..) => "interface",
-            Self::Library(..) => "library",
-        }
     }
 }
 
@@ -967,11 +949,7 @@ impl Display for ast::FormulaStatement {
         match self {
             Self::Block(inner) => std::fmt::Display::fmt(&inner, f),
             Self::FunctionCall(inner) => Display::fmt(&inner, f),
-            Self::Assign(_, exprs, eq_expr) => {
-                write_separated(exprs, f, ", ")?;
-                f.write_str(" := ")?;
-                std::fmt::Display::fmt(&eq_expr, f)
-            }
+            Self::Expression(_, expr) => Display::fmt(&expr, f),
             Self::Error(_) => Ok(()),
         }
     }
@@ -1075,7 +1053,7 @@ mod tests {
             ast::Expression::PostIncrement(loc!(), Box::new(expr!($($t)+)))
         };
     }
-    macro_rules! fexpr {
+    macro_rules! formula_expr {
         ($i:ident) => {
             ast::FormulaExpression::Variable(id(stringify!($i)))
         };
@@ -1211,12 +1189,6 @@ mod tests {
         (memory) => {
             ast::StorageLocation::Memory(loc!())
         };
-        (storage) => {
-            ast::StorageLocation::Storage(loc!())
-        };
-        (calldata) => {
-            ast::StorageLocation::Calldata(loc!())
-        };
     }
 
     /// Identifier
@@ -1227,7 +1199,7 @@ mod tests {
         }
     }
 
-    macro_rules! fid {
+    macro_rules! formula_id {
         ($i:ident) => {
             ast::YulTypedIdentifier {
                 loc: loc!(),
@@ -1249,7 +1221,7 @@ mod tests {
         Box::new(ast::Expression::Variable(id(s)))
     }
 
-    fn f_block() -> ast::FormulaBlock {
+    fn formula_block() -> ast::FormulaBlock {
         ast::FormulaBlock {
             loc: loc!(),
             statements: vec![],
@@ -1502,11 +1474,11 @@ mod tests {
             } => "name()",
             ast::FormulaFunctionCall {
                 id: id("name"),
-                arguments: vec![fexpr!(arg)],
+                arguments: vec![formula_expr!(arg)],
             } => "name(arg)",
             ast::FormulaFunctionCall {
                 id: id("name"),
-                arguments: vec![fexpr!(arg1), fexpr!(arg2)],
+                arguments: vec![formula_expr!(arg1), formula_expr!(arg2)],
             } => "name(arg1, arg2)",
         ];
     }
@@ -1754,51 +1726,26 @@ mod tests {
                 ast::Type::Bool => "bool",
                 ast::Type::String => "string",
                 ast::Type::Rational => "rational",
-                // ast::Type::Function {
-                //     params: vec![],
-                //     attributes: vec![],
-                //     returns: None
-                // } => "function ()",
-                // ast::Type::Function {
-                //     params: vec![(loc!(), Some(param!(uint256)))],
-                //     attributes: vec![],
-                //     returns: None
-                // } => "function (uint256)",
-                // ast::Type::Function {
-                //     params: vec![(loc!(), Some(param!(uint256))), (loc!(), Some(param!(address)))],
-                //     attributes: vec![],
-                //     returns: None
-                // } => "function (uint256, address)",
-                // ast::Type::Function {
-                //     params: vec![(loc!(), Some(param!(uint256)))],
-                //     attributes: vec![ast::FunctionAttribute::Virtual(loc!())],
-                //     returns: None
-                // } => "function (uint256) virtual",
-                // ast::Type::Function {
-                //     params: vec![(loc!(), Some(param!(uint256)))],
-                //     attributes: vec![ast::FunctionAttribute::Virtual(loc!()), ast::FunctionAttribute::Override(loc!(), vec![])],
-                //     returns: None
-                // } => "function (uint256) virtual override",
-                // ast::Type::Function {
-                //     params: vec![(loc!(), Some(param!(uint256)))],
-                //     attributes: vec![ast::FunctionAttribute::Virtual(loc!()), ast::FunctionAttribute::Override(loc!(), vec![idp!["a", "b"]])],
-                //     returns: None
-                // } => "function (uint256) virtual override(a.b)",
-                // ast::Type::Function {
-                //     params: vec![(loc!(), Some(param!(uint256)))],
-                //     attributes: vec![],
-                //     returns: Some((vec![], vec![])),
-                // } => "function (uint256)",
-                // ast::Type::Function {
-                //     params: vec![(loc!(), Some(param!(uint256)))],
-                //     attributes: vec![],
-                //     returns: Some((vec![(loc!(), Some(param!(uint256)))], vec![])),
-                // } => "function (uint256) returns (uint256)",
-                // ast::Type::Function {
-                //     params: vec![(loc!(), Some(param!(uint256)))],
-                //     attributes: vec![],
-                //     returns: Some((vec![(loc!(), Some(param!(uint256))), (loc!(), Some(param!(address)))], vec![])),
-                // } => "function (uint256) returns (uint256, address)",
+                ast::Type::Function {
+                    params: vec![],
+                    annotations: vec![],
+                    returns: None
+                } => "fn ()",
+                ast::Type::Function {
+                    params: vec![(loc!(), Some(param!(uint256)))],
+                    annotations: vec![],
+                    returns: None
+                } => "fn (uint256)",
+                ast::Type::Function {
+                    params: vec![(loc!(), Some(param!(uint256))), (loc!(), Some(param!(address)))],
+                    annotations: vec![],
+                    returns: None
+                } => "fn (uint256, address)",
+                ast::Type::Function {
+                    params: vec![(loc!(), Some(param!(uint256)))],
+                    annotations: vec![],
+                    returns: Some((vec![], vec![])),
+                } => "fn (uint256)",
             }
 
             ast::UserDefinedOperator: {
@@ -1846,12 +1793,8 @@ mod tests {
             }
 
             ast::FormulaStatement: {
-                // rest tested individually
-
-                ast::FormulaStatement::Assign(loc!(), vec![fexpr!(var)], fexpr!(eq))
-                    => "var := eq",
-                ast::FormulaStatement::Assign(loc!(), vec![fexpr!(a), fexpr!(b)], fexpr!(eq))
-                    => "a, b := eq",
+                ast::FormulaStatement::Expression(loc!(), formula_expr!(None))
+                    => "None",
             }
         ];
     }

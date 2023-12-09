@@ -372,9 +372,9 @@ pub enum Import {
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
 pub enum ImportPath {
-    /// "foo.sol"
+    /// "foo.but"
     Filename(StringLiteral),
-    /// std.stub (experimental Solidity feature)
+    /// std.stub
     Path(IdentifierPath),
 }
 
@@ -622,26 +622,6 @@ pub struct Using {
     pub global: Option<Identifier>,
 }
 
-/// The contract type.
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-pub enum ContractTy {
-    /// `abstract contract`
-    Abstract(Loc),
-
-    /// `contract`
-    Contract(Loc),
-
-    /// `interface`
-    Interface(Loc),
-
-    /// `library`
-    Library(Loc),
-}
-
-/// A function modifier invocation (see [FunctionAttribute])
-/// or a contract inheritance specifier (see [ContractDefinition]).
-///
 /// Both have the same semantics:
 ///
 /// `<name>[(<args>,*)]`
@@ -1207,33 +1187,6 @@ pub enum Visibility {
     Private(Option<Loc>),
 }
 
-/// A function attribute.
-#[derive(Debug, PartialEq, Eq, Clone)]
-#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
-#[repr(u8)] // for cmp; order of variants is important
-pub enum FunctionAttribute {
-    /// Visibility attribute.
-    Visibility(Visibility),
-
-    /// Mutability attribute.
-    Mutability(Mutability),
-
-    /// `virtual`
-    Virtual(Loc),
-
-    /// `immutable`
-    Immutable(Loc),
-
-    /// `override[(<identifier path>,*)]`
-    Override(Loc, Vec<IdentifierPath>),
-
-    /// A modifier or constructor invocation.
-    BaseOrModifier(Loc, Base),
-
-    /// An error occurred during parsing.
-    Error(Loc),
-}
-
 /// A function's type.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 #[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
@@ -1377,11 +1330,10 @@ impl Statement {
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
 pub enum FormulaStatement {
-    /// `<1>,+ = <2>`
-    Assign(Loc, Vec<FormulaExpression>, FormulaExpression),
-    /// A [YulBlock] statement.
+    Expression(Loc, FormulaExpression),
+    /// A [FormulaBlock] statement.
     Block(FormulaBlock),
-    /// A [YulFunctionCall] statement.
+    /// A [FormulaFunctionCall] statement.
     FunctionCall(Box<FormulaFunctionCall>),
     /// An error occurred during parsing.
     Error(Loc),
@@ -1423,7 +1375,7 @@ pub enum FormulaExpression {
     StringLiteral(StringLiteral, Option<Identifier>),
     /// Any valid [Identifier].
     Variable(Identifier),
-    /// [YulFunctionCall].
+    /// [FormulaFunctionCall].
     FunctionCall(Box<FormulaFunctionCall>),
     /// `<1>.<2>`
     SuffixAccess(Loc, Box<FormulaExpression>, Identifier),
