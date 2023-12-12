@@ -388,6 +388,12 @@ impl Display for ast::Expression {
                 Display::fmt(val, f)?;
                 Ok(())
             }
+            Self::Cast(_, e, ty) => {
+                Display::fmt(e, f)?;
+                f.write_str(" as ")?;
+                Display::fmt(ty, f)?;
+                Ok(())
+            }
             Self::RationalNumberLiteral(_, val, _) => {
                 let dig = f64::from_str(val).unwrap();
                 // let val = rm_underscores(val);
@@ -517,6 +523,7 @@ impl ast::Expression {
             Equal(..) => "==",
             NotEqual(..) => "!=",
 
+            Cast(..) => "as",
             Assign(..) => "=",
             AssignOr(..) => "|=",
             AssignAnd(..) => "&=",

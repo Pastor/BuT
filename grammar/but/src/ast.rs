@@ -951,6 +951,7 @@ pub enum Expression {
     /// `\[ <1>.* \]`
     ArrayLiteral(Loc, Vec<Expression>),
     Initializer(Loc, Vec<Expression>),
+    Cast(Loc, Box<Expression>, Type),
 }
 
 /// See `Expression::components`.
@@ -1019,6 +1020,7 @@ macro_rules! expr_components {
             | AddressLiteral(..)
             | Variable(..)
             | List(..)
+            | Cast(..)
             | Initializer(..)
             | ArrayLiteral(..) => (None, None),
         }
@@ -1273,7 +1275,7 @@ pub enum Statement {
         /// The assembly flags.
         flags: Option<Vec<StringLiteral>>,
         /// The assembly block.
-        block: Box<FormulaStatement>,
+        block: Box<FormulaBlock>,
     },
     /// `{ <1>,* }`
     Args(Loc, Vec<NamedArgument>),

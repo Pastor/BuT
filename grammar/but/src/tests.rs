@@ -28,10 +28,20 @@ fn parser_error_recovery() {
         assert_eq!(
             errors,
             vec![
-                Diagnostic { loc: Source(0, 17, 21), level: Error, ty: ParserError,
-                    message: "'frum' found where 'from' expected".to_string(), notes: vec![] },
-                Diagnostic { loc: Source(0, 56, 58), level: Error, ty: ParserError,
-                    message: "unrecognised token 'if', expected \"#\", \"const\", \"external\", \"let\", \"mut\", \"pio\", \"}\", identifier".to_string(), notes: vec![] },
+                Diagnostic {
+                    loc: Source(0, 17, 21),
+                    level: Error,
+                    ty: ParserError,
+                    message: "'frum' found where 'from' expected".to_string(),
+                    notes: vec![],
+                },
+                Diagnostic {
+                    loc: Source(0, 56, 58),
+                    level: Error,
+                    ty: ParserError,
+                    message: "unrecognised token 'if', expected \"#\", \"const\", \"external\", \"let\", \"mut\", \"pio\", \"}\", identifier".to_string(),
+                    notes: vec![],
+                },
             ]
         )
     }

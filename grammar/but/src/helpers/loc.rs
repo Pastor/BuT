@@ -310,6 +310,7 @@ impl_for_enums! {
         | Self::Initializer(l, ..)
         | Self::List(l, ..)
         | Self::Type(l, ..)
+        | Self::Cast(l, ..)
         | Self::AddressLiteral(l, ..) => l,
     }
 

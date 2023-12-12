@@ -256,6 +256,7 @@ Precedence9: Expression = {
 
 Precedence7: Expression = {
     <a:@L> <l:Precedence7> "&" <r:Precedence6> <b:@R> => Expression::BitwiseAnd(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <e:Precedence7> "as" <ty:Type> <b:@R> => Expression::Cast(Loc::Source(file_no, a, b), Box::new(e), ty),
     Precedence6,
 }
 
@@ -432,7 +433,7 @@ NonIfStatement: Statement = {
             block: Box::new(block)
         }
     },
-    <l:@L> "formula" <dialect:StringLiteral?> <block:FormulaStatement> <r:@R> => {
+    <l:@L> "formula" <dialect:StringLiteral?> <block:FormulaBlock> <r:@R> => {
         Statement::Formula {
             loc: Loc::Source(file_no, l, r),
             dialect: dialect.map(|dialect| dialect.to_owned()),
