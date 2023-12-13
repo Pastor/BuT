@@ -287,7 +287,6 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "continue" => Token::Continue,
     "do" => Token::Do,
     "else" => Token::Else,
-    "emit" => Token::Emit,
     "enum" => Token::Enum,
     "false" => Token::False,
     "for" => Token::For,
@@ -296,7 +295,6 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "import" => Token::Import,
     "interface" => Token::Interface,
     "library" => Token::Library,
-    "pragma" => Token::Pragma,
     "return" => Token::Return,
     "string" => Token::String,
     "struct" => Token::Struct,
@@ -306,6 +304,7 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "as" => Token::As,
     "is" => Token::Is,
     "assembly" => Token::Assembly,
+    "formula" => Token::Formula,
     "let" => Token::Readable,
     "mut" => Token::Writable,
     "pio" => Token::Portable,
@@ -1054,55 +1053,6 @@ mod tests {
 
         assert_eq!(tokens, vec!((0, Token::StringLiteral(false, "foo"), 5)));
 
-        let tokens = Lexer::new(
-            "pragma solidity >=0.5.0 <0.7.0;",
-            0,
-            &mut comments,
-            &mut errors,
-        )
-        .collect::<Vec<_>>();
-
-        assert_eq!(
-            tokens,
-            vec!(
-                (0, Token::Pragma, 6),
-                (7, Token::Identifier("solidity"), 15),
-                (16, Token::StringLiteral(false, ">=0.5.0 <0.7.0"), 30),
-                (30, Token::Semicolon, 31),
-            )
-        );
-
-        let tokens = Lexer::new(
-            "pragma solidity \t>=0.5.0 <0.7.0 \n ;",
-            0,
-            &mut comments,
-            &mut errors,
-        )
-        .collect::<Vec<_>>();
-
-        assert_eq!(
-            tokens,
-            vec!(
-                (0, Token::Pragma, 6),
-                (7, Token::Identifier("solidity"), 15),
-                (17, Token::StringLiteral(false, ">=0.5.0 <0.7.0"), 31),
-                (34, Token::Semicolon, 35),
-            )
-        );
-
-        let tokens =
-            Lexer::new("pragma solidity 赤;", 0, &mut comments, &mut errors).collect::<Vec<_>>();
-
-        assert_eq!(
-            tokens,
-            vec!(
-                (0, Token::Pragma, 6),
-                (7, Token::Identifier("solidity"), 15),
-                (16, Token::StringLiteral(false, "赤"), 19),
-                (19, Token::Semicolon, 20)
-            )
-        );
-
         let tokens = Lexer::new(">>= >> >= >", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
         assert_eq!(
@@ -1174,18 +1124,6 @@ mod tests {
                 Loc::Source(0, 0, 3),
                 "€".to_owned(),
             ))
-        );
-
-        let tokens =
-            Lexer::new(r#"pragma foo bar"#, 0, &mut comments, &mut errors).collect::<Vec<_>>();
-
-        assert_eq!(
-            tokens,
-            vec!(
-                (0, Token::Pragma, 6),
-                (7, Token::Identifier("foo"), 10),
-                (11, Token::StringLiteral(false, "bar"), 14),
-            )
         );
 
         comments.truncate(0);

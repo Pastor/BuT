@@ -7,9 +7,12 @@ use walkdir::WalkDir;
 
 use crate::ast::Annotation::Function;
 use crate::ast::Expression::{
-    AddressLiteral, BitwiseAnd, BitwiseOr, Initializer, NumberLiteral, Parenthesis,
+    Add, AddressLiteral, BitwiseAnd, BitwiseOr, Cast, Initializer, NumberLiteral, Parenthesis,
     RationalNumberLiteral, Variable,
 };
+use crate::ast::FormulaExpression::BoolLiteral;
+use crate::ast::FormulaStatement::FunctionCall;
+use crate::ast::Statement::{Block, Formula, Return};
 use crate::ast::Type::{Alias, Array};
 use crate::ast::VariableAttribute::{Constant, Portable, Readable, Writable};
 use crate::ast::*;
@@ -60,6 +63,170 @@ fn parse_function_assembly() {
 
     let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
     assert_eq!(actual_parse_tree.0.len(), 1);
+}
+
+#[test]
+fn parse_function_formula() {
+    let src = r#"
+        #[unused]
+        fn with_formula(input1: u8, input2: bit): u16 {
+            formula "LTL" {
+            }
+            formula {
+                None(true)
+                None(false)
+                Always(input1)
+            }
+            return (input1 + input2) as u16;
+        }
+        "#;
+
+    let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
+    assert_eq!(actual_parse_tree.0.len(), 1);
+    let expected_parse_tree = SourceUnit(vec![SourceUnitPart::FunctionDefinition(Box::new(
+        FunctionDefinition {
+            loc: Source(0, 9, 72),
+            ty: FunctionTy::Function,
+            name: Some(Identifier {
+                loc: Source(0, 30, 42),
+                name: "with_formula".to_string(),
+            }),
+            name_loc: Source(0, 30, 42),
+            params: vec![
+                (
+                    Source(0, 43, 53),
+                    Some(Parameter {
+                        loc: Source(0, 43, 53),
+                        annotation: None,
+                        ty: Variable(Identifier {
+                            loc: Source(0, 51, 53),
+                            name: "u8".to_string(),
+                        }),
+                        storage: None,
+                        name: Some(Identifier {
+                            loc: Source(0, 43, 49),
+                            name: "input1".to_string(),
+                        }),
+                    }),
+                ),
+                (
+                    Source(0, 55, 66),
+                    Some(Parameter {
+                        loc: Source(0, 55, 66),
+                        annotation: None,
+                        ty: Variable(Identifier {
+                            loc: Source(0, 63, 66),
+                            name: "bit".to_string(),
+                        }),
+                        storage: None,
+                        name: Some(Identifier {
+                            loc: Source(0, 55, 61),
+                            name: "input2".to_string(),
+                        }),
+                    }),
+                ),
+            ],
+            annotations: vec![AnnotationDefinition {
+                loc: Source(0, 9, 18),
+                args: vec![Annotation::Identifier(
+                    Source(0, 11, 17),
+                    IdentifierPath {
+                        loc: Source(0, 11, 17),
+                        identifiers: vec![Identifier {
+                            loc: Source(0, 11, 17),
+                            name: "unused".to_string(),
+                        }],
+                    },
+                )],
+                glob: false,
+            }],
+            return_type: Some(Alias(Identifier {
+                loc: Source(0, 69, 72),
+                name: "u16".to_string(),
+            })),
+            body: Some(Block {
+                loc: Source(0, 73, 293),
+                unchecked: false,
+                statements: vec![
+                    Formula {
+                        loc: Source(0, 87, 116),
+                        dialect: Some(StringLiteral {
+                            loc: Source(0, 95, 100),
+                            unicode: false,
+                            string: "LTL".to_string(),
+                        }),
+                        flags: None,
+                        block: Box::new(FormulaBlock {
+                            loc: Source(0, 101, 116),
+                            statements: vec![],
+                        }),
+                    },
+                    Formula {
+                        loc: Source(0, 129, 238),
+                        dialect: None,
+                        flags: None,
+                        block: Box::new(FormulaBlock {
+                            loc: Source(0, 137, 238),
+                            statements: vec![
+                                FunctionCall(Box::new(FormulaFunctionCall {
+                                    loc: Source(0, 155, 165),
+                                    id: Identifier {
+                                        loc: Source(0, 155, 159),
+                                        name: "None".to_string(),
+                                    },
+                                    arguments: vec![BoolLiteral(Source(0, 160, 164), true, None)],
+                                })),
+                                FunctionCall(Box::new(FormulaFunctionCall {
+                                    loc: Source(0, 182, 193),
+                                    id: Identifier {
+                                        loc: Source(0, 182, 186),
+                                        name: "None".to_string(),
+                                    },
+                                    arguments: vec![BoolLiteral(Source(0, 187, 192), false, None)],
+                                })),
+                                FunctionCall(Box::new(FormulaFunctionCall {
+                                    loc: Source(0, 210, 224),
+                                    id: Identifier {
+                                        loc: Source(0, 210, 216),
+                                        name: "Always".to_string(),
+                                    },
+                                    arguments: vec![FormulaExpression::Variable(Identifier {
+                                        loc: Source(0, 217, 223),
+                                        name: "input1".to_string(),
+                                    })],
+                                })),
+                            ],
+                        }),
+                    },
+                    Return(
+                        Source(0, 251, 282),
+                        Some(Cast(
+                            Source(0, 258, 282),
+                            Box::new(Parenthesis(
+                                Source(0, 259, 274),
+                                Box::new(Add(
+                                    Source(0, 259, 274),
+                                    Box::new(Variable(Identifier {
+                                        loc: Source(0, 259, 265),
+                                        name: "input1".to_string(),
+                                    })),
+                                    Box::new(Variable(Identifier {
+                                        loc: Source(0, 268, 274),
+                                        name: "input2".to_string(),
+                                    })),
+                                )),
+                            )),
+                            Alias(Identifier {
+                                loc: Source(0, 279, 282),
+                                name: "u16".to_string(),
+                            }),
+                        )),
+                    ),
+                ],
+            }),
+        },
+    ))]);
+    std::assert_eq!(actual_parse_tree, expected_parse_tree);
 }
 
 #[test]
