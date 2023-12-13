@@ -636,5 +636,8 @@ extern {
         "is" => Token::Is,
         "assembly" => Token::Assembly,
         "formula" => Token::Formula,
+        "model" => Token::Model,
+        "state" => Token::State,
+        "ref" => Token::Reference,
     }
 }
