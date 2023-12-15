@@ -333,6 +333,7 @@ impl_for_enums! {
         Self::StructDefinition(ref l, ..) => l.loc(),
         Self::ErrorDefinition(ref l, ..) => l.loc(),
         Self::FunctionDefinition(ref l, ..) => l.loc(),
+        Self::FormulaDefinition(ref l, ..) => l.loc.loc(),
         Self::VariableDefinition(ref l, ..) => l.loc(),
         Self::TypeDefinition(ref l, ..) => l.loc(),
         Self::AnnotationDefinition(ref l, ..) => l.loc(),

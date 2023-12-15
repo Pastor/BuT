@@ -333,6 +333,7 @@ pub enum SourceUnitPart {
 
     /// A function definition.
     FunctionDefinition(Box<FunctionDefinition>),
+    FormulaDefinition(Box<FormulaDefinition>),
 
     /// A variable definition.
     VariableDefinition(Box<VariableDefinition>),
@@ -707,6 +708,13 @@ pub enum VariableAttribute {
     Writable(Loc),
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
+#[repr(u8)] // for cmp; order of variants is important
+pub enum FunctionAttribute {
+    Visibility(Visibility),
+}
+
 /// A variable definition.
 ///
 /// `<ty> <attrs>* <name> [= <initializer>]`
@@ -777,6 +785,8 @@ pub enum Annotation {
     String(StringLiteral),
     Number(Loc, i64),
     Rational(Loc, String, bool),
+    Boolean(Loc, bool),
+    Visibility(Loc, Expression),
 }
 
 /// A string literal.
@@ -1200,6 +1210,13 @@ pub enum FunctionTy {
     Function,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
+pub struct FormulaDefinition {
+    pub loc: Loc,
+    pub formula: FormulaBlock,
+}
+
 /// A function definition.
 ///
 /// `<ty> [name](<params>,*) [attributes] [returns] [body]`
@@ -1220,6 +1237,7 @@ pub struct FunctionDefinition {
     pub params: ParameterList,
     /// The function attributes.
     pub annotations: Vec<AnnotationDefinition>,
+    pub attributes: Vec<FunctionAttribute>,
     /// The return parameter list.
     pub return_type: Option<Type>,
     /// The function body.

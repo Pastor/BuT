@@ -117,6 +117,7 @@ pub enum Token<'input> {
     Readable,
     Portable,
     External,
+    Private,
 
     PeirceArrow,
 
@@ -217,6 +218,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Model => write!(f, "model"),
             Token::State => write!(f, "state"),
             Token::Reference => write!(f, "ref"),
+            Token::Private => write!(f, "private"),
         }
     }
 }
@@ -316,6 +318,7 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "mut" => Token::Writable,
     "pio" => Token::Portable,
     "external" => Token::External,
+    "private" => Token::Private,
     "model" => Token::Model,
     "state" => Token::State,
     "ref" => Token::Reference,

@@ -17,6 +17,7 @@ SourceUnitPart: SourceUnitPart = {
     GlobalAnnotationDefinition => SourceUnitPart::AnnotationDefinition(Box::new(<>)),
     PropertyDefinition => SourceUnitPart::PropertyDefinition(Box::new(<>)),
     FunctionDefinition => SourceUnitPart::FunctionDefinition(<>),
+    FormulaDefinition => SourceUnitPart::FormulaDefinition(<>),
     <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc::Source(file_no, l, r)),
 }
 
@@ -128,6 +129,15 @@ Annotation: Annotation = {
     <l:@L> <id:ButIdentifierPath> <r:@R> => {
         Annotation::Identifier(Loc::Source(file_no, l, r), id)
     },
+    <l:@L> "true" <r:@R> => {
+        Annotation::Boolean(Loc::Source(file_no, l, r), true)
+    },
+    <l:@L> "false" <r:@R> => {
+        Annotation::Boolean(Loc::Source(file_no, l, r), false)
+    },
+    <l:@L> <v:Visibility> "(" <e:Expression> ")"  <r:@R> => {
+        Annotation::Visibility(Loc::Source(file_no, l, r), e)
+    },
     <l:@L> <id:Identifier> "(" <v:CommaOne<Annotation>> ")" <r:@R> => {
         Annotation::Function{loc: Loc::Source(file_no, l, r), name: id, args: v}
     },
@@ -150,14 +160,19 @@ GlobalAnnotationDefinition: AnnotationDefinition = {
 
 Visibility: Visibility = {
     <l:@L> "external" <r:@R> => Visibility::External(Some(Loc::Source(file_no, l, r))),
+    <l:@L> "private" <r:@R> => Visibility::Private(Some(Loc::Source(file_no, l, r))),
 }
 
 VariableAttribute: VariableAttribute = {
     Visibility => VariableAttribute::Visibility(<>),
     <l:@L> "const" <r:@R> => VariableAttribute::Constant(Loc::Source(file_no, l, r)),
-    <l:@L> "let" <r:@R> => VariableAttribute::Readable(Loc::Source(file_no, l, r)),
-    <l:@L> "mut" <r:@R> => VariableAttribute::Writable(Loc::Source(file_no, l, r)),
-    <l:@L> "pio" <r:@R> => VariableAttribute::Portable(Loc::Source(file_no, l, r)),
+    <l:@L> "let"   <r:@R> => VariableAttribute::Readable(Loc::Source(file_no, l, r)),
+    <l:@L> "mut"   <r:@R> => VariableAttribute::Writable(Loc::Source(file_no, l, r)),
+    <l:@L> "pio"   <r:@R> => VariableAttribute::Portable(Loc::Source(file_no, l, r)),
+}
+
+FunctionAttribute: FunctionAttribute = {
+
 }
 
 StructDefinition: Box<StructDefinition> = {
@@ -180,7 +195,7 @@ BlockStatementOrSemiColon: Option<Statement> = {
 }
 
 FunctionDefinition: Box<FunctionDefinition> = {
-    <l:@L> <annotations:AnnotationDefinition*> "fn" <nl:@L> <name:ButIdentifierOrError> <nr:@R> <params:ParameterList>
+    <l:@L> <annotations:AnnotationDefinition*> <attributes:FunctionAttribute*> "fn" <nl:@L> <name:ButIdentifierOrError> <nr:@R> <params:ParameterList>
     <return_type:(":" <Type>)?> <r:@R> <body:BlockStatementOrSemiColon> => {
         Box::new(FunctionDefinition{
             loc: Loc::Source(file_no, l, r),
@@ -189,8 +204,18 @@ FunctionDefinition: Box<FunctionDefinition> = {
             name_loc: Loc::Source(file_no, nl, nr),
             params,
             annotations,
+            attributes,
             return_type,
             body,
+        })
+    },
+}
+
+FormulaDefinition: Box<FormulaDefinition> = {
+    <l:@L> "formula" <dialect:StringLiteral?> <block:FormulaBlock> <r:@R> => {
+        Box::new(FormulaDefinition {
+            loc: Loc::Source(file_no, l, r),
+            formula: block
         })
     },
 }
@@ -375,10 +400,10 @@ BlockStatement: Statement = {
 }
 
 OpenStatement: Statement = {
-    <l:@L> "if" "(" <cond:Expression> ")" <body:Statement> <r:@R> => {
+    <l:@L> "if" <cond:Expression> <body:BlockStatement> <r:@R> => {
         Statement::If(Loc::Source(file_no, l, r), cond, Box::new(body), None)
     },
-    <l:@L> "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:OpenStatement> <r:@R> => {
+    <l:@L> "if" <cond:Expression> <body:BlockStatement> "else" <o:OpenStatement> <r:@R> => {
         Statement::If(Loc::Source(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
     },
     <l:@L> "for" "(" <b:SimpleStatement?> ";" <c:Expression?> ";" <n:Expression?> ")" <block:OpenStatement> <r:@R> => {
@@ -391,7 +416,7 @@ OpenStatement: Statement = {
 
 ClosedStatement: Statement = {
     NonIfStatement,
-    <l:@L> "if" "(" <cond:Expression> ")" <body:ClosedStatement> "else" <o:ClosedStatement> <r:@R> => {
+    <l:@L> "if" <cond:Expression> <body:BlockStatement> "else" <o:ClosedStatement> <r:@R> => {
         Statement::If(Loc::Source(file_no, l, r), cond, Box::new(body), Some(Box::new(o)))
     },
     <l:@L> "while" "(" <e:Expression> ")" <b:ClosedStatement> <r:@R> => {
@@ -620,6 +645,7 @@ extern {
         "mut" => Token::Writable,
         "pio" => Token::Portable,
         "external" => Token::External,
+        "private" => Token::Private,
         "true" => Token::True,
         "false" => Token::False,
         "fn" => Token::Function,

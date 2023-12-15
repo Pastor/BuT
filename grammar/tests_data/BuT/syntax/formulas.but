@@ -1,0 +1,18 @@
+type u8  = [ 8  : bit ];
+
+let point: u8 = 0;
+
+formula "LTL" {
+    Assert(point)
+}
+
+formula "CTL" {
+    Assert(point)
+}
+
+formula "Guard" {
+}
+
+formula "Assert" {
+}
+

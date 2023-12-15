@@ -75,6 +75,12 @@ impl Display for ast::Annotation {
             Annotation::Rational(_, n, _) => {
                 Display::fmt(n, f)?;
             }
+            Annotation::Boolean(_, v) => {
+                Display::fmt(v, f)?;
+            }
+            Annotation::Visibility(_, v) => {
+                Display::fmt(v, f)?;
+            }
         }
         Ok(())
     }
@@ -118,6 +124,14 @@ impl Display for ast::ErrorParameter {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         std::fmt::Display::fmt(&self.ty, f)?;
         write_opt!(f, ' ', &self.name);
+        Ok(())
+    }
+}
+
+impl Display for ast::FormulaDefinition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        f.write_str("formula ")?;
+        Display::fmt(&self.formula, f)?;
         Ok(())
     }
 }
@@ -582,7 +596,7 @@ impl ast::FunctionTy {
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Constructor => "constructor",
-            Self::Function => "function",
+            Self::Function => "fn",
         }
     }
 }
@@ -652,6 +666,7 @@ impl Display for ast::SourceUnitPart {
             Self::StructDefinition(inner) => Display::fmt(&inner, f),
             Self::ErrorDefinition(inner) => Display::fmt(&inner, f),
             Self::FunctionDefinition(inner) => Display::fmt(&inner, f),
+            Self::FormulaDefinition(inner) => Display::fmt(&inner, f),
             Self::VariableDefinition(inner) => Display::fmt(&inner, f),
             Self::TypeDefinition(inner) => Display::fmt(&inner, f),
             Self::AnnotationDefinition(inner) => Display::fmt(&inner, f),
@@ -701,9 +716,9 @@ impl Display for ast::Statement {
                 f.write_char('}')
             }
             Self::If(_, cond, block, end_block) => {
-                f.write_str("if (")?;
+                f.write_str("if ")?;
                 std::fmt::Display::fmt(&cond, f)?;
-                f.write_str(") ")?;
+                f.write_str(" ")?;
                 Display::fmt(&block, f)?;
                 write_opt!(f, " else ", end_block);
                 Ok(())
@@ -1398,36 +1413,40 @@ mod tests {
                 name_loc: loc!(),
                 params: vec![],
                 annotations: vec![],
+                attributes: vec![],
                 return_type: None,
                 body: None,
-            } => "function name();",
+            } => "fn name();",
             ast::FunctionDefinition {
                 ty: ast::FunctionTy::Function,
                 name: Some(id("name")),
                 name_loc: loc!(),
                 params: vec![],
                 annotations: vec![],
+                attributes: vec![],
                 return_type: None,
                 body: Some(stmt!({})),
-            } => "function name() {}",
+            } => "fn name() {}",
             ast::FunctionDefinition {
                 ty: ast::FunctionTy::Function,
                 name: Some(id("name")),
                 name_loc: loc!(),
                 params: vec![],
                 annotations: vec![],
+                attributes: vec![],
                 return_type: Some(Type::Alias(id("uint256"))),
                 body: Some(stmt!({})),
-            } => "function name() : uint256 {}",
+            } => "fn name() : uint256 {}",
             ast::FunctionDefinition {
                 ty: ast::FunctionTy::Function,
                 name: Some(id("name")),
                 name_loc: loc!(),
                 params: vec![],
                 annotations: vec![],
+                attributes: vec![],
                 return_type: Some(Type::Alias(id("uint256"))),
                 body: Some(stmt!({})),
-            } => "function name() : uint256 {}",
+            } => "fn name() : uint256 {}",
 
             ast::StructDefinition {
                 name: Some(id("name")),
@@ -1534,32 +1553,13 @@ mod tests {
                     => "1234",
                 ast::Expression::RationalNumberLiteral(loc!(), ".9".into(), false)
                     => "0.9",
-                // ast::Expression::FunctionCall(loc!(), Box::new(expr!(func)), vec![]) => "func()",
-                // ast::Expression::FunctionCall(loc!(), Box::new(expr!(func)), vec![expr!(arg)])
-                //     => "func(arg)",
-                // ast::Expression::FunctionCall(loc!(), Box::new(expr!(func)), vec![expr!(arg1), expr!(arg2)])
-                //     => "func(arg1, arg2)",
-                // ast::Expression::FunctionCallBlock(loc!(), Box::new(expr!(func)), Box::new(stmt!({})))
-                //     => "func{}",
-                // ast::Expression::NamedFunctionCall(loc!(), Box::new(expr!(func)), vec![])
-                //     => "func({})",
-                // ast::Expression::NamedFunctionCall(loc!(), Box::new(expr!(func)), vec![ast::NamedArgument {
-                //     loc: loc!(),
-                //     name: id("arg"),
-                //     expr: expr!(value),
-                // }]) => "func({arg: value})",
-                // ast::Expression::NamedFunctionCall(loc!(), Box::new(expr!(func)), vec![
-                //     ast::NamedArgument {
-                //         loc: loc!(),
-                //         name: id("arg1"),
-                //         expr: expr!(value1),
-                //     },
-                //     ast::NamedArgument {
-                //         loc: loc!(),
-                //         name: id("arg2"),
-                //         expr: expr!(value2),
-                //     }
-                // ]) => "func({arg1: value1, arg2: value2})",
+                ast::Expression::FunctionCall(loc!(), id("func"), vec![]) => "func()",
+                ast::Expression::FunctionCall(loc!(), id("func"), vec![expr!(arg)])
+                    => "func(arg)",
+                ast::Expression::FunctionCall(loc!(), id("func"), vec![expr!(arg1), expr!(arg2)])
+                    => "func(arg1, arg2)",
+                ast::Expression::FunctionCallBlock(loc!(), Box::new(expr!(func)), Box::new(stmt!({})))
+                    => "func{}",
 
                 ast::Expression::PreIncrement(loc!(), var("a")) => "++a",
                 ast::Expression::PostIncrement(loc!(), var("a")) => "a++",
@@ -1605,7 +1605,7 @@ mod tests {
 
             ast::FunctionTy: {
                 ast::FunctionTy::Constructor => "constructor",
-                ast::FunctionTy::Function => "function",
+                ast::FunctionTy::Function => "fn",
             }
 
             ast::Import: {
@@ -1671,11 +1671,11 @@ mod tests {
                     },
                 ]) => "{name1: value1, name2: value2}",
 
-                // ast::Statement::If(loc!(), expr!(true), Box::new(stmt!({})), None) => "if (true) {}",
-                // ast::Statement::If(loc!(), expr!(true), Box::new(stmt!({})), Some(Box::new(stmt!({}))))
-                //     => "if (true) {} else {}",
+                ast::Statement::If(loc!(), expr!(true), Box::new(stmt!({})), None) => "if true {}",
+                ast::Statement::If(loc!(), expr!(true), Box::new(stmt!({})), Some(Box::new(stmt!({}))))
+                    => "if true {} else {}",
 
-                // ast::Statement::While(loc!(), expr!(true), Box::new(stmt!({}))) => "while (true) {}",
+                ast::Statement::While(loc!(), expr!(true), Box::new(stmt!({}))) => "while (true) {}",
 
                 ast::Statement::Expression(loc!(), expr!(true)) => "true",
 
@@ -1778,7 +1778,7 @@ mod tests {
                 ast::VariableAttribute::Constant(loc!()) => "const",
             }
 
-            ast::YulExpression: {
+            ast::FormulaExpression: {
                 ast::FormulaExpression::BoolLiteral(loc!(), false, None) => "false",
                 ast::FormulaExpression::BoolLiteral(loc!(), true, None) => "true",
                 ast::FormulaExpression::BoolLiteral(loc!(), false, Some(id("name"))) => "false: name",

@@ -42,7 +42,7 @@ fn parser_error_recovery() {
                     loc: Source(0, 56, 58),
                     level: Error,
                     ty: ParserError,
-                    message: "unrecognised token 'if', expected \"#\", \"const\", \"external\", \"let\", \"mut\", \"pio\", \"}\", identifier".to_string(),
+                    message: "unrecognised token 'if', expected \"#\", \"const\", \"external\", \"let\", \"mut\", \"pio\", \"private\", \"}\", identifier".to_string(),
                     notes: vec![],
                 },
             ]
@@ -140,6 +140,7 @@ fn parse_function_formula() {
                 )],
                 glob: false,
             }],
+            attributes: vec![],
             return_type: Some(Alias(Identifier {
                 loc: Source(0, 69, 72),
                 name: "u16".to_string(),
