@@ -338,6 +338,7 @@ impl_for_enums! {
         Self::TypeDefinition(ref l, ..) => l.loc(),
         Self::AnnotationDefinition(ref l, ..) => l.loc(),
         Self::PropertyDefinition(ref l, ..) => l.loc.loc(),
+        Self::ModelDefinition(ref l, ..) => l.loc.loc(),
         Self::Using(ref l, ..) => l.loc(),
         | Self::StraySemicolon(l, ..) => l,
     }

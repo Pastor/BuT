@@ -17,6 +17,7 @@ SourceUnitPart: SourceUnitPart = {
     GlobalAnnotationDefinition => SourceUnitPart::AnnotationDefinition(Box::new(<>)),
     PropertyDefinition => SourceUnitPart::PropertyDefinition(Box::new(<>)),
     FunctionDefinition => SourceUnitPart::FunctionDefinition(<>),
+    ModelDefinition => SourceUnitPart::ModelDefinition(<>),
     FormulaDefinition => SourceUnitPart::FormulaDefinition(<>),
     <l:@L> ";" <r:@R> => SourceUnitPart::StraySemicolon(Loc::Source(file_no, l, r)),
 }
@@ -64,6 +65,52 @@ EnumDefinition: Box<EnumDefinition> = {
     <l:@L> <annotations:AnnotationDefinition*> "enum" <name:ButIdentifierOrError> "{" <values:Comma<ButIdentifierOrError>> "}" <r:@R> => {
         Box::new(EnumDefinition{loc: Loc::Source(file_no, l, r), name, values, annotations})
     }
+}
+
+ObjectType: ObjectType = {
+    <l:@L> "abstract" <r:@R> => ObjectType::Abstract(Loc::Source(file_no, l, r)),
+    <l:@L> "template" <r:@R> => ObjectType::Template(Loc::Source(file_no, l, r)),
+}
+
+ModelDefinition: Box<ModelDefinition> = {
+    <l:@L> <annotations:AnnotationDefinition*> <ty:ObjectType?> "model" <name:ButIdentifierOrError>
+    <implements: (":" <Expression>)?>
+    "{" <parts:(<ModelPart>)*> "}" <r:@R> => {
+        Box::new(ModelDefinition{loc: Loc::Source(file_no, l, r), name, parts, annotations, ty, implements})
+    }
+}
+ModelPart: ModelPart = {
+    EnumDefinition => ModelPart::EnumDefinition(<>),
+    StructDefinition => ModelPart::StructDefinition(<>),
+    TypeDefinition => ModelPart::TypeDefinition(<>),
+    VariableDefinition => ModelPart::VariableDefinition(<>),
+    GlobalAnnotationDefinition => ModelPart::AnnotationDefinition(Box::new(<>)),
+    PropertyDefinition => ModelPart::PropertyDefinition(Box::new(<>)),
+    FunctionDefinition => ModelPart::FunctionDefinition(<>),
+    ModelDefinition => ModelPart::ModelDefinition(<>),
+    StateDefinition => ModelPart::StateDefinition(<>),
+    FormulaDefinition => ModelPart::FormulaDefinition(<>),
+    <l:@L> ";" <r:@R> => ModelPart::StraySemicolon(Loc::Source(file_no, l, r)),
+}
+
+StateDefinition: Box<StateDefinition> = {
+    <l:@L> <annotations:AnnotationDefinition*> <ty:ObjectType?> "state" <name:ButIdentifierOrError>
+    "{" <parts:(<StatePart>)*> "}" <r:@R> => {
+        Box::new(StateDefinition{loc: Loc::Source(file_no, l, r), name, parts, annotations, ty})
+    }
+}
+StatePart: StatePart = {
+    EnumDefinition => StatePart::EnumDefinition(<>),
+    StructDefinition => StatePart::StructDefinition(<>),
+    TypeDefinition => StatePart::TypeDefinition(<>),
+    VariableDefinition => StatePart::VariableDefinition(<>),
+    GlobalAnnotationDefinition => StatePart::AnnotationDefinition(Box::new(<>)),
+    PropertyDefinition => StatePart::PropertyDefinition(Box::new(<>)),
+    FunctionDefinition => StatePart::FunctionDefinition(<>),
+    ModelDefinition => StatePart::ModelDefinition(<>),
+    FormulaDefinition => StatePart::FormulaDefinition(<>),
+    <l:@L> "ref" <i:Identifier> <e: (":" <Expression>)?> ";" <r:@R> => StatePart::Reference(Loc::Source(file_no, l, r), i, e),
+    <l:@L> ";" <r:@R> => StatePart::StraySemicolon(Loc::Source(file_no, l, r)),
 }
 
 ButIdentifierPath: IdentifierPath = {
@@ -646,6 +693,8 @@ extern {
         "pio" => Token::Portable,
         "external" => Token::External,
         "private" => Token::Private,
+        "abstract" => Token::Abstract,
+        "template" => Token::Template,
         "true" => Token::True,
         "false" => Token::False,
         "fn" => Token::Function,

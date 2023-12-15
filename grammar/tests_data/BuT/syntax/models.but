@@ -1,0 +1,27 @@
+#[unused]
+model None {
+}
+model Start: Template + None {
+    state Start {
+        ref Next: true;
+        ref End;
+    }
+    state Next {
+        ref Flag: flag & S(None) = End;
+        ref Start;
+    }
+    state Flag {
+        ref Start;
+        exit -> flag = false;
+    }
+    start -> Start;
+
+    flag: bit = false;
+}
+
+template model Template {
+
+}
+
+
+behavior -> Start | None;

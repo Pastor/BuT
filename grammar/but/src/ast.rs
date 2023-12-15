@@ -340,6 +340,7 @@ pub enum SourceUnitPart {
 
     AnnotationDefinition(Box<AnnotationDefinition>),
     PropertyDefinition(Box<PropertyDefinition>),
+    ModelDefinition(Box<ModelDefinition>),
 
     /// A type definition.
     TypeDefinition(Box<TypeDefinition>),
@@ -601,6 +602,101 @@ impl UserDefinedOperator {
                 | Self::MoreEqual
         )
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
+pub struct ModelDefinition {
+    pub loc: Loc,
+    pub name: Option<Identifier>,
+    pub annotations: Vec<AnnotationDefinition>,
+    pub parts: Vec<ModelPart>,
+    pub ty: Option<ObjectType>,
+    pub implements: Option<Expression>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
+pub enum ModelPart {
+    /// An import directive.
+    ImportDirective(Import),
+
+    /// An enum definition.
+    EnumDefinition(Box<EnumDefinition>),
+
+    /// A struct definition.
+    StructDefinition(Box<StructDefinition>),
+
+    /// An error definition.
+    ErrorDefinition(Box<ErrorDefinition>),
+
+    /// A function definition.
+    FunctionDefinition(Box<FunctionDefinition>),
+    FormulaDefinition(Box<FormulaDefinition>),
+
+    /// A variable definition.
+    VariableDefinition(Box<VariableDefinition>),
+
+    AnnotationDefinition(Box<AnnotationDefinition>),
+    PropertyDefinition(Box<PropertyDefinition>),
+
+    /// A type definition.
+    TypeDefinition(Box<TypeDefinition>),
+
+    /// A `using` directive.
+    Using(Box<Using>),
+    StateDefinition(Box<StateDefinition>),
+    ModelDefinition(Box<ModelDefinition>),
+
+    /// A stray semicolon.
+    StraySemicolon(Loc),
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
+pub struct StateDefinition {
+    pub loc: Loc,
+    pub name: Option<Identifier>,
+    pub annotations: Vec<AnnotationDefinition>,
+    pub parts: Vec<StatePart>,
+    pub ty: Option<ObjectType>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
+pub enum StatePart {
+    /// An import directive.
+    ImportDirective(Import),
+
+    /// An enum definition.
+    EnumDefinition(Box<EnumDefinition>),
+
+    /// A struct definition.
+    StructDefinition(Box<StructDefinition>),
+
+    /// An error definition.
+    ErrorDefinition(Box<ErrorDefinition>),
+
+    /// A function definition.
+    FunctionDefinition(Box<FunctionDefinition>),
+    FormulaDefinition(Box<FormulaDefinition>),
+
+    /// A variable definition.
+    VariableDefinition(Box<VariableDefinition>),
+
+    AnnotationDefinition(Box<AnnotationDefinition>),
+    PropertyDefinition(Box<PropertyDefinition>),
+
+    /// A type definition.
+    TypeDefinition(Box<TypeDefinition>),
+
+    /// A `using` directive.
+    Using(Box<Using>),
+    Reference(Loc, Identifier, Option<Expression>),
+    ModelDefinition(Box<ModelDefinition>),
+
+    /// A stray semicolon.
+    StraySemicolon(Loc),
 }
 
 /// A `using` directive.
@@ -1208,6 +1304,14 @@ pub enum FunctionTy {
 
     /// `function`
     Function,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
+pub enum ObjectType {
+    /// `abstract`
+    Abstract(Loc),
+    Template(Loc),
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

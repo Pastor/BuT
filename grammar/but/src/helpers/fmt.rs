@@ -5,7 +5,9 @@ use std::{
 };
 
 use crate::ast;
-use crate::ast::{Annotation, Expression, FormulaExpression, SourceUnitPart, Type};
+use crate::ast::{
+    Annotation, Expression, FormulaExpression, ModelPart, SourceUnitPart, StatePart, Type,
+};
 
 macro_rules! write_opt {
     // no sep
@@ -132,6 +134,87 @@ impl Display for ast::FormulaDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         f.write_str("formula ")?;
         Display::fmt(&self.formula, f)?;
+        Ok(())
+    }
+}
+
+impl Display for ast::ModelDefinition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        for x in self.annotations.iter() {
+            Display::fmt(&x, f)?;
+        }
+        f.write_str("model ")?;
+        write_opt!(f, "", &self.name);
+        write_opt!(f, ": ", &self.implements);
+        f.write_str(" {")?;
+        for x in self.parts.iter() {
+            Display::fmt(&x, f)?;
+        }
+        f.write_str("}")?;
+        Ok(())
+    }
+}
+
+impl Display for ast::ModelPart {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            ModelPart::ImportDirective(inner) => Display::fmt(&inner, f)?,
+            ModelPart::EnumDefinition(inner) => Display::fmt(&inner, f)?,
+            ModelPart::StructDefinition(inner) => Display::fmt(&inner, f)?,
+            ModelPart::ErrorDefinition(inner) => Display::fmt(&inner, f)?,
+            ModelPart::FunctionDefinition(inner) => Display::fmt(&inner, f)?,
+            ModelPart::FormulaDefinition(inner) => Display::fmt(&inner, f)?,
+            ModelPart::VariableDefinition(inner) => Display::fmt(&inner, f)?,
+            ModelPart::AnnotationDefinition(inner) => Display::fmt(&inner, f)?,
+            ModelPart::PropertyDefinition(inner) => Display::fmt(&inner, f)?,
+            ModelPart::StateDefinition(inner) => Display::fmt(&inner, f)?,
+            ModelPart::TypeDefinition(inner) => Display::fmt(&inner, f)?,
+            ModelPart::ModelDefinition(inner) => Display::fmt(&inner, f)?,
+            ModelPart::Using(inner) => Display::fmt(&inner, f)?,
+            ModelPart::StraySemicolon(_) => {}
+        }
+        Ok(())
+    }
+}
+
+impl Display for ast::StateDefinition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        for x in self.annotations.iter() {
+            Display::fmt(&x, f)?;
+        }
+        f.write_str("state ")?;
+        write_opt!(f, "", &self.name);
+        f.write_str(" {")?;
+        for x in self.parts.iter() {
+            Display::fmt(&x, f)?;
+        }
+        f.write_str("}")?;
+        Ok(())
+    }
+}
+
+impl Display for ast::StatePart {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            StatePart::ImportDirective(inner) => Display::fmt(&inner, f)?,
+            StatePart::EnumDefinition(inner) => Display::fmt(&inner, f)?,
+            StatePart::StructDefinition(inner) => Display::fmt(&inner, f)?,
+            StatePart::ErrorDefinition(inner) => Display::fmt(&inner, f)?,
+            StatePart::FunctionDefinition(inner) => Display::fmt(&inner, f)?,
+            StatePart::FormulaDefinition(inner) => Display::fmt(&inner, f)?,
+            StatePart::VariableDefinition(inner) => Display::fmt(&inner, f)?,
+            StatePart::AnnotationDefinition(inner) => Display::fmt(&inner, f)?,
+            StatePart::PropertyDefinition(inner) => Display::fmt(&inner, f)?,
+            StatePart::TypeDefinition(inner) => Display::fmt(&inner, f)?,
+            StatePart::ModelDefinition(inner) => Display::fmt(&inner, f)?,
+            StatePart::Using(inner) => Display::fmt(&inner, f)?,
+            StatePart::Reference(_, name, e) => {
+                f.write_str("ref ")?;
+                Display::fmt(&name, f)?;
+                write_opt!(f, ": ", &e);
+            }
+            StatePart::StraySemicolon(_) => {}
+        }
         Ok(())
     }
 }
@@ -670,6 +753,7 @@ impl Display for ast::SourceUnitPart {
             Self::VariableDefinition(inner) => Display::fmt(&inner, f),
             Self::TypeDefinition(inner) => Display::fmt(&inner, f),
             Self::AnnotationDefinition(inner) => Display::fmt(&inner, f),
+            Self::ModelDefinition(inner) => Display::fmt(&inner, f),
             Self::Using(inner) => Display::fmt(&inner, f),
             Self::StraySemicolon(_) => f.write_char(';'),
             SourceUnitPart::PropertyDefinition(inner) => Display::fmt(&inner, f),
