@@ -1,0 +1,52 @@
+Condition: Condition = {
+    Condition6,
+}
+
+Condition6: Expression = {
+    <a:@L> <l:Condition6> "=" <r:Condition5> <b:@R> => Condition::Equal(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition6> "!=" <r:Condition5> <b:@R> => Condition::NotEqual(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    Condition5,
+}
+
+Condition5: Condition = {
+    <a:@L> <l:Condition5> "<" <r:Condition4> <b:@R> => Condition::Less(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition5> ">" <r:Condition4> <b:@R> => Condition::More(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition5> "<=" <r:Condition4> <b:@R> => Condition::LessEqual(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition5> ">=" <r:Condition4> <b:@R> => Condition::MoreEqual(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    Condition4,
+}
+
+Condition4: Condition = {
+    <a:@L> <l:Condition4> "|" <r:Condition3> <b:@R> => Condition::Or(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    Condition3,
+}
+
+Condition3: Condition = {
+    <a:@L> <l:Condition3> "&" <r:Condition2> <b:@R> => Condition::And(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    Condition2,
+}
+
+Condition2: Condition = {
+    <a:@L> <l:Condition2> "+" <r:Condition1> <b:@R> => Condition::Add(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition2> "-" <r:Condition1> <b:@R> => Condition::Subtract(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    Condition1,
+}
+
+Condition1: Condition = {
+    <a:@L> "!" <e:Condition1> <b:@R> => Condition::Not(Loc::Source(file_no, a, b), Box::new(e)),
+    Condition0
+}
+
+Condition0: Condition = {
+  <Identifier> => Condition::Variable(<>),
+  <FunctionCall> => <>,
+  <a:@L> "(" <e:Condition> ")" <b:@R> => Condition::Group(Loc::Source(file_no, a, b), Box::new(e)),
+  <a:@L> <e:Condition0> "." <i:Identifier> <b:@R> => Condition::MemberAccess(Loc::Source(file_no, a, b), Box::new(e), i),
+  <a:@L> <i:Identifier> "[" <n:number> "]" <b:@R> => Condition::ArraySubscript(Loc::Source(file_no, a, b), i, n),
+  ConditionExpression,
+}
+
+ConditionExpression: Condition = {
+    <a:@L> "true" <b:@R> => Condition::BoolLiteral(Loc::Source(file_no, a, b), true),
+    <a:@L> "false" <b:@R> => Condition::BoolLiteral(Loc::Source(file_no, a, b), false),
+}

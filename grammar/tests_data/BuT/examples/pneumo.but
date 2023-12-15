@@ -1,0 +1,207 @@
+model Cylinder {
+    state S1 {
+        ref S2: y1_down & y2_down & next;
+        ref S6: timer > 20;
+        enter -> {
+            if y1_down && y2_down {
+                timer = 0;
+                if delay > 40 {
+                    next = true;
+                }
+            }
+            y1 = false;
+            y2 = false;
+        }
+        exit -> {
+            timer = 0;
+            delay = 0;
+            next = false;
+        }
+    }
+    state S2 {
+        ref S3: y1_up & y2_down & next;
+        ref ER: timer > 20;
+        enter -> {
+            if y1_up && y2_down {
+                timer = 0;
+                if delay > 40 {
+                    next = true;
+                }
+            }
+            y1 = true;
+            y2 = false;
+        }
+        exit -> {
+            timer = 0;
+            delay = 0;
+            next = false;
+        }
+    }
+    state S3 {
+        ref S4: y1_up & y2_up & next;
+        ref ER: timer > 20;
+        exit -> {
+            timer = 0;
+            delay = 0;
+            next = false;
+        }
+        enter -> {
+            if y1_up && y2_up {
+                timer = 0;
+                if delay > 40 {
+                    next = true;
+                }
+            }
+            y1 = true;
+            y2 = true;
+        }
+    }
+    state S4 {
+        ref S5: y1_down & y2_up & next;
+        ref ER: timer > 20;
+        exit -> {
+            timer = 0;
+            delay = 0;
+            next = false;
+        }
+        enter -> {
+            if y1_down && y2_up {
+                timer = 0;
+                if delay > 40 {
+                    next = true;
+                }
+            }
+            y1 = false;
+            y2 = true;
+        }
+    }
+    state S5 {
+        ref S6: y1_down & y2_down & next;
+        ref ER: timer > 200;
+        exit -> {
+            timer = 0;
+            delay = 0;
+            next = false;
+        }
+        enter -> {
+            if y1_down && y2_down {
+                timer = 0;
+                if delay > 40 {
+                    next = true;
+                }
+            }
+            y1 = false;
+            y2 = false;
+        }
+    }
+    state S6 {
+        ref S7: y1_up & y2_up & next;
+        ref ER: timer > 20;
+        exit -> {
+            timer = 0;
+            delay = 0;
+            next = false;
+        }
+        enter -> {
+            if y1_up && y2_up {
+                timer = 0;
+                if delay > 40 {
+                    next = true;
+                }
+            }
+            y1 = true;
+            y2 = true;
+        }
+    }
+    state S7 {
+        ref S8: y1_down & y2_up & next;
+        ref ER: timer > 200;
+        exit -> {
+            timer = 0;
+            delay = 0;
+            next = false;
+        }
+        enter -> {
+            if y1_down && y2_up {
+                timer = 0;
+                if delay > 40 {
+                    next = true;
+                }
+            }
+            y1 = false;
+            y2 = true;
+        }
+    }
+    state S8 {
+        ref S9: y1_up & y2_up & next;
+        ref ER: timer > 20;
+        exit -> {
+            timer = 0;
+            delay = 0;
+            next = false;
+        }
+        enter -> {
+            if y1_up && y2_up {
+                timer = 0;
+                if delay > 40 {
+                    next = true;
+                }
+            }
+            y1 = true;
+            y2 = true;
+        }
+    }
+    state S9 {
+        ref S1: y1_down & y2_up & next;
+        ref ER: timer > 200;
+        exit -> {
+            timer = 0;
+            delay = 0;
+            next = false;
+        }
+        enter -> {
+            if y1_down && y2_up {
+                timer = 0;
+                if delay > 40 {
+                    next = true;
+                }
+            }
+            y1 = false;
+            y2 = true;
+        }
+    }
+    state ER {
+        enter -> {
+            y1 = false;
+            y2 = false;
+        }
+        enter -> debug("Error");
+    }
+    start -> S1;
+
+    enter -> {
+        timer = timer + 1;
+        delay = delay + 1;
+    }
+
+    let mut timer: int = 0;
+    let mut delay: int = 0;
+    let mut next: bool = false;
+
+    fn has_next(pred: bool, d: int): bool {
+        if pred {
+            timer = 0;
+            if delay > d {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+port      y1: bool = 0;
+port      y2: bool = 0;
+port y1_down: bool = 0;
+port   y1_up: bool = 0;
+port y2_down: bool = 0;
+port   y2_up: bool = 0;

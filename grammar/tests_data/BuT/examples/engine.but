@@ -1,0 +1,107 @@
+//Генерировать в табличном виде
+#![fsm(Table)]
+//Генерировать в switch виде (по умолчанию)
+//#![fsm(Switch)]
+
+model Consumer {
+    state Listen {
+        ref Wait: port4 > 10;
+        ref Next: port4 > 10; /*Фактически здесь появляется недетерминизм, по идее мы должны об этом сообщить и выдать ошибку*/
+    }
+    state Wait {
+        ref Listen: counter > 1000;
+    }
+    state Next {
+        model Map {
+            state Wait {
+                ref End: complete;
+                exit -> {
+                    result = result + 1;
+                }
+            }
+            state End {
+            }
+            start -> Wait;
+
+            port complete: bit = 0x10000:3;
+        }
+        model Reduce {
+            state Wait {
+                ref End: true;
+                exit -> result = result + 1;
+            }
+            state End {
+            }
+            start -> Wait;
+        }
+        ref Join: (S(Reduce) = End) & (S(Map) = End);
+        behavior -> Map + Reduce;
+        end      -> assert(result == 2);
+    }
+    end   -> exit(EXIT_CONSUMER);
+    start -> Listen;
+    enter -> counter = counter + 1; /*Используем глобальную переменную*/
+    let result: int = 0;
+}
+
+model Producer {
+    #![guard = "timer >= 0"]
+    #![ltl = "G(timer)"]
+
+    state First_Step {
+        ref Second_Step: timer = 10;
+        ref Third_Step: timer = 30;
+        ref Forth_Step: timer = 40; /* Не достижимое состояние. Forth_Step нигде не определено, считается что если состояние не определено, но на него сделан переход, то это состояние завершения */
+        ref First_Step; /* Если нет условия, переход выполняется на следующем такте*/
+        before -> debug("Выполняется перед переходом в состояние");
+        exit   -> debug("Выполняется после выхода из этого состояния");
+        enter  -> debug("Выполняется при каждом тике");
+    }
+    state Second_Step {
+        ref First_Step: timer >= 20;
+        before -> write(0, timer); /*Пересылаем в канал chan0 значение счетчика*/
+    }
+    #[unused] /*Состояние пустое (конечное), добавлен атрибут unused чтобы состояние после оптимизации не было исключено из обработки (последующей генерации кода)*/
+    state Third_Step {
+    }
+    start: First_Step; /*Начальное состояние*/
+    enter -> timer = timer + 1; /*Выполняется при каждом тике*/
+    enter -> Formula = (Euler * PI) + Formula; /*Выполняется при каждом тике*/
+    enter -> global_function(0, timer); /*Также выполняется на каждом тике, но после первого выполнения*/
+    end -> exit(EXIT_PRODUCER) ; /*Выполняется после завершения работы автомата (перехода в одно из конечных состояний)*/
+
+    let mut timer: int = 0; /*Переменная с возможностью модификации, живет(видна) только в пределах автомата, а также видна в подавтоматах*/
+}
+
+behavior -> Consumer | Producer; /* Consumer + Producer или Producer + Consumer или Consumer | Producer(по умолчанию) ---- также возможна группировка скобками (M + M) | M */
+end -> exit(EXIT); /*Вызов при завершении работы автоматов по формуле behavior. Если это | - параллельное исполнение, то join*/
+
+#[extern(C), unused, inline(never)]
+fn global_function(arg1: int, arg2: int);
+#[extern(C), unused, inline(never)]
+fn exit(exit_code: int);
+#[extern(C), unused, inline(never)]
+fn write(n: int, c: int);
+#[extern(C), unused, inline(never)]
+fn assert(cond: bool);
+#[extern(C), unused, inline(never)]
+fn debug(msg: str);
+
+#[inline(always)]
+fn pi(): real {
+    return 3.14159;
+}
+
+port port0: bit         = 0x0000000:5;
+port port1: [8  : bit]  = 1;
+port port2: [32 : bit]  = 2;
+port port3: [5  : bit]  = 6;
+port port4: int         = 7;
+
+const EXIT_CONSUMER: int = 0;
+const EXIT_PRODUCER: int = 1;
+const EXIT: int = 2;
+const PI: real = 3.14159;
+let Euler: real = 2.7182818284;
+let mut Formula: real = 0.1;
+let mut counter: u64 = 65;

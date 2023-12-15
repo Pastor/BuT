@@ -42,7 +42,7 @@ fn parser_error_recovery() {
                     loc: Source(0, 56, 58),
                     level: Error,
                     ty: ParserError,
-                    message: "unrecognised token 'if', expected \"#\", \"const\", \"external\", \"let\", \"mut\", \"pio\", \"private\", \"}\", identifier".to_string(),
+                    message: "unrecognised token 'if', expected \"#\", \"const\", \"external\", \"let\", \"mut\", \"port\", \"private\", \"}\", identifier".to_string(),
                     notes: vec![],
                 },
             ]
@@ -318,10 +318,18 @@ fn test_lib_but() {
             .unwrap()
             .into_iter()
             .map(|entry| (true, entry));
+    let examples_tests =
+        WalkDir::new(Path::new(env!("CARGO_MANIFEST_DIR")).join("../tests_data/BuT/examples"))
+            .into_iter()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap()
+            .into_iter()
+            .map(|entry| (true, entry));
 
     let errors = semantic_tests
         .into_iter()
         .chain(syntax_tests)
+        .chain(examples_tests)
         .map::<Result<_, String>, _>(|(syntax_test, entry)| {
             if entry.file_name().to_string_lossy().ends_with(".but") {
                 let source = match fs::read_to_string(entry.path()) {
@@ -354,6 +362,7 @@ fn test_lib_but() {
         .into_iter()
         .flatten()
         .filter_map(|(path, expect_error, source_part)| {
+            let src = source_part.to_string();
             let result = match timeout_after(Duration::from_secs(5), move || {
                 crate::parse(&source_part, 0)
             }) {
@@ -364,13 +373,55 @@ fn test_lib_but() {
             if let (Err(err), false) = (
                 result.map_err(|diags| {
                     format!(
-                        "{:?}:\n\t{}",
+                        "{:?}:\n\t{}\n\t{}",
                         path,
                         diags
                             .iter()
                             .map(|diag| format!("{diag:?}"))
                             .collect::<Vec<_>>()
-                            .join("\n\t")
+                            .join("\n\t"),
+                        diags
+                            .iter()
+                            .map(|d| {
+                                let loc = d.loc;
+                                let mut chars = src.chars();
+                                let mut start_line = loc.start();
+                                let mut end_line = loc.end();
+                                'position: loop {
+                                    if start_line <= 0 {
+                                        start_line = 0;
+                                        break;
+                                    }
+                                    if end_line >= src.len() {
+                                        end_line = src.len() - 1;
+                                        break;
+                                    }
+                                    let option = chars.nth(start_line);
+                                    match option {
+                                        None => break 'position,
+                                        Some(c) if c == '\n' => {
+                                            start_line += 1;
+                                            break 'position;
+                                        }
+                                        _ => {}
+                                    }
+
+                                    let option = chars.nth(end_line);
+                                    match option {
+                                        None => break 'position,
+                                        Some(c) if c == '\n' => {
+                                            end_line -= 1;
+                                            break 'position;
+                                        }
+                                        _ => {}
+                                    }
+                                    start_line -= 1;
+                                    end_line += 1;
+                                }
+                                format!("{}", &src[start_line..end_line])
+                            })
+                            .collect::<Vec<_>>()
+                            .join("\n\t"),
                     )
                 }),
                 expect_error,
@@ -415,48 +466,48 @@ fn parse_const_variable() {
 
 #[test]
 fn parse_port_with_address() {
-    let src = r#"pio  port5: bit = 0xFFB0:2;"#;
+    let src = r#"port  port5: bit = 0xFFB0:2;"#;
     let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
     std::assert_eq!(actual_parse_tree.0.len(), 1);
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::VariableDefinition(Box::new(
         VariableDefinition {
-            loc: Source(0, 0, 26),
+            loc: Source(0, 0, 27),
             ty: Alias(Identifier {
-                loc: Source(0, 12, 15),
+                loc: Source(0, 13, 16),
                 name: "bit".to_string(),
             }),
             annotations: vec![],
-            attrs: vec![Portable(Source(0, 0, 3))],
+            attrs: vec![Portable(Source(0, 0, 4))],
             name: Some(Identifier {
-                loc: Source(0, 5, 10),
+                loc: Source(0, 6, 11),
                 name: "port5".to_string(),
             }),
-            initializer: Some(AddressLiteral(Source(0, 18, 26), 65456, 2)),
+            initializer: Some(AddressLiteral(Source(0, 19, 27), 65456, 2)),
         },
     ))]);
     std::assert_eq!(actual_parse_tree, expected_parse_tree);
 
-    let src = r#"pio port6: [8: bit] = 0xFFC0; "#;
+    let src = r#"port port6: [8: bit] = 0xFFC0; "#;
     let (actual_parse_tree, _) = crate::parse(src, 0).unwrap();
     std::assert_eq!(actual_parse_tree.0.len(), 1);
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::VariableDefinition(Box::new(
         VariableDefinition {
-            loc: Source(0, 0, 28),
+            loc: Source(0, 0, 29),
             ty: Array {
-                loc: Source(0, 11, 19),
+                loc: Source(0, 12, 20),
                 element_count: 8,
                 element_type: Box::new(Alias(Identifier {
-                    loc: Source(0, 15, 18),
+                    loc: Source(0, 16, 19),
                     name: "bit".to_string(),
                 })),
             },
             annotations: vec![],
-            attrs: vec![Portable(Source(0, 0, 3))],
+            attrs: vec![Portable(Source(0, 0, 4))],
             name: Some(Identifier {
-                loc: Source(0, 4, 9),
+                loc: Source(0, 5, 10),
                 name: "port6".to_string(),
             }),
-            initializer: Some(NumberLiteral(Source(0, 22, 28), 65472)),
+            initializer: Some(NumberLiteral(Source(0, 23, 29), 65472)),
         },
     ))]);
     std::assert_eq!(actual_parse_tree, expected_parse_tree);
@@ -737,12 +788,12 @@ fn parse_simple_expression() {
     std::assert_eq!(actual_parse_tree.0.len(), 1);
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::PropertyDefinition(Box::new(
         PropertyDefinition {
-            loc: Source(0, 0, 42),
+            loc: Source(0, 0, 43),
             name: Some(Identifier {
                 loc: Source(0, 0, 8),
                 name: "behavior".to_string(),
             }),
-            value: Some(BitwiseAnd(
+            value: Property::Expression(BitwiseAnd(
                 Source(0, 13, 42),
                 Box::new(Parenthesis(
                     Source(0, 14, 24),

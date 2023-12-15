@@ -1,0 +1,25 @@
+model Delay {
+    #[display("Единица")]
+    state One {
+        ref None: input = 0;
+        ref One : input = 1;
+        enter -> {
+            output = 1;
+        }
+    }
+    #[display("Ноль")]
+    state None {
+        ref One : input = 1;
+        ref None: input = 0;
+        enter -> {
+            output = 0;
+        }
+    }
+    #[skip]
+    state End {
+    }
+    start -> None;
+}
+
+port input : bit = 0x01;
+port output: bit = 0x02;

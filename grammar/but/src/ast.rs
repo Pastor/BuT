@@ -660,6 +660,7 @@ pub struct StateDefinition {
     pub annotations: Vec<AnnotationDefinition>,
     pub parts: Vec<StatePart>,
     pub ty: Option<ObjectType>,
+    pub implements: Option<Expression>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -692,7 +693,7 @@ pub enum StatePart {
 
     /// A `using` directive.
     Using(Box<Using>),
-    Reference(Loc, Identifier, Option<Expression>),
+    Reference(Loc, Identifier, Option<Condition>),
     ModelDefinition(Box<ModelDefinition>),
 
     /// A stray semicolon.
@@ -845,8 +846,15 @@ pub struct AnnotationDefinition {
 pub struct PropertyDefinition {
     pub loc: Loc,
     pub name: Option<Identifier>,
-    pub value: Option<Expression>,
+    pub value: Property,
     pub annotations: Vec<AnnotationDefinition>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
+pub enum Property {
+    Expression(Expression),
+    Function(Statement),
 }
 
 /// A user type definition.
@@ -927,6 +935,54 @@ pub struct NamedArgument {
     pub name: Identifier,
     /// The value.
     pub expr: Expression,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
+pub enum Condition {
+    /// `<1>\[ [2] \]`
+    ArraySubscript(Loc, Identifier, i64),
+    /// `(<1>)`
+    Parenthesis(Loc, Box<crate::ast::Condition>),
+    /// `<1>.<2>`
+    MemberAccess(Loc, Box<crate::ast::Condition>, Identifier),
+    /// `<1>(<2>,*)`
+    FunctionCall(Loc, Identifier, Vec<crate::ast::Condition>),
+    /// `!<1>`
+    Not(Loc, Box<crate::ast::Condition>),
+    /// `<1> + <2>`
+    Add(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    /// `<1> - <2>`
+    Subtract(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    /// `<1> & <2>`
+    And(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    /// `<1> | <2>`
+    Or(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    /// `<1> < <2>`
+    Less(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    /// `<1> > <2>`
+    More(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    /// `<1> <= <2>`
+    LessEqual(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    /// `<1> >= <2>`
+    MoreEqual(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    /// `<1> = <2>`
+    Equal(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    /// `<1> != <2>`
+    NotEqual(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    /// ``
+    NumberLiteral(Loc, i64),
+    /// ``
+    RationalNumberLiteral(Loc, String, bool),
+    /// ``
+    HexNumberLiteral(Loc, String, Option<Identifier>),
+    /// `<1>+`. See [StringLiteral].
+    StringLiteral(Vec<StringLiteral>),
+    /// `<1>+`. See [HexLiteral].
+    HexLiteral(Vec<HexLiteral>),
+    BoolLiteral(Loc, bool),
+    /// Any valid [Identifier].
+    Variable(Identifier),
 }
 
 /// An expression.

@@ -6,7 +6,8 @@ use std::{
 
 use crate::ast;
 use crate::ast::{
-    Annotation, Expression, FormulaExpression, ModelPart, SourceUnitPart, StatePart, Type,
+    Annotation, Condition, Expression, FormulaExpression, ModelPart, Property, SourceUnitPart,
+    StatePart, Type,
 };
 
 macro_rules! write_opt {
@@ -416,6 +417,96 @@ impl Display for ast::AnnotationDefinition {
     }
 }
 
+impl Display for Condition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            Self::ArraySubscript(_, id, n) => {
+                Display::fmt(id, f)?;
+                f.write_str("[")?;
+                Display::fmt(n, f)?;
+                f.write_str("]")
+            }
+            Self::Parenthesis(_, cnd) => {
+                f.write_str("(")?;
+                Display::fmt(cnd, f)?;
+                f.write_str(")")
+            }
+            Self::MemberAccess(_, cnd, id) => {
+                Display::fmt(id, f)?;
+                f.write_str(".")?;
+                Display::fmt(cnd, f)
+            }
+            Self::FunctionCall(_, id, args) => {
+                Display::fmt(id, f)?;
+                f.write_str("(")?;
+                write_separated(args, f, ", ");
+                f.write_str(")")
+            }
+            Self::Not(_, cnd) => {
+                f.write_str("!")?;
+                Display::fmt(cnd, f)
+            }
+            Self::Add(_, lcnd, rcnd) => {
+                Display::fmt(lcnd, f)?;
+                f.write_str(" + ")?;
+                Display::fmt(rcnd, f)
+            }
+            Self::Subtract(_, lcnd, rcnd) => {
+                Display::fmt(lcnd, f)?;
+                f.write_str(" - ")?;
+                Display::fmt(rcnd, f)
+            }
+            Self::And(_, lcnd, rcnd) => {
+                Display::fmt(lcnd, f)?;
+                f.write_str(" & ")?;
+                Display::fmt(rcnd, f)
+            }
+            Self::Or(_, lcnd, rcnd) => {
+                Display::fmt(lcnd, f)?;
+                f.write_str(" | ")?;
+                Display::fmt(rcnd, f)
+            }
+            Self::Less(_, lcnd, rcnd) => {
+                Display::fmt(lcnd, f)?;
+                f.write_str(" < ")?;
+                Display::fmt(rcnd, f)
+            }
+            Self::More(_, lcnd, rcnd) => {
+                Display::fmt(lcnd, f)?;
+                f.write_str(" > ")?;
+                Display::fmt(rcnd, f)
+            }
+            Self::LessEqual(_, lcnd, rcnd) => {
+                Display::fmt(lcnd, f)?;
+                f.write_str(" <= ")?;
+                Display::fmt(rcnd, f)
+            }
+            Self::MoreEqual(_, lcnd, rcnd) => {
+                Display::fmt(lcnd, f)?;
+                f.write_str(" >= ")?;
+                Display::fmt(rcnd, f)
+            }
+            Self::Equal(_, lcnd, rcnd) => {
+                Display::fmt(lcnd, f)?;
+                f.write_str(" = ")?;
+                Display::fmt(rcnd, f)
+            }
+            Self::NotEqual(_, lcnd, rcnd) => {
+                Display::fmt(lcnd, f)?;
+                f.write_str(" != ")?;
+                Display::fmt(rcnd, f)
+            }
+            Self::NumberLiteral(_, n) => Display::fmt(n, f),
+            Self::RationalNumberLiteral(_, n, b) => Display::fmt(n, f),
+            Self::HexNumberLiteral(_, b, id) => Display::fmt(b, f),
+            Self::StringLiteral(vals) => write_separated(vals, f, " "),
+            Self::HexLiteral(vals) => write_separated(vals, f, " "),
+            Self::BoolLiteral(_, b) => Display::fmt(b, f),
+            Self::Variable(v) => Display::fmt(v, f),
+        }
+    }
+}
+
 impl Display for ast::Expression {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
@@ -736,8 +827,17 @@ impl Display for ast::PropertyDefinition {
             Display::fmt(i, f)?;
         }
         write_opt!(f, "", &self.name);
-        write_opt!(f, ": ", &self.value);
+        Display::fmt(&self.value, f)?;
         f.write_char(';')
+    }
+}
+
+impl Display for ast::Property {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            Property::Expression(e) => Display::fmt(&e, f),
+            Property::Function(stmt) => Display::fmt(&stmt, f),
+        }
     }
 }
 

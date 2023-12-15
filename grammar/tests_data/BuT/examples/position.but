@@ -1,0 +1,550 @@
+/*Определение линии. Линия нарисована на полу и детектируется фотодатчиком*/
+model Detect_Line {
+    state Start {
+        ref End: on_line | point > 0;
+        ref Detect_Wall : distance_top >= 0 | distance_bottom >= 0 | distance_left >= 0 | distance_right >= 0;
+        ref Up: true;
+    }
+
+    state Up {
+        ref End: on_line | point > 0;
+        ref Detect_Wall : distance_top >= 0 | distance_bottom >= 0 | distance_left >= 0 | distance_right >= 0;
+        ref Left: it >= step;
+        enter -> {
+            it = it + 1;
+            machine_gas = true;
+        }
+        exit -> {
+            it = 0;
+            machine_gas = false;
+        }
+    }
+
+    state Left {
+        ref End: on_line | point > 0;
+        ref Detect_Wall : distance_top >= 0 | distance_bottom >= 0 | distance_left >= 0 | distance_right >= 0;
+        ref Bottom: it >= step;
+        enter -> {
+            it = it + 1;
+            machine_shift_left = true;
+        }
+        exit -> {
+            it = 0;
+            machine_shift_left = false;
+        }
+    }
+
+    state Bottom {
+        ref End: on_line | point > 0;
+        ref Detect_Wall : distance_top >= 0 | distance_bottom >= 0 | distance_left >= 0 | distance_right >= 0;
+        ref Right: it >= step;
+        enter -> {
+            it = it + 1;
+            machine_back = true;
+        }
+        exit -> {
+            it = 0;
+            machine_back = false;
+        }
+    }
+
+    state Right {
+        ref End: on_line | point > 0;
+        ref Detect_Wall : distance_top >= 0 | distance_bottom >= 0 | distance_left >= 0 | distance_right >= 0;
+        ref Start: it >= step;
+        enter -> {
+            it = it + 1;
+            machine_shift_right = true;
+        }
+        exit -> {
+            it = 0;
+            machine_shift_right = false;
+            step = step + 1;
+        }
+    }
+
+    state Detect_Wall {
+        ref Wall_Left : distance_left >= 0;
+        ref Wall_Right: distance_right >= 0;
+        ref Wall_Top  : distance_top >= 0;
+        ref Wall_Bottom: distance_bottom >= 0;
+    }
+
+    state Wall_Left {
+        ref Start: distance_top >= 0 | distance_bottom >= 0 | distance_right >= 0;
+        ref End  : on_line | point > 0;
+        enter -> {
+            machine_shift_right = true;
+        }
+        exit -> {
+            machine_shift_right = false;
+        }
+    }
+    state Wall_Right {
+        ref Start: distance_top >= 0 | distance_bottom >= 0 | distance_left >= 0;
+        ref End: on_line | point > 0;
+        enter -> {
+            machine_shift_left = true;
+        }
+        exit -> {
+            machine_shift_left = false;
+        }
+    }
+    state Wall_Top {
+        ref Start: distance_left >= 0 | distance_bottom >= 0 | distance_right >= 0;
+        ref End: on_line | point > 0;
+        enter -> {
+            machine_back = true;
+        }
+        exit -> {
+            machine_back = false;
+        }
+    }
+    state Wall_Bottom {
+        ref Start: distance_top >= 0 | distance_left >= 0 | distance_right >= 0;
+        ref End: on_line | point > 0;
+        enter -> {
+            machine_gas = true;
+        }
+        exit -> {
+            machine_gas = false;
+        }
+    }
+    start -> Start;
+
+    enter -> busy = true;
+    exit ->  watchdog = 0;
+
+    let mut it       : int = 0;
+    let mut step     : int = 1;
+}
+/*Определение транспортера относительно сторон света. Фактически угол поворота.*/
+model Detect_Angle {
+    state Start {
+        ref End  : angle = 0 | angle = 90 | angle = 180 | angle = 270;
+        ref Angle_45 : angle > 0   & angle < 45;
+        ref Angle_90 : angle >= 45 & angle < 90;
+        ref Angle_135: angle > 90  & angle < 135;
+        ref Angle_180: angle >= 135 & angle < 180;
+        ref Angle_225: angle > 180 & angle < 225;
+        ref Angle_270: angle >= 225 & angle < 270;
+        ref Angle_315: angle > 270 & angle < 315;
+        ref Angle_360: angle >= 315 & angle < 360;
+    }
+    state Angle_45 {
+        ref Angle_90: (distance_top >= 0 & distance_top <= 2) | (distance_bottom >= 0 & distance_bottom <= 2);
+        ref Angle_135: angle > 90  & angle < 135;
+        ref Angle_180: angle >= 135 & angle < 180;
+        ref Angle_225: angle > 180 & angle < 225;
+        ref Angle_270: angle >= 225 & angle < 270;
+        ref Angle_315: angle > 270 & angle < 315;
+        ref Angle_360: angle >= 315 & angle < 360;
+        ref End : angle = 0;
+        enter -> machine_rot_left = true;
+        exit -> machine_rot_left = false;
+    }
+    state Angle_90 {
+        ref Angle_45: (distance_top >= 0 & distance_top <= 2) | (distance_bottom >= 0 & distance_bottom <= 2);
+        ref Angle_135: angle > 90  & angle < 135;
+        ref Angle_180: angle >= 135 & angle < 180;
+        ref Angle_225: angle > 180 & angle < 225;
+        ref Angle_270: angle >= 225 & angle < 270;
+        ref Angle_315: angle > 270 & angle < 315;
+        ref Angle_360: angle >= 315 & angle < 360;
+        ref End: angle = 90;
+        enter -> machine_rot_right = true;
+        exit -> machine_rot_right = false;
+    }
+    state Angle_135 {
+        ref Angle_180: (distance_top >= 0 & distance_top <= 2) | (distance_bottom >= 0 & distance_bottom <= 2);
+        ref Angle_45 : angle > 0   & angle < 45;
+        ref Angle_90 : angle >= 45 & angle < 90;
+        ref Angle_225: angle > 180 & angle < 225;
+        ref Angle_270: angle >= 225 & angle < 270;
+        ref Angle_315: angle > 270 & angle < 315;
+        ref Angle_360: angle >= 315 & angle < 360;
+        ref End: angle = 90;
+        enter -> machine_rot_left = true;
+        exit -> machine_rot_left = false;
+    }
+    state Angle_180 {
+        ref Angle_135: (distance_top >= 0 & distance_top <= 2) | (distance_bottom >= 0 & distance_bottom <= 2);
+        ref Angle_45 : angle > 0   & angle < 45;
+        ref Angle_90 : angle >= 45 & angle < 90;
+        ref Angle_225: angle > 180 & angle < 225;
+        ref Angle_270: angle >= 225 & angle < 270;
+        ref Angle_315: angle > 270 & angle < 315;
+        ref Angle_360: angle >= 315 & angle < 360;
+        ref End: angle = 180;
+        enter -> machine_rot_right = true;
+        exit -> machine_rot_right = false;
+    }
+    state Angle_225 {
+        ref Angle_270: (distance_top >= 0 & distance_top <= 2) | (distance_bottom >= 0 & distance_bottom <= 2);
+        ref Angle_45 : angle > 0   & angle < 45;
+        ref Angle_90 : angle >= 45 & angle < 90;
+        ref Angle_135: angle > 90  & angle < 135;
+        ref Angle_180: angle >= 135 & angle < 180;
+        ref Angle_315: angle > 270 & angle < 315;
+        ref Angle_360: angle >= 315 & angle < 360;
+        ref End: angle = 180;
+        enter -> machine_rot_left = true;
+        exit -> machine_rot_left = false;
+    }
+    state Angle_270 {
+        ref Angle_225: (distance_top >= 0 & distance_top <= 2) | (distance_bottom >= 0 & distance_bottom <= 2);
+        ref Angle_45 : angle > 0   & angle < 45;
+        ref Angle_90 : angle >= 45 & angle < 90;
+        ref Angle_135: angle > 90  & angle < 135;
+        ref Angle_180: angle >= 135 & angle < 180;
+        ref Angle_315: angle > 270 & angle < 315;
+        ref Angle_360: angle >= 315 & angle < 360;
+        ref End: angle = 180;
+        enter -> machine_rot_right = true;
+        exit -> machine_rot_right = false;
+    }
+    state Angle_315 {
+        ref Angle_360: (distance_top >= 0 & distance_top <= 2) | (distance_bottom >= 0 & distance_bottom <= 2);
+        ref Angle_45 : angle > 0   & angle < 45;
+        ref Angle_90 : angle >= 45 & angle < 90;
+        ref Angle_135: angle > 90  & angle < 135;
+        ref Angle_180: angle >= 135 & angle < 180;
+        ref Angle_225: angle > 180 & angle < 225;
+        ref Angle_270: angle >= 225 & angle < 270;
+        ref End: angle = 270;
+        enter -> machine_rot_left = true;
+        exit -> machine_rot_left = false;
+    }
+    state Angle_360 {
+        ref Angle_315: (distance_top >= 0 & distance_top <= 2) | (distance_bottom >= 0 & distance_bottom <= 2);
+        ref Angle_45 : angle > 0   & angle < 45;
+        ref Angle_90 : angle >= 45 & angle < 90;
+        ref Angle_135: angle > 90  & angle < 135;
+        ref Angle_180: angle >= 135 & angle < 180;
+        ref Angle_225: angle > 180 & angle < 225;
+        ref Angle_270: angle >= 225 & angle < 270;
+        ref End: angle = 0;
+        enter -> machine_rot_right = true;
+        exit -> machine_rot_right = false;
+    }
+
+    state End {
+    }
+
+    start -> Start;
+
+    enter -> busy = true;
+    exit -> {
+        watchdog = 0;
+        reset = false;
+    }
+}
+/*Поиск ближайшей контрольной точки*/
+model Detect_Point {
+    state Start {
+        ref End: point > 0;
+        ref Up : true;
+        exit -> machine_gas = true;
+    }
+    state Up {
+        ref Compromise: point > 0;
+        ref Down: !on_line & point < 0;
+        exit -> {
+            machine_gas = false;
+            machine_back = true;
+            direct = 1;
+        }
+        enter -> machine_gas = true;
+    }
+    state Down {
+        ref Compromise: point > 0;
+        ref Left: !on_line & point < 0;
+        exit -> {
+            machine_back = false;
+            machine_shift_left = true;
+            direct = 2;
+        }
+        enter -> machine_back = true;
+    }
+    state Left {
+        ref Compromise: point > 0;
+        ref Right: !on_line & point < 0;
+        exit -> {
+            machine_shift_left = false;
+            machine_shift_right = true;
+            direct = 3;
+        }
+        enter -> machine_shift_left = true;
+    }
+    state Right {
+        ref Compromise: point > 0;
+        ref Start: !on_line & point < 0;
+        exit -> machine_shift_right = false;
+        enter -> machine_shift_right = true;
+    }
+    state Compromise {
+        ref End: true;
+        enter -> {
+            if direct == 1 {
+                machine_gas = true;
+            } else if direct == 2 {
+                machine_shift_right = true;
+            } else if direct == 3 {
+                machine_shift_left = true;
+            }
+        }
+    }
+    state End {}
+    start -> Start;
+
+    enter -> busy = true;
+    exit -> watchdog = 0;
+
+    let mut  direct  : int = -1;
+}
+
+/* Выборка и исполнение команд  */
+model Command {
+    state Reading {
+        ref Saving: command_ready & !busy & !error;
+        enter -> command_executing = false;
+    }
+    state Saving {
+        ref Decode: true;
+        enter -> {
+            code = command_code;
+            command_executing = true;
+            next_point = command_point;
+        }
+    }
+    state Decode {
+        ref Reset_Code              : code = 0;
+        ref Complete_Code           : code = 1;
+        ref Rotate_Left_Code        : code = 2;
+        ref Rotate_Right_Code       : code = 3;
+        ref Moving_Up_Code          : code = 4;
+        ref Moving_Down_Code        : code = 5;
+        ref Moving_Shift_Left_Code  : code = 6;
+        ref Moving_Shift_Right_Code : code = 7;
+        ref Pushing_Up_Code         : code = 8;
+        ref Pushing_Down_Code       : code = 9;
+        ref Unknown_Code: true;
+        enter -> busy = true;
+        enter -> command_executing = true;
+        exit -> command_reset = true;
+    }
+    state Pushing_Up_Code  {
+        ref Reading: next_level = push_level;
+        before -> next_level = command_level;
+        exit ->  push_up = false;
+        enter ->  push_up = true;
+        enter ->  command_executing = true;
+    }
+    state Pushing_Down_Code  {
+        ref Reading: 0 = push_level;
+        exit ->  push_down = false;
+        enter ->  push_down = true;
+        enter ->  command_executing = true;
+    }
+    state Rotate_Left_Code {
+        ref Reading: angle >= next_angl_up | angle <= next_angl_down;
+        enter ->  machine_rot_left = true;
+        before -> {
+            next_angl_up   = angle - ANGLE_DELTA - ROUND_DELTA;
+            next_angl_down = angle - ANGLE_DELTA + ROUND_DELTA;
+            if next_angl_up >= 360.0 {
+                next_angl_up = 0.0;
+            } else if next_angl_up < 0.0 {
+                next_angl_up = 350.0;
+            }
+            if next_angl_down >= 360.0 {
+                next_angl_down = 0.0;
+            } else if next_angl_down < 0.0 {
+                next_angl_down = 360.0;
+            }
+        }
+        exit ->  machine_rot_left = false;
+        enter -> command_executing = true;
+    }
+    state Rotate_Right_Code {
+        ref Reading: angle >= next_angl_up & angle <= next_angl_down;
+        enter ->  machine_rot_right = true;
+        before -> {
+            next_angl_up   = angle + ANGLE_DELTA - ROUND_DELTA;
+            next_angl_down = angle + ANGLE_DELTA + ROUND_DELTA;
+            if next_angl_up >= 360.0 {
+                next_angl_up = 0.0;
+            } else if next_angl_up < 0.0 {
+                next_angl_up = 360.0;
+            }
+            if next_angl_down >= 360.0 {
+                next_angl_down = 0.0;
+            } else if next_angl_down < 0.0 {
+                next_angl_down = 360.0;
+            }
+        }
+        exit ->  machine_rot_right = false;
+        enter -> command_executing = true;
+    }
+    state Moving_Up_Code {
+        ref Reading  : next_point = point;
+        ref Emergency: distance_top >= 0 & distance_top <= 2;
+        enter ->  machine_gas = true;
+        exit ->  machine_gas = false;
+        enter -> command_executing = true;
+    }
+    state Moving_Down_Code {
+        ref Reading  : next_point = point;
+        ref Emergency: distance_bottom >= 0 & distance_bottom <= 2;
+        enter ->  machine_back = true;
+        exit ->  machine_back = false;
+        enter -> command_executing = true;
+    }
+    state Moving_Shift_Left_Code {
+        ref Reading  : next_point = point;
+        ref Emergency: distance_left >= 0 & distance_left <= 2;
+        enter ->  machine_shift_left = true;
+        exit ->  machine_shift_left = false;
+        enter -> command_executing = true;
+    }
+    state Moving_Shift_Right_Code {
+        ref Reading  : next_point = point;
+        ref Emergency: distance_right >= 0 & distance_right <= 2;
+        enter ->  machine_shift_right = true;
+        exit ->  machine_shift_right = false;
+        enter -> command_executing = true;
+    }
+    state Unknown_Code {
+        ref Reading: true;
+        enter -> busy = true;
+        enter -> command_executing = true;
+    }
+    state Reset_Code {
+        ref Reading: true;
+        enter -> busy = true;
+        enter -> {
+            command_executing = true;
+            reset = true;
+        }
+    }
+    state Complete_Code {
+        ref Reading: true;
+        enter -> busy = true;
+        enter -> command_executing = true;
+    }
+    state Emergency {
+        ref Reading: true;
+        enter -> error = true;
+    }
+    state End {}
+    start -> Reading;
+
+    let mut code          : int  = 0;
+    let mut next_angle    : real = 0.0;
+    let mut next_angl_up  : real = 0.0;
+    let mut next_angl_down: real = 0.0;
+    let mut next_point    : int  = 0;
+    let mut next_level    : int  = -1;
+}
+/*Управляющая модель*/
+model Controller {
+    state Start {
+        ref Detect_Angle: true;
+        exit -> {
+            reset = false;
+            raise = raise + 1;
+        }
+    }
+    state Detect_Angle = Detect_Angle {
+        ref Detect_Line: S(Detect_Angle) = End | reset;
+    }
+    state Detect_Line = Detect_Line {
+        ref Detect_Point: S(Detect_Line) = End | reset;
+    }
+    state Detect_Point = Detect_Point {
+        ref Reset: S(Detect_Point) = End | reset;
+
+    }
+    state Reset {
+        ref Start: reset;
+        ref Error: error;
+        ref Waiting: true;
+        enter -> busy = true;
+    }
+
+    state Waiting {
+        ref Executing_Command: command_executing;
+        enter -> { 
+            busy = false; 
+            watchdog = 0;
+        }
+    }
+
+    state Executing_Command {
+        ref    Waiting: !command_executing;
+        enter -> {
+            busy = true;
+            watchdog = 0;
+        }
+    }
+
+    state Error {
+        ref    Start: reset;
+        enter -> debug("Сработал Watchdog");
+    }
+
+    state End {}
+
+    start -> Start;
+    enter -> {
+        watchdog = watchdog + 1;
+        if watchdog > MAX_EXECUTING_TICKS {
+            reset = true;
+        }
+        if raise > 10 {
+            error = true;
+        }
+    }
+
+    let mut raise    : int = 0;
+}
+
+port      angle              : real = 0;
+port      point              : int  = 1;
+port      on_line            : bool  = 2;
+
+port      distance_top       : real = 10;
+port      distance_bottom    : real = 11;
+port      distance_left      : real = 11;
+port      distance_right     : real = 11;
+
+port      machine_gas        : bool = 20;
+port      machine_back       : bool = 21;
+port      machine_rot_left   : bool = 22;
+port      machine_rot_right  : bool = 23;
+port      machine_shift_left : bool = 24;
+port      machine_shift_right: bool = 25;
+
+port      push_up            : bool = 26;
+port      push_down          : bool = 27;
+port      push_level         : bool = 28;
+
+port      busy               : bool = 30;
+port      error              : bool = 31;
+
+port      command_ready      : bool = 40;
+port      command_code       : int  = 41;
+port      command_executing  : bool = 42;
+port      command_reset      : bool = 42;
+port      command_point      : int = 43;
+port      command_level      : int = 44;
+
+
+let mut watchdog             : int = 0;
+let mut reset                : bool = false;
+
+const     MAX_EXECUTING_TICKS: int = 1500;
+const     ROUND_DELTA        : real = 0.1;
+const     ANGLE_DELTA        : real = 90.0;
+
+behavior -> Command | Controller;

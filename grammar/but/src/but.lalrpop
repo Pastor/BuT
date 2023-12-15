@@ -74,7 +74,7 @@ ObjectType: ObjectType = {
 
 ModelDefinition: Box<ModelDefinition> = {
     <l:@L> <annotations:AnnotationDefinition*> <ty:ObjectType?> "model" <name:ButIdentifierOrError>
-    <implements: (":" <Expression>)?>
+    <implements: ("=" <Expression>)?>
     "{" <parts:(<ModelPart>)*> "}" <r:@R> => {
         Box::new(ModelDefinition{loc: Loc::Source(file_no, l, r), name, parts, annotations, ty, implements})
     }
@@ -95,8 +95,9 @@ ModelPart: ModelPart = {
 
 StateDefinition: Box<StateDefinition> = {
     <l:@L> <annotations:AnnotationDefinition*> <ty:ObjectType?> "state" <name:ButIdentifierOrError>
+    <implements: ("=" <Expression>)?>
     "{" <parts:(<StatePart>)*> "}" <r:@R> => {
-        Box::new(StateDefinition{loc: Loc::Source(file_no, l, r), name, parts, annotations, ty})
+        Box::new(StateDefinition{loc: Loc::Source(file_no, l, r), name, parts, annotations, ty, implements})
     }
 }
 StatePart: StatePart = {
@@ -109,7 +110,7 @@ StatePart: StatePart = {
     FunctionDefinition => StatePart::FunctionDefinition(<>),
     ModelDefinition => StatePart::ModelDefinition(<>),
     FormulaDefinition => StatePart::FormulaDefinition(<>),
-    <l:@L> "ref" <i:Identifier> <e: (":" <Expression>)?> ";" <r:@R> => StatePart::Reference(Loc::Source(file_no, l, r), i, e),
+    <l:@L> "ref" <i:Identifier> <e: (":" <Condition>)?> ";" <r:@R> => StatePart::Reference(Loc::Source(file_no, l, r), i, e),
     <l:@L> ";" <r:@R> => StatePart::StraySemicolon(Loc::Source(file_no, l, r)),
 }
 
@@ -138,9 +139,13 @@ ButIdentifierOrError: Option<Identifier> = {
 }
 
 PropertyDefinition: PropertyDefinition = {
-    <l:@L> <annotations:AnnotationDefinition*> <name:ButIdentifierOrError> "-" ">" <e:(Expression)?> <r:@R> ";" => PropertyDefinition {
-        loc: Loc::Source(file_no, l, r), name: name, value: e, annotations: annotations
+    <l:@L> <annotations:AnnotationDefinition*> <name:ButIdentifierOrError> "-" ">" <p:Property> <r:@R> => PropertyDefinition {
+        loc: Loc::Source(file_no, l, r), name: name, value: p, annotations: annotations
     },
+}
+Property: Property = {
+    <Expression> ";"  => Property::Expression(<>),
+    BlockStatement  => Property::Function(<>)
 }
 
 VariableDeclaration: VariableDeclaration = {
@@ -215,7 +220,7 @@ VariableAttribute: VariableAttribute = {
     <l:@L> "const" <r:@R> => VariableAttribute::Constant(Loc::Source(file_no, l, r)),
     <l:@L> "let"   <r:@R> => VariableAttribute::Readable(Loc::Source(file_no, l, r)),
     <l:@L> "mut"   <r:@R> => VariableAttribute::Writable(Loc::Source(file_no, l, r)),
-    <l:@L> "pio"   <r:@R> => VariableAttribute::Portable(Loc::Source(file_no, l, r)),
+    <l:@L> "port"  <r:@R> => VariableAttribute::Portable(Loc::Source(file_no, l, r)),
 }
 
 FunctionAttribute: FunctionAttribute = {
@@ -277,6 +282,70 @@ Type: Type = {
             element_type: Box::new(ty)
         }
     }
+}
+
+Condition: Condition = {
+    Condition6,
+}
+
+Condition6: Condition = {
+    <a:@L> <l:Condition6> "=" <r:Condition5> <b:@R> => Condition::Equal(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition6> "!=" <r:Condition5> <b:@R> => Condition::NotEqual(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    Condition5,
+}
+
+Condition5: Condition = {
+    <a:@L> <l:Condition5> "<" <r:Condition4> <b:@R> => Condition::Less(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition5> ">" <r:Condition4> <b:@R> => Condition::More(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition5> "<=" <r:Condition4> <b:@R> => Condition::LessEqual(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition5> ">=" <r:Condition4> <b:@R> => Condition::MoreEqual(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    Condition4,
+}
+
+Condition4: Condition = {
+    <a:@L> <l:Condition4> "|" <r:Condition3> <b:@R> => Condition::Or(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    Condition3,
+}
+
+Condition3: Condition = {
+    <a:@L> <l:Condition3> "&" <r:Condition2> <b:@R> => Condition::And(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    Condition2,
+}
+
+Condition2: Condition = {
+    <a:@L> <l:Condition2> "+" <r:Condition1> <b:@R> => Condition::Add(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition2> "-" <r:Condition1> <b:@R> => Condition::Subtract(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    Condition1,
+}
+
+Condition1: Condition = {
+    <a:@L> "!" <e:Condition1> <b:@R> => Condition::Not(Loc::Source(file_no, a, b), Box::new(e)),
+    Condition0
+}
+
+Condition0: Condition = {
+  <Identifier> => Condition::Variable(<>),
+  <a:@L> <i:Identifier> "(" <v:Comma<Condition>> ")" <b:@R> => {
+      Condition::FunctionCall(Loc::Source(file_no, a, b), i, v)
+  },
+  <a:@L> "(" <e:Condition> ")" <b:@R> => Condition::Parenthesis(Loc::Source(file_no, a, b), Box::new(e)),
+  <a:@L> <e:Condition0> "." <i:Identifier> <b:@R> => Condition::MemberAccess(Loc::Source(file_no, a, b), Box::new(e), i),
+  <a:@L> <i:Identifier> "[" <n:number> "]" <b:@R> => Condition::ArraySubscript(Loc::Source(file_no, a, b), i, n),
+  ConditionExpression,
+}
+
+ConditionExpression: Condition = {
+    <a:@L> "true" <b:@R> => Condition::BoolLiteral(Loc::Source(file_no, a, b), true),
+    <a:@L> "false" <b:@R> => Condition::BoolLiteral(Loc::Source(file_no, a, b), false),
+    <l:@L> <n:number> <r:@R> => {
+        Condition::NumberLiteral(Loc::Source(file_no, l, r), n)
+    },
+    <l:@L> <n:rational> <r:@R> => {
+        Condition::RationalNumberLiteral(Loc::Source(file_no, l, r), n.0.to_string(), n.1)
+    },
+    <l:@L> <n:hexnumber> <r:@R> => {
+        Condition::HexNumberLiteral(Loc::Source(file_no, l, r), n.to_owned(), None)
+    },
 }
 
 Expression: Expression = {
@@ -690,7 +759,7 @@ extern {
         "const" => Token::Constant,
         "let" => Token::Readable,
         "mut" => Token::Writable,
-        "pio" => Token::Portable,
+        "port" => Token::Portable,
         "external" => Token::External,
         "private" => Token::Private,
         "abstract" => Token::Abstract,

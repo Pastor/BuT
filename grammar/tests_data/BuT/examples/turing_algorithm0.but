@@ -1,0 +1,39 @@
+/** Алгоритм замены 0 на 1, а 1 на 0. С использованием вызовов С функций */
+model Turing_Algorithm0 {
+    state Q1 {
+        ref Q2: symbol = SYM_E;
+        enter -> walk = WALK_RIGHT;
+        exit -> walk = WALK_LEFT;
+    }
+    state Q2 {
+        ref S0: symbol = SYM_1;
+        ref S1: symbol = SYM_0;
+        ref QE: symbol = SYM_E;
+        ref QE: true;
+        enter -> walk = WALK_STAY;
+    }
+    state S0 {
+        ref Q2: true;
+        enter -> symbol = SYM_0;
+        exit -> walk = WALK_LEFT;
+    }
+    state S1 {
+        ref Q2: true;
+        enter -> symbol = SYM_1;
+        exit -> walk = WALK_LEFT;
+    }
+    start -> Q1;
+}
+const WALK_LEFT : int = 0;
+const WALK_RIGHT: int = 1;
+const WALK_STAY : int = 2;
+
+const SYM_E: int = 0;
+const SYM_0: int = 1;
+const SYM_1: int = 2;
+
+port walk  : int = 0x00;
+port symbol: int = 0x01;
+
+
+
