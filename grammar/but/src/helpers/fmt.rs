@@ -45,7 +45,7 @@ macro_rules! write_opt {
 }
 
 // structs
-impl Display for ast::Annotation {
+impl Display for Annotation {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Annotation::Identifier(_, id) => {
@@ -156,7 +156,7 @@ impl Display for ast::ModelDefinition {
     }
 }
 
-impl Display for ast::ModelPart {
+impl Display for ModelPart {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             ModelPart::ImportDirective(inner) => Display::fmt(&inner, f)?,
@@ -194,7 +194,7 @@ impl Display for ast::StateDefinition {
     }
 }
 
-impl Display for ast::StatePart {
+impl Display for StatePart {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             StatePart::ImportDirective(inner) => Display::fmt(&inner, f)?,
@@ -439,7 +439,7 @@ impl Display for Condition {
             Self::FunctionCall(_, id, args) => {
                 Display::fmt(id, f)?;
                 f.write_str("(")?;
-                write_separated(args, f, ", ");
+                write_separated(args, f, ", ")?;
                 f.write_str(")")
             }
             Self::Not(_, cnd) => {
@@ -507,7 +507,7 @@ impl Display for Condition {
     }
 }
 
-impl Display for ast::Expression {
+impl Display for Expression {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Self::Type(_, ty) => Display::fmt(&ty, f),
@@ -679,7 +679,7 @@ impl Display for ast::Expression {
     }
 }
 
-impl ast::Expression {
+impl Expression {
     /// Returns the operator string of this expression, if any.
     #[inline]
     pub const fn operator(&self) -> Option<&'static str> {
@@ -832,7 +832,7 @@ impl Display for ast::PropertyDefinition {
     }
 }
 
-impl Display for ast::Property {
+impl Display for Property {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Property::Expression(e) => Display::fmt(&e, f),
@@ -841,7 +841,7 @@ impl Display for ast::Property {
     }
 }
 
-impl Display for ast::SourceUnitPart {
+impl Display for SourceUnitPart {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Self::ImportDirective(inner) => Display::fmt(&inner, f),
@@ -980,7 +980,7 @@ impl ast::StorageLocation {
     }
 }
 
-impl Display for ast::Type {
+impl Display for Type {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Self::Address => f.write_str("address"),
@@ -1105,7 +1105,7 @@ impl ast::Visibility {
     }
 }
 
-impl Display for ast::FormulaExpression {
+impl Display for FormulaExpression {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             Self::BoolLiteral(_, value, ident) => {
@@ -1423,8 +1423,8 @@ mod tests {
         };
     }
 
-    fn var(s: &str) -> Box<ast::Expression> {
-        Box::new(ast::Expression::Variable(id(s)))
+    fn var(s: &str) -> Box<Expression> {
+        Box::new(Expression::Variable(id(s)))
     }
 
     fn formula_block() -> ast::FormulaBlock {
