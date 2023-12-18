@@ -1,8 +1,8 @@
 extern crate but;
 
 use std::fmt::Debug;
-use std::fs;
 use std::path::Path;
+use std::{fs, process};
 
 use clap::Parser;
 use codespan_reporting::diagnostic::{Diagnostic, Label};
@@ -37,6 +37,7 @@ fn main() -> anyhow::Result<()> {
             for x in errors {
                 let message = x.message;
                 let diagnostic = Diagnostic::error()
+                    .with_code("E0308")
                     .with_message(message.clone())
                     .with_labels(vec![Label::primary((), x.loc.start()..x.loc.end())
                         .with_message(message.clone())])
@@ -44,7 +45,7 @@ fn main() -> anyhow::Result<()> {
 
                 term::emit(&mut writer.lock(), &config, &file, &diagnostic)?;
             }
-            panic!()
+            process::exit(-1)
         }
     };
     println!("{}", FormatterIdent::new(2, Box::new(unit.0)));
