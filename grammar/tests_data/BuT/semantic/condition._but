@@ -1,8 +1,0 @@
-
-state One {
-    ref End: Writable & HasNext
-}
-
-cond Readable = is_readable & (register_5 | reg.0)
-cond Writable = !Readable & is_writable
-cond HasNext  = reg.5 & point > 50

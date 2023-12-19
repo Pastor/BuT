@@ -90,6 +90,7 @@ ModelPart: ModelPart = {
     ModelDefinition => ModelPart::ModelDefinition(<>),
     StateDefinition => ModelPart::StateDefinition(<>),
     FormulaDefinition => ModelPart::FormulaDefinition(<>),
+    ConditionDefinition => ModelPart::ConditionDefinition(Box::new(<>)),
     <l:@L> ";" <r:@R> => ModelPart::StraySemicolon(Loc::Source(file_no, l, r)),
 }
 
@@ -110,6 +111,7 @@ StatePart: StatePart = {
     FunctionDefinition => StatePart::FunctionDefinition(<>),
     ModelDefinition => StatePart::ModelDefinition(<>),
     FormulaDefinition => StatePart::FormulaDefinition(<>),
+    ConditionDefinition => StatePart::ConditionDefinition(Box::new(<>)),
     <l:@L> "ref" <i:Identifier> <e: (":" <Condition>)?> ";" <r:@R> => StatePart::Reference(Loc::Source(file_no, l, r), i, e),
     <l:@L> ";" <r:@R> => StatePart::StraySemicolon(Loc::Source(file_no, l, r)),
 }
@@ -137,7 +139,11 @@ ButIdentifierOrError: Option<Identifier> = {
         None
     }
 }
-
+ConditionDefinition: ConditionDefinition = {
+    <l:@L> <annotations:AnnotationDefinition*> "cond" <name:ButIdentifierOrError> "=" <c:Condition> <r:@R> => ConditionDefinition {
+        loc: Loc::Source(file_no, l, r), name: name, value: c, annotations: annotations
+    },
+}
 PropertyDefinition: PropertyDefinition = {
     <l:@L> <annotations:AnnotationDefinition*> <name:ButIdentifierOrError> "-" ">" <p:Property> <r:@R> => PropertyDefinition {
         loc: Loc::Source(file_no, l, r), name: name, value: p, annotations: annotations
@@ -329,7 +335,7 @@ Condition0: Condition = {
       Condition::FunctionCall(Loc::Source(file_no, a, b), i, v)
   },
   <a:@L> "(" <e:Condition> ")" <b:@R> => Condition::Parenthesis(Loc::Source(file_no, a, b), Box::new(e)),
-  <a:@L> <e:Condition0> "." <i:Identifier> <b:@R> => Condition::MemberAccess(Loc::Source(file_no, a, b), Box::new(e), i),
+  <a:@L> <e:Condition0> "." <i:Member> <b:@R> => Condition::MemberAccess(Loc::Source(file_no, a, b), Box::new(e), i),
   <a:@L> <i:Identifier> "[" <n:number> "]" <b:@R> => Condition::ArraySubscript(Loc::Source(file_no, a, b), i, n),
   ConditionExpression,
 }
@@ -346,6 +352,11 @@ ConditionExpression: Condition = {
     <l:@L> <n:hexnumber> <r:@R> => {
         Condition::HexNumberLiteral(Loc::Source(file_no, l, r), n.to_owned(), None)
     },
+}
+
+Member: Member = {
+    <Identifier> => Member::Identifier(<>),
+    <number> => Member::Number(<>)
 }
 
 Expression: Expression = {
@@ -468,7 +479,7 @@ Precedence0: Expression = {
   },
   <a:@L> <e:Precedence0> "++" <b:@R> => Expression::PostIncrement(Loc::Source(file_no, a, b), Box::new(e)),
   <a:@L> <e:Precedence0> "--" <b:@R> => Expression::PostDecrement(Loc::Source(file_no, a, b), Box::new(e)),
-  <a:@L> <e:Precedence0> "." <i:Identifier> <b:@R> => Expression::MemberAccess(Loc::Source(file_no, a, b), Box::new(e), i),
+  <a:@L> <e:Precedence0> "." <i:Member> <b:@R> => Expression::MemberAccess(Loc::Source(file_no, a, b), Box::new(e), i),
   <a:@L> <i:Identifier> "[" <n:number> "]" <b:@R> => Expression::ArraySubscript(Loc::Source(file_no, a, b), i, n),
   <a:@L> <i:Identifier> "[" <l:number?> ":" <r:number?> "]" <b:@R> => Expression::ArraySlice(Loc::Source(file_no, a, b), i, l, r),
   LiteralExpression,
@@ -756,6 +767,7 @@ extern {
         "library" => Token::Library,
         "enum" => Token::Enum,
         "type" => Token::Type,
+        "cond" => Token::Condition,
         "const" => Token::Constant,
         "let" => Token::Readable,
         "mut" => Token::Writable,

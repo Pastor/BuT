@@ -308,6 +308,13 @@ impl Comment {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
+pub enum Member {
+    Identifier(Identifier),
+    Number(i64),
+}
+
 /// The source unit of the parse tree.
 ///
 /// Contains all of the parse tree's parts in a vector.
@@ -633,6 +640,7 @@ pub enum ModelPart {
     /// A function definition.
     FunctionDefinition(Box<FunctionDefinition>),
     FormulaDefinition(Box<FormulaDefinition>),
+    ConditionDefinition(Box<ConditionDefinition>),
 
     /// A variable definition.
     VariableDefinition(Box<VariableDefinition>),
@@ -681,6 +689,7 @@ pub enum StatePart {
     /// A function definition.
     FunctionDefinition(Box<FunctionDefinition>),
     FormulaDefinition(Box<FormulaDefinition>),
+    ConditionDefinition(Box<ConditionDefinition>),
 
     /// A variable definition.
     VariableDefinition(Box<VariableDefinition>),
@@ -945,7 +954,7 @@ pub enum Condition {
     /// `(<1>)`
     Parenthesis(Loc, Box<crate::ast::Condition>),
     /// `<1>.<2>`
-    MemberAccess(Loc, Box<crate::ast::Condition>, Identifier),
+    MemberAccess(Loc, Box<crate::ast::Condition>, Member),
     /// `<1>(<2>,*)`
     FunctionCall(Loc, Identifier, Vec<crate::ast::Condition>),
     /// `!<1>`
@@ -1000,7 +1009,7 @@ pub enum Expression {
     /// `(<1>)`
     Parenthesis(Loc, Box<Expression>),
     /// `<1>.<2>`
-    MemberAccess(Loc, Box<Expression>, Identifier),
+    MemberAccess(Loc, Box<Expression>, Member),
     /// `<1>(<2>,*)`
     FunctionCall(Loc, Identifier, Vec<Expression>),
     /// `<1><2>` where <2> is a block.
@@ -1375,6 +1384,15 @@ pub enum ObjectType {
 pub struct FormulaDefinition {
     pub loc: Loc,
     pub formula: FormulaBlock,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+#[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
+pub struct ConditionDefinition {
+    pub loc: Loc,
+    pub name: Option<Identifier>,
+    pub value: Condition,
+    pub annotations: Vec<AnnotationDefinition>,
 }
 
 /// A function definition.

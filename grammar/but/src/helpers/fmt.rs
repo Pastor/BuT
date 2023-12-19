@@ -6,8 +6,8 @@ use std::{
 
 use crate::ast;
 use crate::ast::{
-    Annotation, Condition, Expression, FormulaExpression, ModelPart, Property, SourceUnitPart,
-    StatePart, Type,
+    Annotation, Condition, ConditionDefinition, Expression, FormulaExpression, Member, ModelPart,
+    Property, SourceUnitPart, StatePart, Type,
 };
 
 macro_rules! write_opt {
@@ -139,6 +139,18 @@ impl Display for ast::FormulaDefinition {
     }
 }
 
+impl Display for ConditionDefinition {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        for x in self.annotations.iter() {
+            Display::fmt(&x, f)?;
+        }
+        f.write_str("cond ")?;
+        write_opt!(f, "", &self.name);
+        f.write_str(" = ")?;
+        Display::fmt(&self.value, f)
+    }
+}
+
 impl Display for ast::ModelDefinition {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         for x in self.annotations.iter() {
@@ -153,6 +165,15 @@ impl Display for ast::ModelDefinition {
         }
         f.write_str("}")?;
         Ok(())
+    }
+}
+
+impl Display for Member {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self {
+            Self::Identifier(id) => Display::fmt(id, f),
+            Self::Number(n) => Display::fmt(n, f),
+        }
     }
 }
 
@@ -171,6 +192,7 @@ impl Display for ModelPart {
             ModelPart::StateDefinition(inner) => Display::fmt(&inner, f)?,
             ModelPart::TypeDefinition(inner) => Display::fmt(&inner, f)?,
             ModelPart::ModelDefinition(inner) => Display::fmt(&inner, f)?,
+            ModelPart::ConditionDefinition(inner) => Display::fmt(&inner, f)?,
             ModelPart::Using(inner) => Display::fmt(&inner, f)?,
             ModelPart::StraySemicolon(_) => {}
         }
@@ -208,6 +230,7 @@ impl Display for StatePart {
             StatePart::PropertyDefinition(inner) => Display::fmt(&inner, f)?,
             StatePart::TypeDefinition(inner) => Display::fmt(&inner, f)?,
             StatePart::ModelDefinition(inner) => Display::fmt(&inner, f)?,
+            StatePart::ConditionDefinition(inner) => Display::fmt(&inner, f)?,
             StatePart::Using(inner) => Display::fmt(&inner, f)?,
             StatePart::Reference(_, name, e) => {
                 f.write_str("ref ")?;
@@ -1718,7 +1741,8 @@ mod tests {
                 ast::Expression::ArraySlice(loc!(), id("arr"), Some(1), Some(2))
                     => "arr[1:2]",
 
-                ast::Expression::MemberAccess(loc!(), Box::new(expr!(struct)), id("access")) => "struct.access",
+                ast::Expression::MemberAccess(loc!(), Box::new(expr!(struct)), Member::Identifier(id("access")))
+                    => "struct.access",
 
                 ast::Expression::Parenthesis(loc!(), Box::new(expr!(var))) => "(var)",
                 ast::Expression::List(loc!(), vec![]) => "()",

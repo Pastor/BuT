@@ -83,7 +83,7 @@ fn exit(exit_code: int);
 #[extern(C), unused, inline(never)]
 fn write(n: int, c: int);
 #[extern(C), unused, inline(never)]
-fn assert(cond: bool);
+fn assert(c: bool);
 #[extern(C), unused, inline(never)]
 fn debug(msg: str);
 

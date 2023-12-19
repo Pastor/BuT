@@ -10,7 +10,7 @@ use codespan_reporting::files::SimpleFile;
 use codespan_reporting::term;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 
-use but::helpers::ident::{DisplayIdent, FormatterIdent};
+use but::helpers::ident::FormatterIdent;
 
 #[derive(Debug, Parser)]
 #[clap(name = "BuT tooling", about, verbatim_doc_comment)]

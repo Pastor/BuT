@@ -126,6 +126,7 @@ pub enum Token<'input> {
     State,
     Reference,
     Template,
+    Condition,
 }
 
 impl<'input> fmt::Display for Token<'input> {
@@ -223,6 +224,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::Private => write!(f, "private"),
             Token::Abstract => write!(f, "abstract"),
             Token::Template => write!(f, "template"),
+            Token::Condition => write!(f, "cond"),
         }
     }
 }
@@ -328,6 +330,7 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "state" => Token::State,
     "ref" => Token::Reference,
     "template" => Token::Template,
+    "cond" => Token::Condition,
 };
 
 impl<'input> Lexer<'input> {
