@@ -248,7 +248,7 @@ BlockStatementOrSemiColon: Option<Statement> = {
 
 FunctionDefinition: Box<FunctionDefinition> = {
     <l:@L> <annotations:AnnotationDefinition*> <attributes:FunctionAttribute*> "fn" <nl:@L> <name:ButIdentifierOrError> <nr:@R> <params:ParameterList>
-    <return_type:(":" <Type>)?> <r:@R> <body:BlockStatementOrSemiColon> => {
+    <return_type:("-" ">" <Type>)?> <r:@R> <body:BlockStatementOrSemiColon> => {
         Box::new(FunctionDefinition{
             loc: Loc::Source(file_no, l, r),
             ty: FunctionTy::Function,

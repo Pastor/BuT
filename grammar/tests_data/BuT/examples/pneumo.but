@@ -188,7 +188,7 @@ model Cylinder {
     let mut delay: int = 0;
     let mut next: bool = false;
 
-    fn has_next(pred: bool, d: int): bool {
+    fn has_next(pred: bool, d: int) -> bool {
         if pred {
             timer = 0;
             if delay > d {

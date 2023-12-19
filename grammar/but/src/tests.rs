@@ -69,7 +69,7 @@ fn parse_function_assembly() {
 fn parse_function_formula() {
     let src = r#"
         #[unused]
-        fn with_formula(input1: u8, input2: bit): u16 {
+        fn with_formula(input1: u8, input2: bit) -> u16 {
             formula "LTL" {
             }
             formula {
@@ -85,7 +85,7 @@ fn parse_function_formula() {
     assert_eq!(actual_parse_tree.0.len(), 1);
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::FunctionDefinition(Box::new(
         FunctionDefinition {
-            loc: Source(0, 9, 72),
+            loc: Source(0, 9, 74),
             ty: FunctionTy::Function,
             name: Some(Identifier {
                 loc: Source(0, 30, 42),
@@ -142,57 +142,57 @@ fn parse_function_formula() {
             }],
             attributes: vec![],
             return_type: Some(Alias(Identifier {
-                loc: Source(0, 69, 72),
+                loc: Source(0, 71, 74),
                 name: "u16".to_string(),
             })),
             body: Some(Block {
-                loc: Source(0, 73, 293),
+                loc: Source(0, 75, 295),
                 unchecked: false,
                 statements: vec![
                     Formula {
-                        loc: Source(0, 87, 116),
+                        loc: Source(0, 89, 118),
                         dialect: Some(StringLiteral {
-                            loc: Source(0, 95, 100),
+                            loc: Source(0, 97, 102),
                             unicode: false,
                             string: "LTL".to_string(),
                         }),
                         flags: None,
                         block: Box::new(FormulaBlock {
-                            loc: Source(0, 101, 116),
+                            loc: Source(0, 103, 118),
                             statements: vec![],
                         }),
                     },
                     Formula {
-                        loc: Source(0, 129, 238),
+                        loc: Source(0, 131, 240),
                         dialect: None,
                         flags: None,
                         block: Box::new(FormulaBlock {
-                            loc: Source(0, 137, 238),
+                            loc: Source(0, 139, 240),
                             statements: vec![
                                 FunctionCall(Box::new(FormulaFunctionCall {
-                                    loc: Source(0, 155, 165),
+                                    loc: Source(0, 157, 167),
                                     id: Identifier {
-                                        loc: Source(0, 155, 159),
+                                        loc: Source(0, 157, 161),
                                         name: "None".to_string(),
                                     },
-                                    arguments: vec![BoolLiteral(Source(0, 160, 164), true, None)],
+                                    arguments: vec![BoolLiteral(Source(0, 162, 166), true, None)],
                                 })),
                                 FunctionCall(Box::new(FormulaFunctionCall {
-                                    loc: Source(0, 182, 193),
+                                    loc: Source(0, 184, 195),
                                     id: Identifier {
-                                        loc: Source(0, 182, 186),
+                                        loc: Source(0, 184, 188),
                                         name: "None".to_string(),
                                     },
-                                    arguments: vec![BoolLiteral(Source(0, 187, 192), false, None)],
+                                    arguments: vec![BoolLiteral(Source(0, 189, 194), false, None)],
                                 })),
                                 FunctionCall(Box::new(FormulaFunctionCall {
-                                    loc: Source(0, 210, 224),
+                                    loc: Source(0, 212, 226),
                                     id: Identifier {
-                                        loc: Source(0, 210, 216),
+                                        loc: Source(0, 212, 218),
                                         name: "Always".to_string(),
                                     },
                                     arguments: vec![FormulaExpression::Variable(Identifier {
-                                        loc: Source(0, 217, 223),
+                                        loc: Source(0, 219, 225),
                                         name: "input1".to_string(),
                                     })],
                                 })),
@@ -200,25 +200,25 @@ fn parse_function_formula() {
                         }),
                     },
                     Return(
-                        Source(0, 251, 282),
+                        Source(0, 253, 284),
                         Some(Cast(
-                            Source(0, 258, 282),
+                            Source(0, 260, 284),
                             Box::new(Parenthesis(
-                                Source(0, 259, 274),
+                                Source(0, 261, 276),
                                 Box::new(Add(
-                                    Source(0, 259, 274),
+                                    Source(0, 261, 276),
                                     Box::new(Variable(Identifier {
-                                        loc: Source(0, 259, 265),
+                                        loc: Source(0, 261, 267),
                                         name: "input1".to_string(),
                                     })),
                                     Box::new(Variable(Identifier {
-                                        loc: Source(0, 268, 274),
+                                        loc: Source(0, 270, 276),
                                         name: "input2".to_string(),
                                     })),
                                 )),
                             )),
                             Alias(Identifier {
-                                loc: Source(0, 279, 282),
+                                loc: Source(0, 281, 284),
                                 name: "u16".to_string(),
                             }),
                         )),

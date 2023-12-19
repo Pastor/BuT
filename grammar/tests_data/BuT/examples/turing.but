@@ -14,11 +14,11 @@ model Turing {
 }
 
 #[extern(C), inline(never)]
-fn next_step(s: int): int;
+fn next_step(s: int) -> int;
 #[extern(C), inline(never)]
-fn next_symbol(s: int): int;
+fn next_symbol(s: int) -> int;
 #[extern(C), inline(never)]
-fn next_walk(s: int): int;
+fn next_walk(s: int) -> int;
 
 port next        : bool = 0x00;
 port symbol      : int  = 0x02;

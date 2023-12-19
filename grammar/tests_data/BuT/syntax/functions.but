@@ -6,12 +6,12 @@ fn seen() {
 }
 
 #[unused]
-fn unused(input: u8): u8 {
+fn unused(input: u8) -> u8 {
     return 0 as u8;
 }
 
 #[unused]
-fn condition(input: u8): u8 {
+fn condition(input: u8) -> u8 {
     assert(input != 0);
     if true {
         input += 45;
@@ -21,7 +21,7 @@ fn condition(input: u8): u8 {
 }
 
 #[unused]
-fn with_formula(input1: u8, input2: bit): u16 {
+fn with_formula(input1: u8, input2: bit) -> u16 {
     formula "LTL" {
     }
     formula {
@@ -33,5 +33,5 @@ fn with_formula(input1: u8, input2: bit): u16 {
 }
 
 #[unused, external(true)]
-fn external_fun(input: u8): u16;
+fn external_fun(input: u8) -> u16;
 
