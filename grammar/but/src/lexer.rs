@@ -897,17 +897,17 @@ impl<'input> Lexer<'input> {
                     };
                 }
                 Some((i, '.')) => {
-                    if let Some((_, a)) = self.chars.peek() {
-                        if a.is_ascii_digit() {
-                            return match self.parse_number(i + 1, '.') {
-                                Err(lex_error) => {
-                                    self.errors.push(lex_error);
-                                    None
-                                }
-                                Ok(parse_result) => Some(parse_result),
-                            };
-                        }
-                    }
+                    // if let Some((_, a)) = self.chars.peek() {
+                    //     if a.is_ascii_digit() {
+                    //         return match self.parse_number(i + 1, '.') {
+                    //             Err(lex_error) => {
+                    //                 self.errors.push(lex_error);
+                    //                 None
+                    //             }
+                    //             Ok(parse_result) => Some(parse_result),
+                    //         };
+                    //     }
+                    // }
                     return Some((i, Token::Member, i + 1));
                 }
                 Some((i, '[')) => return Some((i, Token::OpenBracket, i + 1)),
@@ -1453,14 +1453,14 @@ mod tests {
         );
 
         let mut errors = Vec::new();
-        let tokens = Lexer::new(".9", 0, &mut comments, &mut errors).collect::<Vec<_>>();
+        let tokens = Lexer::new("0.9", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
-        assert_eq!(tokens, vec!((0, Token::RationalNumber(".9", false), 2)));
+        assert_eq!(tokens, vec!((0, Token::RationalNumber("0.9", false), 3)));
 
         let mut errors = Vec::new();
-        let tokens = Lexer::new(".9e10", 0, &mut comments, &mut errors).collect::<Vec<_>>();
+        let tokens = Lexer::new("0.9e10", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
-        assert_eq!(tokens, vec!((0, Token::RationalNumber(".9", false), 5)));
+        assert_eq!(tokens, vec!((0, Token::RationalNumber("0.9", false), 6)));
 
         errors.clear();
         comments.clear();

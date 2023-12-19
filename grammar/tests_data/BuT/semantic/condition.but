@@ -3,7 +3,7 @@ model Base {
     state One {
         ref End: Writable & HasNext;
     }
-    cond Readable = is_readable & (register_5 | reg[0]);
+    cond Readable = is_readable & (register_5 | reg.0);
     cond Writable = !Readable & is_writable;
-    cond HasNext  = reg[5] & point > 50; //Хотелось бы использовать как reg.5, но сейчас есть проблема с детектированием числа с плавающей точкой
+    cond HasNext  = reg.5 & point > 50; //Из-за возможности получения доступа до конкретного бита через .номер - запись чисел с плавающей точкой вида .9 - невозможен
 }
