@@ -1,0 +1,41 @@
+#[unused]
+model Owned {
+    state Start {
+        ref End: true;
+    }
+    start -> Start;
+}
+
+model Next {
+    state Start {
+        ref End: true;
+    }
+    start -> Start;
+}
+
+model None {
+    state Template = Owned + Next {
+        ref End: true;
+    }
+    start -> Template;
+}
+
+template model BaseModel {
+    state None {
+        ref End;
+    }
+    start -> None;
+    end -> End; // По умолчанию
+}
+
+model Inheritance = BaseModel {
+    state Start {
+        ref None;
+    }
+    start -> Start;
+    end -> None;
+}
+
+behavior -> Next | None;
+
+
