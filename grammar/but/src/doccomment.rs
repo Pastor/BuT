@@ -146,17 +146,17 @@ fn filter_comments(
     comments: &[Comment],
     start: usize,
     end: usize,
-) -> impl Iterator<Item=(CommentType, Vec<(usize, &str)>)> {
+) -> impl Iterator<Item = (CommentType, Vec<(usize, &str)>)> {
     comments.iter().filter_map(move |comment| {
         match comment {
             // filter out all non-doc comments
             Comment::Block(..) | Comment::Line(..) => None,
             // filter out doc comments that are outside the given range
             Comment::DocLine(loc, _) | Comment::DocBlock(loc, _)
-            if loc.start() >= end || loc.end() < start =>
-                {
-                    None
-                }
+                if loc.start() >= end || loc.end() < start =>
+            {
+                None
+            }
 
             Comment::DocLine(loc, comment) => {
                 // remove the leading /// and whitespace;

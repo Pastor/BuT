@@ -239,7 +239,7 @@ impl Identifier {
 
 /// A qualified identifier.
 ///
-/// `<identifiers>.*`
+/// `<identifiers>::*`
 #[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
 pub struct IdentifierPath {

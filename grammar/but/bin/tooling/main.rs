@@ -37,7 +37,7 @@ fn main() -> anyhow::Result<()> {
             for x in errors {
                 let message = x.message;
                 let diagnostic = Diagnostic::error()
-                    .with_code("E0308")
+                    .with_code("E0001")
                     .with_message(message.clone())
                     .with_labels(vec![Label::primary((), x.loc.start()..x.loc.end())
                         .with_message(message.clone())])

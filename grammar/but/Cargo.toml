@@ -25,13 +25,13 @@ lalrpop = { git = "https://github.com/lalrpop/lalrpop.git", package = "lalrpop",
 [dependencies]
 lalrpop-util = { git = "https://github.com/lalrpop/lalrpop.git", package = "lalrpop-util", version = "^0.20.1"}
 thiserror = "^1.0"
-clap = { version = "4.4.10", features = ["derive"] }
+clap = { version = "4.4.15", features = ["derive"] }
 phf = { version = "0.11", features = ["macros"] }
 unicode-xid = "0.2"
 itertools = "0.12"
 serde = { version = "1.0", features = ["derive"], optional = true }
 codespan-reporting = "0.11.1"
-anyhow = "1.0.75"
+anyhow = "1.0.79"
 
 [dev-dependencies]
 rstest = "^0.18.2"
