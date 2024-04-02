@@ -57,7 +57,7 @@ pub enum ErrorType {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Note {
     /// The code location of the note.
-    pub loc: ast::Loc,
+    pub loc: Loc,
     /// The message of the note.
     pub message: String,
 }
@@ -66,7 +66,7 @@ pub struct Note {
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Diagnostic {
     /// The code location of the diagnostic.
-    pub loc: ast::Loc,
+    pub loc: Loc,
     /// The level of the diagnostic.
     pub level: Level,
     /// The type of diagnostic.

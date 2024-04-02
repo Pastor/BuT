@@ -580,13 +580,13 @@ fn parse_alias_type() {
     std::assert_eq!(actual_parse_tree.0.len(), 1);
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::TypeDefinition(Box::new(
         TypeDefinition {
-            loc: Loc::Source(0, 0, 16),
+            loc: Source(0, 0, 16),
             name: Identifier {
-                loc: Loc::Source(0, 5, 9),
+                loc: Source(0, 5, 9),
                 name: "bool".to_string(),
             },
-            ty: Type::Alias(Identifier {
-                loc: Loc::Source(0, 13, 16),
+            ty: Alias(Identifier {
+                loc: Source(0, 13, 16),
                 name: "bit".to_string(),
             }),
         },
@@ -601,16 +601,16 @@ fn parse_simple_array_type() {
     std::assert_eq!(actual_parse_tree.0.len(), 1);
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::TypeDefinition(Box::new(
         TypeDefinition {
-            loc: Loc::Source(0, 0, 21),
+            loc: Source(0, 0, 21),
             name: Identifier {
-                loc: Loc::Source(0, 5, 7),
+                loc: Source(0, 5, 7),
                 name: "u8".to_string(),
             },
-            ty: Type::Array {
-                loc: Loc::Source(0, 10, 21),
+            ty: Array {
+                loc: Source(0, 10, 21),
                 element_count: 8,
-                element_type: Box::new(Type::Alias(Identifier {
-                    loc: Loc::Source(0, 17, 20),
+                element_type: Box::new(Alias(Identifier {
+                    loc: Source(0, 17, 20),
                     name: "bit".to_string(),
                 })),
             },
@@ -626,19 +626,19 @@ fn parse_nested_array_type() {
     std::assert_eq!(actual_parse_tree.0.len(), 1);
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::TypeDefinition(Box::new(
         TypeDefinition {
-            loc: Loc::Source(0, 0, 27),
+            loc: Source(0, 0, 27),
             name: Identifier {
-                loc: Loc::Source(0, 5, 10),
+                loc: Source(0, 5, 10),
                 name: "block".to_string(),
             },
-            ty: Type::Array {
-                loc: Loc::Source(0, 13, 27),
+            ty: Array {
+                loc: Source(0, 13, 27),
                 element_count: 2,
-                element_type: Box::new(Type::Array {
-                    loc: Loc::Source(0, 18, 26),
+                element_type: Box::new(Array {
+                    loc: Source(0, 18, 26),
                     element_count: 2,
-                    element_type: Box::new(Type::Alias(Identifier {
-                        loc: Loc::Source(0, 22, 25),
+                    element_type: Box::new(Alias(Identifier {
+                        loc: Source(0, 22, 25),
                         name: "bit".to_string(),
                     })),
                 }),
@@ -678,7 +678,7 @@ fn parse_variable_annotations() {
                             loc: Source(0, 11, 17),
                             name: "extern".to_string(),
                         },
-                        args: vec![crate::ast::Annotation::Identifier(
+                        args: vec![Annotation::Identifier(
                             Source(0, 18, 19),
                             IdentifierPath {
                                 loc: Source(0, 18, 19),
@@ -689,7 +689,7 @@ fn parse_variable_annotations() {
                             },
                         )],
                     },
-                    crate::ast::Annotation::Identifier(
+                    Annotation::Identifier(
                         Source(0, 22, 28),
                         IdentifierPath {
                             loc: Source(0, 22, 28),
@@ -705,7 +705,7 @@ fn parse_variable_annotations() {
                             loc: Source(0, 30, 36),
                             name: "inline".to_string(),
                         },
-                        args: vec![crate::ast::Annotation::Identifier(
+                        args: vec![Annotation::Identifier(
                             Source(0, 37, 42),
                             IdentifierPath {
                                 loc: Source(0, 37, 42),
@@ -732,7 +732,7 @@ fn parse_global_annotations() {
     let expected_parse_tree = SourceUnit(vec![SourceUnitPart::AnnotationDefinition(Box::new(
         AnnotationDefinition {
             loc: Source(0, 0, 14),
-            args: vec![Annotation::Function {
+            args: vec![Function {
                 loc: Source(0, 3, 13),
                 name: Identifier {
                     loc: Source(0, 3, 6),

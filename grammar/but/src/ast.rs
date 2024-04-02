@@ -952,33 +952,33 @@ pub enum Condition {
     /// `<1>\[ [2] \]`
     ArraySubscript(Loc, Identifier, i64),
     /// `(<1>)`
-    Parenthesis(Loc, Box<crate::ast::Condition>),
+    Parenthesis(Loc, Box<Condition>),
     /// `<1>.<2>`
-    MemberAccess(Loc, Box<crate::ast::Condition>, Member),
+    MemberAccess(Loc, Box<Condition>, Member),
     /// `<1>(<2>,*)`
-    FunctionCall(Loc, Identifier, Vec<crate::ast::Condition>),
+    FunctionCall(Loc, Identifier, Vec<Condition>),
     /// `!<1>`
-    Not(Loc, Box<crate::ast::Condition>),
+    Not(Loc, Box<Condition>),
     /// `<1> + <2>`
-    Add(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    Add(Loc, Box<Condition>, Box<Condition>),
     /// `<1> - <2>`
-    Subtract(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    Subtract(Loc, Box<Condition>, Box<Condition>),
     /// `<1> & <2>`
-    And(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    And(Loc, Box<Condition>, Box<Condition>),
     /// `<1> | <2>`
-    Or(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    Or(Loc, Box<Condition>, Box<Condition>),
     /// `<1> < <2>`
-    Less(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    Less(Loc, Box<Condition>, Box<Condition>),
     /// `<1> > <2>`
-    More(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    More(Loc, Box<Condition>, Box<Condition>),
     /// `<1> <= <2>`
-    LessEqual(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    LessEqual(Loc, Box<Condition>, Box<Condition>),
     /// `<1> >= <2>`
-    MoreEqual(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    MoreEqual(Loc, Box<Condition>, Box<Condition>),
     /// `<1> = <2>`
-    Equal(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    Equal(Loc, Box<Condition>, Box<Condition>),
     /// `<1> != <2>`
-    NotEqual(Loc, Box<crate::ast::Condition>, Box<crate::ast::Condition>),
+    NotEqual(Loc, Box<Condition>, Box<Condition>),
     /// ``
     NumberLiteral(Loc, i64),
     /// ``
