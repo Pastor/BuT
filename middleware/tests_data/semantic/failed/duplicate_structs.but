@@ -1,0 +1,11 @@
+#[repr(C)]
+struct One {
+  let mut  var1: u8;
+  let var2: u8;
+};
+
+#[repr(C)]
+struct One {
+  let mut  var1: u8;
+  let var2: u8;
+};

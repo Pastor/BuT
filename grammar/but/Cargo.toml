@@ -1,5 +1,5 @@
 [package]
-name = "but"
+name = "but-grammar"
 version = "0.0.1"
 authors = ["Pastor <viruszold@gmail.com>"]
 description = "BuT"
@@ -23,7 +23,7 @@ path = "bin/tooling/main.rs"
 lalrpop = { git = "https://github.com/lalrpop/lalrpop.git", package = "lalrpop", version = "^0.20.1", features = ["lexer"] }
 
 [dependencies]
-lalrpop-util = { git = "https://github.com/lalrpop/lalrpop.git", package = "lalrpop-util", version = "^0.20.1"}
+lalrpop-util = { git = "https://github.com/lalrpop/lalrpop.git", package = "lalrpop-util", version = "^0.20.1" }
 thiserror = "^1.0"
 clap = { version = "4.4.15", features = ["derive"] }
 phf = { version = "0.11", features = ["macros"] }

@@ -1,0 +1,5 @@
+port     port3: bit = 0xFFB0:0;
+port     port3: bit = 0xFFB1:0;
+
+let mut  var3: u8  = 0;
+let mut  var3: u8  = 0;

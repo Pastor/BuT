@@ -1,0 +1,9 @@
+#[unused]
+fn unused(input: u8) -> u8 {
+    return 0 as u8;
+}
+
+#[unused]
+fn unused(input: u8) -> u8 {
+    return 0 as u8;
+}

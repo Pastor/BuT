@@ -1,0 +1,2 @@
+type u8    = [8   : bit];
+type u8    = [8   : bit];

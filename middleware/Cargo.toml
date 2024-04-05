@@ -1,0 +1,20 @@
+[package]
+name = "but-middleware"
+version = "0.0.1"
+authors = ["Pastor <viruszold@gmail.com>"]
+description = "BuT middleware"
+homepage = "https://but.ru"
+repository = "https://github.com/Pastor/BuT"
+readme = "../README.adoc"
+keywords = ["BuT", "middleware"]
+license = "BSD"
+edition = "2021"
+rust-version = "1.71.0"
+include = ["Cargo.toml", "src/**/*"]
+
+[dependencies]
+but-grammar = { path = "../grammar/but" }
+
+[dev-dependencies]
+walkdir = "^2.4.0"
+regex = "^1"

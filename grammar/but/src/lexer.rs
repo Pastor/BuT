@@ -234,7 +234,7 @@ impl<'input> fmt::Display for Token<'input> {
 /// # Examples
 ///
 /// ```
-/// use but::lexer::{Lexer, Token};
+/// use but_grammar::lexer::{Lexer, Token};
 ///
 /// let source = "int number = 0;";
 /// let mut comments = Vec::new();
@@ -339,7 +339,7 @@ impl<'input> Lexer<'input> {
     /// # Examples
     ///
     /// ```
-    /// use but::lexer::Lexer;
+    /// use but_grammar::lexer::Lexer;
     ///
     /// let source = "let number: uint256 = 0;";
     /// let mut comments = Vec::new();
@@ -1067,7 +1067,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         assert_eq!(tokens, vec!((0, Token::HexLiteral("hex\"cafe_dead\""), 14)));
 
@@ -1113,7 +1113,7 @@ mod tests {
 
         let tokens = Lexer::new("-4 ", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
-        assert_eq!(tokens, vec!((1, Token::Number(-4i64), 2),));
+        assert_eq!(tokens, vec!((1, Token::Number(-4i64), 2), ));
 
         let mut errors = Vec::new();
         let _ = Lexer::new(r#"hex"abcdefg""#, 0, &mut comments, &mut errors).collect::<Vec<_>>();
@@ -1202,7 +1202,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .count();
+            .count();
 
         assert_eq!(tokens, 0);
         assert_eq!(
@@ -1234,7 +1234,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1341,7 +1341,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .count();
+            .count();
 
         assert_eq!(tokens, 0);
         assert_eq!(
@@ -1373,7 +1373,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-        .collect::<Vec<(usize, Token, usize)>>();
+            .collect::<Vec<(usize, Token, usize)>>();
 
         assert_eq!(
             tokens,
@@ -1449,7 +1449,7 @@ mod tests {
             vec!(LexicalError::InvalidCharacterInHexLiteral(
                 Loc::Source(0, 4, 5),
                 'g',
-            ),)
+            ), )
         );
 
         let mut errors = Vec::new();

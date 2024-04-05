@@ -1,0 +1,7 @@
+enum One {
+  A, B, C
+};
+
+enum One {
+  A, B, C 
+};

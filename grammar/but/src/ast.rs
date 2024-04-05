@@ -1224,7 +1224,7 @@ impl Expression {
     /// # Examples
     ///
     /// ```
-    /// use but::ast::{Expression, Identifier, Loc};
+    /// use but_grammar::ast::{Expression, Identifier, Loc};
     ///
     /// // `a++`
     /// let var = Expression::Variable(Identifier::new("a"));

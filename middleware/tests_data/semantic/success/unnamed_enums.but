@@ -1,0 +1,5 @@
+enum _ {
+  A, B, C
+};
+
+enum B {};
