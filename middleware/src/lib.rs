@@ -1,11 +1,13 @@
 use but_grammar::ast::{SourceUnit, SourceUnitPart};
 use but_grammar::diagnostics::Diagnostic;
 
-use crate::tree::{build_tree, Model, TreeDefinition};
+use crate::tree::TreeDefinition;
+use crate::unit::Unit;
 
 mod tree;
+mod unit;
 
-pub fn parse(unit: SourceUnit) -> Result<(Vec<Model>), Vec<Diagnostic>> {
+pub fn parse(unit: SourceUnit) -> Result<Unit, Vec<Diagnostic>> {
     let mut global_enums = vec![];
     let mut models = vec![];
     let mut global_types = vec![];
@@ -35,10 +37,10 @@ pub fn parse(unit: SourceUnit) -> Result<(Vec<Model>), Vec<Diagnostic>> {
         models, global_enums, global_types, global_properties, global_variables, global_structs, global_functions,
         &mut diagnostics,
     );
-    if diagnostics.len() > 0 {
+    if !diagnostics.is_empty() {
         return Err(diagnostics);
     }
-    return build_tree(tree_definition);
+    tree_definition.build_tree()
 }
 
 #[cfg(test)]
@@ -52,20 +54,7 @@ mod tests {
     use but_grammar::diagnostics::Diagnostic;
     use but_grammar::parse;
 
-    use crate::tree::Model;
-
-    #[test]
-    fn test_but_grammar() {
-        let path = "0".to_string();
-        let source_part = r#"const PI: float = 3.1415;"#;
-        match parse(source_part, 0) {
-            Ok((unit, comments)) => {}
-            Err(diagnostics) => {
-                let v = process_diagnostics(path, source_part.to_string(), diagnostics);
-                println!("{}", v);
-            }
-        }
-    }
+    use crate::unit::Unit;
 
     #[test]
     fn test_semantics_failed() {
@@ -136,7 +125,7 @@ mod tests {
             .flatten()
             .filter_map(|(path, expect_error, source_part)| {
                 let src = source_part.to_string();
-                let result: Result<(Vec<Model>), Vec<Diagnostic>> = match parse(&source_part, 0) {
+                let result: Result<Unit, Vec<Diagnostic>> = match parse(&source_part, 0) {
                     Ok((unit, comments)) => {
                         match crate::parse(unit) {
                             Ok(result) => Ok(result),
@@ -180,7 +169,8 @@ mod tests {
                     let mut start_line = loc.start();
                     let mut end_line = loc.end();
                     'position: loop {
-                        if start_line <= 0 {
+                        //TODO: Зачем?
+                        if start_line == 0 {
                             start_line = 0;
                             break;
                         }
@@ -215,5 +205,67 @@ mod tests {
                 .collect::<Vec<_>>()
                 .join("\n\t"),
         )
+    }
+}
+
+#[cfg(test)]
+mod contexts {
+    use std::collections::HashMap;
+
+    use crate::unit::Variable;
+
+    trait Context<'a> {
+        fn variable(&'a self, name: &str) -> Option<&'a Variable>;
+    }
+
+    struct DefaultContext<'a> {
+        parent: Option<Box<dyn Context<'a>>>,
+        variables: HashMap<String, Variable>,
+    }
+
+    impl<'a> DefaultContext<'a> {
+        fn root() -> DefaultContext<'a> {
+            DefaultContext {
+                parent: None,
+                variables: HashMap::new(),
+            }
+        }
+
+        fn with_context(context: Box<dyn Context<'a>>) -> DefaultContext<'a> {
+            DefaultContext {
+                parent: Some(context),
+                variables: HashMap::new(),
+            }
+        }
+
+        fn new(&'a self) -> DefaultContext<'a> {
+            let root = DefaultContext::root();
+            let x = Box::new(root) as Box<dyn Context<'a>>;
+            DefaultContext::with_context(x)
+        }
+
+        fn add_variable(&'a mut self, name: &str, value: Variable) {
+            self.variables.insert(name.to_string(), value);
+        }
+    }
+
+    impl<'a> Context<'a> for DefaultContext<'a> {
+        fn variable(&'a self, name: &str) -> Option<&'a Variable> {
+            if let Some(v) = self.variables.get(name) {
+                return Some(v);
+            }
+            return self.parent.as_ref().and_then(|ctx| ctx.variable(name));
+        }
+    }
+
+    impl<'a> Default for DefaultContext<'a> {
+        fn default() -> Self {
+            DefaultContext::root()
+        }
+    }
+
+    #[test]
+    fn test_context() {
+        let root = DefaultContext::root();
     }
 }
