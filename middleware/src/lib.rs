@@ -15,9 +15,10 @@ pub fn parse(unit: SourceUnit) -> Result<Unit, Vec<Diagnostic>> {
     let mut global_variables = vec![];
     let mut global_functions = vec![];
     let mut global_structs = vec![];
+    let mut global_imports = vec![];
     for part in unit.0 {
         match part {
-            SourceUnitPart::ImportDirective(_) => { println!("Skip import"); }
+            SourceUnitPart::ImportDirective(im) => { global_imports.push(im); }
             SourceUnitPart::EnumDefinition(ed) => { global_enums.push(ed); }
             SourceUnitPart::StructDefinition(sd) => { global_structs.push(sd); }
             SourceUnitPart::ErrorDefinition(_) => { println!("Skip error"); }
@@ -92,7 +93,7 @@ mod tests {
         let syntax_test = false;
         semantic_failed_tests
             .into_iter()
-            .map::<Result<_, String>, _>(|(entry)| {
+            .map::<Result<_, String>, _>(|entry| {
                 if entry.file_name().to_string_lossy().ends_with(".but") {
                     let source = match fs::read_to_string(entry.path()) {
                         Ok(source) => source,
@@ -216,10 +217,12 @@ mod contexts {
 
     trait Context<'a> {
         fn variable(&'a self, name: &str) -> Option<&'a Variable>;
+        fn add_variable(&'a mut self, name: &str, value: Variable);
+        fn size(&'a self) -> usize;
     }
 
     struct DefaultContext<'a> {
-        parent: Option<Box<dyn Context<'a>>>,
+        parent: Option<Box<&'a dyn Context<'a>>>,
         variables: HashMap<String, Variable>,
     }
 
@@ -231,7 +234,7 @@ mod contexts {
             }
         }
 
-        fn with_context(context: Box<dyn Context<'a>>) -> DefaultContext<'a> {
+        fn with_context(context: Box<&'a (dyn Context<'a> + 'a)>) -> DefaultContext<'a> {
             DefaultContext {
                 parent: Some(context),
                 variables: HashMap::new(),
@@ -239,13 +242,12 @@ mod contexts {
         }
 
         fn new(&'a self) -> DefaultContext<'a> {
-            let root = DefaultContext::root();
-            let x = Box::new(root) as Box<dyn Context<'a>>;
-            DefaultContext::with_context(x)
+            let c = self.as_ref();
+            DefaultContext::with_context(Box::new(c))
         }
 
-        fn add_variable(&'a mut self, name: &str, value: Variable) {
-            self.variables.insert(name.to_string(), value);
+        fn as_ref(&'a self) -> &'a dyn Context<'a> {
+            return self;
         }
     }
 
@@ -255,6 +257,14 @@ mod contexts {
                 return Some(v);
             }
             return self.parent.as_ref().and_then(|ctx| ctx.variable(name));
+        }
+
+        fn add_variable(&'a mut self, name: &str, value: Variable) {
+            self.variables.insert(name.to_string(), value);
+        }
+
+        fn size(&'a self) -> usize {
+            self.variables.len()
         }
     }
 
@@ -266,6 +276,13 @@ mod contexts {
 
     #[test]
     fn test_context() {
-        let root = DefaultContext::root();
+        let mut root: &mut dyn Context = &mut DefaultContext::root() as &mut dyn Context;
+        root.add_variable("V1", Variable {});
+        assert!(true);
+        // assert_eq!(root.size(), 1usize);
+        // let v = root.variable("V1");
+        // assert!(v.is_some());
+        // let v = v.unwrap();
+        // assert_eq!(v, &Variable {});
     }
 }

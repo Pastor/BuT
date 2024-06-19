@@ -12,6 +12,7 @@ pub struct Type {}
 
 pub struct Property {}
 
+#[derive(PartialEq, Debug)]
 pub struct Variable {}
 
 pub struct Struct {}
