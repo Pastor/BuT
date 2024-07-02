@@ -1,6 +1,5 @@
 use std::fmt;
 
-use crate::ast;
 use crate::ast::Loc;
 
 /// The level of a diagnostic.

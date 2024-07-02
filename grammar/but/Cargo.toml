@@ -28,13 +28,13 @@ thiserror = "^1.0"
 clap = { version = "4.4.15", features = ["derive"] }
 phf = { version = "0.11", features = ["macros"] }
 unicode-xid = "0.2"
-itertools = "0.12"
+itertools = "0.13.0"
 serde = { version = "1.0", features = ["derive"], optional = true }
 codespan-reporting = "0.11.1"
 anyhow = "1.0.79"
 
 [dev-dependencies]
-rstest = "^0.18.2"
+rstest = "0.21.0"
 walkdir = "2.4.0"
 regex = "1"
 pretty_assertions = "1.4"

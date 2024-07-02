@@ -6,6 +6,7 @@ use crate::unit::Unit;
 
 mod tree;
 mod unit;
+mod context;
 
 pub fn parse(unit: SourceUnit) -> Result<Unit, Vec<Diagnostic>> {
     let mut global_enums = vec![];
@@ -133,7 +134,7 @@ mod tests {
                             Err(err) => Err(err),
                         }
                     }
-                    Err((diagnostics)) => {
+                    Err(diagnostics) => {
                         Err(diagnostics)
                     }
                 };
@@ -206,83 +207,5 @@ mod tests {
                 .collect::<Vec<_>>()
                 .join("\n\t"),
         )
-    }
-}
-
-#[cfg(test)]
-mod contexts {
-    use std::collections::HashMap;
-
-    use crate::unit::Variable;
-
-    trait Context<'a> {
-        fn variable(&'a self, name: &str) -> Option<&'a Variable>;
-        fn add_variable(&'a mut self, name: &str, value: Variable);
-        fn size(&'a self) -> usize;
-    }
-
-    struct DefaultContext<'a> {
-        parent: Option<Box<&'a dyn Context<'a>>>,
-        variables: HashMap<String, Variable>,
-    }
-
-    impl<'a> DefaultContext<'a> {
-        fn root() -> DefaultContext<'a> {
-            DefaultContext {
-                parent: None,
-                variables: HashMap::new(),
-            }
-        }
-
-        fn with_context(context: Box<&'a (dyn Context<'a> + 'a)>) -> DefaultContext<'a> {
-            DefaultContext {
-                parent: Some(context),
-                variables: HashMap::new(),
-            }
-        }
-
-        fn new(&'a self) -> DefaultContext<'a> {
-            let c = self.as_ref();
-            DefaultContext::with_context(Box::new(c))
-        }
-
-        fn as_ref(&'a self) -> &'a dyn Context<'a> {
-            return self;
-        }
-    }
-
-    impl<'a> Context<'a> for DefaultContext<'a> {
-        fn variable(&'a self, name: &str) -> Option<&'a Variable> {
-            if let Some(v) = self.variables.get(name) {
-                return Some(v);
-            }
-            return self.parent.as_ref().and_then(|ctx| ctx.variable(name));
-        }
-
-        fn add_variable(&'a mut self, name: &str, value: Variable) {
-            self.variables.insert(name.to_string(), value);
-        }
-
-        fn size(&'a self) -> usize {
-            self.variables.len()
-        }
-    }
-
-    impl<'a> Default for DefaultContext<'a> {
-        fn default() -> Self {
-            DefaultContext::root()
-        }
-    }
-
-    #[test]
-    fn test_context() {
-        let mut root: &mut dyn Context = &mut DefaultContext::root() as &mut dyn Context;
-        root.add_variable("V1", Variable {});
-        assert!(true);
-        // assert_eq!(root.size(), 1usize);
-        // let v = root.variable("V1");
-        // assert!(v.is_some());
-        // let v = v.unwrap();
-        // assert_eq!(v, &Variable {});
     }
 }

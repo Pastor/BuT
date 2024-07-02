@@ -1,4 +1,4 @@
-extern crate but;
+extern crate but_grammar;
 
 use std::fmt::Debug;
 use std::path::Path;
@@ -10,7 +10,8 @@ use codespan_reporting::files::SimpleFile;
 use codespan_reporting::term;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream};
 
-use but::helpers::ident::FormatterIdent;
+use but_grammar::helpers::ident::FormatterIdent;
+use but_grammar::parse;
 
 #[derive(Debug, Parser)]
 #[clap(name = "BuT tooling", about, verbatim_doc_comment)]
@@ -30,7 +31,7 @@ fn main() -> anyhow::Result<()> {
     };
     let path = Path::new(&path);
 
-    let unit = match but::parse(&source, 0) {
+    let unit = match parse(&source, 0) {
         Ok(unit) => unit,
         Err(errors) => {
             let file = SimpleFile::new(path.file_name().unwrap().to_str().unwrap(), source);
