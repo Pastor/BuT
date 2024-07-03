@@ -10,70 +10,95 @@ pub(crate) enum Value {
     Boolean(bool),
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct Context {
-    parent: Option<*mut Context>,
+pub(crate) trait Context {
+    fn set(&mut self, key: &str, value: Value);
+    fn del(&mut self, key: &str);
+    fn get(&self, key: &str) -> Option<Value>;
+    #[allow(clippy::new_ret_no_self)]
+    fn new(&mut self) -> Box<dyn Context>;
+}
+
+#[derive(Debug, Default)]
+struct Context_ {
+    parent: Option<*mut dyn Context>,
     values: HashMap<String, Value>,
 }
 
-impl Context {
-    pub(crate) fn new(&mut self) -> Context {
-        Context {
-            parent: Some(&mut *self),
-            values: Default::default(),
-        }
-    }
-
-    pub(crate) fn set(&mut self, key: &str, value: Value) {
+impl Context for Context_ {
+    fn set(&mut self, key: &str, value: Value) {
         self.values.insert(key.to_string(), value);
     }
 
-    pub(crate) fn get(&self, key: &str) -> Option<Value> {
+    fn del(&mut self, key: &str) {
+        self.values.remove(key);
+    }
+
+    fn get(&self, key: &str) -> Option<Value> {
         if let Some(v) = self.values.get(key) {
             return Some(v.clone());
         }
-        return self.parent.as_ref().and_then(|ctx| get(*ctx, key));
+        return self.parent.as_ref().and_then(|ctx| {
+            unsafe { ctx.as_ref().unwrap().get(key) }
+        });
+    }
+
+    fn new(&mut self) -> Box<dyn Context> {
+        Box::new(Context_ {
+            parent: Some(&mut *self),
+            values: Default::default(),
+        })
     }
 }
 
-fn get(context: *mut Context, key: &str) -> Option<Value> {
-    unsafe { context.as_ref().unwrap().get(key) }
-}
+impl Context_ {}
 
-fn root() -> &'static Mutex<Context> {
-    static mut CONF: MaybeUninit<Mutex<Context>> = MaybeUninit::uninit();
+fn root() -> &'static Mutex<Box<dyn Context>> {
+    static mut CONF: MaybeUninit<Mutex<Box<dyn Context>>> = MaybeUninit::uninit();
     static ONCE: Once = Once::new();
     ONCE.call_once(|| unsafe {
-        CONF.as_mut_ptr().write(Mutex::new(Context {
+        CONF.as_mut_ptr().write(Mutex::new(Box::new(Context_ {
             parent: None,
             values: Default::default(),
-        }));
+        })));
     });
 
     unsafe { &*CONF.as_ptr() }
 }
 
-pub fn set(key: &str, value: Value) {
-    root().lock().unwrap().set(key, value)
-}
-pub fn new() -> Context {
-    root().lock().unwrap().new()
+#[derive(Debug)]
+pub(crate) struct Root;
+
+impl Root {
+    fn set(key: &str, value: Value) {
+        root().lock().unwrap().set(key, value)
+    }
+
+    fn del(key: &str) {
+        root().lock().unwrap().del(key)
+    }
+
+    fn get(key: &str) -> Option<Value> {
+        root().lock().unwrap().get(key)
+    }
+
+    fn new_context() -> Box<dyn Context> {
+        root().lock().unwrap().new()
+    }
 }
 
 #[cfg(test)]
-mod tests {
-    use crate::context::{new, set, Value};
+mod tests0 {
+    use crate::context::{Root, Value};
 
     #[test]
     fn test_context() {
-        set("V1", Value::String("V1".to_string()));
-        let mut new1 = new();
-        new1.set("V2", Value::None);
-        println!("new 1  : {:#?}", new1);
-        let new2 = new();
-        println!("new 2  : {:#?}", new2);
-        let v = new2.get("V1");
-        assert!(v.is_some());
-        assert_eq!(v.unwrap(), Value::String("V1".to_string()));
+        Root::set("V0", Value::Boolean(true));
+        let mut root = Root::new_context();
+        root.set("V1", Value::Boolean(false));
+        let ctx = root.new();
+        assert_eq!(ctx.get("V1").unwrap(), Value::Boolean(false));
+        assert_eq!(ctx.get("V0").unwrap(), Value::Boolean(true));
+        Root::del("V0");
+        assert_eq!(ctx.get("V0"), None);
     }
 }
