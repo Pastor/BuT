@@ -2,18 +2,33 @@ use std::collections::HashMap;
 use std::mem::MaybeUninit;
 use std::sync::{Mutex, Once};
 
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
-pub(crate) enum Value {
+use but_grammar::ast::{ModelDefinition, VariableDefinition};
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub(crate) enum Variable {
     None,
-    String(String),
-    Number(i64),
-    Boolean(bool),
+    Defined(VariableDefinition),
 }
 
-pub(crate) trait Context {
-    fn set(&mut self, key: &str, value: Value);
-    fn del(&mut self, key: &str);
-    fn get(&self, key: &str) -> Option<Value>;
+pub(crate) trait VariableContext {
+    fn variable_set(&mut self, key: &str, value: Variable);
+    fn variable_del(&mut self, key: &str);
+    fn variable_get(&self, key: &str) -> Option<Variable>;
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub(crate) enum Model {
+    None,
+    Defined(ModelDefinition),
+}
+
+pub(crate) trait ModelContext {
+    fn model_set(&mut self, key: &str, model: Model);
+    fn model_del(&mut self, key: &str);
+    fn model_get(&self, key: &str) -> Option<Model>;
+}
+
+pub(crate) trait Context: VariableContext + ModelContext {
     #[allow(clippy::new_ret_no_self)]
     fn new(&mut self) -> Box<dyn Context>;
 }
@@ -21,31 +36,54 @@ pub(crate) trait Context {
 #[derive(Debug, Default)]
 struct Context_ {
     parent: Option<*mut dyn Context>,
-    values: HashMap<String, Value>,
+    variables: HashMap<String, Variable>,
+    models: HashMap<String, Model>,
 }
 
-impl Context for Context_ {
-    fn set(&mut self, key: &str, value: Value) {
-        self.values.insert(key.to_string(), value);
+impl VariableContext for Context_ {
+    fn variable_set(&mut self, key: &str, value: Variable) {
+        self.variables.insert(key.to_string(), value);
     }
 
-    fn del(&mut self, key: &str) {
-        self.values.remove(key);
+    fn variable_del(&mut self, key: &str) {
+        self.variables.remove(key);
     }
 
-    fn get(&self, key: &str) -> Option<Value> {
-        if let Some(v) = self.values.get(key) {
+    fn variable_get(&self, key: &str) -> Option<Variable> {
+        if let Some(v) = self.variables.get(key) {
             return Some(v.clone());
         }
         return self.parent.as_ref().and_then(|ctx| {
-            unsafe { ctx.as_ref().unwrap().get(key) }
+            unsafe { ctx.as_ref().unwrap().variable_get(key) }
         });
     }
+}
 
+impl ModelContext for Context_ {
+    fn model_set(&mut self, key: &str, model: Model) {
+        self.models.insert(key.to_string(), model);
+    }
+
+    fn model_del(&mut self, key: &str) {
+        self.models.remove(key);
+    }
+
+    fn model_get(&self, key: &str) -> Option<Model> {
+        if let Some(v) = self.models.get(key) {
+            return Some(v.clone());
+        }
+        return self.parent.as_ref().and_then(|ctx| {
+            unsafe { ctx.as_ref().unwrap().model_get(key) }
+        });
+    }
+}
+
+impl Context for Context_ {
     fn new(&mut self) -> Box<dyn Context> {
         Box::new(Context_ {
             parent: Some(&mut *self),
-            values: Default::default(),
+            variables: Default::default(),
+            models: Default::default(),
         })
     }
 }
@@ -58,7 +96,8 @@ fn root() -> &'static Mutex<Box<dyn Context>> {
     ONCE.call_once(|| unsafe {
         CONF.as_mut_ptr().write(Mutex::new(Box::new(Context_ {
             parent: None,
-            values: Default::default(),
+            variables: Default::default(),
+            models: Default::default(),
         })));
     });
 
@@ -69,16 +108,16 @@ fn root() -> &'static Mutex<Box<dyn Context>> {
 pub(crate) struct Root;
 
 impl Root {
-    fn set(key: &str, value: Value) {
-        root().lock().unwrap().set(key, value)
+    fn set(key: &str, value: Variable) {
+        root().lock().unwrap().variable_set(key, value)
     }
 
     fn del(key: &str) {
-        root().lock().unwrap().del(key)
+        root().lock().unwrap().variable_del(key)
     }
 
-    fn get(key: &str) -> Option<Value> {
-        root().lock().unwrap().get(key)
+    fn get(key: &str) -> Option<Variable> {
+        root().lock().unwrap().variable_get(key)
     }
 
     fn new_context() -> Box<dyn Context> {
@@ -88,17 +127,35 @@ impl Root {
 
 #[cfg(test)]
 mod tests0 {
-    use crate::context::{Root, Value};
+    use but_grammar::ast::{Identifier, Type, VariableDefinition};
+
+    use crate::context::{Root, Variable};
 
     #[test]
     fn test_context() {
-        Root::set("V0", Value::Boolean(true));
+        let def_v0 = VariableDefinition {
+            loc: Default::default(),
+            ty: Type::Address,
+            attrs: vec![],
+            name: Some(Identifier { loc: Default::default(), name: "V0".to_string() }),
+            initializer: None,
+            annotations: vec![],
+        };
+        let def_v1 = VariableDefinition {
+            loc: Default::default(),
+            ty: Type::Address,
+            attrs: vec![],
+            name: Some(Identifier { loc: Default::default(), name: "V1".to_string() }),
+            initializer: None,
+            annotations: vec![],
+        };
+        Root::set("V0", Variable::Defined(def_v0.clone()));
         let mut root = Root::new_context();
-        root.set("V1", Value::Boolean(false));
+        root.variable_set("V1", Variable::Defined(def_v1.clone()));
         let ctx = root.new();
-        assert_eq!(ctx.get("V1").unwrap(), Value::Boolean(false));
-        assert_eq!(ctx.get("V0").unwrap(), Value::Boolean(true));
+        assert_eq!(ctx.variable_get("V1").unwrap(), Variable::Defined(def_v1));
+        assert_eq!(ctx.variable_get("V0").unwrap(), Variable::Defined(def_v0));
         Root::del("V0");
-        assert_eq!(ctx.get("V0"), None);
+        assert_eq!(ctx.variable_get("V0"), None);
     }
 }

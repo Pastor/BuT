@@ -49,6 +49,19 @@ impl Unit {
             structs: HashMap::new(),
         }
     }
+    
+    pub(crate) fn new() -> Self {
+        Self {
+            unit: None,
+            models: Default::default(),
+            functions: Default::default(),
+            enums: Default::default(),
+            types: Default::default(),
+            properties: Default::default(),
+            variables: Default::default(),
+            structs: Default::default(),
+        }
+    }
 
     fn add_model(&mut self, md: ModelDefinition) {
         let rc = RefCell::new(&*self);
