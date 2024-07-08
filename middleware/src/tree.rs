@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use but_grammar::ast::{EnumDefinition, FunctionDefinition, Identifier, Loc, ModelDefinition, PropertyDefinition, StructDefinition, TypeDefinition, VariableDefinition};
 use but_grammar::diagnostics::Diagnostic;
+
 use crate::unit::Unit;
 
 pub(crate) struct TreeDefinition {
@@ -56,7 +57,7 @@ impl TreeDefinition {
     }
 
     pub(crate) fn build_tree(&self) -> Result<Unit, Vec<Diagnostic>> {
-        return Err(vec![Diagnostic::error(Loc::Implicit, "Empty".to_string())]);
+        return Ok(Unit::new());
     }
 }
 
@@ -64,7 +65,9 @@ impl TreeDefinition {
 fn build_map<Definition: Clone, F>(build_name: &str,
                                    values: Vec<Box<Definition>>,
                                    diagnostics: &mut Vec<Diagnostic>, d: F) -> HashMap<String, Box<Definition>>
-    where F: Fn(Definition) -> (Option<Identifier>, Loc) {
+where
+    F: Fn(Definition) -> (Option<Identifier>, Loc),
+{
     let mut table = HashMap::new();
     for mut fd in values {
         fd = fd.clone();
