@@ -1,3 +1,4 @@
+use std::cell::{Cell, UnsafeCell};
 use std::collections::HashMap;
 use std::mem::MaybeUninit;
 use std::sync::{Mutex, Once};
@@ -13,7 +14,7 @@ pub(crate) enum Value {
 pub(crate) trait Context {
     fn set(&mut self, key: &str, value: Value);
     fn del(&mut self, key: &str);
-    fn get(&self, key: &str) -> Option<Value>;
+    fn get(&self, key: &str) -> Option<*mut Value>;
     #[allow(clippy::new_ret_no_self)]
     fn new(&mut self) -> Box<dyn Context>;
 }
@@ -21,21 +22,21 @@ pub(crate) trait Context {
 #[derive(Debug, Default)]
 struct Context_ {
     parent: Option<*mut dyn Context>,
-    values: HashMap<String, Value>,
+    values: HashMap<String, UnsafeCell<Value>>,
 }
 
 impl Context for Context_ {
     fn set(&mut self, key: &str, value: Value) {
-        self.values.insert(key.to_string(), value);
+        self.values.insert(key.to_string(), UnsafeCell::new(value));
     }
 
     fn del(&mut self, key: &str) {
         self.values.remove(key);
     }
 
-    fn get(&self, key: &str) -> Option<Value> {
+    fn get(&self, key: &str) -> Option<*mut Value> {
         if let Some(v) = self.values.get(key) {
-            return Some(v.clone());
+            return Some(v.get());
         }
         return self.parent.as_ref().and_then(|ctx| {
             unsafe { ctx.as_ref().unwrap().get(key) }
@@ -56,10 +57,7 @@ fn root() -> &'static Mutex<Box<dyn Context>> {
     static mut CONF: MaybeUninit<Mutex<Box<dyn Context>>> = MaybeUninit::uninit();
     static ONCE: Once = Once::new();
     ONCE.call_once(|| unsafe {
-        CONF.as_mut_ptr().write(Mutex::new(Box::new(Context_ {
-            parent: None,
-            values: Default::default(),
-        })));
+        CONF.as_mut_ptr().write(Mutex::new(Box::new(Context_::default())));
     });
 
     unsafe { &*CONF.as_ptr() }
@@ -77,7 +75,7 @@ impl Root {
         root().lock().unwrap().del(key)
     }
 
-    fn get(key: &str) -> Option<Value> {
+    fn get(key: &str) -> Option<*mut Value> {
         root().lock().unwrap().get(key)
     }
 
@@ -96,9 +94,11 @@ mod tests0 {
         let mut root = Root::new_context();
         root.set("V1", Value::Boolean(false));
         let ctx = root.new();
-        assert_eq!(ctx.get("V1").unwrap(), Value::Boolean(false));
-        assert_eq!(ctx.get("V0").unwrap(), Value::Boolean(true));
+        unsafe { assert_eq!(*ctx.get("V1").unwrap(), Value::Boolean(false)); }
+        unsafe { assert_eq!(*ctx.get("V0").unwrap(), Value::Boolean(true)); }
         Root::del("V0");
         assert_eq!(ctx.get("V0"), None);
+        unsafe { *root.get("V1").unwrap() = Value::Number(30) }
+        unsafe { assert_eq!(*ctx.get("V1").unwrap(), Value::Number(30)); }
     }
 }
