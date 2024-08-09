@@ -45,7 +45,7 @@ impl TreeDefinition {
                                      global_structs, diagnostics, |d| { (d.name, d.loc) });
         let function_table = build_map("function",
                                        global_functions, diagnostics, |d| { (d.name, d.loc) });
-        return TreeDefinition {
+        TreeDefinition {
             models,
             enum_table,
             type_table,
@@ -53,7 +53,7 @@ impl TreeDefinition {
             variable_table,
             struct_table,
             function_table,
-        };
+        }
     }
 
     pub(crate) fn build_tree(&self) -> Result<Unit, Vec<Diagnostic>> {
@@ -86,5 +86,5 @@ where
             }
         }
     }
-    return table;
+    table
 }

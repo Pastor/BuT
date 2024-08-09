@@ -3,12 +3,54 @@ use std::collections::HashMap;
 use std::mem::MaybeUninit;
 use std::sync::{Mutex, Once};
 
-#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Default)]
 pub(crate) enum Value {
+    #[default]
     None,
     String(String),
     Number(i64),
     Boolean(bool),
+}
+
+impl Value {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Value::None => "none",
+            Value::String(_) => "str",
+            Value::Number(_) => "num",
+            Value::Boolean(_) => "bool",
+        }
+    }
+}
+
+impl From<bool> for Value {
+    fn from(value: bool) -> Self {
+        Self::Boolean(value)
+    }
+}
+
+impl From<i64> for Value {
+    fn from(value: i64) -> Self {
+        Self::Number(value)
+    }
+}
+
+impl From<&str> for Value {
+    fn from(value: &str) -> Self {
+        Self::String(value.to_string())
+    }
+}
+
+impl From<String> for Value {
+    fn from(value: String) -> Self {
+        Self::String(value)
+    }
+}
+
+impl From<()> for Value {
+    fn from(_: ()) -> Self {
+        Value::None
+    }
 }
 
 pub(crate) trait Context {
@@ -20,12 +62,12 @@ pub(crate) trait Context {
 }
 
 #[derive(Debug, Default)]
-struct Context_ {
+struct PrivateContext {
     parent: Option<*mut dyn Context>,
     values: HashMap<String, UnsafeCell<Value>>,
 }
 
-impl Context for Context_ {
+impl Context for PrivateContext {
     fn set(&mut self, key: &str, value: Value) {
         self.values.insert(key.to_string(), UnsafeCell::new(value));
     }
@@ -38,26 +80,26 @@ impl Context for Context_ {
         if let Some(v) = self.values.get(key) {
             return Some(v.get());
         }
-        return self.parent.as_ref().and_then(|ctx| {
+        self.parent.as_ref().and_then(|ctx| {
             unsafe { ctx.as_ref().unwrap().get(key) }
-        });
+        })
     }
 
     fn new(&mut self) -> Box<dyn Context> {
-        Box::new(Context_ {
+        Box::new(PrivateContext {
             parent: Some(&mut *self),
             values: Default::default(),
         })
     }
 }
 
-impl Context_ {}
+impl PrivateContext {}
 
 fn root() -> &'static Mutex<Box<dyn Context>> {
     static mut CONF: MaybeUninit<Mutex<Box<dyn Context>>> = MaybeUninit::uninit();
     static ONCE: Once = Once::new();
     ONCE.call_once(|| unsafe {
-        CONF.as_mut_ptr().write(Mutex::new(Box::new(Context_::default())));
+        CONF.as_mut_ptr().write(Mutex::new(Box::new(PrivateContext::default())));
     });
 
     unsafe { &*CONF.as_ptr() }

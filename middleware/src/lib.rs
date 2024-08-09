@@ -128,7 +128,7 @@ mod tests {
             .filter_map(|(path, expect_error, source_part)| {
                 let src = source_part.to_string();
                 let result: Result<Unit, Vec<Diagnostic>> = match parse(&source_part, 0) {
-                    Ok((unit, comments)) => {
+                    Ok((unit, _comments)) => {
                         match crate::parse(unit) {
                             Ok(result) => Ok(result),
                             Err(err) => Err(err),

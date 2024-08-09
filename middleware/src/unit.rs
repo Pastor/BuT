@@ -17,12 +17,8 @@ pub struct Variable {}
 
 pub struct Struct {}
 
-trait Context<'a> {
-    fn variable(&'a self, name: &'a str) -> Option<&'a Variable>;
-}
-
 pub struct Unit {
-    unit: Option<Arc<RefCell<Unit>>>,
+    parent: Option<Arc<RefCell<Unit>>>,
     models: HashMap<String, Model>,
     functions: HashMap<String, Function>,
     enums: HashMap<String, Enum>,
@@ -39,7 +35,7 @@ impl Unit {
 
     fn with_unit(unit: Option<Arc<RefCell<Unit>>>) -> Unit {
         Unit {
-            unit: unit.clone(),
+            parent: unit.clone(),
             models: HashMap::new(),
             functions: HashMap::new(),
             enums: HashMap::new(),
@@ -52,7 +48,7 @@ impl Unit {
     
     pub(crate) fn new() -> Self {
         Self {
-            unit: None,
+            parent: None,
             models: Default::default(),
             functions: Default::default(),
             enums: Default::default(),
@@ -80,24 +76,6 @@ impl Model {
         Model {
             unit: unit.clone()
         }
-    }
-}
-
-impl<'a> Context<'a> for Unit {
-    fn variable(&'a self, name: &'a str) -> Option<&'a Variable> {
-        let v = self.variables.get(name);
-        if v.is_some() {
-            return v;
-        }
-        None
-        //self.unit.as_ref().and_then(|ctx| ctx.as_ref().borrow().variable(name))
-    }
-}
-
-impl<'a> Context<'a> for Model {
-    fn variable(&'a self, name: &'a str) -> Option<&'a Variable> {
-        //self.unit.as_ref().borrow().variable(name)
-        None
     }
 }
 
