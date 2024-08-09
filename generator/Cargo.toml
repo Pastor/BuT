@@ -1,0 +1,16 @@
+[package]
+name = "but-generator"
+version = "0.0.1"
+authors = ["Pastor <viruszold@gmail.com>"]
+description = "BuT generator"
+homepage = "https://but.ru"
+repository = "https://github.com/Pastor/BuT"
+readme = "../README.adoc"
+keywords = ["BuT", "generator"]
+license = "BSD"
+edition = "2021"
+rust-version = "1.71.0"
+include = ["Cargo.toml", "src/**/*"]
+
+[dependencies]
+but-middleware = { path = "../middleware" }
