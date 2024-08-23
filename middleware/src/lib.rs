@@ -7,6 +7,7 @@ use crate::unit::Unit;
 mod tree;
 mod unit;
 mod context;
+mod unit2;
 
 pub fn parse(unit: SourceUnit) -> Result<Unit, Vec<Diagnostic>> {
     let mut global_enums = vec![];
