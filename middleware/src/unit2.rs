@@ -10,15 +10,16 @@ pub trait Hierarchical: Debug {
     where
         Self: Sized;
     fn create(&self, state: Self::State) -> Box<dyn Hierarchical<State=Self::State>>;
-    fn update_mut(&mut self, cb: Box<dyn FnMut(Self::State) -> Self::State>);
+    fn update(&mut self, cb: Box<dyn FnMut(Self::State) -> Self::State>);
     fn size(&self) -> usize;
     fn print(&self);
-    fn visit(&self, visitor: &mut dyn Visitor<State=Self::State>);
+    fn visit(&self, pad: usize, visitor: &mut dyn Visitor<State=Self::State>);
 }
 
 pub trait Visitor {
     type State: Sized + Debug;
-    fn visit(&mut self, state: Self::State);
+    fn visit_data(&mut self, pad: usize, state: Self::State);
+    fn visit_child(&mut self, pad: usize, child: Box<dyn Hierarchical<State=Self::State>>);
 }
 
 pub fn default<T: Sized>() -> Box<dyn Hierarchical<State=()>> {
@@ -94,8 +95,13 @@ impl Debug for HierarchicalWrapper {
 impl Visitor for Stdout {
     type State = ();
 
-    fn visit(&mut self, state: Self::State) {
-        let _ = self.write_fmt(format_args!("{:?}\n", state));
+    fn visit_data(&mut self, pad: usize, state: Self::State) {
+        let _ = self.write_fmt(format_args!("{:pad$}{:?}\n", ' ', state, pad = pad));
+    }
+
+    fn visit_child(&mut self, pad: usize, child: Box<dyn Hierarchical<State=Self::State>>) {
+        // let _ = self.write_fmt(format_args!("{:pad$}{:?}\n", ' ', child, pad = pad));
+        child.visit(pad + 1, self)
     }
 }
 
@@ -113,7 +119,7 @@ impl Hierarchical for HierarchicalWrapper {
         Box::new(HierarchicalWrapper::from(&add))
     }
 
-    fn update_mut(&mut self, mut cb: Box<dyn FnMut(Self::State) -> Self::State>) {
+    fn update(&mut self, mut cb: Box<dyn FnMut(Self::State) -> Self::State>) {
         let binding = self.inner.borrow_mut();
         let mut data = binding.data.lock().unwrap();
         let ret = cb(*data);
@@ -125,17 +131,16 @@ impl Hierarchical for HierarchicalWrapper {
     }
 
     fn print(&self) {
-        self.visit(&mut std::io::stdout() as &mut dyn Visitor<State=()>);
+        self.visit(0usize, &mut std::io::stdout() as &mut dyn Visitor<State=()>);
     }
 
-    fn visit(&self, visitor: &mut dyn Visitor<State=()>) {
+    fn visit(&self, pad: usize, visitor: &mut dyn Visitor<State=()>) {
         let binding = self.inner.borrow();
         let state = binding.data.lock().unwrap();
-        visitor.visit(*state);
-        // self.inner.borrow().children.iter().for_each(|mut unit| {
-        //     let h = &mut HierarchicalImpl::from(unit);
-        //     visitor.visit(h as &dyn Hierarchical);
-        // })
+        visitor.visit_data(pad, *state);
+        self.inner.borrow().children.iter().for_each(|mut child| {
+            visitor.visit_child(pad + 1, Box::new(HierarchicalWrapper::from(&child)));
+        })
     }
 }
 
@@ -155,8 +160,7 @@ mod tests {
         assert_eq!(child.size(), 0);
         let child = unit.create(());
         assert_eq!(child.size(), 0);
-        unit.print();
-        unit.update_mut(Box::new(move |state| {
+        unit.update(Box::new(move |state| {
             state
         }));
         unit.print();
