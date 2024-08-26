@@ -2,50 +2,54 @@ use std::cell::RefCell;
 use std::fmt::{Debug, Formatter};
 use std::io::{Stdout, Write};
 use std::ops::Deref;
+use std::rc::Rc;
 
 pub trait Hierarchical: Debug {
+    type State: Sized;
     fn new() -> Self
     where
         Self: Sized;
-    fn add_children(&self) -> Box<dyn Hierarchical>;
+    fn create(&self, state: Self::State) -> Box<dyn Hierarchical<State=Self::State>>;
+    fn update_mut(&mut self, cb: Box<dyn FnMut(Self::State) -> Self::State>);
     fn size(&self) -> usize;
     fn print(&self);
-    fn visit(&self, visitor: &mut dyn Visitor);
+    fn visit(&self, visitor: &mut dyn Visitor<State=Self::State>);
 }
 
 pub trait Visitor {
-    fn visit(&mut self, unit: &dyn Hierarchical);
+    type State: Sized + Debug;
+    fn visit(&mut self, state: Self::State);
 }
 
-pub fn default() -> Box<dyn Hierarchical> {
-    let unit = <HierarchicalImpl as Hierarchical>::new();
+pub fn default<T: Sized>() -> Box<dyn Hierarchical<State=()>> {
+    let unit = <HierarchicalWrapper as Hierarchical>::new();
     Box::new(unit)
 }
 
 mod private {
     use std::cell::RefCell;
     use std::fmt::{Debug, Formatter, Write};
-    use std::rc::{Rc, Weak};
+    use std::rc::Rc;
+    use std::sync::Mutex;
 
-    #[derive(Clone)]
     pub(crate) struct HierarchicalPrivate {
-        parent: Option<Weak<RefCell<HierarchicalPrivate>>>,
+        parent: Option<*mut HierarchicalPrivate>,
         pub children: Vec<Rc<RefCell<HierarchicalPrivate>>>,
+        pub data: Mutex<()>,
     }
 
     impl HierarchicalPrivate {
-        pub fn new() -> Self {
+        pub fn new(data: ()) -> Self {
             Self {
                 parent: None,
                 children: vec![],
+                data: Mutex::new(data),
             }
         }
-        pub fn add(unit: &RefCell<HierarchicalPrivate>) -> Rc<RefCell<HierarchicalPrivate>> {
-            let child = Rc::new(RefCell::new(HierarchicalPrivate::new()));
+        pub fn add(unit: &RefCell<HierarchicalPrivate>, data: ()) -> Rc<RefCell<HierarchicalPrivate>> {
+            let child = Rc::new(RefCell::new(HierarchicalPrivate::new(data)));
             unit.borrow_mut().children.push(Rc::clone(&child));
-            let parent: Weak<RefCell<HierarchicalPrivate>> = Weak::new();
-            parent.upgrade().replace(Rc::new(RefCell::clone(&unit)));
-            child.borrow_mut().parent = Some(parent);
+            child.borrow_mut().parent = Some(unit.as_ptr());
             child
         }
     }
@@ -69,40 +73,51 @@ mod private {
     }
 }
 
-struct HierarchicalImpl {
-    inner: RefCell<private::HierarchicalPrivate>,
+struct HierarchicalWrapper {
+    inner: Rc<RefCell<private::HierarchicalPrivate>>,
 }
 
-impl HierarchicalImpl {
-    fn from(data: &RefCell<private::HierarchicalPrivate>) -> Self {
+impl HierarchicalWrapper {
+    fn from(data: &Rc<RefCell<private::HierarchicalPrivate>>) -> Self {
         Self {
-            inner: RefCell::clone(&data),
+            inner: Rc::clone(&data),
         }
     }
 }
 
-impl Debug for HierarchicalImpl {
+impl Debug for HierarchicalWrapper {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{:?}", &self.inner.borrow()))
     }
 }
 
 impl Visitor for Stdout {
-    fn visit(&mut self, unit: &dyn Hierarchical) {
-        let _ = self.write_fmt(format_args!("{:?}\n", unit));
+    type State = ();
+
+    fn visit(&mut self, state: Self::State) {
+        let _ = self.write_fmt(format_args!("{:?}\n", state));
     }
 }
 
-impl Hierarchical for HierarchicalImpl {
+impl Hierarchical for HierarchicalWrapper {
+    type State = ();
+
     fn new() -> Self {
         Self {
-            inner: RefCell::new(private::HierarchicalPrivate::new())
+            inner: Rc::new(RefCell::new(private::HierarchicalPrivate::new(())))
         }
     }
 
-    fn add_children(&self) -> Box<dyn Hierarchical> {
-        let add = private::HierarchicalPrivate::add(&self.inner);
-        Box::new(HierarchicalImpl::from(add.as_ref()))
+    fn create(&self, state: Self::State) -> Box<dyn Hierarchical<State=()>> {
+        let add = private::HierarchicalPrivate::add(&self.inner, state);
+        Box::new(HierarchicalWrapper::from(&add))
+    }
+
+    fn update_mut(&mut self, mut cb: Box<dyn FnMut(Self::State) -> Self::State>) {
+        let binding = self.inner.borrow_mut();
+        let mut data = binding.data.lock().unwrap();
+        let ret = cb(*data);
+        *data = ret
     }
 
     fn size(&self) -> usize {
@@ -110,11 +125,13 @@ impl Hierarchical for HierarchicalImpl {
     }
 
     fn print(&self) {
-        self.visit(&mut std::io::stdout() as &mut dyn Visitor);
+        self.visit(&mut std::io::stdout() as &mut dyn Visitor<State=()>);
     }
 
-    fn visit(&self, visitor: &mut dyn Visitor) {
-        visitor.visit(self);
+    fn visit(&self, visitor: &mut dyn Visitor<State=()>) {
+        let binding = self.inner.borrow();
+        let state = binding.data.lock().unwrap();
+        visitor.visit(*state);
         // self.inner.borrow().children.iter().for_each(|mut unit| {
         //     let h = &mut HierarchicalImpl::from(unit);
         //     visitor.visit(h as &dyn Hierarchical);
@@ -128,16 +145,20 @@ mod tests {
 
     #[test]
     fn it_unit() {
-        let unit = default();
-        let child = unit.add_children();
+        let mut unit = default::<()>();
+        let child = unit.create(());
         assert_eq!(unit.size(), 1);
         assert_eq!(child.size(), 0);
-        let child = child.add_children();
+        let child = child.create(());
         assert_eq!(child.size(), 0);
-        let child = unit.add_children();
+        let child = unit.create(());
         assert_eq!(child.size(), 0);
-        let child = unit.add_children();
+        let child = unit.create(());
         assert_eq!(child.size(), 0);
+        unit.print();
+        unit.update_mut(Box::new(move |state| {
+            state
+        }));
         unit.print();
     }
 }
