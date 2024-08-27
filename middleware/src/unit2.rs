@@ -4,7 +4,7 @@ use std::io::{Stdout, Write};
 use std::ops::Deref;
 use std::rc::Rc;
 
-type Data = ();
+type Data = (u8);
 
 pub trait Unit: Debug {
     type State: Sized + Default;
@@ -25,7 +25,7 @@ pub trait Visitor {
 }
 
 pub fn default<T: Sized>() -> Box<dyn Unit<State=Data>> {
-    let unit = <UnitWrap as Unit>::new();
+    let unit = <UnitImpl as Unit>::new();
     Box::new(unit)
 }
 
@@ -77,11 +77,11 @@ mod private {
     }
 }
 
-struct UnitWrap {
+struct UnitImpl {
     inner: Rc<RefCell<private::UnitPrivate>>,
 }
 
-impl UnitWrap {
+impl UnitImpl {
     fn from(data: &Rc<RefCell<private::UnitPrivate>>) -> Self {
         Self {
             inner: Rc::clone(&data),
@@ -89,7 +89,7 @@ impl UnitWrap {
     }
 }
 
-impl Debug for UnitWrap {
+impl Debug for UnitImpl {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{:?}", &self.inner.borrow()))
     }
@@ -108,7 +108,7 @@ impl Visitor for Stdout {
     }
 }
 
-impl Unit for UnitWrap {
+impl Unit for UnitImpl {
     type State = Data;
 
     fn new() -> Self {
@@ -119,7 +119,7 @@ impl Unit for UnitWrap {
 
     fn create(&self, state: Self::State) -> Box<dyn Unit<State=Data>> {
         let add = private::UnitPrivate::add(&self.inner, state);
-        Box::new(UnitWrap::from(&add))
+        Box::new(UnitImpl::from(&add))
     }
 
     fn update(&mut self, mut update: Box<dyn FnMut(Self::State) -> Self::State>) {
@@ -142,7 +142,7 @@ impl Unit for UnitWrap {
         let state = binding.data.lock().unwrap();
         visitor.visit_data(pad, *state);
         self.inner.borrow().children.iter().for_each(|mut child| {
-            visitor.visit_unit(pad + 1, Box::new(UnitWrap::from(&child)));
+            visitor.visit_unit(pad + 1, Box::new(UnitImpl::from(&child)));
         })
     }
 }
@@ -154,16 +154,16 @@ mod tests {
     #[test]
     fn it_unit() {
         let mut unit = default::<Data>();
-        let child = unit.create(());
+        let child = unit.create((1));
         assert_eq!(unit.size(), 1);
         assert_eq!(child.size(), 0);
-        let child = child.create(());
+        let child = child.create((2));
         assert_eq!(child.size(), 0);
-        let child = unit.create(());
+        let child = unit.create((3));
         assert_eq!(child.size(), 0);
-        let child = unit.create(());
+        let child = unit.create((4));
         assert_eq!(child.size(), 0);
-        unit.update(Box::new(|state| { state }));
+        unit.update(Box::new(|state| { (state + 10) }));
         unit.print();
     }
 }
