@@ -8,12 +8,22 @@ use std::rc::Rc;
 
 const PADDING: usize = 2usize;
 
+#[derive(Default, Debug, Eq, PartialEq, PartialOrd, Clone, Ord)]
+enum Address {
+    #[default]
+    None,
+    InPlace,
+    Direct(u64),
+    Offset(u64, u8),
+}
+
 #[derive(Default, Debug, Clone)]
 pub struct UnitState {
     variables: HashMap<String, Variable>,
 }
 
 type Data = UnitState;
+type DataBitSlice = Vec<bool>;
 
 pub trait VariablesUnit {
     fn get_variable(&self, key: &str) -> Option<Variable>;
@@ -44,6 +54,7 @@ pub fn default<T: Sized>() -> Box<dyn Unit<State=Data>> {
 }
 
 mod variables {
+    use crate::unit2::{Address, DataBitSlice};
     use std::ops::Add;
 
     #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Default)]
@@ -53,6 +64,12 @@ mod variables {
         String(String),
         Number(i64),
         Boolean(bool),
+        Bit(bool),
+        BitSlice(DataBitSlice),
+        Address {
+            address: Address,
+            data: DataBitSlice,
+        },
     }
 
     impl Variable {
@@ -62,6 +79,7 @@ mod variables {
                 Variable::String(_) => "str",
                 Variable::Number(_) => "num",
                 Variable::Boolean(_) => "bool",
+                _ => "not_implement"
             }
         }
     }
@@ -72,6 +90,7 @@ mod variables {
         fn add(self, rhs: Self) -> Self::Output {
             match (rhs, self) {
                 (Variable::Number(n), Variable::Number(v)) => Variable::Number(n + v),
+                (Variable::String(n), Variable::String(v)) => Variable::String(n + v.as_str()),
                 (_, v) => v
             }
         }

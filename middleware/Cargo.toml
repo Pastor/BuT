@@ -14,7 +14,9 @@ include = ["Cargo.toml", "src/**/*"]
 
 [dependencies]
 but-grammar = { path = "../grammar/but" }
+bit-vec = "^0.8.0"
+bit-set = "^0.8.0"
 
 [dev-dependencies]
-walkdir = "^2.4.0"
+walkdir = "^2.5.0"
 regex = "^1"
