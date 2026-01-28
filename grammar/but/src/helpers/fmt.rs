@@ -520,7 +520,7 @@ impl Display for Condition {
                 Display::fmt(rcnd, f)
             }
             Self::NumberLiteral(_, n) => Display::fmt(n, f),
-            Self::RationalNumberLiteral(_, n, b) => Display::fmt(n, f),
+            Self::RationalNumberLiteral(_, n, _) => Display::fmt(n, f),
             Self::HexNumberLiteral(_, b, id) => Display::fmt(b, f),
             Self::StringLiteral(vals) => write_separated(vals, f, " "),
             Self::HexLiteral(vals) => write_separated(vals, f, " "),

@@ -43,6 +43,9 @@
         FORMULA     = "formula"
         REF         = "ref"
         IS          = "is"
+        INTERFACE   = "interface"
+        LIBRARY     = "library"
+        EMIT        = "emit"
 
         // Operators
         ARROW       = "->"
@@ -69,7 +72,9 @@
         OR          = "||"
         AND         = "&&"
         BITOR       = "|"
+        BITXOR      = "^"
         BITAND      = "&"
+        BITNOT      = "~"
         SHL         = "<<"
         SHR         = ">>"
         PLUS        = "+"
@@ -86,6 +91,7 @@
         DIV_ASSIGN  = "/="
         MOD_ASSIGN  = "%="
         OR_ASSIGN   = "|="
+        XOR_ASSIGN  = "^="
         AND_ASSIGN  = "&="
         SHL_ASSIGN  = "<<="
         SHR_ASSIGN  = ">>="
@@ -110,8 +116,8 @@ ImportPath ::= STRING | ButIdentifierPath
 
 ImportDirective ::= IMPORT ImportPath SEMICOLON
                   | IMPORT ImportPath AS ButIdentifier SEMICOLON
-                  | IMPORT MUL AS ButIdentifier ID ImportPath SEMICOLON
-                  | IMPORT LBRACE ImportRenameList RBRACE ID ImportPath SEMICOLON
+                  | IMPORT MUL AS ButIdentifier ButIdentifier ImportPath SEMICOLON
+                  | IMPORT LBRACE ImportRenameList RBRACE ButIdentifier ImportPath SEMICOLON
 
 private ImportRenameList ::= ImportRename (COMMA ImportRename)*
 
@@ -257,7 +263,7 @@ Member ::= Identifier | NUMBER
 Expression ::= Precedence14
 
 private Precedence14 ::= Precedence13 (AssignOp Precedence14)?
-private AssignOp ::= ASSIGN | OR_ASSIGN | AND_ASSIGN | SHL_ASSIGN | SHR_ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | DIV_ASSIGN | MOD_ASSIGN
+private AssignOp ::= ASSIGN | OR_ASSIGN | XOR_ASSIGN | AND_ASSIGN | SHL_ASSIGN | SHR_ASSIGN | ADD_ASSIGN | SUB_ASSIGN | MUL_ASSIGN | DIV_ASSIGN | MOD_ASSIGN
 
 private Precedence13 ::= Precedence13 OR Precedence12
              | Precedence12
@@ -271,7 +277,10 @@ private Precedence11 ::= Precedence11 (EQ | NEQ) Precedence10
 private Precedence10 ::= Precedence10 (LT | GT | LTE | GTE) Precedence9
              | Precedence9
 
-private Precedence9 ::= Precedence9 BITOR Precedence7
+private Precedence9 ::= Precedence9 BITOR Precedence8
+             | Precedence8
+
+private Precedence8 ::= Precedence8 BITXOR Precedence7
              | Precedence7
 
 private Precedence7 ::= Precedence7 BITAND Precedence6
@@ -291,6 +300,7 @@ private Precedence3 ::= Precedence2 POW Precedence3
              | Precedence2
 
 private Precedence2 ::= BANG Precedence2
+             | BITNOT Precedence2
              | INC Precedence2
              | DEC Precedence2
              | PLUS Precedence2
@@ -308,7 +318,10 @@ private ExpressionOneList ::= Expression (COMMA Expression)*
 
 private Precedence0 ::= Identifier
              | FunctionCall
-             | ParameterList
+             | LPAREN Expression RPAREN
+             | LPAREN Expression (COMMA Expression)+ RPAREN
+             | LPAREN Parameter RPAREN
+             | LPAREN ParameterTwoList RPAREN
              | Precedence0 INC
              | Precedence0 DEC
              | Precedence0 DOT Member
@@ -316,8 +329,8 @@ private Precedence0 ::= Identifier
              | Identifier LBRACKET NUMBER? COLON NUMBER? RBRACKET
              | LiteralExpression
 
-Parameter ::= ParameterAnnotation? ButIdentifier COLON Precedence9
-            | ParameterAnnotation? Precedence9
+Parameter ::= ParameterAnnotation? ButIdentifier COLON Expression
+            | ParameterAnnotation? Expression
 
 private OptParameter ::= Parameter?
 

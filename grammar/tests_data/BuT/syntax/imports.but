@@ -1,0 +1,4 @@
+import "std";
+import "foo/bar" as fb;
+import * as base from "lib";
+import { a, b as c } from "utils";

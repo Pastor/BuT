@@ -55,10 +55,13 @@ pub enum Token<'input> {
 
     BitwiseOr,
     BitwiseOrAssign,
+    BitwiseXor,
+    BitwiseXorAssign,
     Or,
 
     BitwiseAnd,
     BitwiseAndAssign,
+    BitwiseNot,
     And,
 
     AddAssign,
@@ -154,9 +157,12 @@ impl<'input> fmt::Display for Token<'input> {
             Token::CloseCurlyBrace => write!(f, "}}"),
             Token::BitwiseOr => write!(f, "|"),
             Token::BitwiseOrAssign => write!(f, "|="),
+            Token::BitwiseXor => write!(f, "^"),
+            Token::BitwiseXorAssign => write!(f, "^="),
             Token::Or => write!(f, "||"),
             Token::BitwiseAnd => write!(f, "&"),
             Token::BitwiseAndAssign => write!(f, "&="),
+            Token::BitwiseNot => write!(f, "~"),
             Token::And => write!(f, "&&"),
             Token::AddAssign => write!(f, "+="),
             Token::Increment => write!(f, "++"),
@@ -790,6 +796,15 @@ impl<'input> Lexer<'input> {
                         _ => Some((i, Token::BitwiseOr, i + 1)),
                     };
                 }
+                Some((i, '^')) => {
+                    return match self.chars.peek() {
+                        Some((_, '=')) => {
+                            self.chars.next();
+                            Some((i, Token::BitwiseXorAssign, i + 2))
+                        }
+                        _ => Some((i, Token::BitwiseXor, i + 1)),
+                    };
+                }
                 Some((i, '&')) => {
                     return match self.chars.peek() {
                         Some((_, '=')) => {
@@ -913,6 +928,7 @@ impl<'input> Lexer<'input> {
                 Some((i, '[')) => return Some((i, Token::OpenBracket, i + 1)),
                 Some((i, ']')) => return Some((i, Token::CloseBracket, i + 1)),
                 Some((i, ':')) => return Some((i, Token::Colon, i + 1)),
+                Some((i, '~')) => return Some((i, Token::BitwiseNot, i + 1)),
                 Some((_, ch)) if ch.is_whitespace() => (),
                 Some((start, _)) => {
                     let mut end;
@@ -1067,7 +1083,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .collect::<Vec<_>>();
+        .collect::<Vec<_>>();
 
         assert_eq!(tokens, vec!((0, Token::HexLiteral("hex\"cafe_dead\""), 14)));
 
@@ -1113,7 +1129,7 @@ mod tests {
 
         let tokens = Lexer::new("-4 ", 0, &mut comments, &mut errors).collect::<Vec<_>>();
 
-        assert_eq!(tokens, vec!((1, Token::Number(-4i64), 2), ));
+        assert_eq!(tokens, vec!((1, Token::Number(-4i64), 2),));
 
         let mut errors = Vec::new();
         let _ = Lexer::new(r#"hex"abcdefg""#, 0, &mut comments, &mut errors).collect::<Vec<_>>();
@@ -1202,7 +1218,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .count();
+        .count();
 
         assert_eq!(tokens, 0);
         assert_eq!(
@@ -1234,7 +1250,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .collect::<Vec<_>>();
+        .collect::<Vec<_>>();
 
         assert_eq!(
             tokens,
@@ -1341,7 +1357,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .count();
+        .count();
 
         assert_eq!(tokens, 0);
         assert_eq!(
@@ -1373,7 +1389,7 @@ mod tests {
             &mut comments,
             &mut errors,
         )
-            .collect::<Vec<(usize, Token, usize)>>();
+        .collect::<Vec<(usize, Token, usize)>>();
 
         assert_eq!(
             tokens,
@@ -1449,7 +1465,7 @@ mod tests {
             vec!(LexicalError::InvalidCharacterInHexLiteral(
                 Loc::Source(0, 4, 5),
                 'g',
-            ), )
+            ),)
         );
 
         let mut errors = Vec::new();

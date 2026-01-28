@@ -1,0 +1,83 @@
+// Stray semicolon
+;
+
+// Multidimensional arrays
+type matrix = [3: [3: u8]];
+let m: matrix = {{1,2,3}, {4,5,6}, {7,8,9}};
+
+// Array slices
+fn slices() {
+    let a: [10: bit];
+    let b: [4: bit] = a[1:5];
+    let c: [5: bit] = a[:5];
+    let d: [5: bit] = a[5:];
+    let e: [10: bit] = a[:];
+}
+
+// State references with conditions
+model StateMachine {
+    state Start {
+        ref End: timer > 10;
+        ref Self: true;
+    }
+    state End {}
+    timer: u32 = 0;
+}
+
+// Complex annotations
+#[foo(C), author("Junie"), version(1.0)]
+#[config(debug = true, optimize = false)]
+struct Config {
+    #[bitfield(size=8)]
+    data: u8;
+}
+
+// Complex statements and expressions
+fn all_ops(x: i32, y: i32) -> i32 {
+    let mut res: i32 = x;
+    res += y;
+    res -= y;
+    res *= y;
+    res /= y;
+    res %= y;
+    res |= y;
+    res ^= y;
+    res &= y;
+    res <<= 1;
+    res >>= 1;
+
+    if (res == 0 || res != 1 && res < 10 || res > 0 && res <= 100 || res >= 5) {
+        res = res | 1 ^ 2 & 3;
+    }
+
+    let b: bool = !true;
+    let n: i32 = ~res;
+    let r: i32 = -res + (+res);
+    res++;
+    res--;
+    ++res;
+    --res;
+
+    let p: i32 = 2 ** 8;
+    let c: i32 = res as i32;
+
+    do {
+        res--;
+        if (res < 0) { continue; }
+        break;
+    } while (res > 0);
+
+    assembly "evm" {
+        pop(0);
+    }
+
+    return res;
+}
+
+// More imports
+import { foo as bar, baz } from "utils";
+
+// Formula with dialect
+formula "CTL" {
+    AG(EF(start))
+}

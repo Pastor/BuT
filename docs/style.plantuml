@@ -1,6 +1,7 @@
 @startmindmap
 <style>
 mindmapDiagram {
+    FontName Fira Code
     node {
         BackgroundColor lightGreen
     }

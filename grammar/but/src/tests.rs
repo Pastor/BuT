@@ -42,7 +42,7 @@ fn parser_error_recovery() {
                     loc: Source(0, 56, 58),
                     level: Error,
                     ty: ParserError,
-                    message: "unrecognised token 'if', expected \"#\", \"const\", \"external\", \"let\", \"mut\", \"port\", \"private\", \"}\", identifier".to_string(),
+                    message: "unrecognised token 'if', expected identifier, \"#\", \"}\", \"const\", \"let\", \"mut\", \"port\", \"external\", \"private\"".to_string(),
                     notes: vec![],
                 },
             ]
@@ -388,8 +388,7 @@ fn test_lib_but() {
                                 let mut start_line = loc.start();
                                 let mut end_line = loc.end();
                                 'position: loop {
-                                    if start_line <= 0 {
-                                        start_line = 0;
+                                    if start_line == 0 {
                                         break;
                                     }
                                     if end_line >= src.len() {

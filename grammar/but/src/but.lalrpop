@@ -367,6 +367,7 @@ Precedence14: Expression = {
     <a:@L> <l:Precedence13> "=" <r:Precedence14> <b:@R> => Expression::Assign(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
     <a:@L> <l:Precedence13> "|=" <r:Precedence14> <b:@R> => Expression::AssignOr(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
     <a:@L> <l:Precedence13> "&=" <r:Precedence14> <b:@R> => Expression::AssignAnd(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence13> "^=" <r:Precedence14> <b:@R> => Expression::AssignXor(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
     <a:@L> <l:Precedence13> "<<=" <r:Precedence14> <b:@R> => Expression::AssignShiftLeft(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
     <a:@L> <l:Precedence13> ">>=" <r:Precedence14> <b:@R> => Expression::AssignShiftRight(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
     <a:@L> <l:Precedence13> "+=" <r:Precedence14> <b:@R> => Expression::AssignAdd(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
@@ -402,7 +403,12 @@ Precedence10: Expression = {
 }
 
 Precedence9: Expression = {
-    <a:@L> <l:Precedence9> "|" <r:Precedence7> <b:@R> => Expression::BitwiseOr(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Precedence9> "|" <r:Precedence8> <b:@R> => Expression::BitwiseOr(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    Precedence8,
+}
+
+Precedence8: Expression = {
+    <a:@L> <l:Precedence8> "^" <r:Precedence7> <b:@R> => Expression::BitwiseXor(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
     Precedence7,
 }
 
@@ -438,6 +444,7 @@ Precedence3: Expression = {
 
 Precedence2: Expression = {
     <a:@L> "!" <e:Precedence2> <b:@R> => Expression::Not(Loc::Source(file_no, a, b), Box::new(e)),
+    <a:@L> "~" <e:Precedence2> <b:@R> => Expression::BitwiseNot(Loc::Source(file_no, a, b), Box::new(e)),
     <a:@L> "++" <e:Precedence2> <b:@R> => Expression::PreIncrement(Loc::Source(file_no, a, b), Box::new(e)),
     <a:@L> "--" <e:Precedence2> <b:@R> => Expression::PreDecrement(Loc::Source(file_no, a, b), Box::new(e)),
     <a:@L> "+" <e:Precedence2> <b:@R>  => Expression::UnaryPlus(Loc::Source(file_no, a, b), Box::new(e)),
@@ -486,11 +493,11 @@ Precedence0: Expression = {
 }
 
 Parameter: Parameter = {
-    <l:@L> <annotation:ParameterAnnotation?> <name:ButIdentifier> ":" <ty:Precedence9> <r:@R> => {
+    <l:@L> <annotation:ParameterAnnotation?> <name:ButIdentifier> ":" <ty:Expression> <r:@R> => {
         let loc = Loc::Source(file_no, l, r);
         Parameter{loc, annotation, ty, storage: None, name: Some(name)}
     },
-    <l:@L> <annotation:ParameterAnnotation?> <ty:Precedence9> <r:@R> => {
+    <l:@L> <annotation:ParameterAnnotation?> <ty:Expression> <r:@R> => {
         let loc = Loc::Source(file_no, l, r);
         Parameter{loc, annotation, ty: ty, storage: None, name: None}
     }
@@ -729,6 +736,7 @@ extern {
         "=" => Token::Assign,
         "==" => Token::Equal,
         "|=" => Token::BitwiseOrAssign,
+        "^=" => Token::BitwiseXorAssign,
         "&=" => Token::BitwiseAndAssign,
         "<<=" => Token::ShiftLeftAssign,
         ">>=" => Token::ShiftRightAssign,
@@ -745,6 +753,7 @@ extern {
         ">" => Token::More,
         ">=" => Token::MoreEqual,
         "|" => Token::BitwiseOr,
+        "^" => Token::BitwiseXor,
         "&" => Token::BitwiseAnd,
         "<<" => Token::ShiftLeft,
         ">>" => Token::ShiftRight,
@@ -755,6 +764,7 @@ extern {
         "%" => Token::Modulo,
         "**" => Token::Power,
         "!" => Token::Not,
+        "~" => Token::BitwiseNot,
         "++" => Token::Increment,
         "--" => Token::Decrement,
         "[" => Token::OpenBracket,

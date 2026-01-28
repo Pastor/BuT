@@ -7,12 +7,14 @@ pub struct BitSlice {
 
 impl BitSlice {
     pub fn new() -> Self {
-        Self { inner: BitVec::new() }
+        Self {
+            inner: BitVec::new(),
+        }
     }
 
     fn from_elem(n: usize, bit: bool) -> Self {
         Self {
-            inner: BitVec::from_elem(n, bit)
+            inner: BitVec::from_elem(n, bit),
         }
     }
 
@@ -48,7 +50,7 @@ mod tests {
         let mut set = bits.create_set();
         set.get_mut().set(0, false);
         assert_eq!(false, set.contains(0));
-        let n = u128::from_be_bytes(bytes.as_slice().try_into().unwrap());
+        let n = u128::from_be_bytes(bytes.as_slice()[0..16].try_into().unwrap());
         assert_ne!(n, 0);
     }
 }

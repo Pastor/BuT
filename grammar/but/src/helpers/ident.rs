@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display, Formatter, Pointer, Write};
+use std::fmt::{Display, Formatter, Write};
 
 use crate::ast::{
     Annotation, AnnotationDefinition, FunctionDefinition, IdentifierPath, ModelDefinition,
