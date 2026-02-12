@@ -32,7 +32,7 @@ impl DisplayIdent for SourceUnit {
     fn ident(&self, ident: usize, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str("SourceUnit (")?;
         let parts = &self.0;
-        if parts.len() > 0 {
+        if !parts.is_empty() {
             f.write_str("\n")?;
         }
         for part in parts.iter() {
@@ -48,7 +48,7 @@ impl DisplayIdent for SourceUnitPart {
     fn ident(&self, ident: usize, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             SourceUnitPart::ImportDirective(_) => {}
-            SourceUnitPart::EnumDefinition(e) => {}
+            SourceUnitPart::EnumDefinition(_e) => {}
             SourceUnitPart::StructDefinition(_) => {}
             SourceUnitPart::ErrorDefinition(_) => {}
             SourceUnitPart::FunctionDefinition(function) => function.ident(ident, f)?,
@@ -116,15 +116,15 @@ impl DisplayIdent for AnnotationDefinition {
         let new_ident = ident * 2;
         f.write_str("AnnotationDefinition (\n")?;
         lpad(new_ident, f)?;
-        write!(f, "global: {},\n", self.glob.to_string())?;
+        writeln!(f, "global: {},", self.glob)?;
         lpad(new_ident, f)?;
-        write!(f, "arguments: [\n")?;
+        writeln!(f, "arguments: [")?;
         for annotation in self.args.iter() {
             annotation.ident(new_ident + ident, f)?;
             f.write_str(", \n")?;
         }
         lpad(new_ident, f)?;
-        write!(f, "]\n")?;
+        writeln!(f, "]")?;
         lpad(ident, f)?;
         f.write_str(")")?;
         Ok(())
@@ -176,10 +176,10 @@ impl DisplayIdent for IdentifierPath {
         f.write_str("IdentifierPath (")?;
         let mut path = String::new();
         for id in self.identifiers.iter() {
-            if path.len() > 0 {
+            if !path.is_empty() {
                 path += "::";
             }
-            path += &*format!("{}", id.name);
+            path += &*id.name.to_string();
         }
         Display::fmt(&path, f)?;
         f.write_str(")")?;

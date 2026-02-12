@@ -1,4 +1,4 @@
-use crate::{Engine, PathDecorator};
+use crate::Engine;
 use std::cell::RefCell;
 
 #[derive(PartialEq, Debug, Copy, Clone)]
@@ -22,7 +22,7 @@ struct TableEngine {
 impl Default for TableEngine {
     fn default() -> Self {
         Self {
-            state: RefCell::new(State::One)
+            state: RefCell::new(State::One),
         }
     }
 }
@@ -48,7 +48,7 @@ impl Engine for TableEngine {
             State::Two => (State::Two, Output(0)),
             State::Three => (State::Three, Output(0)),
             State::Four => (State::Four, Output(0)),
-            state => (state, Output(0))
+            state => (state, Output(0)),
         };
         self.state.replace(state);
         output
@@ -57,7 +57,8 @@ impl Engine for TableEngine {
 
 #[cfg(test)]
 mod test {
-    use super::{Engine, Input, Output, PathDecorator, State, TableEngine};
+    use super::{Engine, Input, Output, State, TableEngine};
+    use crate::PathDecorator;
 
     #[test]
     fn test_tick() {

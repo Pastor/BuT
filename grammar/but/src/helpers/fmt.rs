@@ -521,7 +521,7 @@ impl Display for Condition {
             }
             Self::NumberLiteral(_, n) => Display::fmt(n, f),
             Self::RationalNumberLiteral(_, n, _) => Display::fmt(n, f),
-            Self::HexNumberLiteral(_, b, id) => Display::fmt(b, f),
+            Self::HexNumberLiteral(_, b, _id) => Display::fmt(b, f),
             Self::StringLiteral(vals) => write_separated(vals, f, " "),
             Self::HexLiteral(vals) => write_separated(vals, f, " "),
             Self::BoolLiteral(_, b) => Display::fmt(b, f),
@@ -563,14 +563,14 @@ impl Display for Expression {
             }
 
             Self::MemberAccess(_, expr, ident) => {
-                Self::format_expr(f, &expr);
+                Self::format_expr(f, expr);
                 f.write_char('.')?;
                 std::fmt::Display::fmt(&ident, f)
             }
 
             Self::Parenthesis(_, expr) => {
                 f.write_char('(')?;
-                Self::format_expr(f, &expr);
+                Self::format_expr(f, expr);
                 f.write_char(')')
             }
             Self::List(_, list) => {

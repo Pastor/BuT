@@ -1,7 +1,7 @@
 mod bit;
 
 use bit::BitSlice;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Display, Formatter};
 
 #[derive(Default, Clone)]
 enum Address {
@@ -99,45 +99,45 @@ impl Variable {
     fn to_u8(&self) -> Result<u8, &str> {
         match self {
             Variable::None => Err("Can't convert to u8"),
-            Variable::Address(typ, address) => Err("Can't fetch u8 on address"),
-            Variable::Local(typ, data) => Ok(u8::from_be_bytes(data.bytes().as_slice().try_into().unwrap())),
-            Variable::Unassigned(typ) => Err("Variable not assignment")
+            Variable::Address(_typ, _address) => Err("Can't fetch u8 on address"),
+            Variable::Local(_typ, data) => Ok(u8::from_be_bytes(data.bytes().as_slice().try_into().unwrap())),
+            Variable::Unassigned(_typ) => Err("Variable not assignment")
         }
     }
 
     fn to_u16(&self) -> Result<u16, &str> {
         match self {
             Variable::None => Err("Can't convert to u16"),
-            Variable::Address(typ, address) => Err("Can't fetch u8 on address"),
-            Variable::Local(typ, data) => Ok(u16::from_be_bytes(data.bytes().as_slice().try_into().unwrap())),
-            Variable::Unassigned(typ) => Err("Variable not assignment")
+            Variable::Address(_typ, _address) => Err("Can't fetch u8 on address"),
+            Variable::Local(_typ, data) => Ok(u16::from_be_bytes(data.bytes().as_slice().try_into().unwrap())),
+            Variable::Unassigned(_typ) => Err("Variable not assignment")
         }
     }
 
     fn to_u32(&self) -> Result<u32, &str> {
         match self {
             Variable::None => Err("Can't convert to u32"),
-            Variable::Address(typ, address) => Err("Can't fetch u8 on address"),
-            Variable::Local(typ, data) => Ok(u32::from_be_bytes(data.bytes().as_slice().try_into().unwrap())),
-            Variable::Unassigned(typ) => Err("Variable not assignment")
+            Variable::Address(_typ, _address) => Err("Can't fetch u8 on address"),
+            Variable::Local(_typ, data) => Ok(u32::from_be_bytes(data.bytes().as_slice().try_into().unwrap())),
+            Variable::Unassigned(_typ) => Err("Variable not assignment")
         }
     }
 
     fn to_u64(&self) -> Result<u64, &str> {
         match self {
             Variable::None => Err("Can't convert to u64"),
-            Variable::Address(typ, address) => Err("Can't fetch u8 on address"),
-            Variable::Local(typ, data) => Ok(u64::from_be_bytes(data.bytes().as_slice().try_into().unwrap())),
-            Variable::Unassigned(typ) => Err("Variable not assignment")
+            Variable::Address(_typ, _address) => Err("Can't fetch u8 on address"),
+            Variable::Local(_typ, data) => Ok(u64::from_be_bytes(data.bytes().as_slice().try_into().unwrap())),
+            Variable::Unassigned(_typ) => Err("Variable not assignment")
         }
     }
 
     fn to_u128(&self) -> Result<u128, &str> {
         match self {
             Variable::None => Err("Can't convert to u128"),
-            Variable::Address(typ, address) => Err("Can't fetch u8 on address"),
-            Variable::Local(typ, data) => Ok(u128::from_be_bytes(data.bytes().as_slice().try_into().unwrap())),
-            Variable::Unassigned(typ) => Err("Variable not assignment")
+            Variable::Address(_typ, _address) => Err("Can't fetch u8 on address"),
+            Variable::Local(_typ, data) => Ok(u128::from_be_bytes(data.bytes().as_slice().try_into().unwrap())),
+            Variable::Unassigned(_typ) => Err("Variable not assignment")
         }
     }
 }

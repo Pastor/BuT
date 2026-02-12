@@ -1,6 +1,5 @@
 mod sample;
 
-
 trait Engine {
     type State: Clone + Copy + Sized;
     type Input: Clone + Copy + Sized;
@@ -15,11 +14,17 @@ trait EngineMatrix<Input: Copy, Output: Copy, State: Copy> {
     type NextStateFn: FnMut(Input, State) -> State;
     type NextOutputFn: FnMut(Input, State) -> Output;
     type TickOutputFn: FnMut(Input, State) -> Output;
-    fn register(&mut self, state: State, next: Self::NextPredicateFn, next_state: State, next_output: Output);
+    fn register(
+        &mut self,
+        state: State,
+        next: Self::NextPredicateFn,
+        next_state: State,
+        next_output: Output,
+    );
     fn next(&self, input: Input, state: State) -> (State, Output);
 }
 
-struct PathDecorator<T: Engine> {
+pub struct PathDecorator<T: Engine> {
     engine: T,
     paths: Vec<(T::State, T::Input, T::State, T::Output)>,
 }

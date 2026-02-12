@@ -59,9 +59,9 @@ impl Unit {
         }
     }
 
-    fn add_model(&mut self, md: ModelDefinition) {
+    fn add_model(&mut self, _md: ModelDefinition) {
         let rc = RefCell::new(&*self);
-        let unit = Arc::new(rc);
+        let _unit = Arc::new(rc);
         //let model = Model::new(unit);
         //self.models.insert(md.name.unwrap().name, model);
     }

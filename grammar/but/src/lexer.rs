@@ -279,7 +279,7 @@ pub enum LexicalError {
     EndOfFileInString(Loc),
 
     #[error("end of file found in hex literal string")]
-    EndofFileInHex(Loc),
+    EndOfFileInHex(Loc),
 
     #[error("missing number")]
     MissingNumber(Loc),
@@ -386,7 +386,7 @@ impl<'input> Lexer<'input> {
                         )));
                     }
                     None => {
-                        return Err(LexicalError::EndofFileInHex(Loc::Source(
+                        return Err(LexicalError::EndOfFileInHex(Loc::Source(
                             self.file_no,
                             start,
                             self.input.len(),
@@ -496,7 +496,7 @@ impl<'input> Lexer<'input> {
         let n = &self.input[start..=old_end];
         let _exp = &self.input[exp_start..=end];
 
-        let mut n = i64::from_str(&n).unwrap();
+        let mut n = i64::from_str(n).unwrap();
         if is_minus {
             n = -n;
         }
@@ -752,7 +752,7 @@ impl<'input> Lexer<'input> {
                     match parse_result {
                         Err(lex_err) => {
                             self.errors.push(lex_err.clone());
-                            if matches!(lex_err, LexicalError::EndofFileInHex(_)) {
+                            if matches!(lex_err, LexicalError::EndOfFileInHex(_)) {
                                 return None;
                             }
                         }

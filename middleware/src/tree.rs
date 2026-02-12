@@ -57,7 +57,7 @@ impl TreeDefinition {
     }
 
     pub(crate) fn build_tree(&self) -> Result<Unit, Vec<Diagnostic>> {
-        return Ok(Unit::new());
+        Ok(Unit::new())
     }
 }
 
@@ -78,7 +78,7 @@ where
             }
             Some(id) => {
                 if table.contains_key(&id.name) {
-                    let v: &Box<Definition> = table.get(&id.name).unwrap();
+                    let _v: &Box<Definition> = table.get(&id.name).unwrap();
                     diagnostics.push(Diagnostic::error(loc, format!("{} '{}' already defined", build_name, id.name)));
                 } else {
                     table.insert(id.name, fd);

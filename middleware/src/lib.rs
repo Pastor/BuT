@@ -4,11 +4,11 @@ use but_grammar::diagnostics::Diagnostic;
 use crate::tree::TreeDefinition;
 use crate::unit::Unit;
 
-mod tree;
-mod unit;
 mod context;
-mod unit2;
+mod tree;
 mod types;
+mod unit;
+mod unit2;
 
 pub fn parse(unit: SourceUnit) -> Result<Unit, Vec<Diagnostic>> {
     let mut global_enums = vec![];
@@ -21,24 +21,54 @@ pub fn parse(unit: SourceUnit) -> Result<Unit, Vec<Diagnostic>> {
     let mut global_imports = vec![];
     for part in unit.0 {
         match part {
-            SourceUnitPart::ImportDirective(im) => { global_imports.push(im); }
-            SourceUnitPart::EnumDefinition(ed) => { global_enums.push(ed); }
-            SourceUnitPart::StructDefinition(sd) => { global_structs.push(sd); }
-            SourceUnitPart::ErrorDefinition(_) => { println!("Skip error"); }
-            SourceUnitPart::FunctionDefinition(fd) => { global_functions.push(fd); }
-            SourceUnitPart::FormulaDefinition(_) => { println!("Skip formula"); }
-            SourceUnitPart::VariableDefinition(vd) => { global_variables.push(vd); }
-            SourceUnitPart::AnnotationDefinition(_) => { println!("Skip annotation"); }
-            SourceUnitPart::PropertyDefinition(pd) => { global_properties.push(pd); }
-            SourceUnitPart::ModelDefinition(md) => { models.push(md); }
-            SourceUnitPart::TypeDefinition(td) => { global_types.push(td); }
-            SourceUnitPart::Using(_) => { println!("Skip using"); }
+            SourceUnitPart::ImportDirective(im) => {
+                global_imports.push(im);
+            }
+            SourceUnitPart::EnumDefinition(ed) => {
+                global_enums.push(ed);
+            }
+            SourceUnitPart::StructDefinition(sd) => {
+                global_structs.push(sd);
+            }
+            SourceUnitPart::ErrorDefinition(_) => {
+                println!("Skip error");
+            }
+            SourceUnitPart::FunctionDefinition(fd) => {
+                global_functions.push(fd);
+            }
+            SourceUnitPart::FormulaDefinition(_) => {
+                println!("Skip formula");
+            }
+            SourceUnitPart::VariableDefinition(vd) => {
+                global_variables.push(vd);
+            }
+            SourceUnitPart::AnnotationDefinition(_) => {
+                println!("Skip annotation");
+            }
+            SourceUnitPart::PropertyDefinition(pd) => {
+                global_properties.push(pd);
+            }
+            SourceUnitPart::ModelDefinition(md) => {
+                models.push(md);
+            }
+            SourceUnitPart::TypeDefinition(td) => {
+                global_types.push(td);
+            }
+            SourceUnitPart::Using(_) => {
+                println!("Skip using");
+            }
             SourceUnitPart::StraySemicolon(_) => {}
         }
     }
     let mut diagnostics = vec![];
     let tree_definition = TreeDefinition::new(
-        models, global_enums, global_types, global_properties, global_variables, global_structs, global_functions,
+        models,
+        global_enums,
+        global_types,
+        global_properties,
+        global_variables,
+        global_structs,
+        global_functions,
         &mut diagnostics,
     );
     if !diagnostics.is_empty() {
@@ -130,22 +160,15 @@ mod tests {
             .filter_map(|(path, expect_error, source_part)| {
                 let src = source_part.to_string();
                 let result: Result<Unit, Vec<Diagnostic>> = match parse(&source_part, 0) {
-                    Ok((unit, _comments)) => {
-                        match crate::parse(unit) {
-                            Ok(result) => Ok(result),
-                            Err(err) => Err(err),
-                        }
-                    }
-                    Err(diagnostics) => {
-                        Err(diagnostics)
-                    }
+                    Ok((unit, _comments)) => match crate::parse(unit) {
+                        Ok(result) => Ok(result),
+                        Err(err) => Err(err),
+                    },
+                    Err(diagnostics) => Err(diagnostics),
                 };
 
-
                 if let (Err(err), false) = (
-                    result.map_err(|diags| {
-                        process_diagnostics(path, src, diags)
-                    }),
+                    result.map_err(|diags| process_diagnostics(path, src, diags)),
                     expect_error,
                 ) {
                     return Some(err);

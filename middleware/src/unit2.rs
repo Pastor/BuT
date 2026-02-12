@@ -3,7 +3,6 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter};
 use std::io::{Stdout, Write};
-use std::ops::Deref;
 use std::rc::Rc;
 
 const PADDING: usize = 2usize;
@@ -35,20 +34,20 @@ pub trait Unit: VariablesUnit + Debug {
     fn new() -> Self
     where
         Self: Sized;
-    fn create(&self, state: Self::State) -> Box<dyn Unit<State=Self::State>>;
+    fn create(&self, state: Self::State) -> Box<dyn Unit<State = Self::State>>;
     fn update(&mut self, cb: Box<dyn FnMut(Self::State) -> Self::State>);
     fn size(&self) -> usize;
     fn print(&self);
-    fn visit(&self, pad: usize, visitor: &mut dyn Visitor<State=Self::State>);
+    fn visit(&self, pad: usize, visitor: &mut dyn Visitor<State = Self::State>);
 }
 
 pub trait Visitor {
     type State: Sized + Debug;
     fn visit_data(&mut self, pad: usize, state: Self::State);
-    fn visit_unit(&mut self, pad: usize, unit: Box<dyn Unit<State=Self::State>>);
+    fn visit_unit(&mut self, pad: usize, unit: Box<dyn Unit<State = Self::State>>);
 }
 
-pub fn default<T: Sized>() -> Box<dyn Unit<State=Data>> {
+pub fn default() -> Box<dyn Unit<State = Data>> {
     let unit = <UnitImpl as Unit>::new();
     Box::new(unit)
 }
@@ -79,7 +78,7 @@ mod variables {
                 Variable::String(_) => "str",
                 Variable::Number(_) => "num",
                 Variable::Boolean(_) => "bool",
-                _ => "not_implement"
+                _ => "not_implement",
             }
         }
     }
@@ -91,7 +90,7 @@ mod variables {
             match (rhs, self) {
                 (Variable::Number(n), Variable::Number(v)) => Variable::Number(n + v),
                 (Variable::String(n), Variable::String(v)) => Variable::String(n + v.as_str()),
-                (_, v) => v
+                (_, v) => v,
             }
         }
     }
@@ -168,9 +167,12 @@ mod private {
                 idx += 1;
             }
             if idx > 0 {
-                output.push_str("\n");
+                output.push('\n');
             }
-            f.write_fmt(format_args!("Unit(parent: {:?}, children: [{}])", self.parent, output))
+            f.write_fmt(format_args!(
+                "Unit(parent: {:?}, children: [{}])",
+                self.parent, output
+            ))
         }
     }
 }
@@ -182,7 +184,7 @@ struct UnitImpl {
 impl UnitImpl {
     fn from(data: &Rc<RefCell<private::UnitPrivate>>) -> Self {
         Self {
-            inner: Rc::clone(&data),
+            inner: Rc::clone(data),
         }
     }
 }
@@ -200,7 +202,7 @@ impl Visitor for Stdout {
         let _ = self.write_fmt(format_args!("{:pad$}{:?}\n", ' ', state, pad = pad));
     }
 
-    fn visit_unit(&mut self, pad: usize, child: Box<dyn Unit<State=Self::State>>) {
+    fn visit_unit(&mut self, pad: usize, child: Box<dyn Unit<State = Self::State>>) {
         // let _ = self.write_fmt(format_args!("{:pad$}{:?}\n", ' ', child, pad = pad));
         child.visit(pad + PADDING, self)
     }
@@ -211,11 +213,11 @@ impl VariablesUnit for UnitImpl {
         let binding = self.inner.borrow();
         let data = binding.data.lock().unwrap();
         let val = data.variables.get(key);
-        if val.is_none() && binding.parent != None {
+        if val.is_none() && binding.parent.is_some() {
             drop(data);
             return binding.parent.and_then(|parent| unsafe {
                 let state = &*parent;
-                let mut data = state.data.lock().unwrap();
+                let data = state.data.lock().unwrap();
                 data.variables.get(key).cloned()
             });
         }
@@ -234,11 +236,13 @@ impl Unit for UnitImpl {
 
     fn new() -> Self {
         Self {
-            inner: Rc::new(RefCell::new(private::UnitPrivate::new(Self::State::default())))
+            inner: Rc::new(RefCell::new(private::UnitPrivate::new(
+                Self::State::default(),
+            ))),
         }
     }
 
-    fn create(&self, state: Self::State) -> Box<dyn Unit<State=Data>> {
+    fn create(&self, state: Self::State) -> Box<dyn Unit<State = Data>> {
         let add = private::UnitPrivate::add(&self.inner, state);
         Box::new(UnitImpl::from(&add))
     }
@@ -255,15 +259,18 @@ impl Unit for UnitImpl {
     }
 
     fn print(&self) {
-        self.visit(0usize, &mut std::io::stdout() as &mut dyn Visitor<State=Data>);
+        self.visit(
+            0usize,
+            &mut std::io::stdout() as &mut dyn Visitor<State = Data>,
+        );
     }
 
-    fn visit(&self, pad: usize, visitor: &mut dyn Visitor<State=Data>) {
+    fn visit(&self, pad: usize, visitor: &mut dyn Visitor<State = Data>) {
         let binding = self.inner.borrow();
         let state = binding.data.lock().unwrap();
         visitor.visit_data(pad, state.clone());
         self.inner.borrow().children.iter().for_each(|unit| {
-            visitor.visit_unit(pad + PADDING, Box::new(UnitImpl::from(&unit)));
+            visitor.visit_unit(pad + PADDING, Box::new(UnitImpl::from(unit)));
         })
     }
 }
@@ -275,7 +282,7 @@ mod tests {
 
     #[test]
     fn it_unit() {
-        let mut unit = default::<Data>();
+        let mut unit = default();
         let child = unit.create(Data::default());
         assert_eq!(unit.size(), 1);
         assert_eq!(child.size(), 0);
@@ -299,5 +306,3 @@ mod tests {
         unit.print();
     }
 }
-
-
