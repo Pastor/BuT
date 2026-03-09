@@ -4,4 +4,8 @@ members = [
     "grammar/but",
     "middleware",
     "generator",
+    "simulator",
+    "visual",
+    "codegen",
+    "cli",
 ]

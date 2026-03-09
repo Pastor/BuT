@@ -1,0 +1,10 @@
+[package]
+name = "but-codegen"
+version = "0.1.0"
+authors = ["Pastor <viruszold@gmail.com>"]
+edition = "2021"
+license = "BSD"
+
+[dependencies]
+but-grammar = { path = "../grammar/but" }
+indexmap = "2"

@@ -1,0 +1,11 @@
+[package]
+name = "but-visual"
+version = "0.1.0"
+authors = ["Pastor <viruszold@gmail.com>"]
+edition = "2021"
+license = "BSD"
+
+[dependencies]
+but-grammar = { path = "../grammar/but" }
+but-simulator = { path = "../simulator" }
+thiserror = "2"
