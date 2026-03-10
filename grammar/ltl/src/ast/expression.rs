@@ -122,14 +122,14 @@ impl Display for CompareOpcode {
 mod test {
     use rstest::*;
 
-    use crate::ast::grammar;
+    use crate::ast::ltl;
 
     #[rstest]
     #[case("[]was(z2)", "([]was(z2))")]
     #[case("(is(x1) W was(z1)) & [](was(z2) -> (is(x1) U was(z1)) & was(z1) -> (!is(x1) R was(z2)))",
     "((is(x1) W was(z1)) & ([]((was(z2) -> (is(x1) U was(z1))) & (was(z1) -> ((!is(x1)) R was(z2))))))")]
     fn test_formula_parser(#[case] expression: &str, #[case] expected: &str) {
-        let parsed = grammar::FormulaParser::new()
+        let parsed = ltl::FormulaParser::new()
             .parse(expression)
             .expect("Unable to parse expression");
         assert_eq!(expected, parsed.to_string())

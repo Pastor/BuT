@@ -2,9 +2,9 @@
 resolver = "1"
 members = [
     "grammar/but",
+    "grammar/ltl",
     "middleware",
-    "generator",
-    "simulator",
+    "simulators",
     "visual",
     "codegen",
     "cli",

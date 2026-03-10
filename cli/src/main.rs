@@ -5,7 +5,7 @@ use clap::Parser;
 
 use but_codegen::{AllOutput, CodegenContext};
 use but_grammar::ast::SourceUnit;
-use but_simulator::{build_all, Simulator, Value};
+use but_simulators::{build_all, Simulator, Value};
 use but_visual::visualize_all;
 
 /// Компилятор и симулятор BuT FSM

@@ -35,6 +35,15 @@ impl BitSlice {
             inner: BitVec::from_bytes(bites),
         }
     }
+
+    /// Создать BitSlice из массива битовых значений (каждый u8 — 0 или 1).
+    pub fn from_bit_values(bits: &[u8]) -> Self {
+        let mut inner = BitVec::with_capacity(bits.len());
+        for &b in bits {
+            inner.push(b != 0);
+        }
+        Self { inner }
+    }
 }
 
 #[cfg(test)]

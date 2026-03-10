@@ -1,5 +1,5 @@
 [package]
-name = "ltl"
+name = "ltl-grammar"
 version = "0.0.1"
 authors = ["Pastor <viruszold@gmail.com>"]
 description = "LTL"
@@ -10,7 +10,7 @@ keywords = ["LTL", "BuT", "framework", "code", "generation"]
 license = "BSD"
 edition = "2021"
 rust-version = "1.71.0"
-exclude = ["src/grammar.lalrpop"]
+exclude = ["src/ltl.lalrpop"]
 include = ["Cargo.toml", "src/**/*", "src/ast.rs", "README.md", "LICENSE*"]
 
 [[bin]]
@@ -20,13 +20,13 @@ bench = false
 path = "bin/tooling/main.rs"
 
 [build-dependencies]
-lalrpop = { version = "0.20.0", features = ["lexer"] }
+lalrpop = { version = "0.23.0", features = ["lexer"] }
 
 [dependencies]
-lalrpop-util = "0.20.0"
-thiserror = "^1.0"
+lalrpop-util = "0.23.0"
+thiserror = "2.0.18"
 clap = { version = "4.4.10", features = ["derive"] }
-codespan = "0.11.1"
+codespan = "0.13.1"
 
 [dev-dependencies]
-rstest = "0.21.0"
+rstest = "0.26.1"

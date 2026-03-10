@@ -7,5 +7,5 @@ license = "BSD"
 
 [dependencies]
 but-grammar = { path = "../grammar/but" }
-but-simulator = { path = "../simulator" }
+but-simulators = { path = "../simulators" }
 thiserror = "2"

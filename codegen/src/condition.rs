@@ -233,3 +233,333 @@ pub fn type_to_st(ty: &but_grammar::ast::Type) -> String {
         _ => "INT".to_string(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use but_grammar::ast::{Condition, Expression, Identifier, Loc, Type};
+
+    // Вспомогательная функция: создать заглушку позиции
+    fn loc() -> Loc {
+        Loc::Source(0, 0, 0)
+    }
+
+    // Вспомогательная функция: создать идентификатор
+    fn ident(name: &str) -> Identifier {
+        Identifier::new(name)
+    }
+
+    // Вспомогательная функция: создать псевдоним типа
+    fn alias(name: &str) -> Type {
+        Type::Alias(ident(name))
+    }
+
+    // ===== condition_to_c =====
+
+    #[test]
+    fn condition_variable_в_c() {
+        let cond = Condition::Variable(ident("flag"));
+        assert_eq!(condition_to_c(&cond), "flag");
+    }
+
+    #[test]
+    fn condition_bool_true_в_c() {
+        let cond = Condition::BoolLiteral(loc(), true);
+        assert_eq!(condition_to_c(&cond), "1");
+    }
+
+    #[test]
+    fn condition_bool_false_в_c() {
+        let cond = Condition::BoolLiteral(loc(), false);
+        assert_eq!(condition_to_c(&cond), "0");
+    }
+
+    #[test]
+    fn condition_number_literal_в_c() {
+        let cond = Condition::NumberLiteral(loc(), 42);
+        assert_eq!(condition_to_c(&cond), "42");
+    }
+
+    #[test]
+    fn condition_equal_в_c() {
+        let l = Box::new(Condition::Variable(ident("x")));
+        let r = Box::new(Condition::NumberLiteral(loc(), 0));
+        let cond = Condition::Equal(loc(), l, r);
+        assert_eq!(condition_to_c(&cond), "(x == 0)");
+    }
+
+    #[test]
+    fn condition_not_equal_в_c() {
+        let l = Box::new(Condition::Variable(ident("a")));
+        let r = Box::new(Condition::NumberLiteral(loc(), 1));
+        let cond = Condition::NotEqual(loc(), l, r);
+        assert_eq!(condition_to_c(&cond), "(a != 1)");
+    }
+
+    #[test]
+    fn condition_and_в_c() {
+        let l = Box::new(Condition::Variable(ident("a")));
+        let r = Box::new(Condition::Variable(ident("b")));
+        let cond = Condition::And(loc(), l, r);
+        assert_eq!(condition_to_c(&cond), "(a && b)");
+    }
+
+    #[test]
+    fn condition_or_в_c() {
+        let l = Box::new(Condition::Variable(ident("p")));
+        let r = Box::new(Condition::Variable(ident("q")));
+        let cond = Condition::Or(loc(), l, r);
+        assert_eq!(condition_to_c(&cond), "(p || q)");
+    }
+
+    #[test]
+    fn condition_not_в_c() {
+        let inner = Box::new(Condition::Variable(ident("done")));
+        let cond = Condition::Not(loc(), inner);
+        assert_eq!(condition_to_c(&cond), "(!done)");
+    }
+
+    #[test]
+    fn condition_less_в_c() {
+        let l = Box::new(Condition::Variable(ident("i")));
+        let r = Box::new(Condition::NumberLiteral(loc(), 10));
+        let cond = Condition::Less(loc(), l, r);
+        assert_eq!(condition_to_c(&cond), "(i < 10)");
+    }
+
+    #[test]
+    fn condition_more_в_c() {
+        let l = Box::new(Condition::Variable(ident("i")));
+        let r = Box::new(Condition::NumberLiteral(loc(), 5));
+        let cond = Condition::More(loc(), l, r);
+        assert_eq!(condition_to_c(&cond), "(i > 5)");
+    }
+
+    #[test]
+    fn condition_add_в_c() {
+        let l = Box::new(Condition::Variable(ident("a")));
+        let r = Box::new(Condition::NumberLiteral(loc(), 3));
+        let cond = Condition::Add(loc(), l, r);
+        assert_eq!(condition_to_c(&cond), "(a + 3)");
+    }
+
+    #[test]
+    fn condition_subtract_в_c() {
+        let l = Box::new(Condition::Variable(ident("a")));
+        let r = Box::new(Condition::NumberLiteral(loc(), 1));
+        let cond = Condition::Subtract(loc(), l, r);
+        assert_eq!(condition_to_c(&cond), "(a - 1)");
+    }
+
+    #[test]
+    fn condition_parenthesis_в_c() {
+        let inner = Box::new(Condition::Variable(ident("x")));
+        let cond = Condition::Parenthesis(loc(), inner);
+        assert_eq!(condition_to_c(&cond), "(x)");
+    }
+
+    // ===== expr_to_c =====
+
+    #[test]
+    fn expr_number_literal_в_c() {
+        let expr = Expression::NumberLiteral(loc(), 100);
+        assert_eq!(expr_to_c(&expr), "100");
+    }
+
+    #[test]
+    fn expr_bool_true_в_c() {
+        let expr = Expression::BoolLiteral(loc(), true);
+        assert_eq!(expr_to_c(&expr), "1");
+    }
+
+    #[test]
+    fn expr_bool_false_в_c() {
+        let expr = Expression::BoolLiteral(loc(), false);
+        assert_eq!(expr_to_c(&expr), "0");
+    }
+
+    #[test]
+    fn expr_variable_в_c() {
+        let expr = Expression::Variable(ident("result"));
+        assert_eq!(expr_to_c(&expr), "result");
+    }
+
+    #[test]
+    fn expr_add_в_c() {
+        let l = Box::new(Expression::Variable(ident("x")));
+        let r = Box::new(Expression::NumberLiteral(loc(), 5));
+        let expr = Expression::Add(loc(), l, r);
+        assert_eq!(expr_to_c(&expr), "(x + 5)");
+    }
+
+    #[test]
+    fn expr_subtract_в_c() {
+        let l = Box::new(Expression::Variable(ident("y")));
+        let r = Box::new(Expression::NumberLiteral(loc(), 2));
+        let expr = Expression::Subtract(loc(), l, r);
+        assert_eq!(expr_to_c(&expr), "(y - 2)");
+    }
+
+    #[test]
+    fn expr_assign_в_c() {
+        let l = Box::new(Expression::Variable(ident("output")));
+        let r = Box::new(Expression::NumberLiteral(loc(), 1));
+        let expr = Expression::Assign(loc(), l, r);
+        assert_eq!(expr_to_c(&expr), "output = 1");
+    }
+
+    #[test]
+    fn expr_assign_add_в_c() {
+        let l = Box::new(Expression::Variable(ident("x")));
+        let r = Box::new(Expression::NumberLiteral(loc(), 1));
+        let expr = Expression::AssignAdd(loc(), l, r);
+        assert_eq!(expr_to_c(&expr), "x += 1");
+    }
+
+    #[test]
+    fn expr_assign_subtract_в_c() {
+        let l = Box::new(Expression::Variable(ident("x")));
+        let r = Box::new(Expression::NumberLiteral(loc(), 1));
+        let expr = Expression::AssignSubtract(loc(), l, r);
+        assert_eq!(expr_to_c(&expr), "x -= 1");
+    }
+
+    #[test]
+    fn expr_multiply_в_c() {
+        let l = Box::new(Expression::Variable(ident("a")));
+        let r = Box::new(Expression::NumberLiteral(loc(), 3));
+        let expr = Expression::Multiply(loc(), l, r);
+        assert_eq!(expr_to_c(&expr), "(a * 3)");
+    }
+
+    #[test]
+    fn expr_not_в_c() {
+        let inner = Box::new(Expression::Variable(ident("flag")));
+        let expr = Expression::Not(loc(), inner);
+        assert_eq!(expr_to_c(&expr), "(!flag)");
+    }
+
+    #[test]
+    fn expr_negate_в_c() {
+        let inner = Box::new(Expression::Variable(ident("val")));
+        let expr = Expression::Negate(loc(), inner);
+        assert_eq!(expr_to_c(&expr), "(-val)");
+    }
+
+    #[test]
+    fn expr_parenthesis_в_c() {
+        let inner = Box::new(Expression::NumberLiteral(loc(), 99));
+        let expr = Expression::Parenthesis(loc(), inner);
+        assert_eq!(expr_to_c(&expr), "(99)");
+    }
+
+    // ===== type_to_c =====
+
+    #[test]
+    fn type_u8_в_c() {
+        assert_eq!(type_to_c(&alias("u8")), "uint8_t");
+    }
+
+    #[test]
+    fn type_u16_в_c() {
+        assert_eq!(type_to_c(&alias("u16")), "uint16_t");
+    }
+
+    #[test]
+    fn type_u32_в_c() {
+        assert_eq!(type_to_c(&alias("u32")), "uint32_t");
+    }
+
+    #[test]
+    fn type_bit_в_c() {
+        assert_eq!(type_to_c(&alias("bit")), "uint8_t");
+    }
+
+    #[test]
+    fn type_bool_alias_в_c() {
+        assert_eq!(type_to_c(&alias("bool")), "int");
+    }
+
+    #[test]
+    fn type_bool_в_c() {
+        assert_eq!(type_to_c(&Type::Bool), "int");
+    }
+
+    #[test]
+    fn type_string_в_c() {
+        assert_eq!(type_to_c(&Type::String), "char*");
+    }
+
+    #[test]
+    fn type_rational_в_c() {
+        assert_eq!(type_to_c(&Type::Rational), "double");
+    }
+
+    #[test]
+    fn type_неизвестный_alias_в_c() {
+        assert_eq!(type_to_c(&alias("MyType")), "MyType");
+    }
+
+    // ===== type_to_st =====
+
+    #[test]
+    fn type_bool_в_st() {
+        assert_eq!(type_to_st(&Type::Bool), "BOOL");
+    }
+
+    #[test]
+    fn type_string_в_st() {
+        assert_eq!(type_to_st(&Type::String), "STRING");
+    }
+
+    #[test]
+    fn type_rational_в_st() {
+        assert_eq!(type_to_st(&Type::Rational), "REAL");
+    }
+
+    #[test]
+    fn type_u8_в_st() {
+        assert_eq!(type_to_st(&alias("u8")), "BYTE");
+    }
+
+    #[test]
+    fn type_u16_в_st() {
+        assert_eq!(type_to_st(&alias("u16")), "WORD");
+    }
+
+    #[test]
+    fn type_u32_в_st() {
+        assert_eq!(type_to_st(&alias("u32")), "DWORD");
+    }
+
+    #[test]
+    fn type_u64_в_st() {
+        assert_eq!(type_to_st(&alias("u64")), "LWORD");
+    }
+
+    #[test]
+    fn type_bit_в_st() {
+        assert_eq!(type_to_st(&alias("bit")), "BYTE");
+    }
+
+    #[test]
+    fn type_bool_alias_в_st() {
+        assert_eq!(type_to_st(&alias("bool")), "BOOL");
+    }
+
+    #[test]
+    fn type_int_в_st() {
+        assert_eq!(type_to_st(&alias("int")), "INT");
+    }
+
+    #[test]
+    fn type_неизвестный_alias_в_st() {
+        assert_eq!(type_to_st(&alias("CustomType")), "CustomType");
+    }
+
+    #[test]
+    fn type_address_в_st() {
+        // Address не является Alias/Bool/String/Rational — возвращает "INT"
+        assert_eq!(type_to_st(&Type::Address), "INT");
+    }
+}

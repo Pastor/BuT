@@ -12,7 +12,7 @@ path = "src/main.rs"
 [dependencies]
 but-grammar = { path = "../grammar/but" }
 but-middleware = { path = "../middleware" }
-but-simulator = { path = "../simulator" }
+but-simulators = { path = "../simulators" }
 but-visual = { path = "../visual" }
 but-codegen = { path = "../codegen" }
 clap = { version = "4.4", features = ["derive"] }

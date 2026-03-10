@@ -102,7 +102,7 @@ FloatNum: f32 = {
 };
 
 StringLiteral: String = {
-    r#""[^"]*""# => <>[1..<>.len() - 1].to_owned()
+    <s:r#""[^"]*""#> => s[1..s.len() - 1].to_owned()
 };
 
 BoolLiteral: bool = {

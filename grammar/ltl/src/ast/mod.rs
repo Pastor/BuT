@@ -4,10 +4,10 @@ pub mod expression;
 pub mod types;
 mod utils;
 
-lalrpop_mod!(#[allow(clippy::all)] #[allow(dead_code)] pub grammar);
+lalrpop_mod!(#[allow(clippy::all)] #[allow(dead_code)] pub ltl);
 
 #[test]
 fn test_formula() {
-    assert!(grammar::FormulaParser::new().parse("[]was(z2)").is_ok());
-    assert!(grammar::FormulaParser::new().parse("[]was").is_err());
+    assert!(ltl::FormulaParser::new().parse("[]was(z2)").is_ok());
+    assert!(ltl::FormulaParser::new().parse("[]was").is_err());
 }
