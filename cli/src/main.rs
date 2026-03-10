@@ -5,6 +5,7 @@ use clap::Parser;
 
 use but_codegen::{AllOutput, CodegenContext};
 use but_grammar::ast::SourceUnit;
+use but_middleware::include::IncludeResolver;
 use but_simulators::{build_all, Simulator, Value};
 use but_visual::visualize_all;
 
@@ -81,6 +82,20 @@ fn main() {
                 eprintln!("Ошибка разбора: {:?}", d);
             }
             std::process::exit(1);
+        }
+    };
+
+    // Разрешение директив import (рекурсивное включение файлов)
+    let unit = {
+        let mut resolver = IncludeResolver::from_file(&args.source);
+        match resolver.resolve(unit, &args.source) {
+            Ok(merged) => merged,
+            Err(errs) => {
+                for e in &errs {
+                    eprintln!("Ошибка импорта: {}", e);
+                }
+                std::process::exit(1);
+            }
         }
     };
 

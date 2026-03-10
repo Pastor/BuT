@@ -1,0 +1,23 @@
+// Основной файл базового теста импорта.
+// Импортирует types.but и добавляет собственные определения.
+
+import "types";
+
+const MAX_COUNTER: dword = 0xFFFF;
+
+model Blinker {
+    state On  {
+        ref Off: input = 0;
+        ref On:  input = 1;
+        enter -> { output = 1; }
+    }
+    state Off {
+        ref On:  input = 1;
+        ref Off: input = 0;
+        enter -> { output = 0; }
+    }
+    start -> Off;
+}
+
+port input:  bit = 0x01;
+port output: bit = 0x02;

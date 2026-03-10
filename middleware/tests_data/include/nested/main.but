@@ -1,0 +1,6 @@
+// Верхний уровень вложенных импортов.
+// Импортирует level1.but, который в свою очередь импортирует level2.but.
+
+import "level1";
+
+const BUS_WIDTH: Register = 0xFF;

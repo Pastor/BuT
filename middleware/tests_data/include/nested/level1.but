@@ -1,0 +1,6 @@
+// Средний уровень вложенных импортов.
+// Импортирует level2.but, импортируется из main.but.
+
+import "level2";
+
+type Register = [8: BaseUnit];

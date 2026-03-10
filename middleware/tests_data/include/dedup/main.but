@@ -1,0 +1,8 @@
+// Главный файл теста дедупликации.
+// Импортирует a.but (который импортирует common.but) и common.but напрямую.
+// Тип SharedType из common.but должен присутствовать ровно один раз.
+
+import "a";
+import "common";
+
+const MAIN_CONST: SharedType = 0;
