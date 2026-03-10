@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use but_grammar::ast::{
     self, ConditionDefinition, Expression, Loc, ModelDefinition, ModelPart, Property,
-    PropertyDefinition, SourceUnit, SourceUnitPart, StatePart, VariableAttribute,
+    PropertyDefinition, SourceUnit, SourceUnitPart, StatePart, Type, VariableAttribute,
     VariableDefinition,
 };
 use thiserror::Error;
@@ -25,14 +27,18 @@ pub enum BuildError {
 pub fn build_all(
     source: &SourceUnit,
 ) -> Result<Vec<MachineKind>, BuildError> {
-    // Собрать глобальные объявления переменных/портов
+    // Собрать глобальные объявления переменных/портов и псевдонимы типов
     let mut global_vars: Vec<Box<VariableDefinition>> = vec![];
     let mut models: Vec<Box<ModelDefinition>> = vec![];
+    let mut type_aliases: HashMap<String, Type> = HashMap::new();
 
     for part in &source.0 {
         match part {
             SourceUnitPart::VariableDefinition(vd) => global_vars.push(vd.clone()),
             SourceUnitPart::ModelDefinition(md) => models.push(md.clone()),
+            SourceUnitPart::TypeDefinition(td) => {
+                type_aliases.insert(td.name.name.clone(), td.ty.clone());
+            }
             _ => {}
         }
     }
@@ -40,7 +46,7 @@ pub fn build_all(
     // Построить все модели как отдельные автоматы
     let mut machines: Vec<MachineKind> = vec![];
     for model in &models {
-        let machine = build_machine(model, &global_vars)?;
+        let machine = build_machine(model, &global_vars, &type_aliases)?;
         machines.push(machine);
     }
 
@@ -100,6 +106,7 @@ fn compose_from_expr(
 pub fn build_machine(
     model: &ModelDefinition,
     global_vars: &[Box<VariableDefinition>],
+    type_aliases: &HashMap<String, Type>,
 ) -> Result<MachineKind, BuildError> {
     let model_name = model
         .name
@@ -118,7 +125,7 @@ pub fn build_machine(
 
     // Объявить глобальные переменные/порты в контексте
     for vd in global_vars {
-        declare_variable_def(&mut context, vd);
+        declare_variable_def(&mut context, vd, type_aliases);
     }
 
     // Первый проход: зарегистрировать все имена состояний и объявления уровня модели
@@ -133,7 +140,7 @@ pub fn build_machine(
                 states.insert(sname.clone(), State::new(sname));
             }
             ModelPart::VariableDefinition(vd) => {
-                declare_variable_def(&mut context, vd);
+                declare_variable_def(&mut context, vd, type_aliases);
             }
             ModelPart::PropertyDefinition(pd) => {
                 handle_model_property(pd, &mut start_state, &mut model_enter, &mut model_end);
@@ -163,7 +170,7 @@ pub fn build_machine(
                     extra_vars.push(vd.clone());
                 }
                 if let StatePart::ModelDefinition(nested) = sp {
-                    if let Ok(sub) = build_machine(nested, global_vars) {
+                    if let Ok(sub) = build_machine(nested, global_vars, type_aliases) {
                         sub_machine = Some(sub);
                     }
                 }
@@ -171,7 +178,7 @@ pub fn build_machine(
 
             // Применить переменные состояния
             for vd in &extra_vars {
-                declare_variable_def(&mut context, vd);
+                declare_variable_def(&mut context, vd, type_aliases);
             }
 
             // Теперь взять изменяемую ссылку и применить все изменения
@@ -220,8 +227,37 @@ pub fn build_machine(
     Ok(MachineKind::Single(machine))
 }
 
+/// Рекурсивно разрешить псевдоним типа через таблицу псевдонимов (до 8 уровней).
+fn resolve_type_alias(ty: &Type, aliases: &HashMap<String, Type>, depth: u8) -> Type {
+    if depth == 0 {
+        return ty.clone();
+    }
+    match ty {
+        Type::Alias(id) => match aliases.get(&id.name) {
+            Some(resolved) => resolve_type_alias(resolved, aliases, depth - 1),
+            None => ty.clone(),
+        },
+        _ => ty.clone(),
+    }
+}
+
+/// Определить начальное значение по умолчанию для типа (с разрешением псевдонимов).
+/// Используется при объявлении переменных без явного инициализатора.
+fn default_value_for_type(ty: &Type, aliases: &HashMap<String, Type>) -> Value {
+    match resolve_type_alias(ty, aliases, 8) {
+        Type::Bool => Value::Bool(false),
+        Type::Rational => Value::Real(0.0),
+        Type::Alias(id) => match id.name.as_str() {
+            "bool" => Value::Bool(false),
+            "real" | "f64" | "f32" => Value::Real(0.0),
+            _ => Value::Int(0),
+        },
+        _ => Value::Int(0),
+    }
+}
+
 /// Объявить переменную в контексте.
-fn declare_variable_def(ctx: &mut SimContext, vd: &VariableDefinition) {
+fn declare_variable_def(ctx: &mut SimContext, vd: &VariableDefinition, type_aliases: &HashMap<String, Type>) {
     let name = match &vd.name {
         Some(n) => n.name.clone(),
         None => return,
@@ -235,7 +271,7 @@ fn declare_variable_def(ctx: &mut SimContext, vd: &VariableDefinition) {
         .initializer
         .as_ref()
         .and_then(|e| eval_literal(e))
-        .unwrap_or(Value::Unit);
+        .unwrap_or_else(|| default_value_for_type(&vd.ty, type_aliases));
 
     if is_port {
         ctx.declare_port(&name, initial);
@@ -319,5 +355,141 @@ pub fn property_to_statement(prop: &Property) -> ast::Statement {
         Property::Expression(expr) => {
             ast::Statement::Expression(Loc::Builtin, expr.clone())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use but_grammar::ast::Identifier;
+
+    fn ident(name: &str) -> Identifier {
+        Identifier::new(name)
+    }
+
+    /// Парсировать BuT-исходник и построить автоматы.
+    fn parse_and_build(src: &str) -> Result<Vec<MachineKind>, BuildError> {
+        let (source, _) = but_grammar::parse(src, 0).expect("Ошибка парсинга");
+        build_all(&source)
+    }
+
+    /// Парсировать BuT-исходник и вернуть CodegenContext-подобный контекст.
+    fn collect_type_aliases(src: &str) -> HashMap<String, Type> {
+        let (source, _) = but_grammar::parse(src, 0).expect("Ошибка парсинга");
+        let mut aliases = HashMap::new();
+        for part in &source.0 {
+            if let SourceUnitPart::TypeDefinition(td) = part {
+                aliases.insert(td.name.name.clone(), td.ty.clone());
+            }
+        }
+        aliases
+    }
+
+    // ===== Сбор псевдонимов типов =====
+
+    #[test]
+    fn build_all_собирает_type_aliases() {
+        let aliases = collect_type_aliases(r#"
+type MyByte = u8;
+type Counter = u32;
+model M { start -> M; }
+"#);
+        assert!(aliases.contains_key("MyByte"));
+        assert!(aliases.contains_key("Counter"));
+        assert_eq!(aliases.len(), 2);
+    }
+
+    #[test]
+    fn build_all_без_псевдонимов_пустая_таблица() {
+        let aliases = collect_type_aliases("model M { start -> M; }");
+        assert!(aliases.is_empty());
+    }
+
+    // ===== Значения по умолчанию через псевдонимы =====
+
+    #[test]
+    fn default_value_for_bool_type() {
+        let aliases = HashMap::new();
+        let val = default_value_for_type(&Type::Bool, &aliases);
+        assert_eq!(val, Value::Bool(false));
+    }
+
+    #[test]
+    fn default_value_for_rational_type() {
+        let aliases = HashMap::new();
+        let val = default_value_for_type(&Type::Rational, &aliases);
+        assert_eq!(val, Value::Real(0.0));
+    }
+
+    #[test]
+    fn default_value_для_псевдонима_bool() {
+        let aliases = HashMap::new();
+        let val = default_value_for_type(
+            &Type::Alias(ident("bool")),
+            &aliases,
+        );
+        assert_eq!(val, Value::Bool(false));
+    }
+
+    #[test]
+    fn default_value_для_псевдонима_f64() {
+        let aliases = HashMap::new();
+        let val = default_value_for_type(
+            &Type::Alias(ident("f64")),
+            &aliases,
+        );
+        assert_eq!(val, Value::Real(0.0));
+    }
+
+    #[test]
+    fn default_value_для_пользовательского_псевдонима_на_bool() {
+        // type Flag = bool; → default Value::Bool(false)
+        let mut aliases = HashMap::new();
+        aliases.insert("Flag".to_string(), Type::Bool);
+        let val = default_value_for_type(&Type::Alias(ident("Flag")), &aliases);
+        assert_eq!(val, Value::Bool(false));
+    }
+
+    #[test]
+    fn default_value_для_пользовательского_псевдонима_на_u32() {
+        // type Counter = u32; → default Value::Int(0)
+        let mut aliases = HashMap::new();
+        aliases.insert("Counter".to_string(), Type::Alias(ident("u32")));
+        let val = default_value_for_type(&Type::Alias(ident("Counter")), &aliases);
+        assert_eq!(val, Value::Int(0));
+    }
+
+    // ===== Построение автомата с типами =====
+
+    #[test]
+    fn build_all_с_псевдонимами_типов_и_переменными() {
+        // Переменная типа-псевдонима должна объявляться в контексте
+        let machines = parse_and_build(r#"
+type Counter = u32;
+model M {
+    state Active { ref Active: 1 = 0; }
+    start -> Active;
+}
+"#).expect("Сборка должна пройти успешно");
+        assert_eq!(machines.len(), 1);
+    }
+
+    #[test]
+    fn resolve_type_alias_цепочка() {
+        let mut aliases = HashMap::new();
+        aliases.insert("A".to_string(), Type::Alias(ident("B")));
+        aliases.insert("B".to_string(), Type::Alias(ident("u8")));
+        let resolved = resolve_type_alias(&Type::Alias(ident("A")), &aliases, 8);
+        assert_eq!(resolved, Type::Alias(ident("u8")));
+    }
+
+    #[test]
+    fn resolve_type_alias_предел_глубины() {
+        // Цикличная цепочка не должна вызывать бесконечную рекурсию
+        let mut aliases = HashMap::new();
+        aliases.insert("A".to_string(), Type::Alias(ident("B")));
+        aliases.insert("B".to_string(), Type::Alias(ident("A")));
+        // Не должно паниковать, должно вернуть что-то
+        let _ = resolve_type_alias(&Type::Alias(ident("A")), &aliases, 8);
     }
 }

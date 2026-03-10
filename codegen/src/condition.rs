@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use but_grammar::ast::{Condition, Expression, Statement};
 
 /// Преобразовать узел AST `Condition` в строку C-выражения.
@@ -211,6 +213,44 @@ pub fn type_to_c(ty: &but_grammar::ast::Type) -> String {
     }
 }
 
+/// Разрешить псевдоним типа через таблицу псевдонимов (до 8 уровней вложенности).
+///
+/// Если `ty` — `Type::Alias(name)` и имя найдено в таблице, возвращается разрешённый тип.
+/// Повторяется рекурсивно (например, `type A = B; type B = u8;` → `u8`).
+/// При превышении глубины или отсутствии записи возвращается оригинальный тип.
+pub fn resolve_alias(
+    ty: &but_grammar::ast::Type,
+    aliases: &HashMap<String, but_grammar::ast::Type>,
+) -> but_grammar::ast::Type {
+    resolve_alias_depth(ty, aliases, 8)
+}
+
+fn resolve_alias_depth(
+    ty: &but_grammar::ast::Type,
+    aliases: &HashMap<String, but_grammar::ast::Type>,
+    depth: u8,
+) -> but_grammar::ast::Type {
+    use but_grammar::ast::Type;
+    if depth == 0 {
+        return ty.clone();
+    }
+    match ty {
+        Type::Alias(id) => match aliases.get(&id.name) {
+            Some(resolved) => resolve_alias_depth(resolved, aliases, depth - 1),
+            None => ty.clone(),
+        },
+        _ => ty.clone(),
+    }
+}
+
+/// Преобразовать тип BuT в строку типа C с разрешением псевдонимов из таблицы.
+pub fn type_to_c_ctx(
+    ty: &but_grammar::ast::Type,
+    aliases: &HashMap<String, but_grammar::ast::Type>,
+) -> String {
+    type_to_c(&resolve_alias(ty, aliases))
+}
+
 /// Преобразовать тип BuT в строку типа Structured Text.
 pub fn type_to_st(ty: &but_grammar::ast::Type) -> String {
     use but_grammar::ast::Type;
@@ -232,6 +272,14 @@ pub fn type_to_st(ty: &but_grammar::ast::Type) -> String {
         },
         _ => "INT".to_string(),
     }
+}
+
+/// Преобразовать тип BuT в строку типа ST с разрешением псевдонимов из таблицы.
+pub fn type_to_st_ctx(
+    ty: &but_grammar::ast::Type,
+    aliases: &HashMap<String, but_grammar::ast::Type>,
+) -> String {
+    type_to_st(&resolve_alias(ty, aliases))
 }
 
 #[cfg(test)]
@@ -561,5 +609,126 @@ mod tests {
     fn type_address_в_st() {
         // Address не является Alias/Bool/String/Rational — возвращает "INT"
         assert_eq!(type_to_st(&Type::Address), "INT");
+    }
+
+    // ===== resolve_alias =====
+
+    fn make_aliases(pairs: &[(&str, Type)]) -> HashMap<String, Type> {
+        pairs.iter().map(|(k, v)| (k.to_string(), v.clone())).collect()
+    }
+
+    #[test]
+    fn resolve_alias_известный_псевдоним_раскрывается() {
+        let aliases = make_aliases(&[("MyByte", alias("u8"))]);
+        let resolved = resolve_alias(&alias("MyByte"), &aliases);
+        assert_eq!(resolved, alias("u8"));
+    }
+
+    #[test]
+    fn resolve_alias_неизвестный_псевдоним_остаётся_как_есть() {
+        let aliases = make_aliases(&[]);
+        let resolved = resolve_alias(&alias("Unknown"), &aliases);
+        assert_eq!(resolved, alias("Unknown"));
+    }
+
+    #[test]
+    fn resolve_alias_цепочка_псевдонимов_раскрывается() {
+        // Counter → MyInt → i32
+        let aliases = make_aliases(&[
+            ("Counter", alias("MyInt")),
+            ("MyInt", alias("i32")),
+        ]);
+        let resolved = resolve_alias(&alias("Counter"), &aliases);
+        assert_eq!(resolved, alias("i32"));
+    }
+
+    #[test]
+    fn resolve_alias_примитивный_тип_не_изменяется() {
+        let aliases = make_aliases(&[]);
+        assert_eq!(resolve_alias(&Type::Bool, &aliases), Type::Bool);
+        assert_eq!(resolve_alias(&Type::Rational, &aliases), Type::Rational);
+        assert_eq!(resolve_alias(&Type::String, &aliases), Type::String);
+    }
+
+    #[test]
+    fn resolve_alias_псевдоним_на_массив() {
+        let arr = Type::Array {
+            loc: but_grammar::ast::Loc::Source(0, 0, 0),
+            element_count: 8,
+            element_type: Box::new(alias("bit")),
+        };
+        let aliases = make_aliases(&[("Byte", arr.clone())]);
+        let resolved = resolve_alias(&alias("Byte"), &aliases);
+        assert_eq!(resolved, arr);
+    }
+
+    // ===== type_to_c_ctx =====
+
+    #[test]
+    fn type_to_c_ctx_разрешает_пользовательский_псевдоним_в_c() {
+        // type MyByte = u8; → uint8_t
+        let aliases = make_aliases(&[("MyByte", alias("u8"))]);
+        assert_eq!(type_to_c_ctx(&alias("MyByte"), &aliases), "uint8_t");
+    }
+
+    #[test]
+    fn type_to_c_ctx_цепочка_псевдонимов_в_c() {
+        // type Counter = MyU32; type MyU32 = u32; → uint32_t
+        let aliases = make_aliases(&[
+            ("Counter", alias("MyU32")),
+            ("MyU32", alias("u32")),
+        ]);
+        assert_eq!(type_to_c_ctx(&alias("Counter"), &aliases), "uint32_t");
+    }
+
+    #[test]
+    fn type_to_c_ctx_без_псевдонима_работает_как_type_to_c() {
+        let aliases = make_aliases(&[]);
+        assert_eq!(type_to_c_ctx(&alias("u16"), &aliases), "uint16_t");
+        assert_eq!(type_to_c_ctx(&Type::Bool, &aliases), "int");
+    }
+
+    #[test]
+    fn type_to_c_ctx_неизвестный_псевдоним_возвращает_имя() {
+        let aliases = make_aliases(&[]);
+        assert_eq!(type_to_c_ctx(&alias("CustomType"), &aliases), "CustomType");
+    }
+
+    #[test]
+    fn type_to_c_ctx_псевдоним_bool_в_c() {
+        let aliases = make_aliases(&[("Flag", Type::Bool)]);
+        assert_eq!(type_to_c_ctx(&alias("Flag"), &aliases), "int");
+    }
+
+    // ===== type_to_st_ctx =====
+
+    #[test]
+    fn type_to_st_ctx_разрешает_пользовательский_псевдоним_в_st() {
+        // type Counter = u32; → DWORD
+        let aliases = make_aliases(&[("Counter", alias("u32"))]);
+        assert_eq!(type_to_st_ctx(&alias("Counter"), &aliases), "DWORD");
+    }
+
+    #[test]
+    fn type_to_st_ctx_цепочка_псевдонимов_в_st() {
+        // type MyWord = MyU16; type MyU16 = u16; → WORD
+        let aliases = make_aliases(&[
+            ("MyWord", alias("MyU16")),
+            ("MyU16", alias("u16")),
+        ]);
+        assert_eq!(type_to_st_ctx(&alias("MyWord"), &aliases), "WORD");
+    }
+
+    #[test]
+    fn type_to_st_ctx_без_псевдонима_работает_как_type_to_st() {
+        let aliases = make_aliases(&[]);
+        assert_eq!(type_to_st_ctx(&alias("u8"), &aliases), "BYTE");
+        assert_eq!(type_to_st_ctx(&Type::Bool, &aliases), "BOOL");
+    }
+
+    #[test]
+    fn type_to_st_ctx_псевдоним_rational_в_st() {
+        let aliases = make_aliases(&[("Speed", Type::Rational)]);
+        assert_eq!(type_to_st_ctx(&alias("Speed"), &aliases), "REAL");
     }
 }

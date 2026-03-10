@@ -1,0 +1,43 @@
+// Пример: псевдонимы типов (type alias) в BuT
+//
+// Задача #4 TODO: тип-псевдоним теперь разворачивается в Codegen и Simulator.
+// type T = U → при генерации C/ST тип T заменяется на правильный базовый тип.
+
+// --- Объявление псевдонимов типов ---
+type Byte    = u8;        // → uint8_t (C),  BYTE (ST)
+type Word    = u16;       // → uint16_t (C), WORD (ST)
+type Counter = u32;       // → uint32_t (C), DWORD (ST)
+type Flag    = bool;      // → int (C),      BOOL (ST)
+type Speed   = f64;       // → double (C),   REAL (ST)
+
+// Цепочка псевдонимов: SensorValue → Byte → u8 → uint8_t
+type SensorValue = Byte;
+
+// --- Глобальные порты с псевдонимами типов ---
+port sensor_raw   : SensorValue = 0x00;  // будет раскрыт как uint8_t
+port threshold    : Byte        = 0x80;
+port step_counter : Counter     = 0;
+port alarm_flag   : Flag        = false;
+
+// --- Модель: датчик порогового значения ---
+model ThresholdSensor {
+    state Idle {
+        ref Checking : sensor_raw > 0;
+        ref Idle     : sensor_raw = 0;
+        enter -> { step_counter = 0; alarm_flag = false; }
+    }
+
+    state Checking {
+        ref Alarm    : sensor_raw >= threshold;
+        ref Idle     : sensor_raw = 0;
+        enter -> { step_counter += 1; }
+    }
+
+    state Alarm {
+        ref Idle     : alarm_flag = false;
+        ref Alarm    : alarm_flag = true;
+        enter -> { alarm_flag = true; step_counter = 0; }
+    }
+
+    start -> Idle;
+}

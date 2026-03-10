@@ -6,7 +6,9 @@ pub mod st;
 pub mod thumb;
 pub mod verilog;
 
-use but_grammar::ast::{SourceUnit, SourceUnitPart, VariableDefinition};
+use std::collections::HashMap;
+
+use but_grammar::ast::{SourceUnit, SourceUnitPart, Type, VariableDefinition};
 
 pub use c::{generate_c_all, generate_c_header, generate_c_source};
 pub use lc3::{generate_lc3, generate_lc3_all};
@@ -19,6 +21,8 @@ pub use verilog::{generate_verilog, generate_verilog_all};
 pub struct CodegenContext {
     /// Глобальные определения переменных/портов из исходного файла.
     pub global_vars: Vec<Box<VariableDefinition>>,
+    /// Таблица псевдонимов типов: имя псевдонима → определение типа.
+    pub type_aliases: HashMap<String, Type>,
 }
 
 impl CodegenContext {
@@ -26,12 +30,16 @@ impl CodegenContext {
         Self::default()
     }
 
-    /// Построить контекст из SourceUnit, собрав глобальные объявления.
+    /// Построить контекст из SourceUnit, собрав глобальные объявления и псевдонимы типов.
     pub fn from_source(source: &SourceUnit) -> Self {
         let mut ctx = Self::new();
         for part in &source.0 {
-            if let SourceUnitPart::VariableDefinition(vd) = part {
-                ctx.global_vars.push(vd.clone());
+            match part {
+                SourceUnitPart::VariableDefinition(vd) => ctx.global_vars.push(vd.clone()),
+                SourceUnitPart::TypeDefinition(td) => {
+                    ctx.type_aliases.insert(td.name.name.clone(), td.ty.clone());
+                }
+                _ => {}
             }
         }
         ctx
@@ -96,6 +104,21 @@ port output: bit = 0x02;
             .0
     }
 
+    // Источник с псевдонимами типов
+    const TYPE_ALIAS_SRC: &str = r#"
+type MyByte = u8;
+type Counter = u32;
+type Flag = bool;
+type Nested = MyByte;
+model M { start -> M; }
+"#;
+
+    fn parse_type_aliases() -> SourceUnit {
+        but_grammar::parse(TYPE_ALIAS_SRC, 0)
+            .expect("Исходный код с псевдонимами должен разбираться без ошибок")
+            .0
+    }
+
     // ===== CodegenContext::from_source =====
 
     #[test]
@@ -113,6 +136,24 @@ port output: bit = 0x02;
             .expect("Парсинг пустой модели");
         let ctx = CodegenContext::from_source(&src);
         assert_eq!(ctx.global_vars.len(), 0);
+    }
+
+    #[test]
+    fn from_source_собирает_псевдонимы_типов() {
+        let src = parse_type_aliases();
+        let ctx = CodegenContext::from_source(&src);
+        assert!(ctx.type_aliases.contains_key("MyByte"), "MyByte должен быть в таблице псевдонимов");
+        assert!(ctx.type_aliases.contains_key("Counter"), "Counter должен быть в таблице псевдонимов");
+        assert!(ctx.type_aliases.contains_key("Flag"), "Flag должен быть в таблице псевдонимов");
+        assert!(ctx.type_aliases.contains_key("Nested"), "Nested должен быть в таблице псевдонимов");
+    }
+
+    #[test]
+    fn from_source_пустой_источник_нет_псевдонимов() {
+        let (src, _) = but_grammar::parse("model Empty { start -> Empty; }", 0)
+            .expect("Парсинг пустой модели");
+        let ctx = CodegenContext::from_source(&src);
+        assert!(ctx.type_aliases.is_empty());
     }
 
     #[test]
@@ -229,5 +270,116 @@ port output: bit = 0x02;
         // Имя возвращается в нижнем регистре
         assert_eq!(name, "delay");
         assert!(!asm.is_empty(), "Thumb ассемблер не должен быть пустым");
+    }
+
+    // ===== Интеграционные тесты: псевдонимы типов в кодогенерации =====
+
+    /// Источник с псевдонимами типов и портами, использующими эти псевдонимы
+    const TYPE_ALIAS_PORTS_SRC: &str = r#"
+type Byte    = u8;
+type Counter = u32;
+type Flag    = bool;
+type Speed   = f64;
+type NestedAlias = Byte;
+port sensor  : Byte        = 0x00;
+port count   : Counter     = 0;
+port alarm   : Flag        = false;
+port rate    : Speed       = 0.0;
+port raw     : NestedAlias = 0x00;
+model Sensor {
+    state Idle { }
+    start -> Idle;
+}
+"#;
+
+    fn parse_type_alias_ports() -> SourceUnit {
+        but_grammar::parse(TYPE_ALIAS_PORTS_SRC, 0)
+            .expect("Парсинг источника с псевдонимами типов")
+            .0
+    }
+
+    #[test]
+    fn c_header_разворачивает_псевдоним_byte_в_uint8_t() {
+        let src = parse_type_alias_ports();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_c_all(&src, &ctx);
+        let (_, header, _) = &result[0];
+        assert!(
+            header.contains("uint8_t sensor"),
+            "Ожидается uint8_t для Byte, заголовок:\n{}", header
+        );
+    }
+
+    #[test]
+    fn c_header_разворачивает_псевдоним_counter_в_uint32_t() {
+        let src = parse_type_alias_ports();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_c_all(&src, &ctx);
+        let (_, header, _) = &result[0];
+        assert!(
+            header.contains("uint32_t count"),
+            "Ожидается uint32_t для Counter, заголовок:\n{}", header
+        );
+    }
+
+    #[test]
+    fn c_header_разворачивает_псевдоним_flag_в_int() {
+        let src = parse_type_alias_ports();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_c_all(&src, &ctx);
+        let (_, header, _) = &result[0];
+        assert!(
+            header.contains("int alarm"),
+            "Ожидается int (bool→int) для Flag, заголовок:\n{}", header
+        );
+    }
+
+    #[test]
+    fn c_header_разворачивает_псевдоним_speed_в_double() {
+        let src = parse_type_alias_ports();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_c_all(&src, &ctx);
+        let (_, header, _) = &result[0];
+        assert!(
+            header.contains("double rate"),
+            "Ожидается double для Speed (f64), заголовок:\n{}", header
+        );
+    }
+
+    #[test]
+    fn c_header_разворачивает_вложенный_псевдоним_в_uint8_t() {
+        // NestedAlias = Byte = u8 → uint8_t
+        let src = parse_type_alias_ports();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_c_all(&src, &ctx);
+        let (_, header, _) = &result[0];
+        assert!(
+            header.contains("uint8_t raw"),
+            "Ожидается uint8_t для NestedAlias→Byte→u8, заголовок:\n{}", header
+        );
+    }
+
+    #[test]
+    fn st_decl_разворачивает_псевдоним_counter_в_dword() {
+        let src = parse_type_alias_ports();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_st_all(&src, &ctx);
+        let (_, decl, _) = &result[0];
+        assert!(
+            decl.contains("DWORD"),
+            "Ожидается DWORD для Counter→u32, объявление:\n{}", decl
+        );
+    }
+
+    #[test]
+    fn st_decl_разворачивает_псевдоним_flag_в_bool() {
+        let src = parse_type_alias_ports();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_st_all(&src, &ctx);
+        let (_, decl, _) = &result[0];
+        assert!(
+            decl.contains("BOOL"),
+            "Ожидается BOOL для Flag→bool, объявление:\n{}", decl
+        );
     }
 }

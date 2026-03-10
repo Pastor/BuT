@@ -4,7 +4,7 @@ use but_grammar::ast::{
     VariableAttribute,
 };
 
-use crate::condition::{condition_to_c, expr_to_c, type_to_st};
+use crate::condition::{condition_to_c, expr_to_c, type_to_st_ctx};
 use crate::ltl::{extract_ltl_formulas, ltl_comments_st};
 use crate::CodegenContext;
 
@@ -26,7 +26,7 @@ pub fn generate_st_decl(model: &ModelDefinition, ctx: &CodegenContext) -> String
     for vd in &ctx.global_vars {
         if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
             if let Some(vname) = &vd.name {
-                let ty = type_to_st(&vd.ty);
+                let ty = type_to_st_ctx(&vd.ty, &ctx.type_aliases);
                 let init = vd
                     .initializer
                     .as_ref()
@@ -52,7 +52,7 @@ pub fn generate_st_decl(model: &ModelDefinition, ctx: &CodegenContext) -> String
                 continue;
             }
             if let Some(vname) = &vd.name {
-                let ty = type_to_st(&vd.ty);
+                let ty = type_to_st_ctx(&vd.ty, &ctx.type_aliases);
                 let init = vd
                     .initializer
                     .as_ref()

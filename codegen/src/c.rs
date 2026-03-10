@@ -3,7 +3,7 @@ use but_grammar::ast::{
     StatePart, VariableAttribute,
 };
 
-use crate::condition::{condition_to_c, stmt_to_c, type_to_c};
+use crate::condition::{condition_to_c, stmt_to_c, type_to_c_ctx};
 use crate::ltl::{extract_ltl_formulas, ltl_comments_c};
 use crate::CodegenContext;
 
@@ -37,7 +37,7 @@ pub fn generate_c_header(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
     for vd in &ctx.global_vars {
         if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
             if let Some(vname) = &vd.name {
-                let ty = type_to_c(&vd.ty);
+                let ty = type_to_c_ctx(&vd.ty, &ctx.type_aliases);
                 out.push_str(&format!("extern {} {};\n", ty, vname.name));
             }
         }
@@ -74,7 +74,7 @@ pub fn generate_c_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
     for vd in &ctx.global_vars {
         if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
             if let Some(vname) = &vd.name {
-                let ty = type_to_c(&vd.ty);
+                let ty = type_to_c_ctx(&vd.ty, &ctx.type_aliases);
                 let init = vd
                     .initializer
                     .as_ref()
@@ -92,7 +92,7 @@ pub fn generate_c_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
                 continue; // ports handled above
             }
             if let Some(vname) = &vd.name {
-                let ty = type_to_c(&vd.ty);
+                let ty = type_to_c_ctx(&vd.ty, &ctx.type_aliases);
                 let init = vd
                     .initializer
                     .as_ref()
