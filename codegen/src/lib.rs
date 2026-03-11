@@ -1,3 +1,4 @@
+pub mod behavior;
 pub mod c;
 pub mod condition;
 pub mod lc3;
@@ -10,7 +11,8 @@ use std::collections::HashMap;
 
 use but_grammar::ast::{SourceUnit, SourceUnitPart, Type, VariableDefinition};
 
-pub use c::{generate_c_all, generate_c_header, generate_c_source};
+pub use behavior::{find_behavior, find_end_property, find_terminal_states, BehaviorKind};
+pub use c::{generate_c_all, generate_c_all_named, generate_c_header, generate_c_source};
 pub use lc3::{generate_lc3, generate_lc3_all};
 pub use st::{generate_st_all, generate_st_decl, generate_st_program};
 pub use thumb::{generate_thumb, generate_thumb_all};
@@ -90,31 +92,38 @@ impl CodegenContext {
     }
 }
 
-/// Сгенерировать все выходные данные для всех моделей из SourceUnit.
+/// Сгенерировать все выходные данные для всех моделей из SourceUnit (единый файл на язык).
+///
+/// Используйте [`AllOutput::generate_named`] для задания базового имени выходных файлов.
 pub struct AllOutput {
-    /// (имя_модели, заголовок, исходник)
-    pub c: Vec<(String, String, String)>,
-    /// (имя_модели, verilog)
-    pub verilog: Vec<(String, String)>,
-    /// (имя_модели, объявление, программа)
-    pub st: Vec<(String, String, String)>,
-    /// (имя_модели, ассемблер)
-    pub lc3: Vec<(String, String)>,
-    /// (имя_модели, ассемблер)
-    pub thumb: Vec<(String, String)>,
+    /// (заголовок, исходник) — один `.h` + один `.c` для всех моделей
+    pub c: (String, String),
+    /// Единый Verilog-файл со всеми модулями
+    pub verilog: String,
+    /// (декларации, программа) — один `.FB.DECL.st` + один `.FB.PRGS.st` для всех моделей
+    pub st: (String, String),
+    /// Единый ассемблерный файл LC-3
+    pub lc3: String,
+    /// Единый ассемблерный файл ARM Thumb
+    pub thumb: String,
 }
 
 impl AllOutput {
-    /// Сгенерировать все выходы с настройками по умолчанию (4 пробела).
+    /// Сгенерировать все выходы с базовым именем «model» и настройками по умолчанию (4 пробела).
     pub fn generate(source: &SourceUnit) -> Self {
+        Self::generate_named(source, "model")
+    }
+
+    /// Сгенерировать все выходы с заданным базовым именем файла.
+    pub fn generate_named(source: &SourceUnit, base_name: &str) -> Self {
         let ctx = CodegenContext::from_source(source);
-        Self::generate_with_ctx(source, &ctx)
+        Self::generate_with_ctx(source, base_name, &ctx)
     }
 
     /// Сгенерировать все выходы с заданным контекстом (включая стиль отступа).
-    pub fn generate_with_ctx(source: &SourceUnit, ctx: &CodegenContext) -> Self {
+    pub fn generate_with_ctx(source: &SourceUnit, base_name: &str, ctx: &CodegenContext) -> Self {
         Self {
-            c: generate_c_all(source, ctx),
+            c: generate_c_all_named(source, base_name, ctx),
             verilog: generate_verilog_all(source, ctx),
             st: generate_st_all(source, ctx),
             lc3: generate_lc3_all(source, ctx),
@@ -181,7 +190,6 @@ model M { start -> M; }
 
     #[test]
     fn from_source_пустой_источник_нет_переменных() {
-        // Минимальный источник без глобальных переменных
         let (src, _) = but_grammar::parse("model Empty { start -> Empty; }", 0)
             .expect("Парсинг пустой модели");
         let ctx = CodegenContext::from_source(&src);
@@ -192,10 +200,10 @@ model M { start -> M; }
     fn from_source_собирает_псевдонимы_типов() {
         let src = parse_type_aliases();
         let ctx = CodegenContext::from_source(&src);
-        assert!(ctx.type_aliases.contains_key("MyByte"), "MyByte должен быть в таблице псевдонимов");
-        assert!(ctx.type_aliases.contains_key("Counter"), "Counter должен быть в таблице псевдонимов");
-        assert!(ctx.type_aliases.contains_key("Flag"), "Flag должен быть в таблице псевдонимов");
-        assert!(ctx.type_aliases.contains_key("Nested"), "Nested должен быть в таблице псевдонимов");
+        assert!(ctx.type_aliases.contains_key("MyByte"));
+        assert!(ctx.type_aliases.contains_key("Counter"));
+        assert!(ctx.type_aliases.contains_key("Flag"));
+        assert!(ctx.type_aliases.contains_key("Nested"));
     }
 
     #[test]
@@ -225,25 +233,25 @@ model M { start -> M; }
     fn all_output_generate_возвращает_данные_для_delay() {
         let src = parse_delay();
         let out = AllOutput::generate(&src);
-        // Должна быть одна модель Delay во всех выходах
-        assert_eq!(out.c.len(), 1);
-        assert_eq!(out.verilog.len(), 1);
-        assert_eq!(out.st.len(), 1);
-        assert_eq!(out.lc3.len(), 1);
-        assert_eq!(out.thumb.len(), 1);
+        // Все выходы непусты
+        assert!(!out.c.0.is_empty(), "C-заголовок должен быть непустым");
+        assert!(!out.c.1.is_empty(), "C-исходник должен быть непустым");
+        assert!(!out.verilog.is_empty(), "Verilog должен быть непустым");
+        assert!(!out.st.0.is_empty() || !out.st.1.is_empty(), "ST должен быть непустым");
+        assert!(!out.lc3.is_empty(), "LC-3 должен быть непустым");
+        assert!(!out.thumb.is_empty(), "Thumb должен быть непустым");
     }
 
     #[test]
-    fn all_output_имя_модели_delay() {
+    fn all_output_содержит_имя_модели_delay() {
         let src = parse_delay();
         let out = AllOutput::generate(&src);
-        // C, Verilog, LC-3, Thumb используют to_lowercase() → "delay"
-        assert_eq!(out.c[0].0, "delay");
-        assert_eq!(out.verilog[0].0, "delay");
-        assert_eq!(out.lc3[0].0, "delay");
-        assert_eq!(out.thumb[0].0, "delay");
-        // ST использует to_uppercase() → "DELAY"
-        assert_eq!(out.st[0].0, "DELAY");
+        assert!(out.c.0.contains("DELAY") || out.c.0.contains("delay"),
+            "C-заголовок должен содержать имя модели Delay: {}", out.c.0);
+        assert!(out.verilog.contains("delay") || out.verilog.contains("Delay"),
+            "Verilog должен содержать имя модели: {}", out.verilog);
+        assert!(out.st.0.contains("DELAY") || out.st.1.contains("DELAY"),
+            "ST должен содержать имя модели DELAY");
     }
 
     // ===== generate_c_all =====
@@ -252,14 +260,9 @@ model M { start -> M; }
     fn generate_c_all_создаёт_заголовок_и_исходник() {
         let src = parse_delay();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_c_all(&src, &ctx);
-        assert!(!result.is_empty());
-        let (name, header, source) = &result[0];
-        // Имя возвращается в нижнем регистре
-        assert_eq!(name, "delay");
-        // Заголовок должен содержать guard на основе верхнего регистра
-        assert!(header.contains("DELAY"), "Заголовок должен содержать DELAY: {}", header);
-        // Исходник должен быть непустым
+        let (header, source) = generate_c_all(&src, &ctx);
+        assert!(header.contains("DELAY") || header.contains("delay"),
+            "Заголовок должен содержать имя модели: {}", header);
         assert!(!source.is_empty(), "Исходник не должен быть пустым");
     }
 
@@ -269,14 +272,10 @@ model M { start -> M; }
     fn generate_verilog_all_создаёт_модуль() {
         let src = parse_delay();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_verilog_all(&src, &ctx);
-        assert!(!result.is_empty());
-        let (name, verilog) = &result[0];
-        // Имя возвращается в нижнем регистре
-        assert_eq!(name, "delay");
-        // Verilog должен быть непустым и содержать ключевое слово module
-        assert!(!verilog.is_empty(), "Verilog должен быть непустым");
+        let verilog = generate_verilog_all(&src, &ctx);
+        assert!(!verilog.is_empty());
         assert!(verilog.contains("module"), "Verilog должен содержать 'module': {}", verilog);
+        assert!(verilog.contains("delay"), "Verilog должен содержать имя модели: {}", verilog);
     }
 
     // ===== generate_st_all =====
@@ -285,13 +284,9 @@ model M { start -> M; }
     fn generate_st_all_создаёт_объявление_и_программу() {
         let src = parse_delay();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_st_all(&src, &ctx);
-        assert!(!result.is_empty());
-        let (name, decl, prog) = &result[0];
-        // Имя в ST возвращается в верхнем регистре
-        assert_eq!(name, "DELAY");
-        // Объявление и программа должны быть непустыми
+        let (decl, prog) = generate_st_all(&src, &ctx);
         assert!(!decl.is_empty() || !prog.is_empty(), "ST должен иметь непустой вывод");
+        assert!(decl.contains("DELAY") || prog.contains("DELAY"), "ST должен содержать DELAY");
     }
 
     // ===== generate_lc3_all =====
@@ -300,11 +295,7 @@ model M { start -> M; }
     fn generate_lc3_all_создаёт_ассемблер() {
         let src = parse_delay();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_lc3_all(&src, &ctx);
-        assert!(!result.is_empty());
-        let (name, asm) = &result[0];
-        // Имя возвращается в нижнем регистре
-        assert_eq!(name, "delay");
+        let asm = generate_lc3_all(&src, &ctx);
         assert!(!asm.is_empty(), "LC-3 ассемблер не должен быть пустым");
     }
 
@@ -314,17 +305,12 @@ model M { start -> M; }
     fn generate_thumb_all_создаёт_ассемблер() {
         let src = parse_delay();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_thumb_all(&src, &ctx);
-        assert!(!result.is_empty());
-        let (name, asm) = &result[0];
-        // Имя возвращается в нижнем регистре
-        assert_eq!(name, "delay");
+        let asm = generate_thumb_all(&src, &ctx);
         assert!(!asm.is_empty(), "Thumb ассемблер не должен быть пустым");
     }
 
     // ===== Интеграционные тесты: псевдонимы типов в кодогенерации =====
 
-    /// Источник с псевдонимами типов и портами, использующими эти псевдонимы
     const TYPE_ALIAS_PORTS_SRC: &str = r#"
 type Byte    = u8;
 type Counter = u32;
@@ -352,90 +338,67 @@ model Sensor {
     fn c_header_разворачивает_псевдоним_byte_в_uint8_t() {
         let src = parse_type_alias_ports();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_c_all(&src, &ctx);
-        let (_, header, _) = &result[0];
-        assert!(
-            header.contains("uint8_t sensor"),
-            "Ожидается uint8_t для Byte, заголовок:\n{}", header
-        );
+        let (header, _) = generate_c_all(&src, &ctx);
+        assert!(header.contains("uint8_t sensor"),
+            "Ожидается uint8_t для Byte, заголовок:\n{}", header);
     }
 
     #[test]
     fn c_header_разворачивает_псевдоним_counter_в_uint32_t() {
         let src = parse_type_alias_ports();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_c_all(&src, &ctx);
-        let (_, header, _) = &result[0];
-        assert!(
-            header.contains("uint32_t count"),
-            "Ожидается uint32_t для Counter, заголовок:\n{}", header
-        );
+        let (header, _) = generate_c_all(&src, &ctx);
+        assert!(header.contains("uint32_t count"),
+            "Ожидается uint32_t для Counter, заголовок:\n{}", header);
     }
 
     #[test]
     fn c_header_разворачивает_псевдоним_flag_в_int() {
         let src = parse_type_alias_ports();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_c_all(&src, &ctx);
-        let (_, header, _) = &result[0];
-        assert!(
-            header.contains("int alarm"),
-            "Ожидается int (bool→int) для Flag, заголовок:\n{}", header
-        );
+        let (header, _) = generate_c_all(&src, &ctx);
+        assert!(header.contains("int alarm"),
+            "Ожидается int (bool→int) для Flag, заголовок:\n{}", header);
     }
 
     #[test]
     fn c_header_разворачивает_псевдоним_speed_в_double() {
         let src = parse_type_alias_ports();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_c_all(&src, &ctx);
-        let (_, header, _) = &result[0];
-        assert!(
-            header.contains("double rate"),
-            "Ожидается double для Speed (f64), заголовок:\n{}", header
-        );
+        let (header, _) = generate_c_all(&src, &ctx);
+        assert!(header.contains("double rate"),
+            "Ожидается double для Speed (f64), заголовок:\n{}", header);
     }
 
     #[test]
     fn c_header_разворачивает_вложенный_псевдоним_в_uint8_t() {
-        // NestedAlias = Byte = u8 → uint8_t
         let src = parse_type_alias_ports();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_c_all(&src, &ctx);
-        let (_, header, _) = &result[0];
-        assert!(
-            header.contains("uint8_t raw"),
-            "Ожидается uint8_t для NestedAlias→Byte→u8, заголовок:\n{}", header
-        );
+        let (header, _) = generate_c_all(&src, &ctx);
+        assert!(header.contains("uint8_t raw"),
+            "Ожидается uint8_t для NestedAlias→Byte→u8, заголовок:\n{}", header);
     }
 
     #[test]
     fn st_decl_разворачивает_псевдоним_counter_в_dword() {
         let src = parse_type_alias_ports();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_st_all(&src, &ctx);
-        let (_, decl, _) = &result[0];
-        assert!(
-            decl.contains("DWORD"),
-            "Ожидается DWORD для Counter→u32, объявление:\n{}", decl
-        );
+        let (decl, _) = generate_st_all(&src, &ctx);
+        assert!(decl.contains("DWORD"),
+            "Ожидается DWORD для Counter→u32, объявление:\n{}", decl);
     }
 
     #[test]
     fn st_decl_разворачивает_псевдоним_flag_в_bool() {
         let src = parse_type_alias_ports();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_st_all(&src, &ctx);
-        let (_, decl, _) = &result[0];
-        assert!(
-            decl.contains("BOOL"),
-            "Ожидается BOOL для Flag→bool, объявление:\n{}", decl
-        );
+        let (decl, _) = generate_st_all(&src, &ctx);
+        assert!(decl.contains("BOOL"),
+            "Ожидается BOOL для Flag→bool, объявление:\n{}", decl);
     }
 
     // ===== Интеграционные тесты: система типов (bit и float как базовые) =====
 
-    /// Источник с типами, определёнными через массивы бит (в стиле std.but)
     const STD_TYPES_SRC: &str = r#"
 type u8   = [8:   bit];
 type u16  = [16:  bit];
@@ -462,125 +425,92 @@ model Test { state A {} start -> A; }
 
     #[test]
     fn c_header_u8_через_массив_бит_даёт_uint8_t() {
-        // type u8 = [8: bit]; port x8: u8 → uint8_t x8
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_c_all(&src, &ctx);
-        let (_, header, _) = &result[0];
-        assert!(
-            header.contains("uint8_t x8"),
-            "Ожидается uint8_t для u8=[8:bit], заголовок:\n{}", header
-        );
+        let (header, _) = generate_c_all(&src, &ctx);
+        assert!(header.contains("uint8_t x8"),
+            "Ожидается uint8_t для u8=[8:bit], заголовок:\n{}", header);
     }
 
     #[test]
     fn c_header_u16_через_массив_бит_даёт_uint16_t() {
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_c_all(&src, &ctx);
-        let (_, header, _) = &result[0];
-        assert!(
-            header.contains("uint16_t x16"),
-            "Ожидается uint16_t для u16=[16:bit], заголовок:\n{}", header
-        );
+        let (header, _) = generate_c_all(&src, &ctx);
+        assert!(header.contains("uint16_t x16"),
+            "Ожидается uint16_t для u16=[16:bit], заголовок:\n{}", header);
     }
 
     #[test]
     fn c_header_u32_через_массив_бит_даёт_uint32_t() {
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_c_all(&src, &ctx);
-        let (_, header, _) = &result[0];
-        assert!(
-            header.contains("uint32_t x32"),
-            "Ожидается uint32_t для u32=[32:bit], заголовок:\n{}", header
-        );
+        let (header, _) = generate_c_all(&src, &ctx);
+        assert!(header.contains("uint32_t x32"),
+            "Ожидается uint32_t для u32=[32:bit], заголовок:\n{}", header);
     }
 
     #[test]
     fn c_header_u64_через_массив_бит_даёт_uint64_t() {
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_c_all(&src, &ctx);
-        let (_, header, _) = &result[0];
-        assert!(
-            header.contains("uint64_t x64"),
-            "Ожидается uint64_t для u64=[64:bit], заголовок:\n{}", header
-        );
+        let (header, _) = generate_c_all(&src, &ctx);
+        assert!(header.contains("uint64_t x64"),
+            "Ожидается uint64_t для u64=[64:bit], заголовок:\n{}", header);
     }
 
     #[test]
     fn c_header_u128_через_массив_бит_даёт_uint64_t_массив() {
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_c_all(&src, &ctx);
-        let (_, header, _) = &result[0];
-        assert!(
-            header.contains("uint64_t[2]"),
-            "Ожидается uint64_t[2] для u128=[128:bit], заголовок:\n{}", header
-        );
+        let (header, _) = generate_c_all(&src, &ctx);
+        assert!(header.contains("uint64_t[2]"),
+            "Ожидается uint64_t[2] для u128=[128:bit], заголовок:\n{}", header);
     }
 
     #[test]
     fn c_header_bool_через_бит_даёт_uint8_t() {
-        // type bool = bit; port flag: bool → uint8_t flag
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_c_all(&src, &ctx);
-        let (_, header, _) = &result[0];
-        assert!(
-            header.contains("uint8_t flag"),
-            "Ожидается uint8_t для bool=bit, заголовок:\n{}", header
-        );
+        let (header, _) = generate_c_all(&src, &ctx);
+        assert!(header.contains("uint8_t flag"),
+            "Ожидается uint8_t для bool=bit, заголовок:\n{}", header);
     }
 
     #[test]
     fn c_header_counter_через_цепочку_псевдонимов() {
-        // type u32 = [32: bit]; type Counter = u32; → uint32_t cnt
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_c_all(&src, &ctx);
-        let (_, header, _) = &result[0];
-        assert!(
-            header.contains("uint32_t cnt"),
-            "Ожидается uint32_t для Counter→u32→[32:bit], заголовок:\n{}", header
-        );
+        let (header, _) = generate_c_all(&src, &ctx);
+        assert!(header.contains("uint32_t cnt"),
+            "Ожидается uint32_t для Counter→u32→[32:bit], заголовок:\n{}", header);
     }
 
     #[test]
     fn st_decl_u8_через_массив_бит_даёт_byte() {
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_st_all(&src, &ctx);
-        let (_, decl, _) = &result[0];
-        assert!(
-            decl.contains("BYTE"),
-            "Ожидается BYTE для u8=[8:bit], объявление:\n{}", decl
-        );
+        let (decl, _) = generate_st_all(&src, &ctx);
+        assert!(decl.contains("BYTE"),
+            "Ожидается BYTE для u8=[8:bit], объявление:\n{}", decl);
     }
 
     #[test]
     fn st_decl_u32_через_массив_бит_даёт_dword() {
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_st_all(&src, &ctx);
-        let (_, decl, _) = &result[0];
-        assert!(
-            decl.contains("DWORD"),
-            "Ожидается DWORD для u32=[32:bit], объявление:\n{}", decl
-        );
+        let (decl, _) = generate_st_all(&src, &ctx);
+        assert!(decl.contains("DWORD"),
+            "Ожидается DWORD для u32=[32:bit], объявление:\n{}", decl);
     }
 
     #[test]
     fn st_decl_u128_через_массив_бит_даёт_массив_lword() {
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
-        let result = generate_st_all(&src, &ctx);
-        let (_, decl, _) = &result[0];
-        assert!(
-            decl.contains("ARRAY [0..1] OF LWORD"),
-            "Ожидается ARRAY [0..1] OF LWORD для u128=[128:bit], объявление:\n{}", decl
-        );
+        let (decl, _) = generate_st_all(&src, &ctx);
+        assert!(decl.contains("ARRAY [0..1] OF LWORD"),
+            "Ожидается ARRAY [0..1] OF LWORD для u128=[128:bit], объявление:\n{}", decl);
     }
 
     // ===== IndentStyle =====
@@ -634,49 +564,36 @@ model Test { state A {} start -> A; }
     fn c_источник_с_отступом_2_пробела_содержит_двойной_отступ() {
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(2));
-        let result = generate_c_all(&src, &ctx);
-        let (_, _header, source) = &result[0];
-        // Первый уровень — 2 пробела
-        assert!(
-            source.contains("\n  switch"),
-            "Ожидается отступ в 2 пробела перед switch:\n{}", source
-        );
+        let (_, source) = generate_c_all(&src, &ctx);
+        assert!(source.contains("\n  switch"),
+            "Ожидается отступ в 2 пробела перед switch:\n{}", source);
     }
 
     #[test]
     fn c_источник_с_табуляцией_содержит_табы() {
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Tab);
-        let result = generate_c_all(&src, &ctx);
-        let (_, _header, source) = &result[0];
-        assert!(
-            source.contains('\t'),
-            "Ожидается символ табуляции в коде с IndentStyle::Tab:\n{}", source
-        );
+        let (_, source) = generate_c_all(&src, &ctx);
+        assert!(source.contains('\t'),
+            "Ожидается символ табуляции в коде с IndentStyle::Tab:\n{}", source);
     }
 
     #[test]
     fn c_источник_с_отступом_4_по_умолчанию_содержит_четыре_пробела() {
         let src = parse_delay();
-        let ctx = CodegenContext::from_source(&src); // по умолчанию Spaces(4)
-        let result = generate_c_all(&src, &ctx);
-        let (_, _header, source) = &result[0];
-        assert!(
-            source.contains("\n    switch"),
-            "Ожидается отступ в 4 пробела перед switch:\n{}", source
-        );
+        let ctx = CodegenContext::from_source(&src);
+        let (_, source) = generate_c_all(&src, &ctx);
+        assert!(source.contains("\n    switch"),
+            "Ожидается отступ в 4 пробела перед switch:\n{}", source);
     }
 
     #[test]
     fn c_источник_с_отступом_0_не_содержит_ведущих_пробелов_в_switch() {
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(0));
-        let result = generate_c_all(&src, &ctx);
-        let (_, _header, source) = &result[0];
-        assert!(
-            source.contains("\nswitch"),
-            "При нулевом отступе switch должен быть без ведущих пробелов:\n{}", source
-        );
+        let (_, source) = generate_c_all(&src, &ctx);
+        assert!(source.contains("\nswitch"),
+            "При нулевом отступе switch должен быть без ведущих пробелов:\n{}", source);
     }
 
     // ===== Генерация ST с настраиваемым отступом =====
@@ -685,24 +602,18 @@ model Test { state A {} start -> A; }
     fn st_объявление_с_отступом_2_содержит_двойной_отступ() {
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(2));
-        let result = generate_st_all(&src, &ctx);
-        let (_, decl, _) = &result[0];
-        assert!(
-            decl.contains("\n  state"),
-            "Ожидается 2-пробельный отступ перед 'state' в объявлении:\n{}", decl
-        );
+        let (decl, _) = generate_st_all(&src, &ctx);
+        assert!(decl.contains("\n  state"),
+            "Ожидается 2-пробельный отступ перед 'state' в объявлении:\n{}", decl);
     }
 
     #[test]
     fn st_программа_с_табуляцией_содержит_табы() {
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Tab);
-        let result = generate_st_all(&src, &ctx);
-        let (_, _, prog) = &result[0];
-        assert!(
-            prog.contains('\t'),
-            "Ожидается символ табуляции в ST-программе с IndentStyle::Tab:\n{}", prog
-        );
+        let (_, prog) = generate_st_all(&src, &ctx);
+        assert!(prog.contains('\t'),
+            "Ожидается символ табуляции в ST-программе с IndentStyle::Tab:\n{}", prog);
     }
 
     // ===== Генерация Verilog с настраиваемым отступом =====
@@ -711,24 +622,18 @@ model Test { state A {} start -> A; }
     fn verilog_с_отступом_2_содержит_двойной_отступ() {
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(2));
-        let result = generate_verilog_all(&src, &ctx);
-        let (_, code) = &result[0];
-        assert!(
-            code.contains("\n  input wire clk"),
-            "Ожидается 2-пробельный отступ перед 'input wire clk':\n{}", code
-        );
+        let code = generate_verilog_all(&src, &ctx);
+        assert!(code.contains("\n  input wire clk"),
+            "Ожидается 2-пробельный отступ перед 'input wire clk':\n{}", code);
     }
 
     #[test]
     fn verilog_с_табуляцией_содержит_табы() {
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Tab);
-        let result = generate_verilog_all(&src, &ctx);
-        let (_, code) = &result[0];
-        assert!(
-            code.contains('\t'),
-            "Ожидается символ табуляции в Verilog-коде с IndentStyle::Tab:\n{}", code
-        );
+        let code = generate_verilog_all(&src, &ctx);
+        assert!(code.contains('\t'),
+            "Ожидается символ табуляции в Verilog-коде с IndentStyle::Tab:\n{}", code);
     }
 
     // ===== from_source_with_indent =====
@@ -738,6 +643,125 @@ model Test { state A {} start -> A; }
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(2));
         assert_eq!(ctx.indent, IndentStyle::Spaces(2));
-        assert_eq!(ctx.global_vars.len(), 2); // input и output должны присутствовать
+        assert_eq!(ctx.global_vars.len(), 2);
+    }
+
+    // ===== Тесты behavior и end =====
+
+    const BEHAVIOR_SRC: &str = r#"
+model Worker {
+    state Active { ref Done: ready; }
+    state Done { }
+    start -> Active;
+    end -> { cleanup = 1; }
+}
+port ready : bit = 0;
+port cleanup : bit = 0;
+"#;
+
+    const SEQUENTIAL_SRC: &str = r#"
+model Phase1 {
+    state Run { }
+    start -> Run;
+}
+model Phase2 {
+    state Run { }
+    start -> Run;
+}
+model Pipeline {
+    behavior -> sequential(Phase1, Phase2);
+    end -> { done = 1; }
+}
+port done : bit = 0;
+"#;
+
+    const PARALLEL_SRC: &str = r#"
+model A { state S {} start -> S; }
+model B { state S {} start -> S; }
+model Combo {
+    behavior -> parallel(A, B);
+    end -> { finished = 1; }
+}
+port finished : bit = 0;
+"#;
+
+    fn parse_behavior(src: &str) -> SourceUnit {
+        but_grammar::parse(src, 0)
+            .expect("Парсинг behavior-источника")
+            .0
+    }
+
+    #[test]
+    fn c_header_содержит_is_done_для_терминального_состояния() {
+        let src = parse_behavior(BEHAVIOR_SRC);
+        let ctx = CodegenContext::from_source(&src);
+        let (header, _) = generate_c_all(&src, &ctx);
+        assert!(header.contains("is_done"),
+            "Заголовок должен содержать is_done для терминального состояния Done:\n{}", header);
+    }
+
+    #[test]
+    fn c_source_содержит_end_handler() {
+        let src = parse_behavior(BEHAVIOR_SRC);
+        let ctx = CodegenContext::from_source(&src);
+        let (_, source) = generate_c_all(&src, &ctx);
+        assert!(source.contains("end handler") || source.contains("cleanup"),
+            "Исходник должен содержать end-обработчик:\n{}", source);
+    }
+
+    #[test]
+    fn c_source_sequential_содержит_init_step() {
+        let src = parse_behavior(SEQUENTIAL_SRC);
+        let ctx = CodegenContext::from_source(&src);
+        let (_, source) = generate_c_all(&src, &ctx);
+        assert!(source.contains("pipeline_init") || source.contains("Pipeline_init"),
+            "Исходник должен содержать pipeline_init:\n{}", source);
+        assert!(source.contains("PHASE") || source.contains("phase"),
+            "Исходник должен содержать фазы компоновки:\n{}", source);
+    }
+
+    #[test]
+    fn c_source_parallel_содержит_parallel_logic() {
+        let src = parse_behavior(PARALLEL_SRC);
+        let ctx = CodegenContext::from_source(&src);
+        let (_, source) = generate_c_all(&src, &ctx);
+        assert!(source.contains("is_done") || source.contains("_done"),
+            "Параллельная компоновка должна содержать проверку завершения:\n{}", source);
+    }
+
+    #[test]
+    fn st_decl_sequential_содержит_phase() {
+        let src = parse_behavior(SEQUENTIAL_SRC);
+        let ctx = CodegenContext::from_source(&src);
+        let (decl, _) = generate_st_all(&src, &ctx);
+        assert!(decl.contains("phase") || decl.contains("PHASE"),
+            "ST-декларация должна содержать переменную фазы:\n{}", decl);
+    }
+
+    #[test]
+    fn verilog_содержит_done_signal_для_терминального_состояния() {
+        let src = parse_behavior(BEHAVIOR_SRC);
+        let ctx = CodegenContext::from_source(&src);
+        let verilog = generate_verilog_all(&src, &ctx);
+        assert!(verilog.contains("done"),
+            "Verilog должен содержать done-сигнал:\n{}", verilog);
+    }
+
+    #[test]
+    fn lc3_содержит_имя_модели() {
+        let src = parse_behavior(BEHAVIOR_SRC);
+        let ctx = CodegenContext::from_source(&src);
+        let asm = generate_lc3_all(&src, &ctx);
+        assert!(asm.contains("WORKER") || asm.contains("Worker"),
+            "LC-3 должен содержать имя модели Worker:\n{}", asm);
+    }
+
+    #[test]
+    fn thumb_содержит_init_function() {
+        let src = parse_delay();
+        let ctx = CodegenContext::from_source(&src);
+        let asm = generate_thumb_all(&src, &ctx);
+        assert!(asm.contains("init"),
+            "Thumb должен содержать функцию init:\n{}", asm);
     }
 }

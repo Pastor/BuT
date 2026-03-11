@@ -2,7 +2,7 @@
 
 > **Версия документа:** 1.0
 > **Автор анализа:** Системный аналитик
-> **Дата:** 2026-03-10
+> **Дата:** 2026-03-11
 > **Репозиторий:** https://github.com/Pastor/BuT
 
 ---
@@ -1619,32 +1619,162 @@ END_VAR
 
 ## 19. Композиция поведения
 
-### 19.1 Операторы композиции
+Свойство `behavior` задаёт способ компоновки подмоделей внутри модели-контейнера. Вместо явных состояний и переходов модель описывает, **как** запускать другие модели и в каком порядке. Свойство `end` задаёт действие, выполняемое при завершении модели или композиции.
 
-| Оператор | Семантика |
-|---|---|
-| `A \| B` | **Параллельная** композиция (оба автомата работают одновременно) |
-| `A + B` | **Последовательная** композиция (B запускается после A) |
-| `(A + B) \| C` | Смешанная с группировкой |
+### 19.1 Синтаксис свойства `behavior`
 
-### 19.2 Примеры
+```bnf
+behavior -> SequentialExpr ";"
+          | ParallelExpr ";"
+          | ChoiceExpr ";"
 
-```but
-// Параллельные автоматы
-behavior -> Consumer | Producer;
-
-// Последовательные автоматы
-behavior -> Map + Reduce;
-
-// Смешанная композиция
-behavior -> (A + B) | C;
+SequentialExpr ::= "sequential" "(" Identifier ("," Identifier)* ")"
+ParallelExpr   ::= "parallel"   "(" Identifier ("," Identifier)* ")"
+ChoiceExpr     ::= "choice"     "(" Identifier ("," Identifier)* ")"
 ```
 
-### 19.3 Обращение к состоянию подавтомата
+Свойство `behavior` объявляется на уровне модели и не совмещается с явными состояниями (`state`). Идентификаторы в скобках — имена других моделей (подмоделей).
+
+### 19.2 Типы компоновки
+
+| Тип | Синтаксис | Семантика |
+|---|---|---|
+| **Последовательная** | `sequential(M1, M2, …, Mn)` | M1 → M2 → … → Mn; следующая запускается после завершения предыдущей |
+| **Параллельная** | `parallel(M1, M2, …, Mn)` | Все Mi выполняются одновременно; завершение — когда все завершились |
+| **Выбор** | `choice(M1, M2, …, Mn)` | Выполняется первая модель в списке; когда она завершается — вся композиция завершена |
+
+### 19.3 Свойство `end` — действие при завершении
+
+Свойство `end` задаёт блок кода или выражение, которое выполняется автоматически при завершении модели:
+
+- для обычной FSM — когда автомат переходит в **терминальное состояние** (состояние без исходящих переходов `ref`);
+- для модели с `behavior` — когда вся композиция завершается.
 
 ```but
-// Проверить, в каком состоянии находится подавтомат
+// Блок кода:
+end -> { переменная = 1; вызов_функции(); }
+
+// Выражение:
+end -> pipeline_complete = 1;
+```
+
+### 19.4 Терминальные состояния
+
+Состояние является **терминальным**, если оно не содержит ни одного перехода `ref`. При входе в такое состояние:
+
+1. устанавливается внутренний флаг завершения модели (`is_done() == 1`);
+2. если объявлено свойство `end` — выполняется его тело.
+
+```but
+model Calibrate {
+    state Running {
+        ref Done : samples_ready;  // есть переход → не терминальное
+    }
+    state Done { }  // нет переходов → терминальное
+
+    start -> Running;
+    end -> { calibration_done = 1; }  // выполнится при входе в Done
+}
+```
+
+### 19.5 Примеры
+
+#### Последовательная компоновка
+
+```but
+/// Пайплайн: Calibrate → Process → Store (каждый этап ждёт завершения предыдущего)
+model Pipeline {
+    behavior -> sequential(Calibrate, Process, Store);
+    end -> { pipeline_complete = 1; }
+}
+```
+
+#### Параллельная компоновка
+
+```but
+/// Запускает Calibrate и Process одновременно; завершается, когда оба завершились
+model ParallelPrep {
+    behavior -> parallel(Calibrate, Process);
+    end -> { prep_done = 1; }
+}
+```
+
+#### Выбор первой модели
+
+```but
+/// Выполняет первую модель из списка (Calibrate); при её завершении — завершается сам
+model FastOrSlow {
+    behavior -> choice(Calibrate, Store);
+    end -> { choice_done = 1; }
+}
+```
+
+### 19.6 Обращение к состоянию подавтомата
+
+Для проверки состояния подавтомата внутри условий переходов используется функция `S()`:
+
+```but
+// Проверить, что подавтомат Map завершил работу
+ref Join: (S(Map) = End);
+
+// Обе ветви параллельной композиции завершились
 ref Join: (S(Reduce) = End) & (S(Map) = End);
+```
+
+### 19.7 Полный пример — behavior_example.but
+
+```but
+model Calibrate {
+    state Running { ref Done : samples_ready; }
+    state Done { }
+    start -> Running;
+    end -> { calibration_done = 1; }
+}
+
+model Process {
+    state Idle   { ref Active : start_signal; }
+    state Active { ref Done : result_ready; ref Idle : !start_signal; }
+    state Done   { enter -> { status = 2; } }
+    start -> Idle;
+    end -> { process_done = 1; }
+}
+
+model Store {
+    state Writing  { ref Complete : write_done; }
+    state Complete { }
+    start -> Writing;
+    end -> { stored = 1; }
+}
+
+// Последовательная компоновка
+model Pipeline {
+    behavior -> sequential(Calibrate, Process, Store);
+    end -> { pipeline_complete = 1; }
+}
+
+// Параллельная компоновка
+model ParallelPrep {
+    behavior -> parallel(Calibrate, Process);
+    end -> { prep_done = 1; }
+}
+
+// Выбор
+model FastOrSlow {
+    behavior -> choice(Calibrate, Store);
+    end -> { choice_done = 1; }
+}
+
+port samples_ready    : bit = 0;
+port start_signal     : bit = 0;
+port result_ready     : bit = 0;
+port write_done       : bit = 0;
+port status           : bit = 0;
+port calibration_done : bit = 0;
+port process_done     : bit = 0;
+port stored           : bit = 0;
+port pipeline_complete: bit = 0;
+port prep_done        : bit = 0;
+port choice_done      : bit = 0;
 ```
 
 ---
@@ -1661,7 +1791,296 @@ ref Join: (S(Reduce) = End) & (S(Map) = End);
 | LC-3 ASM | `--gen-lc3` | Ассемблер учебной архитектуры LC-3 |
 | ARM Thumb | `--gen-thumb` | Ассемблер ARMv7-M Thumb |
 
-### 20.2 Пример генерации C-кода
+### 20.2 Модель «один файл на источник»
+
+Начиная с версии 2026-03-11 кодогенератор формирует **один выходной файл (пару файлов) на каждый входной `.but`-файл**, а не по одному файлу на каждую модель. Все модели из исходного файла объединяются в единый выходной артефакт.
+
+Базовое имя выходных файлов совпадает с именем входного файла без расширения (`<basename>`).
+
+| Целевой формат | Выходные файлы |
+|---|---|
+| C | `<basename>.h` + `<basename>.c` |
+| Verilog | `<basename>.v` |
+| Structured Text | `<basename>.FB.DECL.st` + `<basename>.FB.PRGS.st` |
+| LC-3 ASM | `<basename>.asm` |
+| ARM Thumb | `<basename>.S` |
+
+Пример: при запуске `but pipeline.but --gen-c --gen-verilog --output-dir gen/` будут созданы:
+```
+gen/c/pipeline.h
+gen/c/pipeline.c
+gen/verilog/pipeline.v
+```
+
+### 20.3 Функция `is_done()` и флаг завершения
+
+Для каждой модели, у которой есть хотя бы одно **терминальное состояние** (состояние без исходящих `ref`), кодогенератор формирует функцию завершённости:
+
+#### C
+
+```c
+// Объявление в .h:
+int ModelName_is_done(void);
+
+// Реализация в .c:
+int ModelName_is_done(void) {
+    return _state == MODELNAME_TERMSTATE;
+}
+```
+
+Для моделей с несколькими терминальными состояниями проверяются все варианты через `||`.
+
+#### ST (IEC 61131-3)
+
+В секции `VAR` функционального блока добавляется:
+```pascal
+is_done : BOOL;
+```
+Флаг устанавливается в `TRUE` при входе в терминальное состояние.
+
+#### Verilog
+
+```verilog
+output reg done;
+// В always-блоке при входе в терминальное состояние:
+// done <= 1'b1;
+```
+
+#### LC-3 Assembly / ARM Thumb
+
+Флаг завершения хранится в памяти (`MODEL_DONE` / `_model_done_flag`) и устанавливается при входе в терминальное состояние. Вызываться извне — через `LD` (LC-3) или `ldr` (Thumb).
+
+### 20.4 Генерация кода для `behavior` — компоновочные модели
+
+Модели с `behavior` не генерируют собственные состояния FSM — вместо этого кодогенератор создаёт **контроллер компоновки**, который управляет запуском и завершением подмоделей.
+
+#### 20.4.1 Последовательная компоновка (C)
+
+```but
+model Pipeline {
+    behavior -> sequential(Calibrate, Process, Store);
+    end -> { pipeline_complete = 1; }
+}
+```
+
+Генерируется фазовый автомат:
+
+```c
+// pipeline.h
+typedef enum {
+    PIPELINE_PHASE_CALIBRATE,
+    PIPELINE_PHASE_PROCESS,
+    PIPELINE_PHASE_STORE,
+    PIPELINE_DONE
+} Pipeline_Phase_t;
+
+void pipeline_init(void);
+void pipeline_step(void);
+int  pipeline_is_done(void);
+
+// pipeline.c
+static Pipeline_Phase_t _pipeline_phase;
+
+void pipeline_init(void) {
+    _pipeline_phase = PIPELINE_PHASE_CALIBRATE;
+    calibrate_init();
+}
+
+void pipeline_step(void) {
+    switch (_pipeline_phase) {
+        case PIPELINE_PHASE_CALIBRATE:
+            calibrate_step();
+            if (calibrate_is_done()) {
+                _pipeline_phase = PIPELINE_PHASE_PROCESS;
+                process_init();
+            }
+            break;
+        case PIPELINE_PHASE_PROCESS:
+            process_step();
+            if (process_is_done()) {
+                _pipeline_phase = PIPELINE_PHASE_STORE;
+                store_init();
+            }
+            break;
+        case PIPELINE_PHASE_STORE:
+            store_step();
+            if (store_is_done()) {
+                _pipeline_phase = PIPELINE_DONE;
+                pipeline_complete = 1;   /* end handler */
+            }
+            break;
+        case PIPELINE_DONE:
+            break;
+    }
+}
+
+int pipeline_is_done(void) {
+    return _pipeline_phase == PIPELINE_DONE;
+}
+```
+
+#### 20.4.2 Параллельная компоновка (C)
+
+```but
+model ParallelPrep {
+    behavior -> parallel(Calibrate, Process);
+    end -> { prep_done = 1; }
+}
+```
+
+```c
+void parallelprep_init(void) {
+    calibrate_init();
+    process_init();
+}
+
+void parallelprep_step(void) {
+    if (!calibrate_is_done()) calibrate_step();
+    if (!process_is_done())   process_step();
+    if (calibrate_is_done() && process_is_done()) {
+        prep_done = 1;   /* end handler */
+    }
+}
+
+int parallelprep_is_done(void) {
+    return calibrate_is_done() && process_is_done();
+}
+```
+
+#### 20.4.3 Выбор (C)
+
+```but
+model FastOrSlow {
+    behavior -> choice(Calibrate, Store);
+    end -> { choice_done = 1; }
+}
+```
+
+```c
+void fastorslow_init(void) { calibrate_init(); }
+
+void fastorslow_step(void) {
+    calibrate_step();
+    if (calibrate_is_done()) {
+        choice_done = 1;   /* end handler */
+    }
+}
+
+int fastorslow_is_done(void) { return calibrate_is_done(); }
+```
+
+#### 20.4.4 Structured Text (IEC 61131-3)
+
+Для `sequential` генерируется `FUNCTION_BLOCK` с переменной `phase : INT` и секцией `CASE`:
+
+```pascal
+FUNCTION_BLOCK PIPELINE
+VAR
+    phase : INT := 0;
+    done  : BOOL := FALSE;
+    fb_calibrate : CALIBRATE;
+    fb_process   : PROCESS;
+    fb_store     : STORE;
+END_VAR
+
+CASE phase OF
+    0: fb_calibrate();
+       IF fb_calibrate.is_done THEN phase := 1; END_IF;
+    1: fb_process();
+       IF fb_process.is_done THEN phase := 2; END_IF;
+    2: fb_store();
+       IF fb_store.is_done THEN
+           pipeline_complete := 1;
+           done := TRUE;
+       END_IF;
+END_CASE;
+```
+
+#### 20.4.5 Verilog
+
+```verilog
+module Pipeline(input clk, input rst, output reg done);
+    reg [1:0] phase;
+    // enable-сигналы и done-входы для каждой подмодели:
+    reg  calibrate_en; wire calibrate_done;
+    reg  process_en;   wire process_done;
+    reg  store_en;     wire store_done;
+
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin phase <= 0; done <= 0; end
+        else case (phase)
+            2'd0: if (calibrate_done) phase <= 2'd1;
+            2'd1: if (process_done)   phase <= 2'd2;
+            2'd2: if (store_done) begin
+                      done <= 1'b1;
+                  end
+        endcase
+    end
+endmodule
+```
+
+#### 20.4.6 LC-3 Assembly
+
+Контроллер компоновки реализован через суб-процедуры (`JSR`/`RET`):
+
+```asm
+PIPELINE_COMP_INIT
+    JSR CALIBRATE_INIT
+    JSR PROCESS_INIT
+    JSR STORE_INIT
+    AND R0, R0, #0
+    ST R0, PIPELINE_PHASE
+
+PIPELINE_COMP_STEP
+    ; Фаза 0: Calibrate
+    LD R0, PIPELINE_PHASE
+    LD R1, PIPELINE_CONST_0
+    NOT R2, R1
+    ADD R2, R2, #1
+    ADD R2, R0, R2
+    BRz PIPELINE_DO_CALIBRATE
+    ; Фаза 1: Process ...
+    ...
+
+PIPELINE_END_HANDLER
+    ; end: pipeline_complete = 1
+    RET
+```
+
+#### 20.4.7 ARM Thumb
+
+```asm
+pipeline_init:
+    push {lr}
+    bl calibrate_init
+    bl process_init
+    bl store_init
+    ldr r0, =_pipeline_phase
+    movs r1, #0
+    str r1, [r0]
+    pop {pc}
+
+pipeline_step:
+    push {lr}
+    ldr r0, =_pipeline_phase
+    ldr r1, [r0]
+    cmp r1, #0
+    bne .pipeline_phase1
+    bl calibrate_step
+    bl calibrate_is_done
+    cmp r0, #0
+    beq .pipeline_done
+    ; переход к следующей фазе...
+    ...
+    pop {pc}
+
+pipeline_end_handler:
+    push {lr}
+    ; end: pipeline_complete = 1
+    pop {pc}
+```
+
+### 20.5 Пример генерации C-кода (FSM)
 
 Для модели `Delay`:
 
@@ -1725,7 +2144,7 @@ void Delay_step(void) {
 }
 ```
 
-### 20.3 Разворачивание псевдонимов типов в кодогенерации
+### 20.6 Разворачивание псевдонимов типов в кодогенерации
 
 При генерации кода все пользовательские псевдонимы типов (`type T = U`) автоматически разворачиваются до базового типа. Это происходит в `CodegenContext`, который при инициализации строит **таблицу псевдонимов** из всех `TypeDefinition` в исходном файле.
 
@@ -1791,7 +2210,7 @@ Sensor_State_t Sensor_state(void);
 | `bool` | `BOOL` |
 | `str`, `string` | `STRING` |
 
-### 20.4 Настраиваемый отступ при генерации кода
+### 20.7 Настраиваемый отступ при генерации кода
 
 Все генераторы кода (C, ST, Verilog) поддерживают настройку стиля отступа через параметры CLI или программный интерфейс (`CodegenContext`).
 
@@ -1900,7 +2319,7 @@ pub enum IndentStyle {
 | `Spaces(2)` | `""` | `"  "` | `"    "` |
 | `Tab` | `""` | `"\t"` | `"\t\t"` |
 
-### 20.5 Использование CLI
+### 20.8 Использование CLI
 
 ```bash
 # Симуляция
@@ -2060,7 +2479,7 @@ let mut matrix: [3: [3: u8]] = {{1,2,3},{4,5,6},{7,8,9}};
 
 ## Приложение A: Статус реализации и TODO
 
-> Анализ выполнен по состоянию на 2026-03-10.
+> Анализ выполнен по состоянию на 2026-03-11.
 > Источники: `grammar/but/src/`, `middleware/src/`, `codegen/src/`, `simulators/src/`, `visual/src/`.
 
 ### Условные обозначения

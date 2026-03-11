@@ -89,6 +89,14 @@ fn main() {
         }
     };
 
+    // Базовое имя файла для именования выходных файлов (без расширения)
+    let base_name = args
+        .source
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("model")
+        .to_string();
+
     // Разбор
     let (unit, _comments) = match but_grammar::parse(&source_text, 0) {
         Ok(r) => r,
@@ -103,7 +111,6 @@ fn main() {
     // Разрешение директив import (рекурсивное включение файлов)
     let unit = {
         let mut resolver = IncludeResolver::from_file(&args.source);
-        // Добавить дополнительные директории поиска из аргументов командной строки
         for dir in &args.include_dirs {
             if dir.is_dir() {
                 resolver.add_search_path(dir.clone());
@@ -130,7 +137,6 @@ fn main() {
             for d in &diagnostics {
                 eprintln!("  {:?}", d);
             }
-            // Продолжаем — кодогенерация работает напрямую с AST
         }
     }
 
@@ -156,7 +162,6 @@ fn main() {
                 for machine in machines {
                     let mut sim = Simulator::new(machine);
 
-                    // Применить значения портов из аргументов командной строки
                     for port_spec in &args.port {
                         if let Some((name, val_str)) = port_spec.split_once('=') {
                             let val = parse_value(val_str);
@@ -199,8 +204,7 @@ fn main() {
 
     // ── Кодогенерация ────────────────────────────────────────────────────────────
     if do_gen_c || do_gen_verilog || do_gen_st || do_gen_lc3 || do_gen_thumb {
-        println!("\n=== Кодогенерация ===");
-        // Выбрать стиль отступа по аргументам командной строки
+        println!("\n=== Кодогенерация (базовое имя: {}) ===", base_name);
         let indent = if args.indent_tab {
             IndentStyle::Tab
         } else {
@@ -209,6 +213,7 @@ fn main() {
         let ctx = CodegenContext::from_source_with_indent(&unit, indent);
         generate_outputs(
             &unit,
+            &base_name,
             &ctx,
             &args.output_dir,
             do_gen_c,
@@ -222,6 +227,7 @@ fn main() {
 
 fn generate_outputs(
     unit: &SourceUnit,
+    base_name: &str,
     ctx: &CodegenContext,
     out_dir: &Path,
     gen_c: bool,
@@ -230,49 +236,43 @@ fn generate_outputs(
     gen_lc3: bool,
     gen_thumb: bool,
 ) {
-    // Используем контекст с заданным стилем отступа
-    let output = AllOutput::generate_with_ctx(unit, ctx);
+    let output = AllOutput::generate_with_ctx(unit, base_name, ctx);
 
     if gen_c {
+        // Один .h + один .c для всех моделей
         let c_dir = out_dir.join("c");
         let _ = fs::create_dir_all(&c_dir);
-        for (name, header, src) in &output.c {
-            write_file(&c_dir.join(format!("{}.h", name)), header);
-            write_file(&c_dir.join(format!("{}.c", name)), src);
-        }
+        write_file(&c_dir.join(format!("{}.h", base_name)), &output.c.0);
+        write_file(&c_dir.join(format!("{}.c", base_name)), &output.c.1);
     }
 
     if gen_verilog {
+        // Один .v файл для всех модулей
         let v_dir = out_dir.join("verilog");
         let _ = fs::create_dir_all(&v_dir);
-        for (name, code) in &output.verilog {
-            write_file(&v_dir.join(format!("{}.v", name)), code);
-        }
+        write_file(&v_dir.join(format!("{}.v", base_name)), &output.verilog);
     }
 
     if gen_st {
+        // Один .FB.DECL.st + один .FB.PRGS.st для всех моделей
         let st_dir = out_dir.join("st");
         let _ = fs::create_dir_all(&st_dir);
-        for (name, decl, prog) in &output.st {
-            write_file(&st_dir.join(format!("{}.FB.DECL.st", name)), decl);
-            write_file(&st_dir.join(format!("{}.FB.PRGS.st", name)), prog);
-        }
+        write_file(&st_dir.join(format!("{}.FB.DECL.st", base_name)), &output.st.0);
+        write_file(&st_dir.join(format!("{}.FB.PRGS.st", base_name)), &output.st.1);
     }
 
     if gen_lc3 {
+        // Один .asm файл для всех моделей
         let lc3_dir = out_dir.join("lc3");
         let _ = fs::create_dir_all(&lc3_dir);
-        for (name, code) in &output.lc3 {
-            write_file(&lc3_dir.join(format!("{}.asm", name)), code);
-        }
+        write_file(&lc3_dir.join(format!("{}.asm", base_name)), &output.lc3);
     }
 
     if gen_thumb {
+        // Один .S файл для всех моделей
         let thumb_dir = out_dir.join("thumb");
         let _ = fs::create_dir_all(&thumb_dir);
-        for (name, code) in &output.thumb {
-            write_file(&thumb_dir.join(format!("{}.S", name)), code);
-        }
+        write_file(&thumb_dir.join(format!("{}.S", base_name)), &output.thumb);
     }
 }
 

@@ -1,0 +1,95 @@
+/// Пример компоновки поведения (behavior) и обработки завершения (end).
+///
+/// Демонстрирует:
+///   - Последовательную компоновку: sequential(M1, M2, ...)
+///   - Параллельную компоновку: parallel(M1, M2, ...)
+///   - Свойство end — действие после завершения модели или компоновки
+
+// ── Базовые модели ───────────────────────────────────────────────────────────────
+
+/// Первый этап обработки данных
+model Calibrate {
+    state Running {
+        ref Done : samples_ready;
+    }
+    state Done { }
+
+    start -> Running;
+
+    /// Действие при завершении калибровки
+    end -> { calibration_done = 1; }
+}
+
+/// Второй этап обработки данных
+model Process {
+    state Idle {
+        ref Active : start_signal;
+    }
+    state Active {
+        enter -> { status = 1; }
+        ref Done  : result_ready;
+        ref Idle  : !start_signal;
+    }
+    state Done {
+        enter -> { status = 2; }
+    }
+
+    start -> Idle;
+
+    /// После завершения сигнализируем об окончании
+    end -> { process_done = 1; }
+}
+
+/// Финальная запись результатов
+model Store {
+    state Writing {
+        ref Complete : write_done;
+    }
+    state Complete { }
+
+    start -> Writing;
+    end -> { stored = 1; }
+}
+
+// ── Последовательная компоновка ──────────────────────────────────────────────────
+
+/// Пайплайн: выполняет Calibrate → Process → Store последовательно.
+/// Каждая следующая модель запускается только после завершения предыдущей.
+model Pipeline {
+    behavior -> sequential(Calibrate, Process, Store);
+
+    /// Выполняется после того, как все три этапа завершились
+    end -> { pipeline_complete = 1; }
+}
+
+// ── Параллельная компоновка ──────────────────────────────────────────────────────
+
+/// Запускает Calibrate и Process параллельно, ждёт завершения обоих.
+model ParallelPrep {
+    behavior -> parallel(Calibrate, Process);
+
+    end -> { prep_done = 1; }
+}
+
+// ── Выбор поведения ───────────────────────────────────────────────────────────────
+
+/// Выбирает первую из указанных моделей для выполнения.
+model FastOrSlow {
+    behavior -> choice(Calibrate, Store);
+
+    end -> { choice_done = 1; }
+}
+
+// ── Глобальные порты ─────────────────────────────────────────────────────────────
+
+port samples_ready    : bit = 0;
+port start_signal     : bit = 0;
+port result_ready     : bit = 0;
+port write_done       : bit = 0;
+port status           : bit = 0;
+port calibration_done : bit = 0;
+port process_done     : bit = 0;
+port stored           : bit = 0;
+port pipeline_complete: bit = 0;
+port prep_done        : bit = 0;
+port choice_done      : bit = 0;

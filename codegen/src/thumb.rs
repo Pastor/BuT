@@ -3,18 +3,31 @@ use but_grammar::ast::{
     Condition, ModelDefinition, ModelPart, Property, SourceUnit, SourceUnitPart, StatePart,
 };
 
+use crate::behavior::{find_behavior, find_end_property, find_terminal_states, BehaviorKind};
 use crate::condition::condition_to_c;
 use crate::ltl::{extract_ltl_formulas, ltl_comments_thumb};
 use crate::CodegenContext;
 
-/// Сгенерировать ассемблер ARM Thumb для модели.
-pub fn generate_thumb(model: &ModelDefinition, _ctx: &CodegenContext) -> String {
-    let name = model_name(model).to_lowercase();
-    let name_up = name.to_uppercase();
-    let states = collect_states(model);
-    let start = find_start(model).unwrap_or_else(|| states.first().cloned().unwrap_or_default());
-    let start_idx = states.iter().position(|s| *s == start).unwrap_or(0);
+/// Сгенерировать объединённый ассемблер ARM Thumb для всех моделей из SourceUnit.
+pub fn generate_thumb_all(source: &SourceUnit, ctx: &CodegenContext) -> String {
+    let mut out = String::new();
+    out.push_str("/* Сгенерировано but-codegen (ARM Thumb) */\n");
+    out.push_str("/* Все модели объединены в одном файле */\n\n");
+    out.push_str(".syntax unified\n");
+    out.push_str(".thumb\n");
+    out.push_str(".text\n\n");
 
+    for part in &source.0 {
+        if let SourceUnitPart::ModelDefinition(md) = part {
+            out.push_str(&generate_thumb_model_body(md, ctx));
+            out.push('\n');
+        }
+    }
+    out
+}
+
+/// Сгенерировать ассемблер ARM Thumb для одной модели.
+pub fn generate_thumb(model: &ModelDefinition, ctx: &CodegenContext) -> String {
     let mut out = String::new();
     let ltl_formulas = extract_ltl_formulas(model);
     out.push_str("/* Сгенерировано but-codegen (ARM Thumb) */\n");
@@ -26,6 +39,39 @@ pub fn generate_thumb(model: &ModelDefinition, _ctx: &CodegenContext) -> String 
     out.push_str(".syntax unified\n");
     out.push_str(".thumb\n");
     out.push_str(".text\n\n");
+    out.push_str(&generate_thumb_model_body(model, ctx));
+    out
+}
+
+// ── Внутренняя генерация одной модели ────────────────────────────────────────────
+
+fn generate_thumb_model_body(model: &ModelDefinition, ctx: &CodegenContext) -> String {
+    let ltl_formulas = extract_ltl_formulas(model);
+    if let Some(bk) = find_behavior(model) {
+        generate_thumb_behavior(model, &bk, ctx, &ltl_formulas)
+    } else {
+        generate_thumb_fsm(model, ctx, &ltl_formulas)
+    }
+}
+
+fn generate_thumb_fsm(
+    model: &ModelDefinition,
+    _ctx: &CodegenContext,
+    ltl_formulas: &[String],
+) -> String {
+    let name = model_name(model).to_lowercase();
+    let name_up = name.to_uppercase();
+    let states = collect_states(model);
+    let start = find_start(model).unwrap_or_else(|| states.first().cloned().unwrap_or_default());
+    let start_idx = states.iter().position(|s| *s == start).unwrap_or(0);
+    let terminal_states = find_terminal_states(model);
+    let end_prop = find_end_property(model);
+
+    let mut out = String::new();
+    out.push_str(&format!("/* === Модель: {} === */\n", name));
+    if !ltl_formulas.is_empty() {
+        out.push_str(&ltl_comments_thumb(ltl_formulas));
+    }
 
     // Константы состояний
     for (i, s) in states.iter().enumerate() {
@@ -36,23 +82,47 @@ pub fn generate_thumb(model: &ModelDefinition, _ctx: &CodegenContext) -> String 
             i
         ));
     }
+    // is_done флаг константа
+    if !terminal_states.is_empty() {
+        out.push_str(&format!(".equ {}_DONE_VAL, 1\n", name_up));
+    }
     out.push('\n');
 
-    // Переменная состояния в BSS
+    // Переменные в BSS
     out.push_str(".section .bss\n");
     out.push_str(&format!("_{}_state:\n", name));
-    out.push_str("    .space 4\n\n");
+    out.push_str("    .space 4\n");
+    if !terminal_states.is_empty() {
+        out.push_str(&format!("_{}_done_flag:\n", name));
+        out.push_str("    .space 4\n");
+    }
+    out.push('\n');
 
     out.push_str(".section .text\n\n");
 
     // Функция инициализации
     out.push_str(&format!(".global {}_init\n", name));
-    out.push_str(&format!(".thumb_func\n"));
+    out.push_str(".thumb_func\n");
     out.push_str(&format!("{}_init:\n", name));
     out.push_str(&format!("    ldr r0, =_{}_state\n", name));
     out.push_str(&format!("    movs r1, #{}\n", start_idx));
     out.push_str("    str r1, [r0]\n");
+    if !terminal_states.is_empty() {
+        out.push_str(&format!("    ldr r0, =_{}_done_flag\n", name));
+        out.push_str("    movs r1, #0\n");
+        out.push_str("    str r1, [r0]\n");
+    }
     out.push_str("    bx lr\n\n");
+
+    // is_done функция
+    if !terminal_states.is_empty() {
+        out.push_str(&format!(".global {}_is_done\n", name));
+        out.push_str(".thumb_func\n");
+        out.push_str(&format!("{}_is_done:\n", name));
+        out.push_str(&format!("    ldr r0, =_{}_done_flag\n", name));
+        out.push_str("    ldr r0, [r0]\n");
+        out.push_str("    bx lr\n\n");
+    }
 
     // Функция шага
     out.push_str(&format!(".global {}_step\n", name));
@@ -80,6 +150,7 @@ pub fn generate_thumb(model: &ModelDefinition, _ctx: &CodegenContext) -> String 
 
     // Обработчики состояний
     for (idx, sname) in states.iter().enumerate() {
+        let is_terminal = terminal_states.iter().any(|t| t == sname);
         out.push_str(&format!(
             "{}_state_{}:  /* Состояние: {} */\n",
             name,
@@ -106,23 +177,24 @@ pub fn generate_thumb(model: &ModelDefinition, _ctx: &CodegenContext) -> String 
                         .unwrap_or(0);
 
                     out.push_str(&format!("    /* если ({}) → {} */\n", cond_str, target.name));
-                    // Load condition-related port/var into r3 if it's a variable
                     if let Some(Condition::Variable(id)) = cond.as_ref() {
                         out.push_str(&format!("    ldr r3, ={}\n", id.name));
                         out.push_str("    ldr r3, [r3]\n");
                     }
-                    // Simple condition check (best-effort for common cases)
                     match cond.as_ref() {
                         Some(Condition::Equal(_, _, rhs)) => {
                             if let Condition::NumberLiteral(_, n) = rhs.as_ref() {
                                 out.push_str(&format!("    movs r2, #{}\n", n));
                                 out.push_str("    cmp r3, r2\n");
-                                out.push_str(&format!("    bne {}_state_{}_skip_{}\n", name, sname.to_lowercase(), idx));
+                                out.push_str(&format!(
+                                    "    bne {}_state_{}_skip_{}\n",
+                                    name,
+                                    sname.to_lowercase(),
+                                    idx
+                                ));
                             }
                         }
-                        Some(Condition::BoolLiteral(_, true)) | None => {
-                            // unconditional: always transition
-                        }
+                        Some(Condition::BoolLiteral(_, true)) | None => {}
                         _ => {
                             out.push_str("    /* сложное условие — вычислите вручную */\n");
                         }
@@ -132,8 +204,24 @@ pub fn generate_thumb(model: &ModelDefinition, _ctx: &CodegenContext) -> String 
                     out.push_str(&format!("    ldr r0, =_{}_state\n", name));
                     out.push_str("    str r1, [r0]\n");
                     out.push_str(&format!("    b {}_done\n", name));
-                    out.push_str(&format!("{}_state_{}_skip_{}:\n", name, sname.to_lowercase(), idx));
+                    out.push_str(&format!(
+                        "{}_state_{}_skip_{}:\n",
+                        name,
+                        sname.to_lowercase(),
+                        idx
+                    ));
                 }
+            }
+        }
+
+        // Терминальное состояние: установка done
+        if is_terminal {
+            out.push_str(&format!("    /* Терминальное состояние {} */\n", sname));
+            out.push_str(&format!("    ldr r0, =_{}_done_flag\n", name));
+            out.push_str("    movs r1, #1\n");
+            out.push_str("    str r1, [r0]\n");
+            if end_prop.is_some() {
+                out.push_str(&format!("    bl {}_end_handler\n", name));
             }
         }
 
@@ -141,26 +229,167 @@ pub fn generate_thumb(model: &ModelDefinition, _ctx: &CodegenContext) -> String 
         let _ = idx;
     }
 
+    // end handler
+    if let Some(ep) = end_prop {
+        out.push_str(&format!("{}_end_handler:\n", name));
+        out.push_str("    push {lr}\n");
+        match ep {
+            Property::Expression(e) => {
+                out.push_str(&format!(
+                    "    /* end: {} */\n",
+                    crate::condition::expr_to_c(e)
+                ));
+            }
+            Property::Function(_) => {
+                out.push_str("    /* end block (реализуйте вручную) */\n");
+            }
+        }
+        out.push_str("    pop {pc}\n\n");
+    }
+
     out.push_str(&format!("{}_done:\n", name));
     out.push_str("    pop {pc}\n\n");
-
     out
 }
 
-/// Сгенерировать ассемблер ARM Thumb для всех моделей из SourceUnit.
-pub fn generate_thumb_all(
-    source: &SourceUnit,
-    ctx: &CodegenContext,
-) -> Vec<(String, String)> {
-    let mut result = vec![];
-    for part in &source.0 {
-        if let SourceUnitPart::ModelDefinition(md) = part {
-            let name = model_name(md).to_lowercase();
-            let asm = generate_thumb(md, ctx);
-            result.push((name, asm));
+fn generate_thumb_behavior(
+    model: &ModelDefinition,
+    bk: &BehaviorKind,
+    _ctx: &CodegenContext,
+    ltl_formulas: &[String],
+) -> String {
+    let name = model_name(model).to_lowercase();
+    let name_up = name.to_uppercase();
+    let models = bk.models();
+    let end_prop = find_end_property(model);
+    let mut out = String::new();
+
+    out.push_str(&format!("/* === Компоновочная модель: {} === */\n", name));
+    if !ltl_formulas.is_empty() {
+        out.push_str(&ltl_comments_thumb(ltl_formulas));
+    }
+
+    let kind_str = match bk {
+        BehaviorKind::Sequential(_) => "sequential",
+        BehaviorKind::Parallel(_) => "parallel",
+        BehaviorKind::Choice(_) => "choice",
+    };
+    out.push_str(&format!(
+        "/* Тип компоновки: {} ({}) */\n",
+        kind_str,
+        models.join(", ")
+    ));
+
+    // Константы фаз
+    for (i, m) in models.iter().enumerate() {
+        out.push_str(&format!(".equ {}_PHASE_{}, {}\n", name_up, m.to_uppercase(), i));
+    }
+    out.push_str(&format!(".equ {}_PHASE_DONE, {}\n\n", name_up, models.len()));
+
+    // BSS
+    out.push_str(".section .bss\n");
+    out.push_str(&format!("_{}_phase:\n    .space 4\n", name));
+    out.push_str(&format!("_{}_done:\n    .space 4\n\n", name));
+    out.push_str(".section .text\n\n");
+
+    // init
+    out.push_str(&format!(".global {}_init\n.thumb_func\n{}_init:\n", name, name));
+    out.push_str("    push {lr}\n");
+    for m in models {
+        out.push_str(&format!("    bl {}_init\n", m.to_lowercase()));
+    }
+    out.push_str(&format!("    ldr r0, =_{}_phase\n", name));
+    out.push_str("    movs r1, #0\n");
+    out.push_str("    str r1, [r0]\n");
+    out.push_str(&format!("    ldr r0, =_{}_done\n", name));
+    out.push_str("    str r1, [r0]\n");
+    out.push_str("    pop {pc}\n\n");
+
+    // is_done
+    out.push_str(&format!(".global {}_is_done\n.thumb_func\n{}_is_done:\n", name, name));
+    out.push_str(&format!("    ldr r0, =_{}_done\n", name));
+    out.push_str("    ldr r0, [r0]\n");
+    out.push_str("    bx lr\n\n");
+
+    // step
+    out.push_str(&format!(".global {}_step\n.thumb_func\n{}_step:\n", name, name));
+    out.push_str("    push {lr}\n");
+
+    match bk {
+        BehaviorKind::Sequential(ms) => {
+            for (i, m) in ms.iter().enumerate() {
+                let mlo = m.to_lowercase();
+                out.push_str(&format!(
+                    "    ldr r0, =_{}_phase\n    ldr r0, [r0]\n    movs r1, #{}\n    cmp r0, r1\n    bne {}_skip_{}\n",
+                    name, i, name, mlo
+                ));
+                out.push_str(&format!("    bl {}_step\n", mlo));
+                out.push_str(&format!("    bl {}_is_done\n", mlo));
+                out.push_str(&format!("    cmp r0, #0\n    beq {}_comp_done\n", name));
+                let next = i + 1;
+                out.push_str(&format!(
+                    "    ldr r0, =_{}_phase\n    movs r1, #{}\n    str r1, [r0]\n",
+                    name, next
+                ));
+                if i + 1 == ms.len() {
+                    if end_prop.is_some() {
+                        out.push_str(&format!("    bl {}_end_handler\n", name));
+                    }
+                    out.push_str(&format!("    ldr r0, =_{}_done\n    movs r1, #1\n    str r1, [r0]\n", name));
+                }
+                out.push_str(&format!("{}_skip_{}:\n", name, mlo));
+            }
+        }
+        BehaviorKind::Parallel(ms) => {
+            for m in ms {
+                let mlo = m.to_lowercase();
+                out.push_str(&format!("    bl {}_is_done\n    cmp r0, #0\n    bne {}_par_skip_{}\n", mlo, name, mlo));
+                out.push_str(&format!("    bl {}_step\n", mlo));
+                out.push_str(&format!("{}_par_skip_{}:\n", name, mlo));
+            }
+            // Check all done
+            for m in ms {
+                out.push_str(&format!("    bl {}_is_done\n    cmp r0, #0\n    beq {}_comp_done\n", m.to_lowercase(), name));
+            }
+            if end_prop.is_some() {
+                out.push_str(&format!("    bl {}_end_handler\n", name));
+            }
+            out.push_str(&format!("    ldr r0, =_{}_done\n    movs r1, #1\n    str r1, [r0]\n", name));
+        }
+        BehaviorKind::Choice(ms) => {
+            if let Some(m) = ms.first() {
+                let mlo = m.to_lowercase();
+                out.push_str(&format!("    bl {}_step\n", mlo));
+                out.push_str(&format!("    bl {}_is_done\n", mlo));
+                out.push_str(&format!("    cmp r0, #0\n    beq {}_comp_done\n", name));
+                if end_prop.is_some() {
+                    out.push_str(&format!("    bl {}_end_handler\n", name));
+                }
+                out.push_str(&format!("    ldr r0, =_{}_done\n    movs r1, #1\n    str r1, [r0]\n", name));
+            }
         }
     }
-    result
+
+    out.push_str(&format!("{}_comp_done:\n    pop {{pc}}\n\n", name));
+
+    // end handler
+    if let Some(ep) = end_prop {
+        out.push_str(&format!("{}_end_handler:\n    push {{lr}}\n", name));
+        match ep {
+            Property::Expression(e) => {
+                out.push_str(&format!(
+                    "    /* end: {} */\n",
+                    crate::condition::expr_to_c(e)
+                ));
+            }
+            Property::Function(_) => {
+                out.push_str("    /* end block (реализуйте вручную) */\n");
+            }
+        }
+        out.push_str("    pop {pc}\n\n");
+    }
+
+    out
 }
 
 // ── Вспомогательные функции ─────────────────────────────────────────────────────

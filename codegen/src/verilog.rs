@@ -3,12 +3,42 @@ use but_grammar::ast::{
     VariableAttribute,
 };
 
+use crate::behavior::{find_behavior, find_end_property, find_terminal_states, BehaviorKind};
 use crate::condition::condition_to_verilog;
 use crate::ltl::{extract_ltl_formulas, ltl_comments_verilog};
 use crate::CodegenContext;
 
-/// Сгенерировать Verilog-модуль для модели.
+// ── Публичный API ────────────────────────────────────────────────────────────────
+
+/// Сгенерировать объединённый Verilog-файл для всех моделей из SourceUnit.
+pub fn generate_verilog_all(source: &SourceUnit, ctx: &CodegenContext) -> String {
+    let mut out = String::new();
+    out.push_str("// Сгенерировано but-codegen\n\n");
+    let mut first = true;
+    for part in &source.0 {
+        if let SourceUnitPart::ModelDefinition(md) = part {
+            if !first {
+                out.push('\n');
+            }
+            out.push_str(&generate_verilog(md, ctx));
+            first = false;
+        }
+    }
+    out
+}
+
+/// Сгенерировать Verilog-модуль для одной модели.
 pub fn generate_verilog(model: &ModelDefinition, ctx: &CodegenContext) -> String {
+    if let Some(bk) = find_behavior(model) {
+        generate_verilog_behavior(model, &bk, ctx)
+    } else {
+        generate_verilog_fsm(model, ctx)
+    }
+}
+
+// ── FSM-генератор ────────────────────────────────────────────────────────────────
+
+fn generate_verilog_fsm(model: &ModelDefinition, ctx: &CodegenContext) -> String {
     let name = model_name(model).to_lowercase();
     let states = collect_states(model);
     let state_bits = bits_needed(states.len());
@@ -17,9 +47,11 @@ pub fn generate_verilog(model: &ModelDefinition, ctx: &CodegenContext) -> String
     let i3 = ctx.indent.level(3);
     let i4 = ctx.indent.level(4);
 
+    let terminal_states = find_terminal_states(model);
+    let end_prop = find_end_property(model);
+
     let mut out = String::new();
     let ltl_formulas = extract_ltl_formulas(model);
-    out.push_str("// Сгенерировано but-codegen\n");
     if !ltl_formulas.is_empty() {
         out.push_str(&ltl_comments_verilog(&ltl_formulas));
     }
@@ -27,7 +59,6 @@ pub fn generate_verilog(model: &ModelDefinition, ctx: &CodegenContext) -> String
     out.push_str(&format!("{}input wire clk,\n", i1));
     out.push_str(&format!("{}input wire rst", i1));
 
-    // Добавить сигналы портов
     let mut port_list = vec![];
     for vd in &ctx.global_vars {
         if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
@@ -38,6 +69,12 @@ pub fn generate_verilog(model: &ModelDefinition, ctx: &CodegenContext) -> String
             }
         }
     }
+
+    // done-сигнал если есть терминальные состояния
+    if !terminal_states.is_empty() {
+        port_list.push(format!("{}output reg done", i1));
+    }
+
     for p in &port_list {
         out.push_str(",\n");
         out.push_str(p);
@@ -46,25 +83,34 @@ pub fn generate_verilog(model: &ModelDefinition, ctx: &CodegenContext) -> String
 
     // Параметры состояний
     for (i, s) in states.iter().enumerate() {
-        out.push_str(&format!("{}parameter STATE_{} = {}'d{};\n", i1, s.to_uppercase(), state_bits, i));
+        out.push_str(&format!(
+            "{}parameter STATE_{} = {}'d{};\n",
+            i1,
+            s.to_uppercase(),
+            state_bits,
+            i
+        ));
     }
     out.push('\n');
 
-    // Регистр состояния
     out.push_str(&format!("{}reg [{}-1:0] state;\n\n", i1, state_bits));
 
-    // Найти начальное состояние
     let start = find_start(model).unwrap_or_else(|| states.first().cloned().unwrap_or_default());
 
-    // Блок always (логика переходов — синхронный)
+    // Синхронная логика переходов
     out.push_str(&format!("{}always @(posedge clk or posedge rst) begin\n", i1));
-    out.push_str(&format!("{}if (rst) state <= STATE_{};\n", i2, start.to_uppercase()));
-    out.push_str(&format!("{}else begin\n", i2));
+    out.push_str(&format!("{}if (rst) begin\n", i2));
+    out.push_str(&format!("{}state <= STATE_{};\n", i3, start.to_uppercase()));
+    if !terminal_states.is_empty() {
+        out.push_str(&format!("{}done <= 1'b0;\n", i3));
+    }
+    out.push_str(&format!("{}end else begin\n", i2));
     out.push_str(&format!("{}case (state)\n", i3));
 
     for part in &model.parts {
         if let ModelPart::StateDefinition(sd) = part {
             let sname = sd.name.as_ref().map(|n| n.name.as_str()).unwrap_or("?");
+            let is_terminal = terminal_states.iter().any(|t| t == sname);
             out.push_str(&format!("{}STATE_{}: begin\n", i3, sname.to_uppercase()));
 
             for sp in &sd.parts {
@@ -73,7 +119,20 @@ pub fn generate_verilog(model: &ModelDefinition, ctx: &CodegenContext) -> String
                         .as_ref()
                         .map(|c| condition_to_verilog(c))
                         .unwrap_or_else(|| "1'b1".to_string());
-                    out.push_str(&format!("{}if ({}) state <= STATE_{};\n", i4, cond_str, target.name.to_uppercase()));
+                    out.push_str(&format!(
+                        "{}if ({}) state <= STATE_{};\n",
+                        i4,
+                        cond_str,
+                        target.name.to_uppercase()
+                    ));
+                }
+            }
+
+            // Терминальное состояние: done = 1
+            if is_terminal {
+                out.push_str(&format!("{}done <= 1'b1;\n", i4));
+                if end_prop.is_some() {
+                    out.push_str(&format!("{}/* end handler: see combinatorial block */\n", i4));
                 }
             }
 
@@ -85,65 +144,275 @@ pub fn generate_verilog(model: &ModelDefinition, ctx: &CodegenContext) -> String
     out.push_str(&format!("{}end\n", i2));
     out.push_str(&format!("{}end\n\n", i1));
 
-    // Логика выходов (комбинаторная — на основе обработчиков enter)
-    out.push_str(&format!("{}// Логика выходов\n", i1));
-    out.push_str(&format!("{}always @(*) begin\n", i1));
-    out.push_str(&format!("{}case (state)\n", i2));
-
-    for part in &model.parts {
-        if let ModelPart::StateDefinition(sd) = part {
-            let sname = sd.name.as_ref().map(|n| n.name.as_str()).unwrap_or("?");
-            let has_actions = sd.parts.iter().any(|p| {
-                if let StatePart::PropertyDefinition(pd) = p {
+    // Комбинаторная логика выходов (enter-обработчики)
+    let has_enter = model.parts.iter().any(|p| {
+        if let ModelPart::StateDefinition(sd) = p {
+            sd.parts.iter().any(|sp| {
+                if let StatePart::PropertyDefinition(pd) = sp {
                     pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter")
                 } else {
                     false
                 }
-            });
+            })
+        } else {
+            false
+        }
+    });
 
-            if has_actions {
-                out.push_str(&format!("{}STATE_{}: begin\n", i2, sname.to_uppercase()));
-                for sp in &sd.parts {
-                    if let StatePart::PropertyDefinition(pd) = sp {
-                        if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
-                            match &pd.value {
-                                Property::Expression(e) => {
-                                    out.push_str(&format!("{}{};\n", i3, crate::condition::expr_to_c(e)));
-                                }
-                                Property::Function(stmt) => {
-                                    out.push_str(&format!("{}/* enter handler */\n", i3));
-                                    let _ = stmt;
+    // end-обработчик как комбинаторный блок
+    let has_end_logic = end_prop.is_some() && !terminal_states.is_empty();
+
+    if has_enter || has_end_logic {
+        out.push_str(&format!("{}// Логика выходов\n", i1));
+        out.push_str(&format!("{}always @(*) begin\n", i1));
+        out.push_str(&format!("{}case (state)\n", i2));
+
+        for part in &model.parts {
+            if let ModelPart::StateDefinition(sd) = part {
+                let sname = sd.name.as_ref().map(|n| n.name.as_str()).unwrap_or("?");
+                let is_terminal = terminal_states.iter().any(|t| t == sname);
+
+                let has_actions = sd.parts.iter().any(|p| {
+                    if let StatePart::PropertyDefinition(pd) = p {
+                        matches!(
+                            pd.name.as_ref().map(|n| n.name.as_str()),
+                            Some("enter")
+                        )
+                    } else {
+                        false
+                    }
+                });
+
+                if has_actions || (is_terminal && has_end_logic) {
+                    out.push_str(&format!("{}STATE_{}: begin\n", i2, sname.to_uppercase()));
+
+                    for sp in &sd.parts {
+                        if let StatePart::PropertyDefinition(pd) = sp {
+                            if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
+                                match &pd.value {
+                                    Property::Expression(e) => {
+                                        out.push_str(&format!(
+                                            "{}{};\n",
+                                            i3,
+                                            crate::condition::expr_to_c(e)
+                                        ));
+                                    }
+                                    Property::Function(_stmt) => {
+                                        out.push_str(&format!("{}/* enter handler */\n", i3));
+                                    }
                                 }
                             }
                         }
                     }
+
+                    if is_terminal {
+                        if let Some(ep) = end_prop {
+                            out.push_str(&format!("{}/* end handler */\n", i3));
+                            match ep {
+                                Property::Expression(e) => {
+                                    out.push_str(&format!(
+                                        "{}{};\n",
+                                        i3,
+                                        crate::condition::expr_to_c(e)
+                                    ));
+                                }
+                                Property::Function(_) => {
+                                    out.push_str(&format!("{}/* end block */\n", i3));
+                                }
+                            }
+                        }
+                    }
+
+                    out.push_str(&format!("{}end\n", i2));
                 }
-                out.push_str(&format!("{}end\n", i2));
             }
         }
-    }
 
-    out.push_str(&format!("{}endcase\n", i2));
-    out.push_str(&format!("{}end\n\n", i1));
+        out.push_str(&format!("{}endcase\n", i2));
+        out.push_str(&format!("{}end\n\n", i1));
+    }
 
     out.push_str("endmodule\n");
     out
 }
 
-/// Сгенерировать Verilog для всех моделей из SourceUnit.
-pub fn generate_verilog_all(
-    source: &SourceUnit,
+// ── Behavior-генератор ────────────────────────────────────────────────────────────
+
+fn generate_verilog_behavior(
+    model: &ModelDefinition,
+    bk: &BehaviorKind,
     ctx: &CodegenContext,
-) -> Vec<(String, String)> {
-    let mut result = vec![];
-    for part in &source.0 {
-        if let SourceUnitPart::ModelDefinition(md) = part {
-            let name = model_name(md).to_lowercase();
-            let verilog = generate_verilog(md, ctx);
-            result.push((name, verilog));
+) -> String {
+    let name = model_name(model).to_lowercase();
+    let models = bk.models();
+    let phase_bits = bits_needed(models.len() + 1);
+    let i1 = ctx.indent.level(1);
+    let i2 = ctx.indent.level(2);
+    let i3 = ctx.indent.level(3);
+    let end_prop = find_end_property(model);
+
+    let mut out = String::new();
+    let ltl_formulas = extract_ltl_formulas(model);
+    if !ltl_formulas.is_empty() {
+        out.push_str(&ltl_comments_verilog(&ltl_formulas));
+    }
+
+    out.push_str(&format!("module {} (\n", name));
+    out.push_str(&format!("{}input wire clk,\n", i1));
+    out.push_str(&format!("{}input wire rst,\n", i1));
+    out.push_str(&format!("{}output reg done", i1));
+
+    // Входы done-сигналов подмоделей
+    for m in models {
+        out.push_str(&format!(",\n{}input wire {}_done", i1, m.to_lowercase()));
+    }
+
+    // Выходы управления подмоделями (enable)
+    for m in models {
+        out.push_str(&format!(",\n{}output reg {}_en", i1, m.to_lowercase()));
+    }
+
+    out.push_str("\n);\n\n");
+
+    // Параметры фаз
+    for (i, m) in models.iter().enumerate() {
+        out.push_str(&format!(
+            "{}parameter PHASE_{} = {}'d{};\n",
+            i1,
+            m.to_uppercase(),
+            phase_bits,
+            i
+        ));
+    }
+    out.push_str(&format!(
+        "{}parameter PHASE_DONE = {}'d{};\n\n",
+        i1,
+        phase_bits,
+        models.len()
+    ));
+
+    out.push_str(&format!("{}reg [{}-1:0] phase;\n\n", i1, phase_bits));
+
+    // Логика
+    out.push_str(&format!("{}always @(posedge clk or posedge rst) begin\n", i1));
+    out.push_str(&format!("{}if (rst) begin\n", i2));
+    if let Some(m0) = models.first() {
+        out.push_str(&format!(
+            "{}phase <= PHASE_{};\n",
+            i3,
+            m0.to_uppercase()
+        ));
+    }
+    out.push_str(&format!("{}done <= 1'b0;\n", i3));
+    out.push_str(&format!("{}end else begin\n", i2));
+    out.push_str(&format!("{}case (phase)\n", i3));
+
+    match bk {
+        BehaviorKind::Sequential(_) => {
+            for (idx, m) in models.iter().enumerate() {
+                let mlo = m.to_lowercase();
+                let mup = m.to_uppercase();
+                out.push_str(&format!("{}PHASE_{}: begin\n", i3, mup));
+                out.push_str(&format!("{}if ({}_done) begin\n", ctx.indent.level(4), mlo));
+                if idx + 1 < models.len() {
+                    out.push_str(&format!(
+                        "{}phase <= PHASE_{};\n",
+                        ctx.indent.level(5),
+                        models[idx + 1].to_uppercase()
+                    ));
+                } else {
+                    out.push_str(&format!("{}phase <= PHASE_DONE;\n", ctx.indent.level(5)));
+                    out.push_str(&format!("{}done <= 1'b1;\n", ctx.indent.level(5)));
+                }
+                out.push_str(&format!("{}end\n", ctx.indent.level(4)));
+                out.push_str(&format!("{}end\n", i3));
+            }
+        }
+        BehaviorKind::Parallel(_) => {
+            out.push_str(&format!("{}PHASE_{}: begin\n", i3, if let Some(m) = models.first() { m.to_uppercase() } else { "X".to_string() }));
+            let all_done: Vec<String> = models.iter().map(|m| format!("{}_done", m.to_lowercase())).collect();
+            out.push_str(&format!("{}if ({}) begin\n", ctx.indent.level(4), all_done.join(" && ")));
+            out.push_str(&format!("{}phase <= PHASE_DONE;\n", ctx.indent.level(5)));
+            out.push_str(&format!("{}done <= 1'b1;\n", ctx.indent.level(5)));
+            out.push_str(&format!("{}end\n", ctx.indent.level(4)));
+            out.push_str(&format!("{}end\n", i3));
+        }
+        BehaviorKind::Choice(_) => {
+            for m in models {
+                let mlo = m.to_lowercase();
+                let mup = m.to_uppercase();
+                out.push_str(&format!("{}PHASE_{}: begin\n", i3, mup));
+                out.push_str(&format!("{}if ({}_done) begin\n", ctx.indent.level(4), mlo));
+                out.push_str(&format!("{}phase <= PHASE_DONE;\n", ctx.indent.level(5)));
+                out.push_str(&format!("{}done <= 1'b1;\n", ctx.indent.level(5)));
+                out.push_str(&format!("{}end\n", ctx.indent.level(4)));
+                out.push_str(&format!("{}end\n", i3));
+            }
         }
     }
-    result
+
+    out.push_str(&format!("{}PHASE_DONE: ;\n", i3));
+    out.push_str(&format!("{}endcase\n", i3));
+    out.push_str(&format!("{}end\n", i2));
+    out.push_str(&format!("{}end\n\n", i1));
+
+    // Логика enable-сигналов подмоделей
+    out.push_str(&format!("{}// Enable-сигналы подмоделей\n", i1));
+    out.push_str(&format!("{}always @(*) begin\n", i1));
+    match bk {
+        BehaviorKind::Sequential(_) => {
+            for m in models {
+                let mlo = m.to_lowercase();
+                out.push_str(&format!(
+                    "{}{}_en = (phase == PHASE_{});\n",
+                    i2,
+                    mlo,
+                    m.to_uppercase()
+                ));
+            }
+        }
+        BehaviorKind::Parallel(_) => {
+            for m in models {
+                let mlo = m.to_lowercase();
+                out.push_str(&format!("{}{}_en = !done;\n", i2, mlo));
+            }
+        }
+        BehaviorKind::Choice(_) => {
+            for m in models {
+                let mlo = m.to_lowercase();
+                out.push_str(&format!(
+                    "{}{}_en = (phase == PHASE_{}) && !done;\n",
+                    i2,
+                    mlo,
+                    m.to_uppercase()
+                ));
+            }
+        }
+    }
+    out.push_str(&format!("{}end\n\n", i1));
+
+    if let Some(ep) = end_prop {
+        out.push_str(&format!("{}// end handler (выполняется при done = 1)\n", i1));
+        out.push_str(&format!("{}always @(posedge clk) begin\n", i1));
+        out.push_str(&format!("{}if (done) begin\n", i2));
+        match ep {
+            Property::Expression(e) => {
+                out.push_str(&format!(
+                    "{}{};\n",
+                    i3,
+                    crate::condition::expr_to_c(e)
+                ));
+            }
+            Property::Function(_) => {
+                out.push_str(&format!("{}/* end block */\n", i3));
+            }
+        }
+        out.push_str(&format!("{}end\n", i2));
+        out.push_str(&format!("{}end\n\n", i1));
+    }
+
+    out.push_str("endmodule\n");
+    out
 }
 
 // ── Вспомогательные функции ─────────────────────────────────────────────────────
