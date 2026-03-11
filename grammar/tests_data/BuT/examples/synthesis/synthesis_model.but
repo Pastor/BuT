@@ -1,0 +1,23 @@
+model Processor {
+    start Start {
+        ref End: is_complete;
+    }
+    state End {}
+}
+model Memory {
+    start Start {
+        ref End: is_complete;
+    }
+    state End;
+}
+model Floppy {
+    start Start {
+        ref End: is_complete;
+    }
+    state End;
+}
+
+#[main, name(Main)]
+model Refresh = (Processor | Memory) + Floppy;
+
+port is_complete: bool = 0:0x058849;
