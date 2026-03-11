@@ -1,25 +1,40 @@
-// Пример: псевдонимы типов (type alias) в BuT
+// Пример: псевдонимы типов (type alias) в BuT.
 //
-// Задача #4 TODO: тип-псевдоним теперь разворачивается в Codegen и Simulator.
-// type T = U → при генерации C/ST тип T заменяется на правильный базовый тип.
+// Демонстрирует:
+//   1. Подключение стандартной библиотеки типов через import
+//   2. Определение пользовательских псевдонимов на основе стандартных типов
+//   3. Цепочку псевдонимов: SensorValue → Byte → [8: bit] → uint8_t (C)
+//   4. Использование float как базового математического типа
+//
+// Подключаем std.but — содержит определения u8, u16, u32, u64, u128, bool и др.
+import "include/std";
 
-// --- Объявление псевдонимов типов ---
-type Byte    = u8;        // → uint8_t (C),  BYTE (ST)
-type Word    = u16;       // → uint16_t (C), WORD (ST)
-type Counter = u32;       // → uint32_t (C), DWORD (ST)
-type Flag    = bool;      // → int (C),      BOOL (ST)
-type Speed   = f64;       // → double (C),   REAL (ST)
+// ── Пользовательские псевдонимы типов ────────────────────────────────────────
 
-// Цепочка псевдонимов: SensorValue → Byte → u8 → uint8_t
+// Псевдонимы на основе стандартных типов из std.but:
+//   Byte    → u8    → [8:  bit] → uint8_t (C), BYTE (ST)
+//   Word    → u16   → [16: bit] → uint16_t (C), WORD (ST)
+//   CounterT → u32  → [32: bit] → uint32_t (C), DWORD (ST)
+//   Speed   → float → float (C), REAL (ST)
+type Byte     = u8;
+type Word     = u16;
+type CounterT = u32;
+type Speed    = float;
+
+// Цепочка псевдонимов: SensorValue → Byte → u8 → [8: bit] → uint8_t (C)
 type SensorValue = Byte;
 
-// --- Глобальные порты с псевдонимами типов ---
-port sensor_raw   : SensorValue = 0x00;  // будет раскрыт как uint8_t
-port threshold    : Byte        = 0x80;
-port step_counter : Counter     = 0;
-port alarm_flag   : Flag        = false;
+// ── Глобальные порты с псевдонимами типов ────────────────────────────────────
 
-// --- Модель: датчик порогового значения ---
+port sensor_raw   : SensorValue = 0x00;  // uint8_t (C), BYTE (ST)
+port threshold    : Byte        = 0x80;  // uint8_t (C), BYTE (ST)
+port step_counter : CounterT    = 0;     // uint32_t (C), DWORD (ST)
+port alarm_flag   : Flag        = false; // uint8_t (C), BOOL (ST)
+
+// ── Модель: датчик порогового значения ───────────────────────────────────────
+
+/// Конечный автомат датчика с пороговым значением.
+/// Типы раскрываются при кодогенерации через цепочку псевдонимов.
 model ThresholdSensor {
     state Idle {
         ref Checking : sensor_raw > 0;
@@ -28,14 +43,14 @@ model ThresholdSensor {
     }
 
     state Checking {
-        ref Alarm    : sensor_raw >= threshold;
-        ref Idle     : sensor_raw = 0;
+        ref Alarm : sensor_raw >= threshold;
+        ref Idle  : sensor_raw = 0;
         enter -> { step_counter += 1; }
     }
 
     state Alarm {
-        ref Idle     : alarm_flag = false;
-        ref Alarm    : alarm_flag = true;
+        ref Idle  : alarm_flag = false;
+        ref Alarm : alarm_flag = true;
         enter -> { alarm_flag = true; step_counter = 0; }
     }
 

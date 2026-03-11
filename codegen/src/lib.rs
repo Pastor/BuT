@@ -382,4 +382,154 @@ model Sensor {
             "Ожидается BOOL для Flag→bool, объявление:\n{}", decl
         );
     }
+
+    // ===== Интеграционные тесты: система типов (bit и float как базовые) =====
+
+    /// Источник с типами, определёнными через массивы бит (в стиле std.but)
+    const STD_TYPES_SRC: &str = r#"
+type u8   = [8:   bit];
+type u16  = [16:  bit];
+type u32  = [32:  bit];
+type u64  = [64:  bit];
+type u128 = [128: bit];
+type bool = bit;
+type Counter = u32;
+port x8   : u8    = 0;
+port x16  : u16   = 0;
+port x32  : u32   = 0;
+port x64  : u64   = 0;
+port x128 : u128  = 0;
+port flag : bool  = false;
+port cnt  : Counter = 0;
+model Test { state A {} start -> A; }
+"#;
+
+    fn parse_std_types() -> SourceUnit {
+        but_grammar::parse(STD_TYPES_SRC, 0)
+            .expect("Исходный код со std-типами должен разбираться без ошибок")
+            .0
+    }
+
+    #[test]
+    fn c_header_u8_через_массив_бит_даёт_uint8_t() {
+        // type u8 = [8: bit]; port x8: u8 → uint8_t x8
+        let src = parse_std_types();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_c_all(&src, &ctx);
+        let (_, header, _) = &result[0];
+        assert!(
+            header.contains("uint8_t x8"),
+            "Ожидается uint8_t для u8=[8:bit], заголовок:\n{}", header
+        );
+    }
+
+    #[test]
+    fn c_header_u16_через_массив_бит_даёт_uint16_t() {
+        let src = parse_std_types();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_c_all(&src, &ctx);
+        let (_, header, _) = &result[0];
+        assert!(
+            header.contains("uint16_t x16"),
+            "Ожидается uint16_t для u16=[16:bit], заголовок:\n{}", header
+        );
+    }
+
+    #[test]
+    fn c_header_u32_через_массив_бит_даёт_uint32_t() {
+        let src = parse_std_types();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_c_all(&src, &ctx);
+        let (_, header, _) = &result[0];
+        assert!(
+            header.contains("uint32_t x32"),
+            "Ожидается uint32_t для u32=[32:bit], заголовок:\n{}", header
+        );
+    }
+
+    #[test]
+    fn c_header_u64_через_массив_бит_даёт_uint64_t() {
+        let src = parse_std_types();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_c_all(&src, &ctx);
+        let (_, header, _) = &result[0];
+        assert!(
+            header.contains("uint64_t x64"),
+            "Ожидается uint64_t для u64=[64:bit], заголовок:\n{}", header
+        );
+    }
+
+    #[test]
+    fn c_header_u128_через_массив_бит_даёт_uint64_t_массив() {
+        let src = parse_std_types();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_c_all(&src, &ctx);
+        let (_, header, _) = &result[0];
+        assert!(
+            header.contains("uint64_t[2]"),
+            "Ожидается uint64_t[2] для u128=[128:bit], заголовок:\n{}", header
+        );
+    }
+
+    #[test]
+    fn c_header_bool_через_бит_даёт_uint8_t() {
+        // type bool = bit; port flag: bool → uint8_t flag
+        let src = parse_std_types();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_c_all(&src, &ctx);
+        let (_, header, _) = &result[0];
+        assert!(
+            header.contains("uint8_t flag"),
+            "Ожидается uint8_t для bool=bit, заголовок:\n{}", header
+        );
+    }
+
+    #[test]
+    fn c_header_counter_через_цепочку_псевдонимов() {
+        // type u32 = [32: bit]; type Counter = u32; → uint32_t cnt
+        let src = parse_std_types();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_c_all(&src, &ctx);
+        let (_, header, _) = &result[0];
+        assert!(
+            header.contains("uint32_t cnt"),
+            "Ожидается uint32_t для Counter→u32→[32:bit], заголовок:\n{}", header
+        );
+    }
+
+    #[test]
+    fn st_decl_u8_через_массив_бит_даёт_byte() {
+        let src = parse_std_types();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_st_all(&src, &ctx);
+        let (_, decl, _) = &result[0];
+        assert!(
+            decl.contains("BYTE"),
+            "Ожидается BYTE для u8=[8:bit], объявление:\n{}", decl
+        );
+    }
+
+    #[test]
+    fn st_decl_u32_через_массив_бит_даёт_dword() {
+        let src = parse_std_types();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_st_all(&src, &ctx);
+        let (_, decl, _) = &result[0];
+        assert!(
+            decl.contains("DWORD"),
+            "Ожидается DWORD для u32=[32:bit], объявление:\n{}", decl
+        );
+    }
+
+    #[test]
+    fn st_decl_u128_через_массив_бит_даёт_массив_lword() {
+        let src = parse_std_types();
+        let ctx = CodegenContext::from_source(&src);
+        let result = generate_st_all(&src, &ctx);
+        let (_, decl, _) = &result[0];
+        assert!(
+            decl.contains("ARRAY [0..1] OF LWORD"),
+            "Ожидается ARRAY [0..1] OF LWORD для u128=[128:bit], объявление:\n{}", decl
+        );
+    }
 }

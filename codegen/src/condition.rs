@@ -183,7 +183,52 @@ pub fn stmt_to_c(stmt: &Statement, indent: usize) -> String {
     }
 }
 
+/// Проверить, является ли тип базовым битом (`bit`).
+fn is_bit_alias(ty: &but_grammar::ast::Type) -> bool {
+    matches!(ty, but_grammar::ast::Type::Alias(id) if id.name == "bit")
+}
+
+/// Преобразовать N бит в тип C по правилу наименьшего вмещающего типа.
+///
+/// - N ≤ 8  → `uint8_t`
+/// - N ≤ 16 → `uint16_t`
+/// - N ≤ 32 → `uint32_t`
+/// - N ≤ 64 → `uint64_t`
+/// - N > 64 → `uint64_t[⌈N/64⌉]` (массив с выравниванием по 64-битной границе)
+fn bit_count_to_c(count: u16) -> String {
+    match count {
+        1..=8   => "uint8_t".to_string(),
+        9..=16  => "uint16_t".to_string(),
+        17..=32 => "uint32_t".to_string(),
+        33..=64 => "uint64_t".to_string(),
+        n       => format!("uint64_t[{}]", (n as u32 + 63) / 64),
+    }
+}
+
+/// Преобразовать N бит в тип ST по правилу наименьшего вмещающего типа.
+///
+/// - N ≤ 8  → `BYTE`
+/// - N ≤ 16 → `WORD`
+/// - N ≤ 32 → `DWORD`
+/// - N ≤ 64 → `LWORD`
+/// - N > 64 → `ARRAY [0..⌈N/64⌉-1] OF LWORD`
+fn bit_count_to_st(count: u16) -> String {
+    match count {
+        1..=8   => "BYTE".to_string(),
+        9..=16  => "WORD".to_string(),
+        17..=32 => "DWORD".to_string(),
+        33..=64 => "LWORD".to_string(),
+        n => {
+            let words = (n as u32 + 63) / 64;
+            format!("ARRAY [0..{}] OF LWORD", words - 1)
+        }
+    }
+}
+
 /// Преобразовать тип BuT в строку типа C.
+///
+/// Базовые типы языка: `bit` (1 бит) и `float` (число с плавающей точкой).
+/// Все остальные типы являются производными от `bit` через конструкцию `[N: bit]`.
 pub fn type_to_c(ty: &but_grammar::ast::Type) -> String {
     use but_grammar::ast::Type;
     match ty {
@@ -193,21 +238,32 @@ pub fn type_to_c(ty: &but_grammar::ast::Type) -> String {
         Type::Address => "unsigned long".to_string(),
         Type::Alias(id) => {
             match id.name.as_str() {
-                "int" | "i32" => "int32_t".to_string(),
+                // Базовый тип: одиночный бит → uint8_t (ближайший целочисленный тип C)
+                "bit" => "uint8_t".to_string(),
+                // Базовый тип: число с плавающей точкой → float
+                "float" => "float".to_string(),
+                // Встроенные псевдонимы для совместимости с кодом без std.but
                 "u8" | "byte" => "uint8_t".to_string(),
                 "u16" => "uint16_t".to_string(),
                 "u32" => "uint32_t".to_string(),
                 "u64" => "uint64_t".to_string(),
+                "u128" => "uint64_t[2]".to_string(),
+                "int" | "i32" => "int32_t".to_string(),
                 "i64" => "int64_t".to_string(),
                 "real" | "f64" | "f32" => "double".to_string(),
                 "bool" => "int".to_string(),
                 "str" | "string" => "char*".to_string(),
-                "bit" => "uint8_t".to_string(),
                 _ => id.name.clone(),
             }
         }
         Type::Array { element_count, element_type, .. } => {
-            format!("{}[{}]", type_to_c(element_type), element_count)
+            if is_bit_alias(element_type) {
+                // Массив битов → производный целочисленный тип C
+                bit_count_to_c(*element_count)
+            } else {
+                // Массив произвольных элементов
+                format!("{}[{}]", type_to_c(element_type), element_count)
+            }
         }
         _ => "int".to_string(),
     }
@@ -252,22 +308,39 @@ pub fn type_to_c_ctx(
 }
 
 /// Преобразовать тип BuT в строку типа Structured Text.
+///
+/// Базовые типы языка: `bit` (1 бит → BOOL) и `float` (плавающая точка → REAL).
+/// Производные типы `[N: bit]` отображаются в BYTE/WORD/DWORD/LWORD/массив.
 pub fn type_to_st(ty: &but_grammar::ast::Type) -> String {
     use but_grammar::ast::Type;
     match ty {
         Type::Bool => "BOOL".to_string(),
         Type::String => "STRING".to_string(),
         Type::Rational => "REAL".to_string(),
+        Type::Array { element_count, element_type, .. } => {
+            if is_bit_alias(element_type) {
+                // Массив битов → производный тип ST
+                bit_count_to_st(*element_count)
+            } else {
+                // Массив произвольных элементов
+                format!("ARRAY [0..{}] OF {}", element_count - 1, type_to_st(element_type))
+            }
+        }
         Type::Alias(id) => match id.name.as_str() {
-            "int" | "i32" | "i64" => "INT".to_string(),
+            // Базовый тип: одиночный бит → BOOL (1-битовый тип IEC 61131-3)
+            "bit" => "BOOL".to_string(),
+            // Базовый тип: число с плавающей точкой → REAL
+            "float" => "REAL".to_string(),
+            // Встроенные псевдонимы для совместимости с кодом без std.but
             "u8" | "byte" => "BYTE".to_string(),
             "u16" => "WORD".to_string(),
             "u32" => "DWORD".to_string(),
             "u64" => "LWORD".to_string(),
+            "u128" => "ARRAY [0..1] OF LWORD".to_string(),
+            "int" | "i32" | "i64" => "INT".to_string(),
             "real" | "f64" | "f32" => "REAL".to_string(),
             "bool" => "BOOL".to_string(),
             "str" | "string" => "STRING".to_string(),
-            "bit" => "BYTE".to_string(),
             _ => id.name.clone(),
         },
         _ => "INT".to_string(),
@@ -587,7 +660,8 @@ mod tests {
 
     #[test]
     fn type_bit_в_st() {
-        assert_eq!(type_to_st(&alias("bit")), "BYTE");
+        // Одиночный бит — логический тип (BOOL в IEC 61131-3), не BYTE
+        assert_eq!(type_to_st(&alias("bit")), "BOOL");
     }
 
     #[test]
@@ -730,5 +804,193 @@ mod tests {
     fn type_to_st_ctx_псевдоним_rational_в_st() {
         let aliases = make_aliases(&[("Speed", Type::Rational)]);
         assert_eq!(type_to_st_ctx(&alias("Speed"), &aliases), "REAL");
+    }
+
+    // ===== Система типов: базовые типы bit и float =====
+
+    // --- float → C и ST ---
+
+    #[test]
+    fn type_float_в_c() {
+        // Базовый тип float → float (C)
+        assert_eq!(type_to_c(&alias("float")), "float");
+    }
+
+    #[test]
+    fn type_float_в_st() {
+        // Базовый тип float → REAL (ST / IEC 61131-3)
+        assert_eq!(type_to_st(&alias("float")), "REAL");
+    }
+
+    // --- Массивы бит → производные целочисленные типы (C) ---
+
+    fn bit_array(count: u16) -> Type {
+        Type::Array {
+            loc: Loc::Source(0, 0, 0),
+            element_count: count,
+            element_type: Box::new(alias("bit")),
+        }
+    }
+
+    #[test]
+    fn type_массив_8_бит_в_c() {
+        // [8: bit] = u8 → uint8_t
+        assert_eq!(type_to_c(&bit_array(8)), "uint8_t");
+    }
+
+    #[test]
+    fn type_массив_16_бит_в_c() {
+        // [16: bit] = u16 → uint16_t
+        assert_eq!(type_to_c(&bit_array(16)), "uint16_t");
+    }
+
+    #[test]
+    fn type_массив_32_бит_в_c() {
+        // [32: bit] = u32 → uint32_t
+        assert_eq!(type_to_c(&bit_array(32)), "uint32_t");
+    }
+
+    #[test]
+    fn type_массив_64_бит_в_c() {
+        // [64: bit] = u64 → uint64_t
+        assert_eq!(type_to_c(&bit_array(64)), "uint64_t");
+    }
+
+    #[test]
+    fn type_массив_128_бит_в_c() {
+        // [128: bit] = u128 → uint64_t[2] (массив из 2 × 64 бит)
+        assert_eq!(type_to_c(&bit_array(128)), "uint64_t[2]");
+    }
+
+    #[test]
+    fn type_массив_256_бит_в_c() {
+        // [256: bit] → uint64_t[4]
+        assert_eq!(type_to_c(&bit_array(256)), "uint64_t[4]");
+    }
+
+    // --- Массивы бит → производные целочисленные типы (ST) ---
+
+    #[test]
+    fn type_массив_8_бит_в_st() {
+        // [8: bit] = u8 → BYTE
+        assert_eq!(type_to_st(&bit_array(8)), "BYTE");
+    }
+
+    #[test]
+    fn type_массив_16_бит_в_st() {
+        // [16: bit] = u16 → WORD
+        assert_eq!(type_to_st(&bit_array(16)), "WORD");
+    }
+
+    #[test]
+    fn type_массив_32_бит_в_st() {
+        // [32: bit] = u32 → DWORD
+        assert_eq!(type_to_st(&bit_array(32)), "DWORD");
+    }
+
+    #[test]
+    fn type_массив_64_бит_в_st() {
+        // [64: bit] = u64 → LWORD
+        assert_eq!(type_to_st(&bit_array(64)), "LWORD");
+    }
+
+    #[test]
+    fn type_массив_128_бит_в_st() {
+        // [128: bit] = u128 → ARRAY [0..1] OF LWORD
+        assert_eq!(type_to_st(&bit_array(128)), "ARRAY [0..1] OF LWORD");
+    }
+
+    // --- Производные типы через псевдонимы в стиле std.but ---
+
+    #[test]
+    fn type_to_c_ctx_u8_через_массив_бит() {
+        // type u8 = [8: bit]; → uint8_t
+        let aliases = make_aliases(&[("u8", bit_array(8))]);
+        assert_eq!(type_to_c_ctx(&alias("u8"), &aliases), "uint8_t");
+    }
+
+    #[test]
+    fn type_to_c_ctx_u16_через_массив_бит() {
+        // type u16 = [16: bit]; → uint16_t
+        let aliases = make_aliases(&[("u16", bit_array(16))]);
+        assert_eq!(type_to_c_ctx(&alias("u16"), &aliases), "uint16_t");
+    }
+
+    #[test]
+    fn type_to_c_ctx_u32_через_массив_бит() {
+        // type u32 = [32: bit]; → uint32_t
+        let aliases = make_aliases(&[("u32", bit_array(32))]);
+        assert_eq!(type_to_c_ctx(&alias("u32"), &aliases), "uint32_t");
+    }
+
+    #[test]
+    fn type_to_c_ctx_u64_через_массив_бит() {
+        // type u64 = [64: bit]; → uint64_t
+        let aliases = make_aliases(&[("u64", bit_array(64))]);
+        assert_eq!(type_to_c_ctx(&alias("u64"), &aliases), "uint64_t");
+    }
+
+    #[test]
+    fn type_to_c_ctx_u128_через_массив_бит() {
+        // type u128 = [128: bit]; → uint64_t[2]
+        let aliases = make_aliases(&[("u128", bit_array(128))]);
+        assert_eq!(type_to_c_ctx(&alias("u128"), &aliases), "uint64_t[2]");
+    }
+
+    #[test]
+    fn type_to_st_ctx_u8_через_массив_бит() {
+        // type u8 = [8: bit]; → BYTE
+        let aliases = make_aliases(&[("u8", bit_array(8))]);
+        assert_eq!(type_to_st_ctx(&alias("u8"), &aliases), "BYTE");
+    }
+
+    #[test]
+    fn type_to_st_ctx_u32_через_массив_бит() {
+        // type u32 = [32: bit]; → DWORD
+        let aliases = make_aliases(&[("u32", bit_array(32))]);
+        assert_eq!(type_to_st_ctx(&alias("u32"), &aliases), "DWORD");
+    }
+
+    #[test]
+    fn type_to_st_ctx_u128_через_массив_бит() {
+        // type u128 = [128: bit]; → ARRAY [0..1] OF LWORD
+        let aliases = make_aliases(&[("u128", bit_array(128))]);
+        assert_eq!(type_to_st_ctx(&alias("u128"), &aliases), "ARRAY [0..1] OF LWORD");
+    }
+
+    #[test]
+    fn type_to_c_ctx_bool_через_бит() {
+        // type bool = bit; → uint8_t
+        let aliases = make_aliases(&[("bool", alias("bit"))]);
+        assert_eq!(type_to_c_ctx(&alias("bool"), &aliases), "uint8_t");
+    }
+
+    #[test]
+    fn type_to_st_ctx_bool_через_бит() {
+        // type bool = bit; → BOOL
+        let aliases = make_aliases(&[("bool", alias("bit"))]);
+        assert_eq!(type_to_st_ctx(&alias("bool"), &aliases), "BOOL");
+    }
+
+    #[test]
+    fn type_to_c_ctx_цепочка_counter_через_std() {
+        // type u32 = [32: bit]; type Counter = u32; → uint32_t
+        let aliases = make_aliases(&[
+            ("u32", bit_array(32)),
+            ("Counter", alias("u32")),
+        ]);
+        assert_eq!(type_to_c_ctx(&alias("Counter"), &aliases), "uint32_t");
+    }
+
+    #[test]
+    fn type_u128_alias_в_c() {
+        // Встроенный псевдоним u128 без std.but → uint64_t[2]
+        assert_eq!(type_to_c(&alias("u128")), "uint64_t[2]");
+    }
+
+    #[test]
+    fn type_u128_alias_в_st() {
+        // Встроенный псевдоним u128 без std.but → ARRAY [0..1] OF LWORD
+        assert_eq!(type_to_st(&alias("u128")), "ARRAY [0..1] OF LWORD");
     }
 }
