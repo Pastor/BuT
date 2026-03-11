@@ -28,7 +28,18 @@ pub fn condition_to_c(cond: &Condition) -> String {
             let args_str = args.iter().map(condition_to_c).collect::<Vec<_>>().join(", ");
             format!("{}({})", id.name, args_str)
         }
-        Condition::MemberAccess(_, base, _) => condition_to_c(base),
+        Condition::MemberAccess(_, base, member) => {
+            match member {
+                but_grammar::ast::Member::Number(n) => {
+                    // Доступ к биту N: ((переменная) >> N) & 1
+                    format!("(({}) >> {}) & 1", condition_to_c(base), n)
+                }
+                but_grammar::ast::Member::Identifier(id) => {
+                    // Доступ к полю структуры
+                    format!("({}).{}", condition_to_c(base), id.name)
+                }
+            }
+        }
         Condition::ArraySubscript(_, id, idx) => format!("{}[{}]", id.name, idx),
         Condition::StringLiteral(lits) => {
             format!("\"{}\"", lits.iter().map(|l| l.string.as_str()).collect::<String>())
@@ -76,6 +87,17 @@ pub fn condition_to_verilog(cond: &Condition) -> String {
             format!("({} - {})", condition_to_verilog(l), condition_to_verilog(r))
         }
         Condition::Parenthesis(_, inner) => format!("({})", condition_to_verilog(inner)),
+        Condition::MemberAccess(_, base, member) => {
+            match member {
+                but_grammar::ast::Member::Number(n) => {
+                    // В Verilog доступ к биту: base[N]
+                    format!("{}[{}]", condition_to_verilog(base), n)
+                }
+                but_grammar::ast::Member::Identifier(id) => {
+                    format!("{}.{}", condition_to_verilog(base), id.name)
+                }
+            }
+        }
         other => condition_to_c(other),
     }
 }
@@ -94,7 +116,19 @@ pub fn expr_to_c(expr: &Expression) -> String {
         }
         Expression::Variable(id) => id.name.clone(),
         Expression::Parenthesis(_, inner) => format!("({})", expr_to_c(inner)),
-        Expression::Assign(_, l, r) => format!("{} = {}", expr_to_c(l), expr_to_c(r)),
+        Expression::Assign(_, l, r) => {
+            // Запись в конкретный бит: a.N = expr → a = (a & ~(1UL << N)) | ((expr & 1) << N)
+            if let Expression::MemberAccess(_, base, but_grammar::ast::Member::Number(n)) = l.as_ref() {
+                let base_str = expr_to_c(base);
+                let rhs_str = expr_to_c(r);
+                format!(
+                    "{0} = (({0}) & ~(1UL << {1})) | (({2} & 1) << {1})",
+                    base_str, n, rhs_str
+                )
+            } else {
+                format!("{} = {}", expr_to_c(l), expr_to_c(r))
+            }
+        }
         Expression::AssignAdd(_, l, r) => format!("{} += {}", expr_to_c(l), expr_to_c(r)),
         Expression::AssignSubtract(_, l, r) => format!("{} -= {}", expr_to_c(l), expr_to_c(r)),
         Expression::AssignMultiply(_, l, r) => format!("{} *= {}", expr_to_c(l), expr_to_c(r)),
@@ -130,6 +164,18 @@ pub fn expr_to_c(expr: &Expression) -> String {
         Expression::PreDecrement(_, e) => format!("--{}", expr_to_c(e)),
         Expression::ConditionalOperator(_, c, t, e) => {
             format!("({} ? {} : {})", expr_to_c(c), expr_to_c(t), expr_to_c(e))
+        }
+        Expression::MemberAccess(_, base, member) => {
+            match member {
+                but_grammar::ast::Member::Number(n) => {
+                    // Чтение бита N: ((переменная) >> N) & 1
+                    format!("(({}) >> {}) & 1", expr_to_c(base), n)
+                }
+                but_grammar::ast::Member::Identifier(id) => {
+                    // Доступ к полю структуры
+                    format!("({}).{}", expr_to_c(base), id.name)
+                }
+            }
         }
         _ => "/* не поддерживается */".to_string(),
     }
@@ -809,6 +855,131 @@ mod tests {
     // ===== Система типов: базовые типы bit и float =====
 
     // --- float → C и ST ---
+
+    // ===== Доступ к битам: condition_to_c =====
+
+    fn member_num(n: i64) -> but_grammar::ast::Member {
+        but_grammar::ast::Member::Number(n)
+    }
+    fn member_ident(name: &str) -> but_grammar::ast::Member {
+        but_grammar::ast::Member::Identifier(ident(name))
+    }
+
+    #[test]
+    fn condition_bit_access_чтение_в_c() {
+        // a.5 → ((a) >> 5) & 1
+        let cond = Condition::MemberAccess(
+            loc(),
+            Box::new(Condition::Variable(ident("a"))),
+            member_num(5),
+        );
+        assert_eq!(condition_to_c(&cond), "((a) >> 5) & 1");
+    }
+
+    #[test]
+    fn condition_bit_access_нулевой_бит_в_c() {
+        // a.0 → ((a) >> 0) & 1
+        let cond = Condition::MemberAccess(
+            loc(),
+            Box::new(Condition::Variable(ident("flags"))),
+            member_num(0),
+        );
+        assert_eq!(condition_to_c(&cond), "((flags) >> 0) & 1");
+    }
+
+    #[test]
+    fn condition_bit_access_поле_структуры_в_c() {
+        // obj.field → (obj).field
+        let cond = Condition::MemberAccess(
+            loc(),
+            Box::new(Condition::Variable(ident("obj"))),
+            member_ident("field"),
+        );
+        assert_eq!(condition_to_c(&cond), "(obj).field");
+    }
+
+    #[test]
+    fn condition_bit_access_в_verilog() {
+        // a.5 → a[5]
+        let cond = Condition::MemberAccess(
+            loc(),
+            Box::new(Condition::Variable(ident("a"))),
+            member_num(5),
+        );
+        assert_eq!(condition_to_verilog(&cond), "a[5]");
+    }
+
+    // ===== Доступ к битам: expr_to_c =====
+
+    #[test]
+    fn expr_bit_access_чтение_в_c() {
+        // a.3 → ((a) >> 3) & 1
+        let expr = Expression::MemberAccess(
+            loc(),
+            Box::new(Expression::Variable(ident("a"))),
+            member_num(3),
+        );
+        assert_eq!(expr_to_c(&expr), "((a) >> 3) & 1");
+    }
+
+    #[test]
+    fn expr_bit_access_большой_индекс_в_c() {
+        // data.63 → ((data) >> 63) & 1
+        let expr = Expression::MemberAccess(
+            loc(),
+            Box::new(Expression::Variable(ident("data"))),
+            member_num(63),
+        );
+        assert_eq!(expr_to_c(&expr), "((data) >> 63) & 1");
+    }
+
+    #[test]
+    fn expr_bit_write_true_в_c() {
+        // a.5 = 1 → a = ((a) & ~(1UL << 5)) | ((1 & 1) << 5)
+        let lhs = Expression::MemberAccess(
+            loc(),
+            Box::new(Expression::Variable(ident("a"))),
+            member_num(5),
+        );
+        let rhs = Expression::BoolLiteral(loc(), true);
+        let expr = Expression::Assign(loc(), Box::new(lhs), Box::new(rhs));
+        assert_eq!(expr_to_c(&expr), "a = ((a) & ~(1UL << 5)) | ((1 & 1) << 5)");
+    }
+
+    #[test]
+    fn expr_bit_write_false_в_c() {
+        // a.5 = 0 → a = ((a) & ~(1UL << 5)) | ((0 & 1) << 5)
+        let lhs = Expression::MemberAccess(
+            loc(),
+            Box::new(Expression::Variable(ident("a"))),
+            member_num(5),
+        );
+        let rhs = Expression::BoolLiteral(loc(), false);
+        let expr = Expression::Assign(loc(), Box::new(lhs), Box::new(rhs));
+        assert_eq!(expr_to_c(&expr), "a = ((a) & ~(1UL << 5)) | ((0 & 1) << 5)");
+    }
+
+    #[test]
+    fn expr_bit_write_нулевой_бит_в_c() {
+        // flags.0 = 1 → flags = ((flags) & ~(1UL << 0)) | ((1 & 1) << 0)
+        let lhs = Expression::MemberAccess(
+            loc(),
+            Box::new(Expression::Variable(ident("flags"))),
+            member_num(0),
+        );
+        let rhs = Expression::NumberLiteral(loc(), 1);
+        let expr = Expression::Assign(loc(), Box::new(lhs), Box::new(rhs));
+        assert_eq!(expr_to_c(&expr), "flags = ((flags) & ~(1UL << 0)) | ((1 & 1) << 0)");
+    }
+
+    #[test]
+    fn expr_обычный_assign_не_изменяется() {
+        // x = 5 (не bit access) → x = 5
+        let lhs = Expression::Variable(ident("x"));
+        let rhs = Expression::NumberLiteral(loc(), 5);
+        let expr = Expression::Assign(loc(), Box::new(lhs), Box::new(rhs));
+        assert_eq!(expr_to_c(&expr), "x = 5");
+    }
 
     #[test]
     fn type_float_в_c() {

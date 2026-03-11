@@ -4,6 +4,7 @@ use but_grammar::diagnostics::Diagnostic;
 use crate::tree::TreeDefinition;
 use crate::unit::Unit;
 
+pub mod bitaccess;
 pub mod include;
 
 mod context;

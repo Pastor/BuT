@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use but_grammar::ast::{EnumDefinition, FunctionDefinition, Identifier, Loc, ModelDefinition, PropertyDefinition, StructDefinition, TypeDefinition, VariableDefinition};
 use but_grammar::diagnostics::Diagnostic;
 
+use crate::bitaccess;
 use crate::unit::Unit;
 
 pub(crate) struct TreeDefinition {
@@ -57,6 +58,26 @@ impl TreeDefinition {
     }
 
     pub(crate) fn build_tree(&self) -> Result<Unit, Vec<Diagnostic>> {
+        let mut diagnostics = vec![];
+
+        // Строим карту глобальных типов переменных для семантического анализа
+        let global_var_types: HashMap<String, but_grammar::ast::Type> = self
+            .variable_table
+            .iter()
+            .map(|(name, vd)| (name.clone(), vd.ty.clone()))
+            .collect();
+
+        // Проверяем корректность доступа к битам во всех моделях
+        bitaccess::check_models(
+            &self.models,
+            &global_var_types,
+            &self.type_table,
+            &mut diagnostics,
+        );
+
+        if !diagnostics.is_empty() {
+            return Err(diagnostics);
+        }
         Ok(Unit::new())
     }
 }
