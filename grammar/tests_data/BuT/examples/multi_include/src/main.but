@@ -1,0 +1,73 @@
+// Пример использования множественных include-директорий.
+//
+// Запуск с указанием путей поиска:
+//   but src/main.but --gen-c --gen-verilog --gen-st -I libs/platform -I libs/protocol
+//
+// Подключаем типы из внешних библиотек (libs/platform/, libs/protocol/).
+// Сами файлы не находятся рядом с main.but, поэтому нужна опция -I.
+
+import "types";    // libs/platform/types.but  → ControlReg, StatusReg, MemAddress, IrqMask
+import "frames";   // libs/protocol/frames.but  → DataByte, FrameHeader, CRC32
+
+/// Максимальный размер буфера приёма (в байтах)
+const MAX_BUF: int = 256;
+
+/// Автомат: контроллер приёма фреймов по шине.
+/// Использует типы ControlReg, StatusReg из libs/platform/types.but
+/// и DataByte, FrameHeader, CRC32 из libs/protocol/frames.but.
+model FrameReceiver {
+    // ── Переменные состояния ──────────────────────────────────────────────────
+    let mut rx_active: bit = 0;      // Признак активного приёма
+    let mut frame_ok:  bit = 0;      // Признак успешно принятого фрейма
+    let mut err_flag:  bit = 0;      // Флаг ошибки
+    let mut byte_cnt:  int = 0;      // Счётчик принятых байт
+
+    // ── Состояния ─────────────────────────────────────────────────────────────
+
+    /// Ожидание начала фрейма
+    state Idle {
+        ref ReceivingHeader: rx_active;
+        enter -> frame_ok = 0;
+        enter -> byte_cnt = 0;
+    }
+
+    /// Приём двух байт заголовка фрейма (тип FrameHeader = [16: bit])
+    state ReceivingHeader {
+        ref ReceivingData: byte_cnt >= 2;
+        ref Error:         err_flag;
+        enter -> byte_cnt = 0;
+    }
+
+    /// Приём байт полезной нагрузки (тип DataByte = [8: bit])
+    state ReceivingData {
+        ref ValidatingCRC: byte_cnt >= MAX_BUF;
+        ref Error:         err_flag;
+    }
+
+    /// Проверка контрольной суммы (тип CRC32 = [32: bit])
+    state ValidatingCRC {
+        ref Done:  frame_ok;
+        ref Error: err_flag;
+    }
+
+    /// Успешный приём фрейма
+    state Done {
+        ref Idle;
+        enter -> frame_ok = 1;
+    }
+
+    /// Ошибка — сброс и возврат в ожидание
+    state Error {
+        ref Idle;
+        enter -> err_flag = 0;
+        enter -> rx_active = 0;
+    }
+
+    // ── Начальное состояние ───────────────────────────────────────────────────
+    start -> Idle;
+}
+
+// ── Порты ввода-вывода ────────────────────────────────────────────────────────
+
+/// Сигнал запроса на приём нового фрейма
+port rx_request: bit = 0;

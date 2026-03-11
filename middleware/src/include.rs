@@ -738,4 +738,160 @@ mod tests {
             assert_eq!(extract_path_str(import), "std/types");
         }
     }
+
+    // ── Тесты дополнительных путей поиска (--include-dir / add_search_path) ───
+
+    /// Вспомогательная функция: путь к фикстурам search_paths.
+    fn search_paths_dir() -> PathBuf {
+        fixtures_dir().join("search_paths")
+    }
+
+    #[test]
+    fn test_import_не_найден_без_дополнительного_пути() {
+        // main.but импортирует "shared/defs", который не рядом с файлом.
+        // Без дополнительного пути поиска должна возникнуть ошибка FileNotFound.
+        let main_path = search_paths_dir().join("app/main.but");
+        let source = fs::read_to_string(&main_path)
+            .expect("Не удалось прочитать search_paths/app/main.but");
+        let unit = but_grammar::parse(&source, 0)
+            .expect("Ошибка разбора main.but").0;
+
+        // Резолвер знает только директорию самого файла (app/)
+        let mut resolver = IncludeResolver::from_file(&main_path);
+        let result = resolver.resolve(unit, &main_path);
+
+        assert!(
+            result.is_err(),
+            "Ожидалась ошибка: файл из libs/ не доступен без дополнительного пути"
+        );
+        let errs = result.unwrap_err();
+        assert!(
+            errs.iter().any(|e| matches!(e, IncludeError::FileNotFound { .. })),
+            "Ожидалась ошибка FileNotFound, получено: {:?}", errs
+        );
+    }
+
+    #[test]
+    fn test_import_найден_с_дополнительным_путём() {
+        // Тот же файл, но теперь добавляем libs/ как дополнительный путь поиска.
+        let main_path = search_paths_dir().join("app/main.but");
+        let libs_path = search_paths_dir().join("libs");
+        let source = fs::read_to_string(&main_path)
+            .expect("Не удалось прочитать search_paths/app/main.but");
+        let unit = but_grammar::parse(&source, 0)
+            .expect("Ошибка разбора main.but").0;
+
+        let mut resolver = IncludeResolver::from_file(&main_path);
+        resolver.add_search_path(libs_path);
+        let result = resolver.resolve(unit, &main_path);
+
+        assert!(
+            result.is_ok(),
+            "Ожидался успех после добавления libs/ в пути поиска: {:?}", result
+        );
+        let merged = result.unwrap();
+        // Должны быть включены типы из shared/defs.but и hardware/regs.but
+        let type_defs: Vec<_> = merged.0.iter()
+            .filter(|p| matches!(p, SourceUnitPart::TypeDefinition(_)))
+            .collect();
+        assert!(
+            type_defs.len() >= 6,
+            "Ожидалось минимум 6 определений типов (3 из shared + 3 из hardware), получено {}",
+            type_defs.len()
+        );
+    }
+
+    #[test]
+    fn test_несколько_дополнительных_путей_поиска() {
+        // Добавляем два конкретных подкаталога: libs/shared и libs/hardware.
+        // main.but использует import "shared/defs" и import "hardware/regs",
+        // которые находятся относительно libs/.
+        let main_path = search_paths_dir().join("app/main.but");
+        let shared_path = search_paths_dir().join("libs");
+        let source = fs::read_to_string(&main_path)
+            .expect("Не удалось прочитать search_paths/app/main.but");
+        let unit = but_grammar::parse(&source, 0)
+            .expect("Ошибка разбора main.but").0;
+
+        let mut resolver = IncludeResolver::new(vec![]);
+        // Добавляем оба пути — ни один не добавляется автоматически
+        resolver.add_search_path(main_path.parent().unwrap().to_path_buf()); // app/
+        resolver.add_search_path(shared_path);                                // libs/
+
+        assert_eq!(
+            resolver.search_paths().len(), 2,
+            "Ожидалось 2 пути поиска"
+        );
+
+        let result = resolver.resolve(unit, &main_path);
+        assert!(
+            result.is_ok(),
+            "Ожидался успех при двух путях поиска: {:?}", result
+        );
+    }
+
+    #[test]
+    fn test_приоритет_первого_пути_поиска() {
+        // Когда одно и то же имя файла есть в двух директориях,
+        // используется файл из первого добавленного пути.
+        let main_path = search_paths_dir().join("override/project/main.but");
+        let vendor_path = search_paths_dir().join("override/vendor");
+        let local_path  = search_paths_dir().join("override/local");
+        let source = fs::read_to_string(&main_path)
+            .expect("Не удалось прочитать override/project/main.but");
+        let unit = but_grammar::parse(&source, 0)
+            .expect("Ошибка разбора main.but").0;
+
+        // vendor/ добавляется первым — его версия platform.but должна быть загружена
+        let mut resolver = IncludeResolver::from_file(&main_path);
+        resolver.add_search_path(vendor_path);
+        resolver.add_search_path(local_path);
+
+        let result = resolver.resolve(unit, &main_path);
+        assert!(result.is_ok(), "Ожидался успех: {:?}", result);
+
+        let merged = result.unwrap();
+        // vendor/platform.but определяет VendorVersion, local/platform.but — LocalVersion.
+        // Должен быть включён vendor-вариант (VendorVersion).
+        let type_names: Vec<String> = merged.0.iter()
+            .filter_map(|p| {
+                if let SourceUnitPart::TypeDefinition(td) = p {
+                    Some(td.name.name.clone())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert!(
+            type_names.contains(&"VendorVersion".to_string()),
+            "Ожидался тип VendorVersion из vendor/platform.but, получено: {:?}", type_names
+        );
+        assert!(
+            !type_names.contains(&"LocalVersion".to_string()),
+            "Тип LocalVersion не должен быть включён (vendor имеет приоритет): {:?}", type_names
+        );
+    }
+
+    #[test]
+    fn test_add_search_path_возвращает_изменяемую_ссылку() {
+        // Метод add_search_path возвращает &mut Self для цепочки вызовов.
+        let mut r = IncludeResolver::new(vec![]);
+        r.add_search_path(PathBuf::from("/a"))
+         .add_search_path(PathBuf::from("/b"))
+         .add_search_path(PathBuf::from("/c"));
+        assert_eq!(r.search_paths().len(), 3);
+        assert_eq!(r.search_paths()[0], PathBuf::from("/a"));
+        assert_eq!(r.search_paths()[2], PathBuf::from("/c"));
+    }
+
+    #[test]
+    fn test_search_paths_возвращает_все_пути() {
+        let paths = vec![
+            PathBuf::from("/usr/lib/but"),
+            PathBuf::from("/opt/but/include"),
+            PathBuf::from("./local/lib"),
+        ];
+        let r = IncludeResolver::new(paths.clone());
+        assert_eq!(r.search_paths(), paths.as_slice());
+    }
 }

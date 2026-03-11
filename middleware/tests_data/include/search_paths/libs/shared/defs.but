@@ -1,0 +1,6 @@
+// Общие определения типов — разделяемая библиотека.
+// Находится в libs/shared/, не рядом с main.but.
+
+type AppConfig  = [32: bit];
+type EventFlags = [16: bit];
+type TaskId     = [8:  bit];

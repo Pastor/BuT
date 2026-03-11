@@ -61,6 +61,12 @@ struct Args {
     #[arg(long, short = 'o', default_value = "gen")]
     output_dir: PathBuf,
 
+    /// Дополнительные директории для поиска include-файлов (.but).
+    /// Можно указывать несколько раз: -I ./lib -I ./shared
+    /// Порядок поиска: директория исходного файла → указанные директории (слева направо).
+    #[arg(long = "include-dir", short = 'I', value_name = "DIR")]
+    include_dirs: Vec<PathBuf>,
+
     /// Количество пробелов на один уровень отступа при генерации кода (по умолчанию: 4).
     /// Игнорируется при использовании --indent-tab.
     #[arg(long, default_value_t = 4, value_name = "N")]
@@ -97,6 +103,14 @@ fn main() {
     // Разрешение директив import (рекурсивное включение файлов)
     let unit = {
         let mut resolver = IncludeResolver::from_file(&args.source);
+        // Добавить дополнительные директории поиска из аргументов командной строки
+        for dir in &args.include_dirs {
+            if dir.is_dir() {
+                resolver.add_search_path(dir.clone());
+            } else {
+                eprintln!("Предупреждение: директория не найдена: {}", dir.display());
+            }
+        }
         match resolver.resolve(unit, &args.source) {
             Ok(merged) => merged,
             Err(errs) => {

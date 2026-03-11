@@ -1,0 +1,6 @@
+// Определения аппаратных регистров — HAL-библиотека.
+// Находится в libs/hardware/, не рядом с main.but.
+
+type StatusReg  = [8:  bit];
+type ControlReg = [16: bit];
+type DataReg    = [32: bit];

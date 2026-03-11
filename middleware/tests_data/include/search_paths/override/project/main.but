@@ -1,0 +1,10 @@
+// Тест приоритета путей поиска.
+// Файл "platform" существует в двух директориях (vendor/ и local/).
+// Первый добавленный путь должен иметь приоритет.
+
+import "platform";
+
+model PriorityTest {
+    start -> S;
+    state S { ref S; }
+}
