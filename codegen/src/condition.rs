@@ -181,35 +181,35 @@ pub fn expr_to_c(expr: &Expression) -> String {
     }
 }
 
-/// Преобразовать Statement в C-код (отступ `indent` пробелов).
-pub fn stmt_to_c(stmt: &Statement, indent: usize) -> String {
-    let pad = " ".repeat(indent);
+/// Преобразовать Statement в C-код с заданным стилем и уровнем вложенности.
+pub fn stmt_to_c(stmt: &Statement, style: &crate::IndentStyle, level: usize) -> String {
+    let pad = style.level(level);
     match stmt {
         Statement::Block { statements, .. } => {
             let inner = statements
                 .iter()
-                .map(|s| stmt_to_c(s, indent + 4))
+                .map(|s| stmt_to_c(s, style, level + 1))
                 .collect::<String>();
             format!("{}{{\n{}{}}}\n", pad, inner, pad)
         }
         Statement::Expression(_, expr) => format!("{}{};\n", pad, expr_to_c(expr)),
         Statement::If(_, cond, then_s, else_s) => {
             let mut out = format!("{}if ({}) ", pad, expr_to_c(cond));
-            out.push_str(&stmt_to_c(then_s, indent));
+            out.push_str(&stmt_to_c(then_s, style, level));
             if let Some(else_body) = else_s {
                 out.push_str(&format!("{}else ", pad));
-                out.push_str(&stmt_to_c(else_body, indent));
+                out.push_str(&stmt_to_c(else_body, style, level));
             }
             out
         }
         Statement::While(_, cond, body) => {
-            format!("{}while ({}) {}", pad, expr_to_c(cond), stmt_to_c(body, indent))
+            format!("{}while ({}) {}", pad, expr_to_c(cond), stmt_to_c(body, style, level))
         }
         Statement::For(_, init, cond, post, body) => {
-            let init_str = init.as_ref().map(|s| stmt_to_c(s, 0).trim_end_matches('\n').trim_end_matches(';').to_string()).unwrap_or_default();
+            let init_str = init.as_ref().map(|s| stmt_to_c(s, style, 0).trim_end_matches('\n').trim_end_matches(';').to_string()).unwrap_or_default();
             let cond_str = cond.as_ref().map(|e| expr_to_c(e)).unwrap_or_default();
             let post_str = post.as_ref().map(|e| expr_to_c(e)).unwrap_or_default();
-            let body_str = body.as_ref().map(|b| stmt_to_c(b, indent)).unwrap_or_default();
+            let body_str = body.as_ref().map(|b| stmt_to_c(b, style, level)).unwrap_or_default();
             format!("{}for ({}; {}; {}) {}", pad, init_str, cond_str, post_str, body_str)
         }
         Statement::Return(_, Some(expr)) => format!("{}return {};\n", pad, expr_to_c(expr)),

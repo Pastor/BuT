@@ -1676,7 +1676,116 @@ Sensor_State_t Sensor_state(void);
 | `bool` | `BOOL` |
 | `str`, `string` | `STRING` |
 
-### 20.4 Использование CLI
+### 20.4 Настраиваемый отступ при генерации кода
+
+Все генераторы кода (C, ST, Verilog) поддерживают настройку стиля отступа через параметры CLI или программный интерфейс (`CodegenContext`).
+
+#### Параметры CLI
+
+| Флаг | Значение по умолчанию | Описание |
+|---|---|---|
+| `--indent-size N` | `4` | Количество пробелов на один уровень вложенности |
+| `--indent-tab` | выключен | Использовать символ табуляции (`\t`) вместо пробелов |
+
+Флаг `--indent-tab` имеет приоритет над `--indent-size`.
+
+#### Примеры
+
+```bash
+# Стандартный отступ: 4 пробела (по умолчанию)
+but source.but --gen-c
+
+# Отступ в 2 пробела
+but source.but --gen-c --indent-size 2
+
+# Отступ символом табуляции
+but source.but --gen-c --indent-tab
+
+# Нулевой отступ (минимальный, без форматирования)
+but source.but --gen-c --indent-size 0
+```
+
+#### Эффект на генерируемый код
+
+Для одной и той же модели разные стили дают следующий результат (фрагмент C-кода):
+
+**`--indent-size 4` (по умолчанию):**
+```c
+void Model_step(void) {
+    switch (_state) {
+        case MODEL_IDLE: {
+            if (start) {
+                _state = MODEL_ACTIVE;
+            }
+            break;
+        }
+    }
+}
+```
+
+**`--indent-size 2`:**
+```c
+void Model_step(void) {
+  switch (_state) {
+    case MODEL_IDLE: {
+      if (start) {
+        _state = MODEL_ACTIVE;
+      }
+      break;
+    }
+  }
+}
+```
+
+**`--indent-tab`:**
+```c
+void Model_step(void) {
+	switch (_state) {
+		case MODEL_IDLE: {
+			if (start) {
+				_state = MODEL_ACTIVE;
+			}
+			break;
+		}
+	}
+}
+```
+
+#### Программный интерфейс
+
+```rust
+use but_codegen::{CodegenContext, IndentStyle, generate_c_all};
+
+// Создать контекст с отступом в 2 пробела
+let ctx = CodegenContext::from_source_with_indent(&source, IndentStyle::Spaces(2));
+
+// Создать контекст с табуляцией
+let ctx_tab = CodegenContext::from_source_with_indent(&source, IndentStyle::Tab);
+
+// Сгенерировать C-код
+let output = generate_c_all(&source, &ctx);
+```
+
+#### `IndentStyle`
+
+```rust
+pub enum IndentStyle {
+    /// Отступ пробелами: количество пробелов на уровень вложенности
+    Spaces(usize),
+    /// Отступ символом табуляции: один `\t` на уровень
+    Tab,
+}
+```
+
+Метод `level(n: usize) -> String` возвращает строку отступа для уровня `n`:
+
+| Стиль | `level(0)` | `level(1)` | `level(2)` |
+|---|---|---|---|
+| `Spaces(4)` | `""` | `"    "` | `"        "` |
+| `Spaces(2)` | `""` | `"  "` | `"    "` |
+| `Tab` | `""` | `"\t"` | `"\t\t"` |
+
+### 20.5 Использование CLI
 
 ```bash
 # Симуляция
@@ -1690,6 +1799,12 @@ but source.but --all --output-dir ./gen
 
 # Только C и Verilog
 but source.but --gen-c --gen-verilog --output-dir ./gen
+
+# C-код с отступом в 2 пробела
+but source.but --gen-c --indent-size 2 --output-dir ./gen
+
+# Все форматы с табуляцией
+but source.but --all --indent-tab --output-dir ./gen
 ```
 
 ---
@@ -2053,7 +2168,7 @@ let mut matrix: [3: [3: u8]] = {{1,2,3},{4,5,6},{7,8,9}};
 
 20. **Псевдонимы типов в Simulator** — при разыменовании псевдонима возвращается `Value::None`. Необходима таблица типов в контексте выполнения.
 
-22. **Изменяемый отступ при генерации кода** - при генерации кода можно указывать размер отступа (в пробелах или символах табуляции) и генерируемый код будет использовать его 
+22. ~~**Изменяемый отступ при генерации кода**~~ — ✅ **Реализовано.** `IndentStyle` (`Spaces(N)` / `Tab`) в `CodegenContext`; флаги CLI `--indent-size N` и `--indent-tab`. Применяется во всех генераторах (C, ST, Verilog). Подробнее: раздел 20.4.
 
 ---
 

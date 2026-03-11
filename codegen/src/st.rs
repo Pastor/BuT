@@ -11,6 +11,7 @@ use crate::CodegenContext;
 /// Сгенерировать файл объявлений (.FB.DECL.st) для модели.
 pub fn generate_st_decl(model: &ModelDefinition, ctx: &CodegenContext) -> String {
     let name = model_name(model).to_uppercase();
+    let i1 = ctx.indent.level(1);
     let mut out = String::new();
 
     let ltl_formulas = extract_ltl_formulas(model);
@@ -20,7 +21,7 @@ pub fn generate_st_decl(model: &ModelDefinition, ctx: &CodegenContext) -> String
     }
     out.push_str(&format!("FUNCTION_BLOCK {}\n", name));
     out.push_str("VAR\n");
-    out.push_str("    state : INT;\n");
+    out.push_str(&format!("{}state : INT;\n", i1));
 
     // Переменные портов
     for vd in &ctx.global_vars {
@@ -37,10 +38,7 @@ pub fn generate_st_decl(model: &ModelDefinition, ctx: &CodegenContext) -> String
                 } else {
                     "AT %Q"
                 };
-                out.push_str(&format!(
-                    "    {} {} : {} := {};\n",
-                    vname.name, dir, ty, init
-                ));
+                out.push_str(&format!("{}{} {} : {} := {};\n", i1, vname.name, dir, ty, init));
             }
         }
     }
@@ -58,7 +56,7 @@ pub fn generate_st_decl(model: &ModelDefinition, ctx: &CodegenContext) -> String
                     .as_ref()
                     .map(|e| expr_to_c(e))
                     .unwrap_or_else(|| "0".to_string());
-                out.push_str(&format!("    {} : {} := {};\n", vname.name, ty, init));
+                out.push_str(&format!("{}{} : {} := {};\n", i1, vname.name, ty, init));
             }
         }
     }
@@ -68,10 +66,13 @@ pub fn generate_st_decl(model: &ModelDefinition, ctx: &CodegenContext) -> String
 }
 
 /// Сгенерировать файл программы (.FB.PRGS.st) для модели.
-pub fn generate_st_program(model: &ModelDefinition, _ctx: &CodegenContext) -> String {
+pub fn generate_st_program(model: &ModelDefinition, ctx: &CodegenContext) -> String {
     let name = model_name(model).to_uppercase();
     let states = collect_states(model);
     let start = find_start(model).unwrap_or_else(|| states.first().cloned().unwrap_or_default());
+    let i1 = ctx.indent.level(1);
+    let i2 = ctx.indent.level(2);
+    let i3 = ctx.indent.level(3);
 
     let mut out = String::new();
     out.push_str(&format!("(* Сгенерировано but-codegen *)\n"));
@@ -86,7 +87,7 @@ pub fn generate_st_program(model: &ModelDefinition, _ctx: &CodegenContext) -> St
     let start_idx = states.iter().position(|s| *s == start).unwrap_or(0);
     out.push_str(&format!("\n(* Initialize *)\n"));
     out.push_str(&format!("IF state = 0 AND state < 0 THEN\n"));
-    out.push_str(&format!("    state := {};\n", start_idx));
+    out.push_str(&format!("{}state := {};\n", i1, start_idx));
     out.push_str("END_IF;\n\n");
 
     // Глобальные обработчики enter (каждый такт)
@@ -109,9 +110,9 @@ pub fn generate_st_program(model: &ModelDefinition, _ctx: &CodegenContext) -> St
     out.push_str("CASE state OF\n");
 
     for (idx, state_name) in states.iter().enumerate() {
-        out.push_str(&format!("    {} : (* {} *)\n", idx, state_name));
+        out.push_str(&format!("{}{} : (* {} *)\n", i1, idx, state_name));
 
-        // Find state in model
+        // Найти состояние в модели
         if let Some(ModelPart::StateDefinition(sd)) = model.parts.iter().find(|p| {
             if let ModelPart::StateDefinition(sd) = p {
                 sd.name.as_ref().map(|n| n.name.as_str()) == Some(state_name.as_str())
@@ -125,10 +126,10 @@ pub fn generate_st_program(model: &ModelDefinition, _ctx: &CodegenContext) -> St
                     if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
                         match &pd.value {
                             Property::Expression(e) => {
-                                out.push_str(&format!("        {} ;\n", expr_to_c(e)));
+                                out.push_str(&format!("{}{} ;\n", i2, expr_to_c(e)));
                             }
                             Property::Function(_) => {
-                                out.push_str("        (* блок enter *)\n");
+                                out.push_str(&format!("{}(* блок enter *)\n", i2));
                             }
                         }
                     }
@@ -145,9 +146,9 @@ pub fn generate_st_program(model: &ModelDefinition, _ctx: &CodegenContext) -> St
                     let target_idx = states
                         .iter()
                         .position(|s| s == &target.name)
-                        .unwrap_or(states.len()); // unknown state → end state
+                        .unwrap_or(states.len());
 
-                    out.push_str(&format!("        IF {} THEN\n", cond_str));
+                    out.push_str(&format!("{}IF {} THEN\n", i2, cond_str));
 
                     // Обработчики exit
                     for sp2 in &sd.parts {
@@ -155,7 +156,7 @@ pub fn generate_st_program(model: &ModelDefinition, _ctx: &CodegenContext) -> St
                             if pd2.name.as_ref().map(|n| n.name.as_str()) == Some("exit") {
                                 match &pd2.value {
                                     Property::Expression(e) => {
-                                        out.push_str(&format!("            {} ;\n", expr_to_c(e)));
+                                        out.push_str(&format!("{}{} ;\n", i3, expr_to_c(e)));
                                     }
                                     _ => {}
                                 }
@@ -163,8 +164,8 @@ pub fn generate_st_program(model: &ModelDefinition, _ctx: &CodegenContext) -> St
                         }
                     }
 
-                    out.push_str(&format!("            state := {};\n", target_idx));
-                    out.push_str("        END_IF;\n");
+                    out.push_str(&format!("{}state := {};\n", i3, target_idx));
+                    out.push_str(&format!("{}END_IF;\n", i2));
                 }
             }
         }

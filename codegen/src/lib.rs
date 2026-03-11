@@ -16,6 +16,41 @@ pub use st::{generate_st_all, generate_st_decl, generate_st_program};
 pub use thumb::{generate_thumb, generate_thumb_all};
 pub use verilog::{generate_verilog, generate_verilog_all};
 
+/// Стиль отступа при генерации кода.
+///
+/// Используется всеми бэкендами (C, ST, Verilog) для форматирования отступов.
+/// По умолчанию — четыре пробела на уровень вложенности.
+#[derive(Debug, Clone, PartialEq)]
+pub enum IndentStyle {
+    /// Отступ пробелами: задаётся количество пробелов на один уровень.
+    Spaces(usize),
+    /// Отступ символом табуляции: один `\t` на уровень.
+    Tab,
+}
+
+impl IndentStyle {
+    /// Сгенерировать строку отступа для заданного уровня вложенности.
+    ///
+    /// Например, `Spaces(4).level(2)` вернёт 8 пробелов.
+    pub fn level(&self, n: usize) -> String {
+        match self {
+            IndentStyle::Spaces(size) => " ".repeat(size * n),
+            IndentStyle::Tab => "\t".repeat(n),
+        }
+    }
+
+    /// Единица отступа (один уровень).
+    pub fn unit(&self) -> String {
+        self.level(1)
+    }
+}
+
+impl Default for IndentStyle {
+    fn default() -> Self {
+        IndentStyle::Spaces(4)
+    }
+}
+
 /// Контекст для генераторов кода с глобальными объявлениями.
 #[derive(Debug, Default)]
 pub struct CodegenContext {
@@ -23,6 +58,8 @@ pub struct CodegenContext {
     pub global_vars: Vec<Box<VariableDefinition>>,
     /// Таблица псевдонимов типов: имя псевдонима → определение типа.
     pub type_aliases: HashMap<String, Type>,
+    /// Стиль отступа для всех генераторов кода.
+    pub indent: IndentStyle,
 }
 
 impl CodegenContext {
@@ -44,6 +81,13 @@ impl CodegenContext {
         }
         ctx
     }
+
+    /// Построить контекст с заданным стилем отступа.
+    pub fn from_source_with_indent(source: &SourceUnit, indent: IndentStyle) -> Self {
+        let mut ctx = Self::from_source(source);
+        ctx.indent = indent;
+        ctx
+    }
 }
 
 /// Сгенерировать все выходные данные для всех моделей из SourceUnit.
@@ -61,14 +105,20 @@ pub struct AllOutput {
 }
 
 impl AllOutput {
+    /// Сгенерировать все выходы с настройками по умолчанию (4 пробела).
     pub fn generate(source: &SourceUnit) -> Self {
         let ctx = CodegenContext::from_source(source);
+        Self::generate_with_ctx(source, &ctx)
+    }
+
+    /// Сгенерировать все выходы с заданным контекстом (включая стиль отступа).
+    pub fn generate_with_ctx(source: &SourceUnit, ctx: &CodegenContext) -> Self {
         Self {
-            c: generate_c_all(source, &ctx),
-            verilog: generate_verilog_all(source, &ctx),
-            st: generate_st_all(source, &ctx),
-            lc3: generate_lc3_all(source, &ctx),
-            thumb: generate_thumb_all(source, &ctx),
+            c: generate_c_all(source, ctx),
+            verilog: generate_verilog_all(source, ctx),
+            st: generate_st_all(source, ctx),
+            lc3: generate_lc3_all(source, ctx),
+            thumb: generate_thumb_all(source, ctx),
         }
     }
 }
@@ -531,5 +581,163 @@ model Test { state A {} start -> A; }
             decl.contains("ARRAY [0..1] OF LWORD"),
             "Ожидается ARRAY [0..1] OF LWORD для u128=[128:bit], объявление:\n{}", decl
         );
+    }
+
+    // ===== IndentStyle =====
+
+    #[test]
+    fn indent_style_spaces_уровень_0_пустая_строка() {
+        assert_eq!(IndentStyle::Spaces(4).level(0), "");
+        assert_eq!(IndentStyle::Spaces(2).level(0), "");
+        assert_eq!(IndentStyle::Tab.level(0), "");
+    }
+
+    #[test]
+    fn indent_style_spaces_4_уровень_1() {
+        assert_eq!(IndentStyle::Spaces(4).level(1), "    ");
+    }
+
+    #[test]
+    fn indent_style_spaces_2_уровень_1() {
+        assert_eq!(IndentStyle::Spaces(2).level(1), "  ");
+    }
+
+    #[test]
+    fn indent_style_spaces_2_уровень_3() {
+        assert_eq!(IndentStyle::Spaces(2).level(3), "      ");
+    }
+
+    #[test]
+    fn indent_style_tab_уровень_1() {
+        assert_eq!(IndentStyle::Tab.level(1), "\t");
+    }
+
+    #[test]
+    fn indent_style_tab_уровень_3() {
+        assert_eq!(IndentStyle::Tab.level(3), "\t\t\t");
+    }
+
+    #[test]
+    fn indent_style_unit_возвращает_один_уровень() {
+        assert_eq!(IndentStyle::Spaces(4).unit(), IndentStyle::Spaces(4).level(1));
+        assert_eq!(IndentStyle::Tab.unit(), "\t");
+    }
+
+    #[test]
+    fn indent_style_default_четыре_пробела() {
+        assert_eq!(IndentStyle::default(), IndentStyle::Spaces(4));
+    }
+
+    // ===== Генерация C с настраиваемым отступом =====
+
+    #[test]
+    fn c_источник_с_отступом_2_пробела_содержит_двойной_отступ() {
+        let src = parse_delay();
+        let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(2));
+        let result = generate_c_all(&src, &ctx);
+        let (_, _header, source) = &result[0];
+        // Первый уровень — 2 пробела
+        assert!(
+            source.contains("\n  switch"),
+            "Ожидается отступ в 2 пробела перед switch:\n{}", source
+        );
+    }
+
+    #[test]
+    fn c_источник_с_табуляцией_содержит_табы() {
+        let src = parse_delay();
+        let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Tab);
+        let result = generate_c_all(&src, &ctx);
+        let (_, _header, source) = &result[0];
+        assert!(
+            source.contains('\t'),
+            "Ожидается символ табуляции в коде с IndentStyle::Tab:\n{}", source
+        );
+    }
+
+    #[test]
+    fn c_источник_с_отступом_4_по_умолчанию_содержит_четыре_пробела() {
+        let src = parse_delay();
+        let ctx = CodegenContext::from_source(&src); // по умолчанию Spaces(4)
+        let result = generate_c_all(&src, &ctx);
+        let (_, _header, source) = &result[0];
+        assert!(
+            source.contains("\n    switch"),
+            "Ожидается отступ в 4 пробела перед switch:\n{}", source
+        );
+    }
+
+    #[test]
+    fn c_источник_с_отступом_0_не_содержит_ведущих_пробелов_в_switch() {
+        let src = parse_delay();
+        let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(0));
+        let result = generate_c_all(&src, &ctx);
+        let (_, _header, source) = &result[0];
+        assert!(
+            source.contains("\nswitch"),
+            "При нулевом отступе switch должен быть без ведущих пробелов:\n{}", source
+        );
+    }
+
+    // ===== Генерация ST с настраиваемым отступом =====
+
+    #[test]
+    fn st_объявление_с_отступом_2_содержит_двойной_отступ() {
+        let src = parse_delay();
+        let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(2));
+        let result = generate_st_all(&src, &ctx);
+        let (_, decl, _) = &result[0];
+        assert!(
+            decl.contains("\n  state"),
+            "Ожидается 2-пробельный отступ перед 'state' в объявлении:\n{}", decl
+        );
+    }
+
+    #[test]
+    fn st_программа_с_табуляцией_содержит_табы() {
+        let src = parse_delay();
+        let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Tab);
+        let result = generate_st_all(&src, &ctx);
+        let (_, _, prog) = &result[0];
+        assert!(
+            prog.contains('\t'),
+            "Ожидается символ табуляции в ST-программе с IndentStyle::Tab:\n{}", prog
+        );
+    }
+
+    // ===== Генерация Verilog с настраиваемым отступом =====
+
+    #[test]
+    fn verilog_с_отступом_2_содержит_двойной_отступ() {
+        let src = parse_delay();
+        let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(2));
+        let result = generate_verilog_all(&src, &ctx);
+        let (_, code) = &result[0];
+        assert!(
+            code.contains("\n  input wire clk"),
+            "Ожидается 2-пробельный отступ перед 'input wire clk':\n{}", code
+        );
+    }
+
+    #[test]
+    fn verilog_с_табуляцией_содержит_табы() {
+        let src = parse_delay();
+        let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Tab);
+        let result = generate_verilog_all(&src, &ctx);
+        let (_, code) = &result[0];
+        assert!(
+            code.contains('\t'),
+            "Ожидается символ табуляции в Verilog-коде с IndentStyle::Tab:\n{}", code
+        );
+    }
+
+    // ===== from_source_with_indent =====
+
+    #[test]
+    fn from_source_with_indent_устанавливает_стиль() {
+        let src = parse_delay();
+        let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(2));
+        assert_eq!(ctx.indent, IndentStyle::Spaces(2));
+        assert_eq!(ctx.global_vars.len(), 2); // input и output должны присутствовать
     }
 }

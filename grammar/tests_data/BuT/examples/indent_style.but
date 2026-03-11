@@ -1,0 +1,45 @@
+// Пример: демонстрация настраиваемого отступа при генерации кода.
+//
+// Этот файл используется для проверки того, что генераторы кода
+// (C, ST, Verilog) корректно применяют заданный стиль отступа.
+//
+// Запуск с отступом в 2 пробела:
+//   but --gen-c --indent-size 2 indent_style.but
+//
+// Запуск с символом табуляции:
+//   but --gen-c --indent-tab indent_style.but
+
+import "include/std";
+
+/// Глобальный сигнал запуска/останова
+port start_signal : bit = 0x01;
+port stop_signal  : bit = 0x02;
+port busy_flag    : bit = 0x04;
+
+/// Простой двухсостоянный автомат управления устройством.
+/// Иллюстрирует влияние отступа на вид генерируемого кода.
+model DeviceController {
+    /// Счётчик активных тактов (тип-псевдоним из std)
+    let mut tick_count: u32 = 0;
+
+    /// Ожидание сигнала запуска
+    state Idle {
+        ref Active : start_signal;
+        ref Idle   : !start_signal;
+        enter -> {
+            busy_flag = false;
+            tick_count = 0;
+        }
+    }
+
+    /// Активная работа устройства
+    state Active {
+        ref Idle : stop_signal;
+        enter -> {
+            busy_flag = true;
+            tick_count = tick_count + 1;
+        }
+    }
+
+    start -> Idle;
+}

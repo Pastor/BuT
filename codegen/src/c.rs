@@ -11,6 +11,7 @@ use crate::CodegenContext;
 pub fn generate_c_header(model: &ModelDefinition, ctx: &CodegenContext) -> String {
     let name = model_name(model);
     let upper = name.to_uppercase();
+    let i1 = ctx.indent.level(1);
 
     let mut out = String::new();
     out.push_str(&format!("#ifndef __{}_H__\n", upper));
@@ -29,7 +30,7 @@ pub fn generate_c_header(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
     let states = collect_states(model);
     for (i, s) in states.iter().enumerate() {
         let comma = if i + 1 < states.len() { "," } else { "" };
-        out.push_str(&format!("    {}_{}{}\n", upper, s.to_uppercase(), comma));
+        out.push_str(&format!("{}{}_{}{}\n", i1, upper, s.to_uppercase(), comma));
     }
     out.push_str(&format!("}} {}_State_t;\n\n", name));
 
@@ -56,6 +57,11 @@ pub fn generate_c_header(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
 pub fn generate_c_source(model: &ModelDefinition, ctx: &CodegenContext) -> String {
     let name = model_name(model);
     let upper = name.to_uppercase();
+    // Уровни отступа: i1=1 уровень, i2=2, i3=3, i4=4
+    let i1 = ctx.indent.level(1);
+    let i2 = ctx.indent.level(2);
+    let i3 = ctx.indent.level(3);
+    let i4 = ctx.indent.level(4);
 
     let mut out = String::new();
     out.push_str(&format!("#include \"{}.h\"\n\n", name.to_lowercase()));
@@ -89,7 +95,7 @@ pub fn generate_c_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
     for part in &model.parts {
         if let ModelPart::VariableDefinition(vd) = part {
             if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
-                continue; // ports handled above
+                continue;
             }
             if let Some(vname) = &vd.name {
                 let ty = type_to_c_ctx(&vd.ty, &ctx.type_aliases);
@@ -109,14 +115,14 @@ pub fn generate_c_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
 
     // Функция инициализации
     out.push_str(&format!("void {}_init(void) {{\n", name));
-    out.push_str(&format!("    _state = {}_{};\n", upper, start.to_uppercase()));
+    out.push_str(&format!("{}_state = {}_{};\n", i1, upper, start.to_uppercase()));
     // Обработчик enter уровня модели
     for part in &model.parts {
         if let ModelPart::PropertyDefinition(pd) = part {
             if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
                 let stmt = match &pd.value {
-                    Property::Function(s) => stmt_to_c(s, 4),
-                    Property::Expression(e) => format!("    {};\n", crate::condition::expr_to_c(e)),
+                    Property::Function(s) => stmt_to_c(s, &ctx.indent, 1),
+                    Property::Expression(e) => format!("{}{};\n", i1, crate::condition::expr_to_c(e)),
                 };
                 out.push_str(&stmt);
             }
@@ -126,7 +132,7 @@ pub fn generate_c_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
 
     // Запрос состояния
     out.push_str(&format!("{}_State_t {}_state(void) {{\n", name, name));
-    out.push_str("    return _state;\n");
+    out.push_str(&format!("{}return _state;\n", i1));
     out.push_str("}\n\n");
 
     // Функция шага
@@ -137,34 +143,30 @@ pub fn generate_c_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
         if let ModelPart::PropertyDefinition(pd) = part {
             if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
                 let stmt = match &pd.value {
-                    Property::Function(s) => stmt_to_c(s, 4),
-                    Property::Expression(e) => format!("    {};\n", crate::condition::expr_to_c(e)),
+                    Property::Function(s) => stmt_to_c(s, &ctx.indent, 1),
+                    Property::Expression(e) => format!("{}{};\n", i1, crate::condition::expr_to_c(e)),
                 };
                 out.push_str(&stmt);
             }
         }
     }
 
-    out.push_str(&format!("    switch (_state) {{\n"));
+    out.push_str(&format!("{}switch (_state) {{\n", i1));
 
     for part in &model.parts {
         if let ModelPart::StateDefinition(sd) = part {
             let sname = sd.name.as_ref().map(|n| n.name.as_str()).unwrap_or("?");
 
-            out.push_str(&format!(
-                "        case {}_{}: {{\n",
-                upper,
-                sname.to_uppercase()
-            ));
+            out.push_str(&format!("{}case {}_{}: {{\n", i2, upper, sname.to_uppercase()));
 
             // Обработчик enter состояния (каждый такт)
             for sp in &sd.parts {
                 if let StatePart::PropertyDefinition(pd) = sp {
                     if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
                         let stmt = match &pd.value {
-                            Property::Function(s) => stmt_to_c(s, 12),
+                            Property::Function(s) => stmt_to_c(s, &ctx.indent, 3),
                             Property::Expression(e) => {
-                                format!("            {};\n", crate::condition::expr_to_c(e))
+                                format!("{}{};\n", i3, crate::condition::expr_to_c(e))
                             }
                         };
                         out.push_str(&stmt);
@@ -180,16 +182,16 @@ pub fn generate_c_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
                         .map(|c| condition_to_c(c))
                         .unwrap_or_else(|| "1".to_string());
 
-                    out.push_str(&format!("            if ({}) {{\n", cond_str));
+                    out.push_str(&format!("{}if ({}) {{\n", i3, cond_str));
 
                     // Обработчики exit
                     for sp2 in &sd.parts {
                         if let StatePart::PropertyDefinition(pd2) = sp2 {
                             if pd2.name.as_ref().map(|n| n.name.as_str()) == Some("exit") {
                                 let stmt = match &pd2.value {
-                                    Property::Function(s) => stmt_to_c(s, 16),
+                                    Property::Function(s) => stmt_to_c(s, &ctx.indent, 4),
                                     Property::Expression(e) => {
-                                        format!("                {};\n", crate::condition::expr_to_c(e))
+                                        format!("{}{};\n", i4, crate::condition::expr_to_c(e))
                                     }
                                 };
                                 out.push_str(&stmt);
@@ -210,9 +212,9 @@ pub fn generate_c_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
                                 if let StatePart::PropertyDefinition(pd3) = tsp {
                                     if pd3.name.as_ref().map(|n| n.name.as_str()) == Some("before") {
                                         let stmt = match &pd3.value {
-                                            Property::Function(s) => stmt_to_c(s, 16),
+                                            Property::Function(s) => stmt_to_c(s, &ctx.indent, 4),
                                             Property::Expression(e) => {
-                                                format!("                {};\n", crate::condition::expr_to_c(e))
+                                                format!("{}{};\n", i4, crate::condition::expr_to_c(e))
                                             }
                                         };
                                         out.push_str(&stmt);
@@ -222,21 +224,17 @@ pub fn generate_c_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
                         }
                     }
 
-                    out.push_str(&format!(
-                        "                _state = {}_{};\n",
-                        upper,
-                        target.name.to_uppercase()
-                    ));
-                    out.push_str("            }\n");
+                    out.push_str(&format!("{}_state = {}_{};\n", i4, upper, target.name.to_uppercase()));
+                    out.push_str(&format!("{}}}\n", i3));
                 }
             }
 
-            out.push_str("            break;\n");
-            out.push_str("        }\n");
+            out.push_str(&format!("{}break;\n", i3));
+            out.push_str(&format!("{}}}\n", i2));
         }
     }
 
-    out.push_str("    }\n");
+    out.push_str(&format!("{}}}\n", i1));
     out.push_str("}\n");
     out
 }

@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use clap::Parser;
 
-use but_codegen::{AllOutput, CodegenContext};
+use but_codegen::{AllOutput, CodegenContext, IndentStyle};
 use but_grammar::ast::SourceUnit;
 use but_middleware::include::IncludeResolver;
 use but_simulators::{build_all, Simulator, Value};
@@ -60,6 +60,15 @@ struct Args {
     /// Выходная директория
     #[arg(long, short = 'o', default_value = "gen")]
     output_dir: PathBuf,
+
+    /// Количество пробелов на один уровень отступа при генерации кода (по умолчанию: 4).
+    /// Игнорируется при использовании --indent-tab.
+    #[arg(long, default_value_t = 4, value_name = "N")]
+    indent_size: usize,
+
+    /// Использовать символ табуляции вместо пробелов для отступов в генерируемом коде.
+    #[arg(long)]
+    indent_tab: bool,
 }
 
 fn main() {
@@ -177,7 +186,13 @@ fn main() {
     // ── Кодогенерация ────────────────────────────────────────────────────────────
     if do_gen_c || do_gen_verilog || do_gen_st || do_gen_lc3 || do_gen_thumb {
         println!("\n=== Кодогенерация ===");
-        let ctx = CodegenContext::from_source(&unit);
+        // Выбрать стиль отступа по аргументам командной строки
+        let indent = if args.indent_tab {
+            IndentStyle::Tab
+        } else {
+            IndentStyle::Spaces(args.indent_size)
+        };
+        let ctx = CodegenContext::from_source_with_indent(&unit, indent);
         generate_outputs(
             &unit,
             &ctx,
@@ -201,7 +216,8 @@ fn generate_outputs(
     gen_lc3: bool,
     gen_thumb: bool,
 ) {
-    let output = AllOutput::generate(unit);
+    // Используем контекст с заданным стилем отступа
+    let output = AllOutput::generate_with_ctx(unit, ctx);
 
     if gen_c {
         let c_dir = out_dir.join("c");
