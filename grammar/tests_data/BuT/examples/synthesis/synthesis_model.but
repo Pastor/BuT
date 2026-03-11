@@ -1,14 +1,19 @@
 model Processor {
+    //Начальное состояние
     start Start {
         ref End: is_complete;
     }
-    state End {}
+    //Терминальное состояние - нет переходов
+    //Модель считается завершенной/отработанной если она находится в одном из терминальных состояний
+    state End;
 }
 model Memory {
     start Start {
         ref End: is_complete;
     }
-    state End;
+    state End {
+        enter -> is_complete = false;
+    }
 }
 model Floppy {
     start Start {
@@ -17,7 +22,11 @@ model Floppy {
     state End;
 }
 
+//Атрибутами задается основная модель которая будет попадать при генерации кода
+//main - основная модель. Если модель не имеет этого атрибута или не используется явно или не явно - код для нее не генерируется
+//name(Main) - задает имя модели при генерации
 #[main, name(Main)]
+//Описывает сложную компоновку модели
 model Refresh = (Processor | Memory) + Floppy;
 
 port is_complete: bool = 0:0x058849;
