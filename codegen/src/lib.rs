@@ -669,7 +669,7 @@ model Phase2 {
     start -> Run;
 }
 model Pipeline {
-    behavior -> sequential(Phase1, Phase2);
+    behavior -> Phase1 + Phase2;
     end -> { done = 1; }
 }
 port done : bit = 0;
@@ -679,7 +679,7 @@ port done : bit = 0;
 model A { state S {} start -> S; }
 model B { state S {} start -> S; }
 model Combo {
-    behavior -> parallel(A, B);
+    behavior -> A | B;
     end -> { finished = 1; }
 }
 port finished : bit = 0;

@@ -3,19 +3,22 @@ use but_grammar::ast::{Expression, ModelDefinition, ModelPart, Property, StatePa
 
 /// Тип компоновки конечных автоматов (значение свойства `behavior`).
 ///
-/// Примеры в языке BuT:
+/// Синтаксис в языке BuT:
 /// ```text
-/// behavior -> sequential(ModelA, ModelB, ModelC);
-/// behavior -> parallel(ModelA, ModelB);
-/// behavior -> choice(ModelA, ModelB);
+/// behavior -> A + B + C;   // последовательная: A → B → C
+/// behavior -> A | B | C;   // параллельная: все одновременно
+/// behavior -> A;            // выбор: запустить A (одну модель)
 /// ```
 #[derive(Debug, Clone, PartialEq)]
 pub enum BehaviorKind {
     /// Последовательное выполнение: M1 завершается → запускается M2 и т.д.
+    /// Синтаксис: `M1 + M2 + M3`
     Sequential(Vec<String>),
     /// Параллельное выполнение: все модели работают одновременно до завершения всех.
+    /// Синтаксис: `M1 | M2 | M3`
     Parallel(Vec<String>),
-    /// Выбор одной из моделей (берётся первая готовая к выполнению).
+    /// Выбор одной модели для выполнения.
+    /// Синтаксис: `M` (одно имя без операторов)
     Choice(Vec<String>),
 }
 
@@ -30,35 +33,75 @@ impl BehaviorKind {
 
 /// Найти и разобрать свойство `behavior` в модели.
 ///
-/// Возвращает `None`, если свойство отсутствует или имеет неизвестный тип компоновки.
+/// Синтаксис значения свойства:
+/// - `A + B + C`  → [`BehaviorKind::Sequential`]  (оператор `+`)
+/// - `A | B | C`  → [`BehaviorKind::Parallel`]    (оператор `|`)
+/// - `A`          → [`BehaviorKind::Choice`]       (одиночное имя модели)
+///
+/// Возвращает `None`, если свойство отсутствует или выражение не распознано.
 pub fn find_behavior(model: &ModelDefinition) -> Option<BehaviorKind> {
     for part in &model.parts {
         if let ModelPart::PropertyDefinition(pd) = part {
             if pd.name.as_ref().map(|n| n.name.as_str()) == Some("behavior") {
                 if let Property::Expression(expr) = &pd.value {
-                    if let Expression::FunctionCall(_, func_id, args) = expr {
-                        let names: Vec<String> = args
-                            .iter()
-                            .filter_map(|a| {
-                                if let Expression::Variable(id) = a {
-                                    Some(id.name.clone())
-                                } else {
-                                    None
-                                }
-                            })
-                            .collect();
-                        return match func_id.name.as_str() {
-                            "sequential" => Some(BehaviorKind::Sequential(names)),
-                            "parallel" => Some(BehaviorKind::Parallel(names)),
-                            "choice" => Some(BehaviorKind::Choice(names)),
-                            _ => None,
-                        };
-                    }
+                    return parse_behavior_expr(expr);
                 }
             }
         }
     }
     None
+}
+
+/// Разобрать выражение компоновки из AST.
+///
+/// - `Add(A, B)` и вложенные Add  → Sequential
+/// - `BitwiseOr(A, B)` и вложенные BitwiseOr → Parallel
+/// - `Variable(A)`                 → Choice(["A"])
+fn parse_behavior_expr(expr: &Expression) -> Option<BehaviorKind> {
+    match expr {
+        Expression::Add(..) => {
+            let names = flatten_add(expr);
+            if names.is_empty() { None } else { Some(BehaviorKind::Sequential(names)) }
+        }
+        Expression::BitwiseOr(..) => {
+            let names = flatten_bitor(expr);
+            if names.is_empty() { None } else { Some(BehaviorKind::Parallel(names)) }
+        }
+        Expression::Variable(id) => {
+            Some(BehaviorKind::Choice(vec![id.name.clone()]))
+        }
+        _ => None,
+    }
+}
+
+/// Рекурсивно извлечь имена моделей из левоассоциативного дерева `Add`.
+///
+/// Пример: `A + B + C` → `Add(Add(A, B), C)` → ["A", "B", "C"]
+fn flatten_add(expr: &Expression) -> Vec<String> {
+    match expr {
+        Expression::Add(_, left, right) => {
+            let mut names = flatten_add(left);
+            names.extend(flatten_add(right));
+            names
+        }
+        Expression::Variable(id) => vec![id.name.clone()],
+        _ => vec![],
+    }
+}
+
+/// Рекурсивно извлечь имена моделей из левоассоциативного дерева `BitwiseOr`.
+///
+/// Пример: `A | B | C` → `BitwiseOr(BitwiseOr(A, B), C)` → ["A", "B", "C"]
+fn flatten_bitor(expr: &Expression) -> Vec<String> {
+    match expr {
+        Expression::BitwiseOr(_, left, right) => {
+            let mut names = flatten_bitor(left);
+            names.extend(flatten_bitor(right));
+            names
+        }
+        Expression::Variable(id) => vec![id.name.clone()],
+        _ => vec![],
+    }
 }
 
 /// Найти свойство `end` в модели.
@@ -99,118 +142,180 @@ pub fn find_terminal_states(model: &ModelDefinition) -> Vec<String> {
 mod tests {
     use super::*;
 
-    fn parse(src: &str) -> but_grammar::ast::SourceUnit {
-        but_grammar::parse(src, 0).expect("parse ok").0
+    fn parse_first_model(src: &str) -> ModelDefinition {
+        let unit = but_grammar::parse(src, 0).expect("парсинг прошёл успешно").0;
+        if let but_grammar::ast::SourceUnitPart::ModelDefinition(md) = unit.0.into_iter().next().unwrap() {
+            *md
+        } else {
+            panic!("первый элемент не является моделью")
+        }
     }
 
+    // ── Тесты синтаксиса behavior ──────────────────────────────────────────────
+
     #[test]
-    fn find_behavior_sequential() {
-        let src = parse(r#"
-model Comp {
-    behavior -> sequential(ModelA, ModelB);
-    start -> Comp;
+    fn поиск_behavior_последовательного() {
+        // behavior -> A + B; — оператор + означает Sequential
+        let md = parse_first_model(r#"
+model Pipe {
+    behavior -> Phase1 + Phase2;
 }
-model Comp { state Comp{} start -> Comp; }
 "#);
-        // First model has behavior
-        let unit = &src.0;
-        if let but_grammar::ast::SourceUnitPart::ModelDefinition(md) = &unit[0] {
-            let bk = find_behavior(md);
-            assert!(matches!(bk, Some(BehaviorKind::Sequential(_))));
-            if let Some(BehaviorKind::Sequential(names)) = bk {
-                assert_eq!(names, vec!["ModelA", "ModelB"]);
-            }
+        let bk = find_behavior(&md);
+        assert!(matches!(bk, Some(BehaviorKind::Sequential(_))), "ожидается Sequential, получено: {:?}", bk);
+        if let Some(BehaviorKind::Sequential(names)) = bk {
+            assert_eq!(names, vec!["Phase1", "Phase2"]);
         }
     }
 
     #[test]
-    fn find_behavior_parallel() {
-        let src = parse(r#"
-model Comp { behavior -> parallel(M1, M2, M3); start -> Comp; }
+    fn поиск_behavior_последовательного_три_модели() {
+        // A + B + C левоассоциативно → Add(Add(A, B), C) → ["A", "B", "C"]
+        let md = parse_first_model(r#"
+model Pipeline {
+    behavior -> Calibrate + Process + Store;
+}
 "#);
-        if let but_grammar::ast::SourceUnitPart::ModelDefinition(md) = &src.0[0] {
-            let bk = find_behavior(md);
-            assert!(matches!(bk, Some(BehaviorKind::Parallel(_))));
-            if let Some(BehaviorKind::Parallel(names)) = bk {
-                assert_eq!(names.len(), 3);
-            }
+        let bk = find_behavior(&md);
+        assert!(matches!(bk, Some(BehaviorKind::Sequential(_))));
+        if let Some(BehaviorKind::Sequential(names)) = bk {
+            assert_eq!(names, vec!["Calibrate", "Process", "Store"]);
         }
     }
 
     #[test]
-    fn find_behavior_choice() {
-        let src = parse(r#"
-model Comp { behavior -> choice(A, B); start -> Comp; }
+    fn поиск_behavior_параллельного() {
+        // behavior -> A | B; — оператор | означает Parallel
+        let md = parse_first_model(r#"
+model Combo {
+    behavior -> Alpha | Beta;
+}
 "#);
-        if let but_grammar::ast::SourceUnitPart::ModelDefinition(md) = &src.0[0] {
-            assert!(matches!(find_behavior(md), Some(BehaviorKind::Choice(_))));
+        let bk = find_behavior(&md);
+        assert!(matches!(bk, Some(BehaviorKind::Parallel(_))), "ожидается Parallel, получено: {:?}", bk);
+        if let Some(BehaviorKind::Parallel(names)) = bk {
+            assert_eq!(names, vec!["Alpha", "Beta"]);
         }
     }
 
     #[test]
-    fn find_behavior_none() {
-        let src = parse(r#"
-model Plain { state S {} start -> S; }
+    fn поиск_behavior_параллельного_три_модели() {
+        // A | B | C → Parallel(["A", "B", "C"])
+        let md = parse_first_model(r#"
+model Prep {
+    behavior -> Calibrate | Process | Store;
+}
 "#);
-        if let but_grammar::ast::SourceUnitPart::ModelDefinition(md) = &src.0[0] {
-            assert!(find_behavior(md).is_none());
+        if let Some(BehaviorKind::Parallel(names)) = find_behavior(&md) {
+            assert_eq!(names, vec!["Calibrate", "Process", "Store"]);
+        } else {
+            panic!("ожидается Parallel с тремя моделями");
         }
     }
 
     #[test]
-    fn find_end_property_present() {
-        let src = parse(r#"
-model M { state A {} start -> A; end -> { done = 1; } }
+    fn поиск_behavior_выбора_одной_модели() {
+        // behavior -> A; — одно имя без операторов → Choice
+        let md = parse_first_model(r#"
+model Wrapper {
+    behavior -> Worker;
+}
 "#);
-        if let but_grammar::ast::SourceUnitPart::ModelDefinition(md) = &src.0[0] {
-            assert!(find_end_property(md).is_some());
+        let bk = find_behavior(&md);
+        assert!(matches!(bk, Some(BehaviorKind::Choice(_))), "ожидается Choice, получено: {:?}", bk);
+        if let Some(BehaviorKind::Choice(names)) = bk {
+            assert_eq!(names, vec!["Worker"]);
         }
     }
 
     #[test]
-    fn find_end_property_absent() {
-        let src = parse(r#"
-model M { state A {} start -> A; }
+    fn поиск_behavior_отсутствует() {
+        // Обычный автомат без свойства behavior
+        let md = parse_first_model(r#"
+model Plain {
+    state S {}
+    start -> S;
+}
 "#);
-        if let but_grammar::ast::SourceUnitPart::ModelDefinition(md) = &src.0[0] {
-            assert!(find_end_property(md).is_none());
-        }
+        assert!(find_behavior(&md).is_none(), "у обычного автомата не должно быть behavior");
+    }
+
+    // ── Тесты свойства end ────────────────────────────────────────────────────
+
+    #[test]
+    fn поиск_end_свойство_присутствует() {
+        let md = parse_first_model(r#"
+model M {
+    state A {}
+    start -> A;
+    end -> { done = 1; }
+}
+"#);
+        assert!(find_end_property(&md).is_some(), "свойство end должно быть найдено");
     }
 
     #[test]
-    fn find_terminal_states_basic() {
-        let src = parse(r#"
+    fn поиск_end_свойство_отсутствует() {
+        let md = parse_first_model(r#"
+model M {
+    state A {}
+    start -> A;
+}
+"#);
+        assert!(find_end_property(&md).is_none(), "свойство end должно отсутствовать");
+    }
+
+    // ── Тесты терминальных состояний ─────────────────────────────────────────
+
+    #[test]
+    fn терминальные_состояния_одно() {
+        let md = parse_first_model(r#"
 model M {
     state Working { ref Done: done; }
     state Done { }
     start -> Working;
 }
 "#);
-        if let but_grammar::ast::SourceUnitPart::ModelDefinition(md) = &src.0[0] {
-            let terms = find_terminal_states(md);
-            assert_eq!(terms, vec!["Done"]);
-        }
+        let terms = find_terminal_states(&md);
+        assert_eq!(terms, vec!["Done"], "только Done должно быть терминальным");
     }
 
     #[test]
-    fn find_terminal_states_none_when_all_have_refs() {
-        let src = parse(r#"
+    fn терминальные_состояния_несколько() {
+        let md = parse_first_model(r#"
+model M {
+    state A { ref B: x; ref C: y; }
+    state B { }
+    state C { }
+    start -> A;
+}
+"#);
+        let terms = find_terminal_states(&md);
+        assert!(terms.contains(&"B".to_string()), "B должно быть терминальным");
+        assert!(terms.contains(&"C".to_string()), "C должно быть терминальным");
+    }
+
+    #[test]
+    fn терминальные_состояния_отсутствуют_если_все_имеют_переходы() {
+        let md = parse_first_model(r#"
 model M {
     state A { ref B: x; }
     state B { ref A: y; }
     start -> A;
 }
 "#);
-        if let but_grammar::ast::SourceUnitPart::ModelDefinition(md) = &src.0[0] {
-            assert!(find_terminal_states(md).is_empty());
-        }
+        assert!(find_terminal_states(&md).is_empty(), "цикл — нет терминальных состояний");
     }
 
+    // ── Тесты вспомогательного метода models() ────────────────────────────────
+
     #[test]
-    fn behavior_kind_models() {
+    fn behavior_kind_models_возвращает_срез() {
         let seq = BehaviorKind::Sequential(vec!["A".into(), "B".into()]);
         assert_eq!(seq.models(), &["A", "B"]);
-        let par = BehaviorKind::Parallel(vec!["X".into()]);
-        assert_eq!(par.models(), &["X"]);
+        let par = BehaviorKind::Parallel(vec!["X".into(), "Y".into(), "Z".into()]);
+        assert_eq!(par.models(), &["X", "Y", "Z"]);
+        let ch = BehaviorKind::Choice(vec!["Worker".into()]);
+        assert_eq!(ch.models(), &["Worker"]);
     }
 }
