@@ -8,14 +8,13 @@ repository = "https://github.com/Pastor/BuT"
 readme = "../README.adoc"
 keywords = ["BuT", "middleware"]
 license = "BSD"
-edition = "2021"
-rust-version = "1.71.0"
+edition = "2024"
 include = ["Cargo.toml", "src/**/*"]
 
 [dependencies]
 but-grammar = { path = "../grammar/but" }
-bit-vec = "^0.8.0"
-bit-set = "^0.8.0"
+bit-vec = "0.9.1"
+bit-set = "0.9.1"
 
 [dev-dependencies]
 walkdir = "^2.5.0"

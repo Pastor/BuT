@@ -8,8 +8,7 @@ repository = "https://github.com/Pastor/BuT"
 readme = "../../README.md"
 keywords = ["LTL", "BuT", "framework", "code", "generation"]
 license = "BSD"
-edition = "2021"
-rust-version = "1.71.0"
+edition = "2024"
 exclude = ["src/ltl.lalrpop"]
 include = ["Cargo.toml", "src/**/*", "src/ast.rs", "README.md", "LICENSE*"]
 

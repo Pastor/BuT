@@ -1,12 +1,11 @@
-use but_grammar::ast::{
-    Condition, ModelDefinition, ModelPart, Property, SourceUnit, SourceUnitPart,
-    StatePart, VariableAttribute,
-};
-
-use crate::behavior::{find_behavior, find_end_property, find_terminal_states, BehaviorKind};
+use crate::CodegenContext;
+use crate::behavior::{BehaviorKind, find_behavior, find_end_property, find_terminal_states};
 use crate::condition::{condition_to_c, expr_to_c, stmt_to_c, type_to_c_ctx};
 use crate::ltl::{extract_ltl_formulas, ltl_comments_c};
-use crate::CodegenContext;
+use but_grammar::ast::{
+    Annotation, Condition, ModelDefinition, ModelPart, Property, SourceUnit, SourceUnitPart,
+    StatePart, VariableAttribute,
+};
 
 // ── Публичный API ────────────────────────────────────────────────────────────────
 
@@ -20,7 +19,11 @@ pub fn generate_c_header_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
 
     // Внешние объявления глобальных портов
     for vd in &ctx.global_vars {
-        if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+        if vd
+            .attrs
+            .iter()
+            .any(|a| matches!(a, VariableAttribute::Portable(_)))
+        {
             if let Some(vname) = &vd.name {
                 let ty = type_to_c_ctx(&vd.ty, &ctx.type_aliases);
                 out.push_str(&format!("extern {} {};\n", ty, vname.name));
@@ -49,7 +52,11 @@ pub fn generate_c_source_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
 
     // Определения глобальных портов
     for vd in &ctx.global_vars {
-        if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+        if vd
+            .attrs
+            .iter()
+            .any(|a| matches!(a, VariableAttribute::Portable(_)))
+        {
             if let Some(vname) = &vd.name {
                 let ty = type_to_c_ctx(&vd.ty, &ctx.type_aliases);
                 let init = vd
@@ -88,7 +95,11 @@ pub fn generate_c_header(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
         out.push('\n');
     }
     for vd in &ctx.global_vars {
-        if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+        if vd
+            .attrs
+            .iter()
+            .any(|a| matches!(a, VariableAttribute::Portable(_)))
+        {
             if let Some(vname) = &vd.name {
                 let ty = type_to_c_ctx(&vd.ty, &ctx.type_aliases);
                 out.push_str(&format!("extern {} {};\n", ty, vname.name));
@@ -109,10 +120,7 @@ pub fn generate_c_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
 /// Сгенерировать C-заголовок и исходник для всех моделей (объединённый вывод).
 ///
 /// Возвращает `(header_content, source_content)` — содержимое одного `.h` и одного `.c` файла.
-pub fn generate_c_all(
-    source: &SourceUnit,
-    ctx: &CodegenContext,
-) -> (String, String) {
+pub fn generate_c_all(source: &SourceUnit, ctx: &CodegenContext) -> (String, String) {
     generate_c_all_named(source, "model", ctx)
 }
 
@@ -145,7 +153,12 @@ fn generate_c_model_header(model: &ModelDefinition, ctx: &CodegenContext) -> Str
     let behavior = find_behavior(model);
     if let Some(bk) = &behavior {
         // Для компоновочных моделей — enum фаз вместо состояний
-        out.push_str(&generate_c_behavior_enum(&name, &upper, bk, ctx.indent.level(1).as_str()));
+        out.push_str(&generate_c_behavior_enum(
+            &name,
+            &upper,
+            bk,
+            ctx.indent.level(1).as_str(),
+        ));
     } else {
         // Перечисление состояний FSM
         let i1 = ctx.indent.level(1);
@@ -229,7 +242,11 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
     // Переменные модели
     for part in &model.parts {
         if let ModelPart::VariableDefinition(vd) = part {
-            if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+            if vd
+                .attrs
+                .iter()
+                .any(|a| matches!(a, VariableAttribute::Portable(_)))
+            {
                 continue;
             }
             if let Some(vname) = &vd.name {
@@ -251,7 +268,13 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
 
     // Функция инициализации
     out.push_str(&format!("void {}_init(void) {{\n", name));
-    out.push_str(&format!("{}_{}_state = {}_{};\n", i1, name, upper, start.to_uppercase()));
+    out.push_str(&format!(
+        "{}_{}_state = {}_{};\n",
+        i1,
+        name,
+        upper,
+        start.to_uppercase()
+    ));
     for part in &model.parts {
         if let ModelPart::PropertyDefinition(pd) = part {
             if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
@@ -297,7 +320,12 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
             let sname = sd.name.as_ref().map(|n| n.name.as_str()).unwrap_or("?");
             let is_terminal = terminal_states.iter().any(|t| t == sname);
 
-            out.push_str(&format!("{}case {}_{}: {{\n", i2, upper, sname.to_uppercase()));
+            out.push_str(&format!(
+                "{}case {}_{}: {{\n",
+                i2,
+                upper,
+                sname.to_uppercase()
+            ));
 
             // Обработчик enter состояния
             for sp in &sd.parts {
@@ -338,7 +366,8 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
                         if let ModelPart::StateDefinition(ts) = target_part {
                             for tsp in &ts.parts {
                                 if let StatePart::PropertyDefinition(pd3) = tsp {
-                                    if pd3.name.as_ref().map(|n| n.name.as_str()) == Some("before") {
+                                    if pd3.name.as_ref().map(|n| n.name.as_str()) == Some("before")
+                                    {
                                         out.push_str(&property_to_c(&pd3.value, ctx, 4));
                                     }
                                 }
@@ -346,7 +375,13 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
                         }
                     }
 
-                    out.push_str(&format!("{}_{}_state = {}_{};\n", i4, name, upper, target.name.to_uppercase()));
+                    out.push_str(&format!(
+                        "{}_{}_state = {}_{};\n",
+                        i4,
+                        name,
+                        upper,
+                        target.name.to_uppercase()
+                    ));
                     out.push_str(&format!("{}}}\n", i3));
                 }
             }
@@ -386,13 +421,21 @@ fn generate_c_behavior_source(
 
     match bk {
         BehaviorKind::Sequential(_) => {
-            out.push_str(&format!("/* Последовательная компоновка: {} */\n", models.join(" → ")));
+            out.push_str(&format!(
+                "/* Последовательная компоновка: {} */\n",
+                models.join(" → ")
+            ));
             out.push_str(&format!("static {}_Phase_t _{}_phase;\n\n", name, name));
 
             // init
             out.push_str(&format!("void {}_init(void) {{\n", name));
-            out.push_str(&format!("{}_{}_phase = {}_PHASE_{};\n",
-                i1, name, upper, models.first().map(|s| s.to_uppercase()).unwrap_or_default()));
+            out.push_str(&format!(
+                "{}_{}_phase = {}_PHASE_{};\n",
+                i1,
+                name,
+                upper,
+                models.first().map(|s| s.to_uppercase()).unwrap_or_default()
+            ));
             if let Some(m0) = models.first() {
                 out.push_str(&format!("{}{}_init();\n", i1, m0.to_lowercase()));
             }
@@ -406,16 +449,29 @@ fn generate_c_behavior_source(
                 let mup = m.to_uppercase();
                 out.push_str(&format!("{}case {}_PHASE_{}: {{\n", i2, upper, mup));
                 out.push_str(&format!("{}{}_step();\n", ctx.indent.level(3), mlo));
-                out.push_str(&format!("{}if ({}_is_done()) {{\n", ctx.indent.level(3), mlo));
+                out.push_str(&format!(
+                    "{}if ({}_is_done()) {{\n",
+                    ctx.indent.level(3),
+                    mlo
+                ));
                 if idx + 1 < models.len() {
                     let next_mup = models[idx + 1].to_uppercase();
                     let next_mlo = models[idx + 1].to_lowercase();
-                    out.push_str(&format!("{}_{}_phase = {}_PHASE_{};\n",
-                        ctx.indent.level(4), name, upper, next_mup));
+                    out.push_str(&format!(
+                        "{}_{}_phase = {}_PHASE_{};\n",
+                        ctx.indent.level(4),
+                        name,
+                        upper,
+                        next_mup
+                    ));
                     out.push_str(&format!("{}{}_init();\n", ctx.indent.level(4), next_mlo));
                 } else {
-                    out.push_str(&format!("{}_{}_phase = {}_DONE;\n",
-                        ctx.indent.level(4), name, upper));
+                    out.push_str(&format!(
+                        "{}_{}_phase = {}_DONE;\n",
+                        ctx.indent.level(4),
+                        name,
+                        upper
+                    ));
                     if let Some(ep) = end_prop {
                         out.push_str(&format!("{}/* end handler */\n", ctx.indent.level(4)));
                         out.push_str(&property_to_c(ep, ctx, 4));
@@ -432,12 +488,18 @@ fn generate_c_behavior_source(
 
             // is_done
             out.push_str(&format!("int {}_is_done(void) {{\n", name));
-            out.push_str(&format!("{}return _{}_phase == {}_DONE;\n", i1, name, upper));
+            out.push_str(&format!(
+                "{}return _{}_phase == {}_DONE;\n",
+                i1, name, upper
+            ));
             out.push_str("}\n");
         }
 
         BehaviorKind::Parallel(_) => {
-            out.push_str(&format!("/* Параллельная компоновка: {} */\n", models.join(" ∥ ")));
+            out.push_str(&format!(
+                "/* Параллельная компоновка: {} */\n",
+                models.join(" ∥ ")
+            ));
             out.push_str(&format!("static int _{}_done;\n\n", name));
 
             // init
@@ -458,7 +520,12 @@ fn generate_c_behavior_source(
                 .iter()
                 .map(|m| format!("{}_is_done()", m.to_lowercase()))
                 .collect();
-            out.push_str(&format!("{}if (!_{}_done && {}) {{\n", i1, name, all_done.join(" && ")));
+            out.push_str(&format!(
+                "{}if (!_{}_done && {}) {{\n",
+                i1,
+                name,
+                all_done.join(" && ")
+            ));
             out.push_str(&format!("{}_{}_done = 1;\n", i2, name));
             if let Some(ep) = end_prop {
                 out.push_str(&format!("{}/* end handler */\n", i2));
@@ -474,7 +541,10 @@ fn generate_c_behavior_source(
         }
 
         BehaviorKind::Choice(_) => {
-            out.push_str(&format!("/* Компоновка выбора: {} */\n", models.join(" | ")));
+            out.push_str(&format!(
+                "/* Компоновка выбора: {} */\n",
+                models.join(" | ")
+            ));
             out.push_str(&format!("static int _{}_active_idx;\n", name));
             out.push_str(&format!("static int _{}_done;\n\n", name));
 
@@ -492,7 +562,10 @@ fn generate_c_behavior_source(
             out.push_str(&format!("{}switch (_{}_active_idx) {{\n", i1, name));
             for (idx, m) in models.iter().enumerate() {
                 let mlo = m.to_lowercase();
-                out.push_str(&format!("{}case {}: {}_step(); if ({}_is_done()) {{ _{}_done = 1;", i2, idx, mlo, mlo, name));
+                out.push_str(&format!(
+                    "{}case {}: {}_step(); if ({}_is_done()) {{ _{}_done = 1;",
+                    i2, idx, mlo, mlo, name
+                ));
                 if let Some(ep) = end_prop {
                     let ep_str = match ep {
                         Property::Expression(e) => format!(" {}; ", expr_to_c(e)),
@@ -527,6 +600,53 @@ fn property_to_c(prop: &Property, ctx: &CodegenContext, level: usize) -> String 
 }
 
 pub(crate) fn model_name(model: &ModelDefinition) -> String {
+    let named: Option<String> = model
+        .annotations
+        .iter()
+        .filter(|a| !a.glob)
+        .flat_map(|a| a.args.iter().collect::<Vec<_>>())
+        .filter(|a| {
+            if let Annotation::String(s) = a {
+                true
+            } else {
+                false
+            }
+        })
+        .map(|a| {
+            if let Annotation::Function { name, args, .. } = a
+                && name.name == "name"
+                && !args.is_empty()
+            {
+                let name = args
+                    .iter()
+                    .filter(|a| {
+                        if let Annotation::String(s) = a {
+                            true
+                        } else {
+                            false
+                        }
+                    })
+                    .map(|a| {
+                        if let Annotation::String(s) = a {
+                            s.string.clone()
+                        } else {
+                            unreachable!()
+                        }
+                    })
+                    .collect::<Vec<String>>()
+                    .first()
+                    .map(|s| s.clone());
+                return name.unwrap_or_else(|| "Model".to_string());
+            } else {
+                panic!("Annotation is not a string")
+            }
+        })
+        .collect::<Vec<String>>()
+        .first()
+        .map(|s| s.clone());
+    if let Some(named) = named {
+        return named.clone();
+    }
     model
         .name
         .as_ref()
