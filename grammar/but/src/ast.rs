@@ -661,6 +661,12 @@ pub enum ModelPart {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub enum StateKind {
+    Start,
+    End
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 #[cfg_attr(feature = "ast-serde", derive(Serialize, Deserialize))]
 pub struct StateDefinition {
     pub loc: Loc,
@@ -669,6 +675,7 @@ pub struct StateDefinition {
     pub parts: Vec<StatePart>,
     pub ty: Option<ObjectType>,
     pub implements: Option<Expression>,
+    pub kind: Option<StateKind>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

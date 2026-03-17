@@ -127,6 +127,7 @@ pub enum Token<'input> {
 
     Model,
     State,
+    Start,
     Reference,
     Template,
     Condition,
@@ -226,6 +227,7 @@ impl<'input> fmt::Display for Token<'input> {
             Token::PeirceArrow => write!(f, "-->"),
             Token::Model => write!(f, "model"),
             Token::State => write!(f, "state"),
+            Token::Start => write!(f, "start"),
             Token::Reference => write!(f, "ref"),
             Token::Private => write!(f, "private"),
             Token::Abstract => write!(f, "abstract"),
@@ -334,6 +336,7 @@ static KEYWORDS: phf::Map<&'static str, Token> = phf_map! {
     "abstract" => Token::Abstract,
     "model" => Token::Model,
     "state" => Token::State,
+    "start" => Token::Start,
     "ref" => Token::Reference,
     "template" => Token::Template,
     "cond" => Token::Condition,
@@ -1043,6 +1046,45 @@ impl<'input> Iterator for Lexer<'input> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_start_state() {
+        let src = r#"
+        model Model {
+            start Start {
+                ref End: true;
+            }
+            state End {
+            }
+        }
+        "#;
+        let mut comments = Vec::new();
+        let mut errors = Vec::new();
+        let lexer = Lexer::new(src, 0, &mut comments, &mut errors);
+        let tokens = lexer.collect::<Vec<_>>();
+        assert_eq!(
+            tokens,
+            vec![
+                (9, Token::Model, 14),
+                (15, Token::Identifier("Model"), 20),
+                (21, Token::OpenCurlyBrace, 22),
+                (35, Token::Start, 40),
+                (41, Token::Identifier("Start"), 46),
+                (47, Token::OpenCurlyBrace, 48),
+                (65, Token::Reference, 68),
+                (69, Token::Identifier("End"), 72),
+                (72, Token::Colon, 73),
+                (74, Token::True, 78),
+                (78, Token::Semicolon, 79),
+                (92, Token::CloseCurlyBrace, 93),
+                (106, Token::State, 111),
+                (112, Token::Identifier("End"), 115),
+                (116, Token::OpenCurlyBrace, 117),
+                (130, Token::CloseCurlyBrace, 131),
+                (140, Token::CloseCurlyBrace, 141)
+            ]
+        );
+    }
 
     #[test]
     fn test_lexer() {

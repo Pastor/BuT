@@ -94,11 +94,16 @@ ModelPart: ModelPart = {
     <l:@L> ";" <r:@R> => ModelPart::StraySemicolon(Loc::Source(file_no, l, r)),
 }
 
+
+StateKind: Option<StateKind> = {
+    "state" => None,
+    "start" => Some(StateKind::Start)
+}
 StateDefinition: Box<StateDefinition> = {
-    <l:@L> <annotations:AnnotationDefinition*> <ty:ObjectType?> "state" <name:ButIdentifierOrError>
+    <l:@L> <annotations:AnnotationDefinition*> <ty:ObjectType?> <kind:StateKind> <name:ButIdentifierOrError>
     <implements: ("=" <Expression>)?>
     "{" <parts:(<StatePart>)*> "}" <r:@R> => {
-        Box::new(StateDefinition{loc: Loc::Source(file_no, l, r), name, parts, annotations, ty, implements})
+        Box::new(StateDefinition{loc: Loc::Source(file_no, l, r), name, parts, annotations, ty, implements, kind})
     }
 }
 StatePart: StatePart = {
@@ -804,6 +809,7 @@ extern {
         "formula" => Token::Formula,
         "model" => Token::Model,
         "state" => Token::State,
+        "start" => Token::Start,
         "ref" => Token::Reference,
     }
 }

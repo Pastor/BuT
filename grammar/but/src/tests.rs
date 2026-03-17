@@ -51,6 +51,23 @@ fn parser_error_recovery() {
 }
 
 #[test]
+fn parse_start_state() {
+    let src = r#"
+        model Model {
+            start Start {
+                ref End: true;
+            }
+            state End {
+            }
+        }
+        "#;
+    let result = crate::parse(src, 0);
+    assert_eq!(result.is_err(), false, "{result:?}");
+    let (actual_parse_tree, _) = result.unwrap();
+    assert_eq!(actual_parse_tree.0.len(), 1);
+}
+
+#[test]
 fn parse_function_assembly() {
     let src = r#"
         #[unused, always_inline, align(4)]

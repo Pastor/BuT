@@ -19,6 +19,7 @@
         TYPE        = "type"
         MODEL       = "model"
         STATE       = "state"
+        START       = "start"
         ABSTRACT    = "abstract"
         TEMPLATE    = "template"
         FN          = "fn"
