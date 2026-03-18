@@ -1,83 +1,19 @@
-use but_grammar::ast::{SourceUnit, SourceUnitPart};
+use crate::model::Model;
+use but_grammar::ast::SourceUnit;
 use but_grammar::diagnostics::Diagnostic;
-
-use crate::tree::TreeDefinition;
-use crate::unit::Unit;
 
 pub mod bitaccess;
 pub mod include;
 
 mod context;
+mod model;
 mod tree;
 mod types;
-mod unit;
-mod unit2;
 
-pub fn parse(unit: SourceUnit) -> Result<Unit, Vec<Diagnostic>> {
-    let mut global_enums = vec![];
-    let mut models = vec![];
-    let mut global_types = vec![];
-    let mut global_properties = vec![];
-    let mut global_variables = vec![];
-    let mut global_functions = vec![];
-    let mut global_structs = vec![];
-    let mut global_imports = vec![];
-    for part in unit.0 {
-        match part {
-            SourceUnitPart::ImportDirective(im) => {
-                global_imports.push(im);
-            }
-            SourceUnitPart::EnumDefinition(ed) => {
-                global_enums.push(ed);
-            }
-            SourceUnitPart::StructDefinition(sd) => {
-                global_structs.push(sd);
-            }
-            SourceUnitPart::ErrorDefinition(_) => {
-                println!("Skip error");
-            }
-            SourceUnitPart::FunctionDefinition(fd) => {
-                global_functions.push(fd);
-            }
-            SourceUnitPart::FormulaDefinition(_) => {
-                println!("Skip formula");
-            }
-            SourceUnitPart::VariableDefinition(vd) => {
-                global_variables.push(vd);
-            }
-            SourceUnitPart::AnnotationDefinition(_) => {
-                println!("Skip annotation");
-            }
-            SourceUnitPart::PropertyDefinition(pd) => {
-                global_properties.push(pd);
-            }
-            SourceUnitPart::ModelDefinition(md) => {
-                models.push(md);
-            }
-            SourceUnitPart::TypeDefinition(td) => {
-                global_types.push(td);
-            }
-            SourceUnitPart::Using(_) => {
-                println!("Skip using");
-            }
-            SourceUnitPart::StraySemicolon(_) => {}
-        }
-    }
-    let mut diagnostics = vec![];
-    let tree_definition = TreeDefinition::new(
-        models,
-        global_enums,
-        global_types,
-        global_properties,
-        global_variables,
-        global_structs,
-        global_functions,
-        &mut diagnostics,
-    );
-    if !diagnostics.is_empty() {
-        return Err(diagnostics);
-    }
-    tree_definition.build_tree()
+pub fn processing(unit: SourceUnit) -> Result<SourceUnit, Vec<Diagnostic>> {
+    let model = Model::new(unit.clone());
+    let main = model.analyze()?;
+    Ok(unit)
 }
 
 #[cfg(test)]
@@ -86,12 +22,10 @@ mod tests {
     use std::path::Path;
     use std::vec::IntoIter;
 
-    use walkdir::{DirEntry, WalkDir};
-
+    use but_grammar::ast::SourceUnit;
     use but_grammar::diagnostics::Diagnostic;
     use but_grammar::parse;
-
-    use crate::unit::Unit;
+    use walkdir::{DirEntry, WalkDir};
 
     #[test]
     fn test_semantics_failed() {
@@ -162,8 +96,8 @@ mod tests {
             .flatten()
             .filter_map(|(path, expect_error, source_part)| {
                 let src = source_part.to_string();
-                let result: Result<Unit, Vec<Diagnostic>> = match parse(&source_part, 0) {
-                    Ok((unit, _comments)) => match crate::parse(unit) {
+                let result: Result<SourceUnit, Vec<Diagnostic>> = match parse(&source_part, 0) {
+                    Ok((unit, _comments)) => match crate::processing(unit) {
                         Ok(result) => Ok(result),
                         Err(err) => Err(err),
                     },

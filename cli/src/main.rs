@@ -130,15 +130,16 @@ fn main() {
     };
 
     // Семантический анализ (продолжаем даже при предупреждениях)
-    match but_middleware::parse(unit.clone()) {
-        Ok(_) => {}
+    let unit = match but_middleware::processing(unit) {
+        Ok(unit) => unit,
         Err(diagnostics) => {
             eprintln!("[предупреждение] Семантические диагностики:");
             for d in &diagnostics {
                 eprintln!("  {:?}", d);
             }
+            std::process::exit(1);
         }
-    }
+    };
 
     // Создаём выходную директорию
     if let Err(e) = fs::create_dir_all(&args.output_dir) {

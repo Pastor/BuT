@@ -1,3 +1,4 @@
+#[main]
 model Cylinder {
     state S1 {
         ref S2: y1_down & y2_down & next;

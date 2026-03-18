@@ -154,14 +154,14 @@ mod tests {
         root.set("level".to_string(), Value::Number(0.0));
         root.set("root_only".to_string(), Value::Boolean(true));
 
-        let mut mid = RefCell::new(new_context(root.as_ref()));
-        let mut binding = mid.borrow();
-        let mut leaf = new_context(binding.as_ref());
+        let mid = RefCell::new(new_context(root.as_ref()));
+        let binding = mid.borrow();
+        let leaf = new_context(binding.as_ref());
 
         assert_eq!(leaf.get("level"), Some(&Value::Number(0.0)));
         assert_eq!(leaf.get("root_only"), Some(&Value::Boolean(true)));
 
-        let mut mid_mut = {
+        let mid_mut = {
             let mut temp = new_context(root.as_ref());
             temp.set("level".to_string(), Value::Number(1.0));
             temp
