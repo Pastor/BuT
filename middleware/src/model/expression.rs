@@ -10,6 +10,26 @@ pub enum Expression {
     Add(Box<Self>, Box<Self>),
 }
 
+impl Expression {
+    pub(crate) fn visit(
+        &self,
+        visitor: &dyn Fn(String) -> Result<(), Vec<Diagnostic>>,
+    ) -> Result<(), Vec<Diagnostic>> {
+        match self {
+            Expression::Identifier(id) => visitor(id.clone()),
+            Expression::Parentheses(ex) => ex.visit(visitor),
+            Expression::Or(left, right) => {
+                left.visit(visitor)?;
+                right.visit(visitor)
+            }
+            Expression::Add(left, right) => {
+                left.visit(visitor)?;
+                right.visit(visitor)
+            }
+        }
+    }
+}
+
 impl Display for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
