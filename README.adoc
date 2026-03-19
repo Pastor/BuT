@@ -1,0 +1,73 @@
+[source]
+----
+type u8 [8: bit];
+model Consumer {
+    start Start {
+        ref End: true;
+    }
+    state End {}
+    let ports: [2, u8] = {0, 1};
+}
+model Producer {
+    start Start {
+        ref End: true;
+    }
+    state End {}
+    let ports: [2: u8] = {1, 0};
+}
+model Engine = Producer | Consumer {
+    let ports: [8: bit];
+}
+----
+
+[source,c]
+----
+#include <stdio.h>
+#include <stdbool.h>
+
+typedef u8 u_int8_t;
+struct Engine {
+    struct {
+        enum {
+            ENGINE_PRODUCER_INIT,
+            ENGINE_PRODUCER_START,
+            ENGINE_PRODUCER_END
+        } state;
+        u8 ports[2];
+    } producer;
+    struct {
+        enum {
+            ENGINE_CONSUMER_INIT,
+            ENGINE_CONSUMER_START,
+            ENGINE_CONSUMER_END
+        } state;
+        u8 ports[2];
+    } consumer;
+    enum {
+        ENGINE_IMPLEMENT_INIT,
+        ENGINE_IMPLEMENT_START,
+        ENGINE_IMPLEMENT_END
+    } state;
+    u8 ports;
+};
+
+void Engine_init(struct Engine *engine);
+void Engine_tick(struct Engine *engine);
+bool Engine_finished(struct Engine *engine);
+void Engine_reset(struct Engine *engine);
+
+int main(void) {
+    struct Engine engine = {.state = ENGINE_IMPLEMENT_INIT, .producer = {.state = ENGINE_PRODUCER_START, .ports = {0x00, 0x01}}, .consumer = {.state = ENGINE_CONSUMER_START, .ports = {0x01, 0x00}}};
+    printf("Engine: %lu\n", sizeof(engine));
+    printf("Engine.state: %lu\n", sizeof(engine.state));
+    printf("Engine.producer: %lu\n", sizeof(engine.producer));
+    printf("Engine.producer.state: %lu\n", sizeof(engine.producer.state));
+    printf("Engine.producer.ports: %lu\n", sizeof(engine.producer.ports));
+    Engine_init(&engine);
+    while (!Engine_finished(&engine)) {
+        Engine_tick(&engine);
+    }
+    Engine_reset(&engine);
+    return 0;
+}
+----
