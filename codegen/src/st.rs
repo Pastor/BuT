@@ -4,7 +4,7 @@ use but_grammar::ast::{
     VariableAttribute,
 };
 
-use crate::behavior::{find_behavior, find_end_property, find_terminal_states, BehaviorKind};
+use crate::behavior::{model_composition, find_end_property, find_terminal_states, BehaviorKind};
 use crate::condition::{condition_to_c, expr_to_c, stmt_to_c, type_to_st_ctx};
 use crate::ltl::{extract_ltl_formulas, ltl_comments_st};
 use crate::CodegenContext;
@@ -67,7 +67,7 @@ fn generate_st_model_decl(model: &ModelDefinition, ctx: &CodegenContext) -> Stri
     out.push_str(&format!("FUNCTION_BLOCK {}\n", name));
     out.push_str("VAR\n");
 
-    let behavior = find_behavior(model);
+    let behavior = model_composition(model);
     if let Some(bk) = &behavior {
         // Composition model: phase variable + sub-model instances
         match bk {
@@ -141,7 +141,7 @@ fn generate_st_model_decl(model: &ModelDefinition, ctx: &CodegenContext) -> Stri
 // ── Program generation ───────────────────────────────────────────────────────────────
 
 fn generate_st_model_prog(model: &ModelDefinition, ctx: &CodegenContext) -> String {
-    if let Some(bk) = find_behavior(model) {
+    if let Some(bk) = model_composition(model) {
         generate_st_behavior_prog(model, &bk, ctx)
     } else {
         generate_st_fsm_prog(model, ctx)

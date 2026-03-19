@@ -3,7 +3,7 @@ use but_grammar::ast::{
     VariableAttribute,
 };
 
-use crate::behavior::{find_behavior, find_end_property, find_terminal_states, BehaviorKind};
+use crate::behavior::{model_composition, find_end_property, find_terminal_states, BehaviorKind};
 use crate::condition::condition_to_verilog;
 use crate::ltl::{extract_ltl_formulas, ltl_comments_verilog};
 use crate::CodegenContext;
@@ -29,7 +29,7 @@ pub fn generate_verilog_all(source: &SourceUnit, ctx: &CodegenContext) -> String
 
 /// Generate a Verilog module for a single model.
 pub fn generate_verilog(model: &ModelDefinition, ctx: &CodegenContext) -> String {
-    if let Some(bk) = find_behavior(model) {
+    if let Some(bk) = model_composition(model) {
         generate_verilog_behavior(model, &bk, ctx)
     } else {
         generate_verilog_fsm(model, ctx)

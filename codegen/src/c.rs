@@ -1,5 +1,5 @@
 use crate::CodegenContext;
-use crate::behavior::{BehaviorKind, find_behavior, find_end_property, find_terminal_states};
+use crate::behavior::{BehaviorKind, model_composition, find_end_property, find_terminal_states};
 use crate::condition::{condition_to_c, expr_to_c, stmt_to_c, type_to_c_ctx};
 use crate::ltl::{extract_ltl_formulas, ltl_comments_c};
 use but_grammar::ast::{
@@ -150,7 +150,7 @@ fn generate_c_model_header(model: &ModelDefinition, ctx: &CodegenContext) -> Str
         out.push('\n');
     }
 
-    let behavior = find_behavior(model);
+    let behavior = model_composition(model);
     if let Some(bk) = &behavior {
         // For composition models — phase enum instead of states
         out.push_str(&generate_c_behavior_enum(
@@ -192,7 +192,7 @@ fn generate_c_behavior_enum(name: &str, upper: &str, bk: &BehaviorKind, i1: &str
 fn model_declarations(name: &str, upper: &str, model: &ModelDefinition) -> String {
     let mut out = String::new();
     let terminals = find_terminal_states(model);
-    let has_behavior = find_behavior(model).is_some();
+    let has_behavior = model_composition(model).is_some();
 
     if has_behavior {
         out.push_str(&format!("void {}_init(void);\n", name));
@@ -213,7 +213,7 @@ fn model_declarations(name: &str, upper: &str, model: &ModelDefinition) -> Strin
 
 /// Generate the C implementation for a single model.
 fn generate_c_model_source(model: &ModelDefinition, ctx: &CodegenContext) -> String {
-    if let Some(bk) = find_behavior(model) {
+    if let Some(bk) = model_composition(model) {
         generate_c_behavior_source(model, &bk, ctx)
     } else {
         generate_c_fsm_source(model, ctx)

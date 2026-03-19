@@ -1,29 +1,27 @@
-/// Пример компоновки поведения (behavior) и обработки завершения (end).
+/// Example of model composition and end-of-composition handling.
 ///
-/// Демонстрирует:
-///   - Последовательную компоновку: M1 + M2 + M3
-///   - Параллельную компоновку:     M1 | M2 | M3
-///   - Выбор одной модели:          M  (одно имя, behavior -> M)
-///   - Свойство end — действие после завершения модели или компоновки
+/// Demonstrates:
+///   - Sequential composition: M1 + M2 + M3
+///   - Parallel composition:   M1 | M2 | M3
+///   - Choice (single model):  M = A
+///   - The `end` property — action executed after a model or composition finishes
 
-// ── Базовые модели ───────────────────────────────────────────────────────────────
+// ── Base models ──────────────────────────────────────────────────────────────
 
-/// Первый этап обработки данных
+/// First processing stage
 model Calibrate {
-    state Running {
+    start Running {
         ref Done : samples_ready;
     }
     state Done { }
 
-    start -> Running;
-
-    /// Действие при завершении калибровки
+    /// Action on calibration completion
     end -> { calibration_done = 1; }
 }
 
-/// Второй этап обработки данных
+/// Second processing stage
 model Process {
-    state Idle {
+    start Idle {
         ref Active : start_signal;
     }
     state Active {
@@ -35,65 +33,56 @@ model Process {
         enter -> { status = 2; }
     }
 
-    start -> Idle;
-
-    /// После завершения сигнализируем об окончании
+    /// Signal completion after finishing
     end -> { process_done = 1; }
 }
 
-/// Финальная запись результатов
+/// Final result storage stage
 model Store {
-    state Writing {
+    start Writing {
         ref Complete : write_done;
     }
     state Complete { }
 
-    start -> Writing;
     end -> { stored = 1; }
 }
 
-// ── Последовательная компоновка ──────────────────────────────────────────────────
+// ── Sequential composition ───────────────────────────────────────────────────
 
-/// Пайплайн: выполняет Calibrate → Process → Store последовательно.
-/// Каждая следующая модель запускается только после завершения предыдущей.
-/// Синтаксис: M1 + M2 + M3
-model Pipeline {
-    behavior -> Calibrate + Process + Store;
-
-    /// Выполняется после того, как все три этапа завершились
+/// Pipeline: runs Calibrate → Process → Store sequentially.
+/// Each model starts only after the previous one finishes.
+/// Syntax: model Name = M1 + M2 + M3 { ... }
+model Pipeline = Calibrate + Process + Store {
+    /// Executed after all three stages have completed
     end -> { pipeline_complete = 1; }
 }
 
-// ── Параллельная компоновка ──────────────────────────────────────────────────────
+// ── Parallel composition ──────────────────────────────────────────────────────
 
-/// Запускает Calibrate и Process параллельно, ждёт завершения обоих.
-/// Синтаксис: M1 | M2
-model ParallelPrep {
-    behavior -> Calibrate | Process;
-
+/// Runs Calibrate and Process in parallel, waits for both to finish.
+/// Syntax: model Name = M1 | M2 { ... }
+model ParallelPrep = Calibrate | Process {
     end -> { prep_done = 1; }
 }
 
-// ── Три модели параллельно ────────────────────────────────────────────────────────
+// ── Three models in parallel ──────────────────────────────────────────────────
 
-/// Все три модели работают одновременно.
-model FullParallel {
-    behavior -> Calibrate | Process | Store;
-
+/// All three models run simultaneously.
+model FullParallel = Calibrate | Process | Store {
     end -> { all_done = 1; }
 }
 
-// ── Выбор одной модели ────────────────────────────────────────────────────────────
+// ── Choice (single sub-model) ─────────────────────────────────────────────────
 
-/// Запускает одну конкретную модель.
-/// Синтаксис: просто имя модели — behavior не обязателен для одной модели.
-model RunCalibrate {
-    behavior -> Calibrate;
-
+/// Delegates to a single concrete model.
+/// Syntax: model Name = M { ... }
+model RunCalibrate = Calibrate {
     end -> { choice_done = 1; }
 }
 
-// ── Глобальные порты ─────────────────────────────────────────────────────────────
+model Composite = ((Calibrate | Process) + Store) | Calibrate {}
+
+// ── Global ports ──────────────────────────────────────────────────────────────
 
 port samples_ready    : bit = 0;
 port start_signal     : bit = 0;

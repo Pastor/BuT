@@ -36,6 +36,8 @@ model Inheritance = BaseModel {
     end -> None;
 }
 
-behavior -> Next | None;
+#[main]
+model Composition = Next | None {
+}
 
 

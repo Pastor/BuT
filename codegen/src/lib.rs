@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 use but_grammar::ast::{SourceUnit, SourceUnitPart, Type, VariableDefinition};
 
-pub use behavior::{find_behavior, find_end_property, find_terminal_states, BehaviorKind};
+pub use behavior::{model_composition, find_end_property, find_terminal_states, BehaviorKind};
 pub use c::{generate_c_all, generate_c_all_named, generate_c_header, generate_c_source};
 pub use lc3::{generate_lc3, generate_lc3_all};
 pub use st::{generate_st_all, generate_st_decl, generate_st_program};
@@ -144,13 +144,12 @@ model Delay {
         ref One : input = 1;
         enter -> { output = 1; }
     }
-    state None {
+    start None {
         ref One : input = 1;
         ref None: input = 0;
         enter -> { output = 0; }
     }
     state End { }
-    start -> None;
 }
 port input : bit = 0x01;
 port output: bit = 0x02;
@@ -169,7 +168,7 @@ type MyByte = u8;
 type Counter = u32;
 type Flag = bool;
 type Nested = MyByte;
-model M { start -> M; }
+model M { start M { } }
 "#;
 
     fn parse_type_aliases() -> SourceUnit {
@@ -190,7 +189,7 @@ model M { start -> M; }
 
     #[test]
     fn from_source_empty_source_no_variables() {
-        let (src, _) = but_grammar::parse("model Empty { start -> Empty; }", 0)
+        let (src, _) = but_grammar::parse("model Empty { start Empty { } }", 0)
             .expect("Parsing empty model");
         let ctx = CodegenContext::from_source(&src);
         assert_eq!(ctx.global_vars.len(), 0);
@@ -208,7 +207,7 @@ model M { start -> M; }
 
     #[test]
     fn from_source_empty_source_no_aliases() {
-        let (src, _) = but_grammar::parse("model Empty { start -> Empty; }", 0)
+        let (src, _) = but_grammar::parse("model Empty { start Empty { } }", 0)
             .expect("Parsing empty model");
         let ctx = CodegenContext::from_source(&src);
         assert!(ctx.type_aliases.is_empty());
@@ -323,8 +322,7 @@ port alarm   : Flag        = false;
 port rate    : Speed       = 0.0;
 port raw     : NestedAlias = 0x00;
 model Sensor {
-    state Idle { }
-    start -> Idle;
+    start Idle { }
 }
 "#;
 
@@ -414,7 +412,7 @@ port x64  : u64   = 0;
 port x128 : u128  = 0;
 port flag : bool  = false;
 port cnt  : Counter = 0;
-model Test { state A {} start -> A; }
+model Test { start A { } }
 "#;
 
     fn parse_std_types() -> SourceUnit {
@@ -650,9 +648,8 @@ model Test { state A {} start -> A; }
 
     const BEHAVIOR_SRC: &str = r#"
 model Worker {
-    state Active { ref Done: ready; }
+    start Active { ref Done: ready; }
     state Done { }
-    start -> Active;
     end -> { cleanup = 1; }
 }
 port ready : bit = 0;
@@ -661,25 +658,21 @@ port cleanup : bit = 0;
 
     const SEQUENTIAL_SRC: &str = r#"
 model Phase1 {
-    state Run { }
-    start -> Run;
+    start Run { }
 }
 model Phase2 {
-    state Run { }
-    start -> Run;
+    start Run { }
 }
-model Pipeline {
-    behavior -> Phase1 + Phase2;
+model Pipeline = Phase1 + Phase2 {
     end -> { done = 1; }
 }
 port done : bit = 0;
 "#;
 
     const PARALLEL_SRC: &str = r#"
-model A { state S {} start -> S; }
-model B { state S {} start -> S; }
-model Combo {
-    behavior -> A | B;
+model A { start S { } }
+model B { start S { } }
+model Combo = A | B {
     end -> { finished = 1; }
 }
 port finished : bit = 0;

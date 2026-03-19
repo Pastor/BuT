@@ -24,4 +24,6 @@ template model Template {
 }
 
 
-behavior -> Start | None;
+#[main]
+model Composition = Start | None {
+}

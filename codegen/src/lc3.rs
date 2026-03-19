@@ -3,7 +3,7 @@ use but_grammar::ast::{
     Condition, ModelDefinition, ModelPart, Property, SourceUnit, SourceUnitPart, StatePart,
 };
 
-use crate::behavior::{find_behavior, find_end_property, find_terminal_states, BehaviorKind};
+use crate::behavior::{model_composition, find_end_property, find_terminal_states, BehaviorKind};
 use crate::condition::condition_to_c;
 use crate::ltl::{extract_ltl_formulas, ltl_comments_asm};
 use crate::CodegenContext;
@@ -50,7 +50,7 @@ pub fn generate_lc3(model: &ModelDefinition, ctx: &CodegenContext) -> String {
 
 fn generate_lc3_model_body(model: &ModelDefinition, ctx: &CodegenContext) -> String {
     let ltl_formulas = extract_ltl_formulas(model);
-    if let Some(bk) = find_behavior(model) {
+    if let Some(bk) = model_composition(model) {
         generate_lc3_behavior(model, &bk, ctx, &ltl_formulas)
     } else {
         generate_lc3_fsm(model, ctx, &ltl_formulas)
