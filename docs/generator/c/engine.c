@@ -1,105 +1,12 @@
-[source,,linenums,title="engine.but"]
-----
-type u8 [8: bit];
-model Consumer {
-    start Start {
-        ref End: true;
-    }
-    state End {
-        enter -> {
-            ports[0] = 0xFF;
-        }
-    }
-    let ports: [2, u8] = {0, 1};
-}
-model Producer {
-    start Start {
-        ref End: ports[0] == 0xFE;
-    }
-    state End {
-        enter -> {
-            ports[1] = 0xFF;
-        }
-    }
-    let ports: [2: u8] = {1, 0};
-}
-model Acceptor {
-    start Start {
-        ref End: S(Producer) = End;
-    }
-    state End {
-        enter -> {
-            ports[1] = 0xFF;
-        }
-    }
-    let ports: [2: u8] = {1, 1};
-}
-model Engine = (Producer | Consumer) + Acceptor {
-    let ports: [8: bit];
-}
-----
-
-[source,c,linenums,title="engine.h"]
-----
-#if !defined(_ENGINE_H_)
-#define _ENGINE_H_
-
-#include <stdio.h>
-#include <stdbool.h>
-
-typedef u8 u_int8_t;
-struct Engine {
-    struct {
-        enum {
-            ENGINE_PRODUCER_INIT,
-            ENGINE_PRODUCER_START,
-            ENGINE_PRODUCER_END
-        } state;
-        u8 ports[2];
-    } producer;
-    struct {
-        enum {
-            ENGINE_CONSUMER_INIT,
-            ENGINE_CONSUMER_START,
-            ENGINE_CONSUMER_END
-        } state;
-        u8 ports[2];
-    } consumer;
-    struct {
-        enum {
-            ENGINE_ACCEPTOR_INIT,
-            ENGINE_ACCEPTOR_START,
-            ENGINE_ACCEPTOR_END
-        } state;
-        u8 ports[2];
-    } acceptor;
-    enum {
-        ENGINE_IMPLEMENT_INIT,
-        ENGINE_IMPLEMENT_TICK,
-        ENGINE_IMPLEMENT_END
-    } state;
-    u8 ports;
-};
-
-void Engine_init(struct Engine *engine);
-void Engine_tick(struct Engine *engine);
-bool Engine_finished(struct Engine *engine);
-void Engine_reset(struct Engine *engine);
-
-#endif
-----
-
-[source,c,linenums,title="engine.c"]
-----
 #include "engine.h"
 
 //model: Producer
-static void Engine_Producer_reset(struct Engine *engine) __attribute__((inline)) {
+__attribute__((always_inline)) static void Engine_Producer_reset(struct Engine *engine) {
 }
-static void Engine_Producer_init(struct Engine *engine) __attribute__((inline)) {
+__attribute__((always_inline)) static void Engine_Producer_init(struct Engine *engine)  {
     Engine_Producer_reset(engine);
 }
-static void Engine_Producer_tick(struct Engine *engine) __attribute__((inline)) {
+__attribute__((always_inline)) static void Engine_Producer_tick(struct Engine *engine) {
     switch (engine->producer.state) {
         case ENGINE_PRODUCER_INIT: {
             engine->consumer.ports[0] = 0x01;
@@ -119,16 +26,16 @@ static void Engine_Producer_tick(struct Engine *engine) __attribute__((inline)) 
         }
     }
 }
-static bool Engine_Producer_finished(struct Engine *engine) __attribute__((inline)) {
+__attribute__((always_inline)) static bool Engine_Producer_finished(struct Engine *engine) {
     return engine->producer.state == ENGINE_PRODUCER_END;
 }
 //model: Consumer
-static void Engine_Consumer_reset(struct Engine *engine) __attribute__((inline)) {
+__attribute__((always_inline)) static void Engine_Consumer_reset(struct Engine *engine) {
 }
-static void Engine_Consumer_init(struct Engine *engine) __attribute__((inline)) {
+__attribute__((always_inline)) static void Engine_Consumer_init(struct Engine *engine) {
     Engine_Consumer_reset(engine);
 }
-static void Engine_Consumer_tick(struct Engine *engine) __attribute__((inline)) {
+__attribute__((always_inline)) static void Engine_Consumer_tick(struct Engine *engine) {
     switch (engine->consumer.state) {
         case ENGINE_CONSUMER_INIT: {
             engine->consumer.ports[0] = 0x00;
@@ -148,21 +55,21 @@ static void Engine_Consumer_tick(struct Engine *engine) __attribute__((inline)) 
         }
     }
 }
-static bool Engine_Consumer_finished(struct Engine *engine) __attribute__((inline)) {
+__attribute__((always_inline)) static bool Engine_Consumer_finished(struct Engine *engine) {
     return engine->consumer.state == ENGINE_CONSUMER_END;
 }
 //model: Engine_Acceptor
-static void Engine_Acceptor_reset(struct Engine *engine) __attribute__((inline))  {
+__attribute__((always_inline)) static void Engine_Acceptor_reset(struct Engine *engine) {
     Engine_Producer_init(engine);
     Engine_Consumer_init(engine);
 }
-static void Engine_Acceptor_init(struct Engine *engine)  __attribute__((inline)) {
-    Engine_Implement0_reset(&engine);
+__attribute__((always_inline)) static void Engine_Acceptor_init(struct Engine *engine) {
+    Engine_Acceptor_reset(engine);
 }
 
-static void Engine_Acceptor_tick(struct Engine *engine)  __attribute__((inline)) {
+__attribute__((always_inline)) static void Engine_Acceptor_tick(struct Engine *engine) {
     switch (engine->state) {
-        case ENGINE_IMPLEMENT0_INIT: {
+        case ENGINE_ACCEPTOR_INIT: {
             engine->acceptor.ports[0] = 0x01;
             engine->acceptor.ports[1] = 0x01;
             engine->acceptor.state = ENGINE_ACCEPTOR_START;
@@ -181,14 +88,14 @@ static void Engine_Acceptor_tick(struct Engine *engine)  __attribute__((inline))
     }
 }
 
-static bool Engine_Acceptor_finished(struct Engine *engine)  __attribute__((inline)) {
+__attribute__((always_inline)) static bool Engine_Acceptor_finished(struct Engine *engine) {
     return engine->acceptor.state == ENGINE_ACCEPTOR_END;
 }
 
 
 //model: Engine
 void Engine_init(struct Engine *engine) {
-    Engine_reset(&engine);
+    Engine_reset(engine);
 }
 
 void Engine_tick(struct Engine *engine) {
@@ -233,28 +140,3 @@ void Engine_reset(struct Engine *engine) {
     Engine_Consumer_reset(engine);
     Engine_Acceptor_reset(engine);
 }
-
-----
-
-[source,c,linenums,title="main.c"]
-----
-#include <engine.h>
-
-int main(void) {
-    struct Engine engine;
-
-    Engine_init(&engine);
-    while (!Engine_finished(&engine)) {
-        Engine_tick(&engine);
-    }
-    Engine_reset(&engine);
-    {
-        printf("Engine: %lu\n", sizeof(engine));
-        printf("Engine.state: %lu\n", sizeof(engine.state));
-        printf("Engine.producer: %lu\n", sizeof(engine.producer));
-        printf("Engine.producer.state: %lu\n", sizeof(engine.producer.state));
-        printf("Engine.producer.ports: %lu\n", sizeof(engine.producer.ports));
-    }
-    return 0;
-}
-----
