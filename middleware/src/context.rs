@@ -133,7 +133,7 @@ mod tests {
         assert_eq!(
             child.get("shared"),
             Some(&Value::String("parent".to_string()))
-        ); // всё ещё видна от родителя
+        ); // still visible from parent
         assert_eq!(
             parent.get("shared"),
             Some(&Value::String("parent".to_string()))

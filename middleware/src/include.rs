@@ -1,22 +1,22 @@
-//! Механизм включения (include/import) файлов языка BuT.
+//! Include/import mechanism for BuT language files.
 //!
-//! Поддерживаемые формы директивы import:
+//! Supported import directive forms:
 //!
 //! ```text
-//! import "файл";                        — прямой импорт
-//! import "файл" as Псевдоним;           — импорт с псевдонимом пространства имён
-//! import * as Псевдоним from "файл";    — импорт всех символов с псевдонимом
-//! import { A, B as C } from "файл";    — именованный импорт
+//! import "file";                        — direct import
+//! import "file" as Alias;               — import with namespace alias
+//! import * as Alias from "file";        — import all symbols with alias
+//! import { A, B as C } from "file";    — named import
 //! ```
 //!
-//! Резолвер выполняет:
-//! - Поиск файлов относительно базового файла или в путях поиска
-//! - Рекурсивную загрузку и разбор транзитивных зависимостей
-//! - Дедупликацию: один файл включается ровно один раз
-//! - Обнаружение циклических зависимостей
-//! - Нумерацию файлов для корректной диагностики ошибок
+//! The resolver performs:
+//! - File lookup relative to the base file or in search paths
+//! - Recursive loading and parsing of transitive dependencies
+//! - Deduplication: each file is included exactly once
+//! - Circular dependency detection
+//! - File numbering for correct error diagnostics
 //!
-//! # Пример использования
+//! # Usage example
 //!
 //! ```rust,no_run
 //! use std::path::Path;
@@ -27,8 +27,8 @@
 //!
 //! let mut resolver = IncludeResolver::from_file(Path::new("/project/main.but"));
 //! match resolver.resolve(unit, Path::new("/project/main.but")) {
-//!     Ok(merged) => println!("Объединено {} элементов", merged.0.len()),
-//!     Err(errs)  => errs.iter().for_each(|e| eprintln!("Ошибка: {}", e)),
+//!     Ok(merged) => println!("Merged {} items", merged.0.len()),
+//!     Err(errs)  => errs.iter().for_each(|e| eprintln!("Error: {}", e)),
 //! }
 //! ```
 
@@ -41,41 +41,41 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use but_grammar::ast::{Import, ImportPath, SourceUnit, SourceUnitPart};
 use but_grammar::diagnostics::Diagnostic;
 
-// ─── Счётчик номеров файлов ───────────────────────────────────────────────────
+// ─── File number counter ──────────────────────────────────────────────────────
 
-/// Глобальный счётчик для присвоения уникальных номеров файлам при парсинге.
+/// Global counter for assigning unique numbers to files during parsing.
 static FILE_NO_COUNTER: AtomicUsize = AtomicUsize::new(1);
 
 fn next_file_no() -> usize {
     FILE_NO_COUNTER.fetch_add(1, Ordering::SeqCst)
 }
 
-// ─── Ошибки разрешения импорта ────────────────────────────────────────────────
+// ─── Import resolution errors ─────────────────────────────────────────────────
 
-/// Ошибка, возникающая при разрешении директивы import.
+/// Error that occurs when resolving an import directive.
 #[derive(Debug)]
 pub enum IncludeError {
-    /// Импортируемый файл не найден ни в одном из путей поиска.
+    /// The imported file was not found in any of the search paths.
     FileNotFound {
-        /// Имя файла из директивы import.
+        /// The file name from the import directive.
         path: PathBuf,
-        /// Список директорий, в которых выполнялся поиск.
+        /// List of directories that were searched.
         search_paths: Vec<PathBuf>,
     },
-    /// Обнаружен циклический импорт (файл импортирует сам себя транзитивно).
+    /// A circular import was detected (a file imports itself transitively).
     CircularImport(PathBuf),
-    /// Ошибка ввода-вывода при чтении файла.
+    /// I/O error when reading a file.
     IoError {
-        /// Путь к файлу, который не удалось прочитать.
+        /// Path to the file that could not be read.
         path: PathBuf,
-        /// Сообщение ошибки ОС.
+        /// OS error message.
         error: String,
     },
-    /// Синтаксические ошибки в импортируемом файле.
+    /// Syntax errors in the imported file.
     ParseError {
-        /// Путь к файлу с ошибками.
+        /// Path to the file with errors.
         path: PathBuf,
-        /// Список диагностик парсера.
+        /// List of parser diagnostics.
         errors: Vec<Diagnostic>,
     },
 }
@@ -85,7 +85,7 @@ impl fmt::Display for IncludeError {
         match self {
             IncludeError::FileNotFound { path, search_paths } => write!(
                 f,
-                "Файл не найден: '{}'. Пути поиска: [{}]",
+                "File not found: '{}'. Search paths: [{}]",
                 path.display(),
                 search_paths
                     .iter()
@@ -94,14 +94,14 @@ impl fmt::Display for IncludeError {
                     .join(", ")
             ),
             IncludeError::CircularImport(path) => {
-                write!(f, "Циклический импорт: '{}'", path.display())
+                write!(f, "Circular import: '{}'", path.display())
             }
             IncludeError::IoError { path, error } => {
-                write!(f, "Ошибка чтения '{}': {}", path.display(), error)
+                write!(f, "Read error '{}': {}", path.display(), error)
             }
             IncludeError::ParseError { path, errors } => write!(
                 f,
-                "Ошибки разбора в '{}': {} ошибок",
+                "Parse errors in '{}': {} errors",
                 path.display(),
                 errors.len()
             ),
@@ -109,22 +109,21 @@ impl fmt::Display for IncludeError {
     }
 }
 
-// ─── Резолвер импортов ────────────────────────────────────────────────────────
+// ─── Import resolver ──────────────────────────────────────────────────────────
 
-/// Резолвер директив `import` языка BuT.
+/// Resolver for `import` directives in the BuT language.
 ///
-/// Рекурсивно загружает и объединяет импортируемые файлы в единый [`SourceUnit`].
-/// Каждый файл обрабатывается ровно один раз благодаря отслеживанию посещённых
-/// канонических путей.
+/// Recursively loads and merges imported files into a single [`SourceUnit`].
+/// Each file is processed exactly once by tracking visited canonical paths.
 pub struct IncludeResolver {
-    /// Список директорий для поиска импортируемых файлов.
+    /// List of directories to search for imported files.
     search_paths: Vec<PathBuf>,
-    /// Канонические пути уже обработанных файлов (защита от дублирования и циклов).
+    /// Canonical paths of already-processed files (protection against duplication and cycles).
     visited: HashSet<PathBuf>,
 }
 
 impl IncludeResolver {
-    /// Создать резолвер с явным списком путей поиска.
+    /// Create a resolver with an explicit list of search paths.
     pub fn new(search_paths: Vec<PathBuf>) -> Self {
         Self {
             search_paths,
@@ -132,11 +131,11 @@ impl IncludeResolver {
         }
     }
 
-    /// Создать резолвер, добавив директорию файла `file_path` как путь поиска.
+    /// Create a resolver, adding the directory of `file_path` as a search path.
     pub fn from_file(file_path: &Path) -> Self {
         let mut search_paths = vec![];
         if let Some(dir) = file_path.parent() {
-            // Пропустить пустой путь (""), который возвращает parent() для файлов без директории
+            // Skip the empty path ("") returned by parent() for files without a directory
             if dir != Path::new("") {
                 search_paths.push(dir.to_path_buf());
             }
@@ -144,41 +143,41 @@ impl IncludeResolver {
         Self::new(search_paths)
     }
 
-    /// Добавить директорию в список путей поиска.
+    /// Add a directory to the list of search paths.
     pub fn add_search_path(&mut self, path: PathBuf) -> &mut Self {
         self.search_paths.push(path);
         self
     }
 
-    /// Получить список путей поиска.
+    /// Get the list of search paths.
     pub fn search_paths(&self) -> &[PathBuf] {
         &self.search_paths
     }
 
-    /// Количество уже обработанных файлов.
+    /// Number of already-processed files.
     pub fn visited_count(&self) -> usize {
         self.visited.len()
     }
 
-    /// Разрешить все директивы `import` в `unit`, рекурсивно загружая зависимости.
+    /// Resolve all `import` directives in `unit`, recursively loading dependencies.
     ///
-    /// Возвращает объединённый [`SourceUnit`] без директив импорта — все
-    /// импортированные определения встроены непосредственно в результат.
+    /// Returns a merged [`SourceUnit`] without import directives — all imported
+    /// definitions are embedded directly in the result.
     ///
-    /// Порядок элементов: сначала все определения из импортированных файлов
-    /// (в порядке встречи директив), затем определения из текущего файла.
+    /// Element order: first all definitions from imported files (in the order
+    /// directives are encountered), then definitions from the current file.
     ///
-    /// # Ошибки
+    /// # Errors
     ///
-    /// Возвращает список [`IncludeError`] если хотя бы один импорт не удалось
-    /// разрешить. Обработка продолжается для остальных импортов, чтобы собрать
-    /// максимум ошибок за один проход.
+    /// Returns a list of [`IncludeError`] if at least one import could not be
+    /// resolved. Processing continues for remaining imports to collect as many
+    /// errors as possible in a single pass.
     pub fn resolve(
         &mut self,
         unit: SourceUnit,
         base_path: &Path,
     ) -> Result<SourceUnit, Vec<IncludeError>> {
-        // Пометить базовый файл как посещённый
+        // Mark the base file as visited
         self.mark_visited(base_path);
 
         let mut result_parts: Vec<SourceUnitPart> = vec![];
@@ -189,7 +188,7 @@ impl IncludeResolver {
                 SourceUnitPart::ImportDirective(ref import) => {
                     let import_path_str = extract_path_str(import);
 
-                    // Найти файл на диске
+                    // Find the file on disk
                     let resolved = match self.find_file(&import_path_str, base_path) {
                         Ok(p) => p,
                         Err(e) => {
@@ -198,7 +197,7 @@ impl IncludeResolver {
                         }
                     };
 
-                    // Проверить дедупликацию
+                    // Check deduplication
                     let canonical = match resolved.canonicalize() {
                         Ok(c) => c,
                         Err(e) => {
@@ -211,17 +210,17 @@ impl IncludeResolver {
                     };
 
                     if self.visited.contains(&canonical) {
-                        // Файл уже обработан — пропустить без ошибки
+                        // File already processed — skip without error
                         continue;
                     }
 
-                    // Загрузить и рекурсивно разрешить файл
+                    // Load and recursively resolve the file
                     match self.load_and_resolve(&resolved) {
                         Ok(sub_unit) => result_parts.extend(sub_unit.0),
                         Err(mut sub_errors) => errors.append(&mut sub_errors),
                     }
                 }
-                // Все остальные элементы переносятся без изменений
+                // All other elements are carried over unchanged
                 other => result_parts.push(other),
             }
         }
@@ -233,11 +232,11 @@ impl IncludeResolver {
         }
     }
 
-    // ── Внутренние методы ────────────────────────────────────────────────────
+    // ── Private methods ───────────────────────────────────────────────────────
 
-    /// Загрузить файл с диска, разобрать его и рекурсивно разрешить его импорты.
+    /// Load a file from disk, parse it, and recursively resolve its imports.
     fn load_and_resolve(&mut self, path: &Path) -> Result<SourceUnit, Vec<IncludeError>> {
-        // Проверить циклический импорт перед загрузкой
+        // Check for circular import before loading
         if let Ok(canonical) = path.canonicalize() {
             if self.visited.contains(&canonical) {
                 return Err(vec![IncludeError::CircularImport(canonical)]);
@@ -265,22 +264,22 @@ impl IncludeResolver {
             }
         };
 
-        // Рекурсивно разрешить импорты внутри загруженного файла
+        // Recursively resolve imports inside the loaded file
         self.resolve(unit, path)
     }
 
-    /// Найти файл по строке пути относительно базового файла или в путях поиска.
+    /// Find a file by path string relative to the base file or in search paths.
     ///
-    /// Автоматически добавляет расширение `.but`, если оно не указано.
+    /// Automatically adds the `.but` extension if not specified.
     fn find_file(&self, path_str: &str, base_path: &Path) -> Result<PathBuf, IncludeError> {
-        // Нормализовать расширение
+        // Normalize the extension
         let normalized = if path_str.ends_with(".but") {
             path_str.to_string()
         } else {
             format!("{}.but", path_str)
         };
 
-        // 1. Относительно директории базового файла
+        // 1. Relative to the base file's directory
         if let Some(base_dir) = base_path.parent() {
             let candidate = base_dir.join(&normalized);
             if candidate.exists() {
@@ -288,13 +287,13 @@ impl IncludeResolver {
             }
         }
 
-        // 2. Абсолютный путь
+        // 2. Absolute path
         let abs = PathBuf::from(&normalized);
         if abs.is_absolute() && abs.exists() {
             return Ok(abs);
         }
 
-        // 3. Перебрать пути поиска
+        // 3. Iterate through search paths
         for search_dir in &self.search_paths {
             let candidate = search_dir.join(&normalized);
             if candidate.exists() {
@@ -308,7 +307,7 @@ impl IncludeResolver {
         })
     }
 
-    /// Зарегистрировать файл как посещённый (если удаётся канонизировать путь).
+    /// Register a file as visited (if the path can be canonicalized).
     fn mark_visited(&mut self, path: &Path) {
         if let Ok(canonical) = path.canonicalize() {
             self.visited.insert(canonical);
@@ -316,9 +315,9 @@ impl IncludeResolver {
     }
 }
 
-// ─── Вспомогательные функции ──────────────────────────────────────────────────
+// ─── Helper functions ─────────────────────────────────────────────────────────
 
-/// Извлечь строку пути из директивы [`Import`].
+/// Extract the path string from an [`Import`] directive.
 fn extract_path_str(import: &Import) -> String {
     match import {
         Import::Plain(p, _) => import_path_to_string(p),
@@ -327,12 +326,12 @@ fn extract_path_str(import: &Import) -> String {
     }
 }
 
-/// Преобразовать [`ImportPath`] в строку файлового пути.
+/// Convert an [`ImportPath`] to a file path string.
 fn import_path_to_string(path: &ImportPath) -> String {
     match path {
-        // `import "файл.but"` — литеральная строка
+        // `import "file.but"` — string literal
         ImportPath::Filename(lit) => lit.string.clone(),
-        // `import std::types` — путь через `::` → преобразовать в `std/types`
+        // `import std::types` — path via `::` → convert to `std/types`
         ImportPath::Path(id_path) => id_path
             .identifiers
             .iter()
@@ -342,7 +341,7 @@ fn import_path_to_string(path: &ImportPath) -> String {
     }
 }
 
-// ─── Тесты ───────────────────────────────────────────────────────────────────
+// ─── Tests ───────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {
@@ -351,35 +350,35 @@ mod tests {
 
     use super::*;
 
-    // ── Вспомогательные утилиты для тестов ───────────────────────────────────
+    // ── Test helper utilities ─────────────────────────────────────────────────
 
-    /// Путь к директории тестовых фикстур include.
+    /// Path to the include test fixtures directory.
     fn fixtures_dir() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests_data/include")
     }
 
-    /// Создать резолвер с директорией фикстур как путём поиска.
+    /// Create a resolver with the fixtures directory as a search path.
     fn resolver_for(subdir: &str) -> IncludeResolver {
         let dir = fixtures_dir().join(subdir);
         IncludeResolver::new(vec![dir])
     }
 
-    /// Разобрать BuT-источник без файловой системы (без разрешения импортов).
+    /// Parse a BuT source without the filesystem (without resolving imports).
     fn parse_src(src: &str) -> SourceUnit {
-        but_grammar::parse(src, 0).expect("Ошибка разбора тестового источника").0
+        but_grammar::parse(src, 0).expect("Failed to parse test source").0
     }
 
-    // ── Тесты extract_path_str / import_path_to_string ───────────────────────
+    // ── Tests for extract_path_str / import_path_to_string ───────────────────
 
     #[test]
     fn test_extract_path_plain_string() {
-        // import "types"; — строковый путь
+        // import "types"; — string path
         let src = r#"import "types";"#;
         let unit = parse_src(src);
         if let SourceUnitPart::ImportDirective(import) = &unit.0[0] {
             assert_eq!(extract_path_str(import), "types");
         } else {
-            panic!("Ожидалась директива импорта");
+            panic!("Expected an import directive");
         }
     }
 
@@ -391,7 +390,7 @@ mod tests {
         if let SourceUnitPart::ImportDirective(import) = &unit.0[0] {
             assert_eq!(extract_path_str(import), "foo/bar");
         } else {
-            panic!("Ожидалась директива импорта");
+            panic!("Expected an import directive");
         }
     }
 
@@ -403,7 +402,7 @@ mod tests {
         if let SourceUnitPart::ImportDirective(import) = &unit.0[0] {
             assert_eq!(extract_path_str(import), "utils");
         } else {
-            panic!("Ожидалась директива импорта");
+            panic!("Expected an import directive");
         }
     }
 
@@ -415,11 +414,11 @@ mod tests {
         if let SourceUnitPart::ImportDirective(import) = &unit.0[0] {
             assert_eq!(extract_path_str(import), "lib");
         } else {
-            panic!("Ожидалась директива импорта");
+            panic!("Expected an import directive");
         }
     }
 
-    // ── Тесты IncludeResolver::new / from_file / add_search_path ─────────────
+    // ── Tests for IncludeResolver::new / from_file / add_search_path ─────────
 
     #[test]
     fn test_resolver_new_empty() {
@@ -444,7 +443,7 @@ mod tests {
 
     #[test]
     fn test_resolver_from_file_no_parent() {
-        // Файл без родительской директории — пути поиска пустые
+        // File without a parent directory — search paths are empty
         let r = IncludeResolver::from_file(Path::new("main.but"));
         assert!(r.search_paths().is_empty());
     }
@@ -458,7 +457,7 @@ mod tests {
         assert_eq!(r.search_paths().len(), 2);
     }
 
-    // ── Тесты find_file ───────────────────────────────────────────────────────
+    // ── Tests for find_file ───────────────────────────────────────────────────
 
     #[test]
     fn test_find_file_not_found() {
@@ -473,12 +472,12 @@ mod tests {
 
     #[test]
     fn test_find_file_adds_extension() {
-        // Без расширения .but — должен найти types.but
+        // Without the .but extension — should find types.but
         let r = resolver_for("basic");
         let base = fixtures_dir().join("basic/main.but");
-        // Поиск "types" должен найти "types.but"
+        // Searching "types" should find "types.but"
         let result = r.find_file("types", &base);
-        assert!(result.is_ok(), "Не найден types.but при поиске 'types': {:?}", result);
+        assert!(result.is_ok(), "types.but not found when searching 'types': {:?}", result);
         let found = result.unwrap();
         assert!(found.to_str().unwrap().ends_with("types.but"));
     }
@@ -491,11 +490,11 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    // ── Тесты resolve: базовый случай ────────────────────────────────────────
+    // ── Tests for resolve: basic case ─────────────────────────────────────────
 
     #[test]
     fn test_resolve_no_imports() {
-        // Исходник без импортов — возвращается как есть
+        // Source without imports — returned as-is
         let src = r#"const X: u32 = 42; let y: bit = 0;"#;
         let unit = parse_src(src);
         let original_len = unit.0.len();
@@ -508,45 +507,45 @@ mod tests {
 
     #[test]
     fn test_resolve_basic_import() {
-        // main.but импортирует types.but с объявлениями типов
+        // main.but imports types.but with type declarations
         let main_path = fixtures_dir().join("basic/main.but");
-        let source = fs::read_to_string(&main_path).expect("Не удалось прочитать main.but");
-        let unit = but_grammar::parse(&source, 0).expect("Ошибка разбора main.but").0;
+        let source = fs::read_to_string(&main_path).expect("Failed to read main.but");
+        let unit = but_grammar::parse(&source, 0).expect("Failed to parse main.but").0;
 
         let mut resolver = IncludeResolver::from_file(&main_path);
         let result = resolver.resolve(unit, &main_path);
 
-        assert!(result.is_ok(), "Ошибка разрешения: {:?}", result);
+        assert!(result.is_ok(), "Resolution error: {:?}", result);
         let merged = result.unwrap();
 
-        // Должны быть объединены определения из types.but + определения из main.but
+        // Definitions from types.but + definitions from main.but should be merged
         assert!(
             merged.0.len() >= 2,
-            "Ожидалось как минимум 2 элемента после объединения, получено {}",
+            "Expected at least 2 elements after merging, got {}",
             merged.0.len()
         );
-        // В объединённом SourceUnit не должно быть директив импорта
+        // The merged SourceUnit should not contain import directives
         let has_imports = merged
             .0
             .iter()
             .any(|p| matches!(p, SourceUnitPart::ImportDirective(_)));
-        assert!(!has_imports, "Объединённый SourceUnit содержит директивы импорта");
+        assert!(!has_imports, "Merged SourceUnit contains import directives");
     }
 
     #[test]
     fn test_resolve_deduplication() {
-        // Два файла импортируют один и тот же файл — он должен быть включён один раз
+        // Two files import the same file — it should be included only once
         let main_path = fixtures_dir().join("dedup/main.but");
-        let source = fs::read_to_string(&main_path).expect("Не удалось прочитать dedup/main.but");
-        let unit = but_grammar::parse(&source, 0).expect("Ошибка разбора").0;
+        let source = fs::read_to_string(&main_path).expect("Failed to read dedup/main.but");
+        let unit = but_grammar::parse(&source, 0).expect("Failed to parse").0;
 
         let mut resolver = IncludeResolver::from_file(&main_path);
         let result = resolver.resolve(unit, &main_path);
 
-        assert!(result.is_ok(), "Ошибки разрешения: {:?}", result);
+        assert!(result.is_ok(), "Resolution errors: {:?}", result);
         let merged = result.unwrap();
 
-        // Подсчитать определения типов — тип из common.but должен быть ровно один раз
+        // Count type definitions — the type from common.but should appear exactly once
         let type_defs: Vec<_> = merged
             .0
             .iter()
@@ -555,45 +554,45 @@ mod tests {
         assert_eq!(
             type_defs.len(),
             1,
-            "Тип из common.but включён {} раз(а), ожидался 1",
+            "Type from common.but included {} time(s), expected 1",
             type_defs.len()
         );
     }
 
     #[test]
     fn test_resolve_nested_imports() {
-        // main.but → level1.but → level2.but (транзитивная цепочка)
+        // main.but → level1.but → level2.but (transitive chain)
         let main_path = fixtures_dir().join("nested/main.but");
-        let source = fs::read_to_string(&main_path).expect("Не удалось прочитать nested/main.but");
-        let unit = but_grammar::parse(&source, 0).expect("Ошибка разбора").0;
+        let source = fs::read_to_string(&main_path).expect("Failed to read nested/main.but");
+        let unit = but_grammar::parse(&source, 0).expect("Failed to parse").0;
 
         let mut resolver = IncludeResolver::from_file(&main_path);
         let result = resolver.resolve(unit, &main_path);
 
-        assert!(result.is_ok(), "Ошибки при вложенных импортах: {:?}", result);
+        assert!(result.is_ok(), "Errors with nested imports: {:?}", result);
         let merged = result.unwrap();
 
-        // Все три уровня должны быть включены
+        // All three levels should be included
         assert!(
             merged.0.len() >= 3,
-            "Ожидалось ≥ 3 элементов из трёх уровней, получено {}",
+            "Expected >= 3 elements from three levels, got {}",
             merged.0.len()
         );
     }
 
     #[test]
     fn test_resolve_circular_import_no_crash() {
-        // a.but → b.but → a.but — не должно вызывать бесконечную рекурсию
-        // Благодаря дедупликации второй импорт a.but просто игнорируется
+        // a.but → b.but → a.but — should not cause infinite recursion
+        // Due to deduplication, the second import of a.but is simply ignored
         let a_path = fixtures_dir().join("circular/a.but");
-        let source = fs::read_to_string(&a_path).expect("Не удалось прочитать circular/a.but");
-        let unit = but_grammar::parse(&source, 0).expect("Ошибка разбора circular/a.but").0;
+        let source = fs::read_to_string(&a_path).expect("Failed to read circular/a.but");
+        let unit = but_grammar::parse(&source, 0).expect("Failed to parse circular/a.but").0;
 
         let mut resolver = IncludeResolver::from_file(&a_path);
-        // Ожидаем либо успех (дедупликация), либо ошибку (обнаружение цикла) —
-        // главное, что нет переполнения стека или зависания
+        // Expect either success (deduplication) or error (cycle detection) —
+        // the important thing is no stack overflow or hang
         let _ = resolver.resolve(unit, &a_path);
-        // Тест проходит, если мы добрались сюда
+        // Test passes if we reach this point
     }
 
     #[test]
@@ -612,7 +611,7 @@ mod tests {
 
     #[test]
     fn test_resolve_multiple_errors_collected() {
-        // Два несуществующих файла — оба должны быть в списке ошибок
+        // Two non-existent files — both should appear in the error list
         let src = r#"
             import "missing_a";
             import "missing_b";
@@ -625,15 +624,15 @@ mod tests {
 
         assert!(result.is_err());
         let errors = result.unwrap_err();
-        assert_eq!(errors.len(), 2, "Ожидалось 2 ошибки, получено {}", errors.len());
+        assert_eq!(errors.len(), 2, "Expected 2 errors, got {}", errors.len());
     }
 
     #[test]
     fn test_resolve_parse_error_in_import() {
-        // Файл с синтаксической ошибкой
+        // File with a syntax error
         let main_path = fixtures_dir().join("errors/main.but");
-        let source = fs::read_to_string(&main_path).expect("Не удалось прочитать errors/main.but");
-        let unit = but_grammar::parse(&source, 0).expect("Ошибка разбора errors/main.but").0;
+        let source = fs::read_to_string(&main_path).expect("Failed to read errors/main.but");
+        let unit = but_grammar::parse(&source, 0).expect("Failed to parse errors/main.but").0;
 
         let mut resolver = IncludeResolver::from_file(&main_path);
         let result = resolver.resolve(unit, &main_path);
@@ -642,45 +641,45 @@ mod tests {
         let errors = result.unwrap_err();
         assert!(
             errors.iter().any(|e| matches!(e, IncludeError::ParseError { .. })),
-            "Ожидалась ошибка ParseError, получено: {:?}",
+            "Expected a ParseError, got: {:?}",
             errors
         );
     }
 
-    // ── Тесты visited_count ───────────────────────────────────────────────────
+    // ── Tests for visited_count ───────────────────────────────────────────────
 
     #[test]
     fn test_visited_count_after_resolve() {
-        // После разрешения с одним файлом должен быть посещён ровно 1 файл
+        // After resolving with one file, exactly 1 file should be visited
         let src = r#"const OK: u32 = 1;"#;
         let unit = parse_src(src);
 
-        // Использовать несуществующий путь — mark_visited использует canonicalize,
-        // который не сработает. Но тест структуры visited_count важен.
+        // Use a non-existent path — mark_visited uses canonicalize,
+        // which will fail. But testing the visited_count structure is important.
         let mut resolver = IncludeResolver::new(vec![]);
         let _ = resolver.resolve(unit, Path::new("/fake/file.but"));
-        // После попытки canonicalize несуществующего пути visited остаётся пустым
+        // After failing to canonicalize a non-existent path, visited remains empty
         assert_eq!(resolver.visited_count(), 0);
     }
 
     #[test]
     fn test_visited_count_with_real_file() {
         let main_path = fixtures_dir().join("basic/main.but");
-        let source = fs::read_to_string(&main_path).expect("Не удалось прочитать main.but");
-        let unit = but_grammar::parse(&source, 0).expect("Ошибка разбора").0;
+        let source = fs::read_to_string(&main_path).expect("Failed to read main.but");
+        let unit = but_grammar::parse(&source, 0).expect("Failed to parse").0;
 
         let mut resolver = IncludeResolver::from_file(&main_path);
         let _ = resolver.resolve(unit, &main_path);
 
-        // Основной файл + импортируемый файл types.but
+        // Main file + imported file types.but
         assert!(
             resolver.visited_count() >= 1,
-            "Ожидалось ≥ 1 посещённый файл, получено {}",
+            "Expected >= 1 visited file, got {}",
             resolver.visited_count()
         );
     }
 
-    // ── Тесты Display для IncludeError ────────────────────────────────────────
+    // ── Tests for Display on IncludeError ─────────────────────────────────────
 
     #[test]
     fn test_display_file_not_found() {
@@ -689,16 +688,16 @@ mod tests {
             search_paths: vec![PathBuf::from("/opt/but"), PathBuf::from("/usr/but")],
         };
         let msg = err.to_string();
-        assert!(msg.contains("missing.but"), "Сообщение: {}", msg);
-        assert!(msg.contains("/opt/but"), "Сообщение: {}", msg);
+        assert!(msg.contains("missing.but"), "Message: {}", msg);
+        assert!(msg.contains("/opt/but"), "Message: {}", msg);
     }
 
     #[test]
     fn test_display_circular_import() {
         let err = IncludeError::CircularImport(PathBuf::from("/project/a.but"));
         let msg = err.to_string();
-        assert!(msg.contains("Циклический"), "Сообщение: {}", msg);
-        assert!(msg.contains("a.but"), "Сообщение: {}", msg);
+        assert!(msg.contains("Circular"), "Message: {}", msg);
+        assert!(msg.contains("a.but"), "Message: {}", msg);
     }
 
     #[test]
@@ -708,8 +707,8 @@ mod tests {
             error: "Permission denied".to_string(),
         };
         let msg = err.to_string();
-        assert!(msg.contains("secret.but"), "Сообщение: {}", msg);
-        assert!(msg.contains("Permission denied"), "Сообщение: {}", msg);
+        assert!(msg.contains("secret.but"), "Message: {}", msg);
+        assert!(msg.contains("Permission denied"), "Message: {}", msg);
     }
 
     #[test]
@@ -719,67 +718,67 @@ mod tests {
             errors: vec![],
         };
         let msg = err.to_string();
-        assert!(msg.contains("broken.but"), "Сообщение: {}", msg);
-        assert!(msg.contains("0 ошибок"), "Сообщение: {}", msg);
+        assert!(msg.contains("broken.but"), "Message: {}", msg);
+        assert!(msg.contains("0 errors"), "Message: {}", msg);
     }
 
-    // ── Тест import_path_to_string с Path-вариантом ───────────────────────────
+    // ── Test for import_path_to_string with the Path variant ─────────────────
 
     #[test]
     fn test_import_path_path_variant() {
-        // import * as base from "lib"; — Path-вариант через идентификаторный путь
-        // Этот вариант создаётся при import std::types (через :: нотацию)
-        // Проверяем через строковый вариант (Filename), т.к. Path-синтаксис
-        // требует отсутствия кавычек у пути
+        // import * as base from "lib"; — Path variant via identifier path
+        // This variant is created for import std::types (via :: notation)
+        // We test via the string variant (Filename), since the Path syntax
+        // requires no quotes around the path
         let src = r#"import "std/types";"#;
         let unit = parse_src(src);
         if let SourceUnitPart::ImportDirective(import) = &unit.0[0] {
-            // Filename-вариант: строка возвращается как есть
+            // Filename variant: the string is returned as-is
             assert_eq!(extract_path_str(import), "std/types");
         }
     }
 
-    // ── Тесты дополнительных путей поиска (--include-dir / add_search_path) ───
+    // ── Tests for additional search paths (--include-dir / add_search_path) ───
 
-    /// Вспомогательная функция: путь к фикстурам search_paths.
+    /// Helper function: path to search_paths fixtures.
     fn search_paths_dir() -> PathBuf {
         fixtures_dir().join("search_paths")
     }
 
     #[test]
-    fn test_import_не_найден_без_дополнительного_пути() {
-        // main.but импортирует "shared/defs", который не рядом с файлом.
-        // Без дополнительного пути поиска должна возникнуть ошибка FileNotFound.
+    fn test_import_not_found_without_extra_path() {
+        // main.but imports "shared/defs", which is not next to the file.
+        // Without an additional search path a FileNotFound error should occur.
         let main_path = search_paths_dir().join("app/main.but");
         let source = fs::read_to_string(&main_path)
-            .expect("Не удалось прочитать search_paths/app/main.but");
+            .expect("Failed to read search_paths/app/main.but");
         let unit = but_grammar::parse(&source, 0)
-            .expect("Ошибка разбора main.but").0;
+            .expect("Failed to parse main.but").0;
 
-        // Резолвер знает только директорию самого файла (app/)
+        // Resolver only knows the file's own directory (app/)
         let mut resolver = IncludeResolver::from_file(&main_path);
         let result = resolver.resolve(unit, &main_path);
 
         assert!(
             result.is_err(),
-            "Ожидалась ошибка: файл из libs/ не доступен без дополнительного пути"
+            "Expected error: file from libs/ is not accessible without an extra search path"
         );
         let errs = result.unwrap_err();
         assert!(
             errs.iter().any(|e| matches!(e, IncludeError::FileNotFound { .. })),
-            "Ожидалась ошибка FileNotFound, получено: {:?}", errs
+            "Expected FileNotFound error, got: {:?}", errs
         );
     }
 
     #[test]
-    fn test_import_найден_с_дополнительным_путём() {
-        // Тот же файл, но теперь добавляем libs/ как дополнительный путь поиска.
+    fn test_import_found_with_extra_path() {
+        // Same file, but now we add libs/ as an additional search path.
         let main_path = search_paths_dir().join("app/main.but");
         let libs_path = search_paths_dir().join("libs");
         let source = fs::read_to_string(&main_path)
-            .expect("Не удалось прочитать search_paths/app/main.but");
+            .expect("Failed to read search_paths/app/main.but");
         let unit = but_grammar::parse(&source, 0)
-            .expect("Ошибка разбора main.but").0;
+            .expect("Failed to parse main.but").0;
 
         let mut resolver = IncludeResolver::from_file(&main_path);
         resolver.add_search_path(libs_path);
@@ -787,72 +786,72 @@ mod tests {
 
         assert!(
             result.is_ok(),
-            "Ожидался успех после добавления libs/ в пути поиска: {:?}", result
+            "Expected success after adding libs/ to search paths: {:?}", result
         );
         let merged = result.unwrap();
-        // Должны быть включены типы из shared/defs.but и hardware/regs.but
+        // Types from shared/defs.but and hardware/regs.but should be included
         let type_defs: Vec<_> = merged.0.iter()
             .filter(|p| matches!(p, SourceUnitPart::TypeDefinition(_)))
             .collect();
         assert!(
             type_defs.len() >= 6,
-            "Ожидалось минимум 6 определений типов (3 из shared + 3 из hardware), получено {}",
+            "Expected at least 6 type definitions (3 from shared + 3 from hardware), got {}",
             type_defs.len()
         );
     }
 
     #[test]
-    fn test_несколько_дополнительных_путей_поиска() {
-        // Добавляем два конкретных подкаталога: libs/shared и libs/hardware.
-        // main.but использует import "shared/defs" и import "hardware/regs",
-        // которые находятся относительно libs/.
+    fn test_multiple_extra_search_paths() {
+        // Add two specific subdirectories: libs/shared and libs/hardware.
+        // main.but uses import "shared/defs" and import "hardware/regs",
+        // which are relative to libs/.
         let main_path = search_paths_dir().join("app/main.but");
         let shared_path = search_paths_dir().join("libs");
         let source = fs::read_to_string(&main_path)
-            .expect("Не удалось прочитать search_paths/app/main.but");
+            .expect("Failed to read search_paths/app/main.but");
         let unit = but_grammar::parse(&source, 0)
-            .expect("Ошибка разбора main.but").0;
+            .expect("Failed to parse main.but").0;
 
         let mut resolver = IncludeResolver::new(vec![]);
-        // Добавляем оба пути — ни один не добавляется автоматически
+        // Add both paths — neither is added automatically
         resolver.add_search_path(main_path.parent().unwrap().to_path_buf()); // app/
         resolver.add_search_path(shared_path);                                // libs/
 
         assert_eq!(
             resolver.search_paths().len(), 2,
-            "Ожидалось 2 пути поиска"
+            "Expected 2 search paths"
         );
 
         let result = resolver.resolve(unit, &main_path);
         assert!(
             result.is_ok(),
-            "Ожидался успех при двух путях поиска: {:?}", result
+            "Expected success with two search paths: {:?}", result
         );
     }
 
     #[test]
-    fn test_приоритет_первого_пути_поиска() {
-        // Когда одно и то же имя файла есть в двух директориях,
-        // используется файл из первого добавленного пути.
+    fn test_first_search_path_takes_priority() {
+        // When the same file name exists in two directories,
+        // the file from the first added path is used.
         let main_path = search_paths_dir().join("override/project/main.but");
         let vendor_path = search_paths_dir().join("override/vendor");
         let local_path  = search_paths_dir().join("override/local");
         let source = fs::read_to_string(&main_path)
-            .expect("Не удалось прочитать override/project/main.but");
+            .expect("Failed to read override/project/main.but");
         let unit = but_grammar::parse(&source, 0)
-            .expect("Ошибка разбора main.but").0;
+            .expect("Failed to parse main.but").0;
 
-        // vendor/ добавляется первым — его версия platform.but должна быть загружена
+        // vendor/ is added first — its version of platform.but should be loaded
         let mut resolver = IncludeResolver::from_file(&main_path);
         resolver.add_search_path(vendor_path);
         resolver.add_search_path(local_path);
 
         let result = resolver.resolve(unit, &main_path);
-        assert!(result.is_ok(), "Ожидался успех: {:?}", result);
+        assert!(result.is_ok(), "Expected success: {:?}", result);
 
         let merged = result.unwrap();
-        // vendor/platform.but определяет VendorVersion, local/platform.but — LocalVersion.
-        // Должен быть включён vendor-вариант (VendorVersion).
+        // vendor/platform.but defines VendorVersion, local/platform.but defines LocalVersion.
+        // The vendor variant (VendorVersion) should be included.
         let type_names: Vec<String> = merged.0.iter()
             .filter_map(|p| {
                 if let SourceUnitPart::TypeDefinition(td) = p {
@@ -864,17 +863,17 @@ mod tests {
             .collect();
         assert!(
             type_names.contains(&"VendorVersion".to_string()),
-            "Ожидался тип VendorVersion из vendor/platform.but, получено: {:?}", type_names
+            "Expected type VendorVersion from vendor/platform.but, got: {:?}", type_names
         );
         assert!(
             !type_names.contains(&"LocalVersion".to_string()),
-            "Тип LocalVersion не должен быть включён (vendor имеет приоритет): {:?}", type_names
+            "Type LocalVersion should not be included (vendor takes priority): {:?}", type_names
         );
     }
 
     #[test]
-    fn test_add_search_path_возвращает_изменяемую_ссылку() {
-        // Метод add_search_path возвращает &mut Self для цепочки вызовов.
+    fn test_add_search_path_returns_mutable_ref() {
+        // The add_search_path method returns &mut Self for method chaining.
         let mut r = IncludeResolver::new(vec![]);
         r.add_search_path(PathBuf::from("/a"))
          .add_search_path(PathBuf::from("/b"))
@@ -885,7 +884,7 @@ mod tests {
     }
 
     #[test]
-    fn test_search_paths_возвращает_все_пути() {
+    fn test_search_paths_returns_all_paths() {
         let paths = vec![
             PathBuf::from("/usr/lib/but"),
             PathBuf::from("/opt/but/include"),

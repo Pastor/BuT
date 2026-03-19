@@ -68,14 +68,14 @@ impl TreeDefinition {
     pub(crate) fn build_tree(&self) -> Result<SourceUnit, Vec<Diagnostic>> {
         let mut diagnostics = vec![];
 
-        // Строим карту глобальных типов переменных для семантического анализа
+        // Build a map of global variable types for semantic analysis
         let global_var_types: HashMap<String, but_grammar::ast::Type> = self
             .variable_table
             .iter()
             .map(|(name, vd)| (name.clone(), vd.ty.clone()))
             .collect();
 
-        // Проверяем корректность доступа к битам во всех моделях
+        // Verify correctness of bit access in all models
         bitaccess::check_models(
             &self.models,
             &global_var_types,

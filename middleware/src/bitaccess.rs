@@ -1,18 +1,21 @@
-/// Модуль семантической проверки корректности доступа к битам переменных.
+/// Semantic validation of bit-access operations on variables.
 ///
-/// Проверяет, что индекс бита в операции `переменная.N` не выходит за границы
-/// ширины типа переменной. Ошибка фиксируется как диагностика компилятора.
+/// Checks that the bit index in `variable.N` does not exceed the width of the
+/// variable's type. Errors are emitted as compiler diagnostics.
 use std::collections::HashMap;
 
+
+use crate::model::{Model, Visitor};
 use but_grammar::ast::{
-    Condition, Expression, Member, ModelDefinition, ModelPart, Property,
-    Statement, StatePart, Type, TypeDefinition,
+    AnnotationDefinition, Condition, EnumDefinition, Expression, FunctionDefinition, Member,
+    ModelDefinition, ModelPart, Property, PropertyDefinition, StatePart, Statement,
+    StructDefinition, Type, TypeDefinition, VariableDefinition,
 };
 use but_grammar::diagnostics::Diagnostic;
 
-/// Вычислить ширину типа в битах.
+/// Compute the bit-width of a type.
 ///
-/// Возвращает `Some(n)` если ширина известна статически, иначе `None`.
+/// Returns `Some(n)` if the width is statically known, otherwise `None`.
 pub fn bit_width_of_type(
     ty: &Type,
     types: &HashMap<String, Box<TypeDefinition>>,
@@ -33,20 +36,21 @@ pub fn bit_width_of_type(
                 .get(name)
                 .and_then(|td| bit_width_of_type(&td.ty, types, depth - 1)),
         },
-        Type::Array { element_count, element_type, .. } => {
-            bit_width_of_type(element_type, types, depth - 1)
-                .map(|w| w * *element_count as u64)
-        }
+        Type::Array {
+            element_count,
+            element_type,
+            ..
+        } => bit_width_of_type(element_type, types, depth - 1).map(|w| w * *element_count as u64),
         Type::Bool => Some(1),
-        // float, string, address — не поддерживают побитовый доступ
+        // float, string, address — bit access not supported
         _ => None,
     }
 }
 
-/// Проверить доступ к биту в выражении.
+/// Check bit-access in an expression.
 ///
-/// Если левая часть присваивания или читаемое выражение содержит `переменная.N`,
-/// и тип переменной известен, проверяется, что N < ширина_типа.
+/// If the left-hand side of an assignment or a read expression contains `variable.N`,
+/// and the variable type is known, validates that N < type_width.
 pub fn check_expr(
     expr: &Expression,
     vars: &HashMap<String, Type>,
@@ -55,14 +59,14 @@ pub fn check_expr(
 ) {
     match expr {
         Expression::MemberAccess(loc, base, Member::Number(n)) => {
-            // Чтение бита: base.N
+            // Bit read: base.N
             if let Some(ty) = extract_var_type(base, vars) {
                 emit_if_out_of_bounds(*loc, *n, &ty, types, diags);
             }
             check_expr(base, vars, types, diags);
         }
         Expression::Assign(_, lhs, rhs) => {
-            // Запись в бит: base.N = value
+            // Bit write: base.N = value
             if let Expression::MemberAccess(loc, base, Member::Number(n)) = lhs.as_ref() {
                 if let Some(ty) = extract_var_type(base, vars) {
                     emit_if_out_of_bounds(*loc, *n, &ty, types, diags);
@@ -117,7 +121,7 @@ pub fn check_expr(
     }
 }
 
-/// Проверить доступ к биту в условии (condition).
+/// Check bit-access in a condition.
 pub fn check_condition(
     cond: &Condition,
     vars: &HashMap<String, Type>,
@@ -158,7 +162,7 @@ pub fn check_condition(
     }
 }
 
-/// Проверить доступ к битам в операторе (Statement).
+/// Check bit-access in a statement.
 pub fn check_statement(
     stmt: &Statement,
     vars: &HashMap<String, Type>,
@@ -197,11 +201,11 @@ pub fn check_statement(
             let mut local_vars = vars.clone();
             for s in statements {
                 if let Statement::VariableDefinition(_, decl, init) = s {
-                    // Сначала проверяем инициализатор в текущем контексте
+                    // Check initializer in the current scope first
                     if let Some(init_expr) = init {
                         check_expr(init_expr, &local_vars, types, diags);
                     }
-                    // Затем добавляем переменную в контекст
+                    // Then add the variable to scope
                     if let Some(name) = &decl.name {
                         local_vars.insert(name.name.clone(), decl.ty.clone());
                     }
@@ -214,7 +218,98 @@ pub fn check_statement(
     }
 }
 
-/// Проверить все модели на корректность доступа к битам.
+pub struct Checker {
+    /// Global variables (root SourceUnit level).
+    global_vars: HashMap<String, Type>,
+    /// Global type aliases (root SourceUnit level).
+    global_types: HashMap<String, Box<TypeDefinition>>,
+    /// Diagnostics accumulated across all visited models.
+    pub diags: Vec<Diagnostic>,
+}
+
+impl Checker {
+    pub fn new(model: &Model) -> Self {
+        Self {
+            global_vars: model.get_variable_types(),
+            global_types: model.get_types(),
+            diags: Vec::new(),
+        }
+    }
+}
+
+impl Visitor for Checker {
+    /// Checks variable initializers, property values, and function bodies of a model.
+    fn visit_model(&mut self, model: &Model) -> Result<bool, Vec<Diagnostic>> {
+        // Global variables are shadowed by parent-chain and model-level variables
+        let mut vars = self.global_vars.clone();
+        vars.extend(model.get_all_variable_types());
+
+        let mut types = self.global_types.clone();
+        types.extend(model.get_all_types());
+
+        // Variable initializers
+        for var in model.variables() {
+            if let Some(init) = &var.initializer {
+                check_expr(init, &vars, &types, &mut self.diags);
+            }
+        }
+
+        // Property values
+        for prop in model.properties() {
+            check_property(&prop.value, &vars, &types, &mut self.diags);
+        }
+
+        // Function bodies
+        for fun in model.functions() {
+            let mut fun_vars = vars.clone();
+            for (_, param) in &fun.params {
+                if let Some(p) = param {
+                    if let Some(name) = &p.name {
+                        // Parameter type is Expression; skip unrecognised forms
+                        if let Expression::Type(_, ty) = &p.ty {
+                            fun_vars.insert(name.name.clone(), ty.clone());
+                        }
+                    }
+                }
+            }
+            if let Some(body) = &fun.body {
+                check_statement(body, &fun_vars, &types, &mut self.diags);
+            }
+        }
+
+        Ok(true)
+    }
+
+    fn visit_annotation(&mut self, _: &AnnotationDefinition) -> Result<bool, Vec<Diagnostic>> {
+        Ok(true)
+    }
+
+    fn visit_enum(&mut self, _: &EnumDefinition) -> Result<bool, Vec<Diagnostic>> {
+        Ok(true)
+    }
+
+    fn visit_struct(&mut self, _: &StructDefinition) -> Result<bool, Vec<Diagnostic>> {
+        Ok(true)
+    }
+
+    fn visit_variable(&mut self, _: &VariableDefinition) -> Result<bool, Vec<Diagnostic>> {
+        Ok(true)
+    }
+
+    fn visit_function(&mut self, _: &FunctionDefinition) -> Result<bool, Vec<Diagnostic>> {
+        Ok(true)
+    }
+
+    fn visit_type(&mut self, _: &TypeDefinition) -> Result<bool, Vec<Diagnostic>> {
+        Ok(true)
+    }
+
+    fn visit_property(&mut self, _: &PropertyDefinition) -> Result<bool, Vec<Diagnostic>> {
+        Ok(true)
+    }
+}
+
+/// Check all models for correct bit-access.
 pub fn check_models(
     models: &[Box<ModelDefinition>],
     global_vars: &HashMap<String, Type>,
@@ -222,7 +317,7 @@ pub fn check_models(
     diags: &mut Vec<Diagnostic>,
 ) {
     for model in models {
-        // Собираем переменные уровня модели
+        // Collect model-level variables
         let mut model_vars = global_vars.clone();
         for part in &model.parts {
             if let ModelPart::VariableDefinition(vd) = part {
@@ -232,7 +327,7 @@ pub fn check_models(
             }
         }
 
-        // Проверяем части модели
+        // Check model parts
         for part in &model.parts {
             match part {
                 ModelPart::VariableDefinition(vd) => {
@@ -241,7 +336,7 @@ pub fn check_models(
                     }
                 }
                 ModelPart::StateDefinition(sd) => {
-                    // Собираем переменные уровня состояния
+                    // Collect state-level variables
                     let mut state_vars = model_vars.clone();
                     for sp in &sd.parts {
                         if let StatePart::VariableDefinition(vd) = sp {
@@ -251,7 +346,7 @@ pub fn check_models(
                         }
                     }
 
-                    // Проверяем части состояния
+                    // Check state parts
                     for sp in &sd.parts {
                         match sp {
                             StatePart::VariableDefinition(vd) => {
@@ -278,7 +373,7 @@ pub fn check_models(
     }
 }
 
-// ── Вспомогательные функции ────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn check_property(
     prop: &Property,
@@ -309,7 +404,7 @@ fn emit_if_out_of_bounds(
     if n < 0 {
         diags.push(Diagnostic::error(
             loc,
-            format!("индекс бита {} отрицателен", n),
+            format!("bit index {} is negative", n),
         ));
         return;
     }
@@ -317,10 +412,7 @@ fn emit_if_out_of_bounds(
         if n as u64 >= width {
             diags.push(Diagnostic::error(
                 loc,
-                format!(
-                    "обращение к биту {} выходит за границы типа (ширина {} бит)",
-                    n, width
-                ),
+                format!("bit index {} is out of bounds for type (width {} bits)", n, width),
             ));
         }
     }

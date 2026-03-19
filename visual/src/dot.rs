@@ -3,7 +3,7 @@ use but_grammar::ast::{
     ModelDefinition, ModelPart, Property, SourceUnit, SourceUnitPart, StatePart,
 };
 
-/// Сгенерировать DOT-граф для одной модели.
+/// Generate a DOT graph for a single model.
 pub fn model_to_dot(model: &ModelDefinition, current_state: Option<&str>) -> String {
     let name = model
         .name
@@ -17,18 +17,18 @@ pub fn model_to_dot(model: &ModelDefinition, current_state: Option<&str>) -> Str
     out.push_str("  node [shape=circle, fontname=\"DejaVu Sans\", fontsize=11];\n");
     out.push_str("  edge [fontname=\"DejaVu Sans\", fontsize=9];\n");
 
-    // Стартовый узел
+    // Start node
     out.push_str("  __start__ [shape=point, width=0.2];\n");
 
-    // Найти начальное состояние
+    // Find the initial state
     let start_state = find_start_state(model);
 
-    // Стартовый переход
+    // Start transition
     if let Some(ref s) = start_state {
         out.push_str(&format!("  __start__ -> {};\n", sanitize(s)));
     }
 
-    // Вывести узлы состояний
+    // Emit state nodes
     let mut state_names: Vec<String> = vec![];
     for part in &model.parts {
         if let ModelPart::StateDefinition(sd) = part {
@@ -47,7 +47,7 @@ pub fn model_to_dot(model: &ModelDefinition, current_state: Option<&str>) -> Str
             }) || is_start {
                 "circle"
             } else {
-                "doublecircle" // терминальные состояния
+                "doublecircle" // terminal states
             };
 
             let attrs = if is_current {
@@ -62,7 +62,7 @@ pub fn model_to_dot(model: &ModelDefinition, current_state: Option<&str>) -> Str
         }
     }
 
-    // Вывести переходы (рёбра)
+    // Emit transitions (edges)
     for part in &model.parts {
         if let ModelPart::StateDefinition(sd) = part {
             let from = sd
@@ -88,7 +88,7 @@ pub fn model_to_dot(model: &ModelDefinition, current_state: Option<&str>) -> Str
         }
     }
 
-    // LTL-спецификации: добавить в граф в виде узла-заметки
+    // LTL specifications: add to the graph as a note node
     let ltl_formulas = extract_ltl_formulas_dot(model);
     if !ltl_formulas.is_empty() {
         let ltl_label = ltl_formulas.join("\n");
@@ -102,7 +102,7 @@ pub fn model_to_dot(model: &ModelDefinition, current_state: Option<&str>) -> Str
     out
 }
 
-/// Сгенерировать DOT для всех моделей из SourceUnit.
+/// Generate DOT for all models from a SourceUnit.
 pub fn source_to_dots(source: &SourceUnit) -> Vec<(String, String)> {
     let mut result = vec![];
     for part in &source.0 {
@@ -119,7 +119,7 @@ pub fn source_to_dots(source: &SourceUnit) -> Vec<(String, String)> {
     result
 }
 
-/// Преобразовать условие Condition в читаемую строку для метки.
+/// Convert a Condition into a human-readable string for use as a label.
 pub fn condition_to_label(cond: &Condition) -> String {
     match cond {
         Condition::Variable(id) => id.name.clone(),
@@ -184,11 +184,11 @@ pub fn condition_to_label(cond: &Condition) -> String {
     }
 }
 
-/// Извлечь LTL-формулы из аннотаций и блоков formula модели (для DOT).
+/// Extract LTL formulas from annotations and formula blocks of a model (for DOT).
 fn extract_ltl_formulas_dot(model: &ModelDefinition) -> Vec<String> {
     let mut result = vec![];
 
-    // Из аннотаций (#![ltl = "..."])
+    // From annotations (#![ltl = "..."])
     for ann_def in &model.annotations {
         for ann in &ann_def.args {
             if let Annotation::Assign { name, value, .. } = ann {
@@ -204,7 +204,7 @@ fn extract_ltl_formulas_dot(model: &ModelDefinition) -> Vec<String> {
         }
     }
 
-    // Из аннотаций внутри тела модели (ModelPart::AnnotationDefinition)
+    // From annotations inside the model body (ModelPart::AnnotationDefinition)
     for part in &model.parts {
         if let ModelPart::AnnotationDefinition(ann_def) = part {
             for ann in &ann_def.args {
@@ -222,7 +222,7 @@ fn extract_ltl_formulas_dot(model: &ModelDefinition) -> Vec<String> {
         }
     }
 
-    // Из блоков formula { ... }
+    // From formula { ... } blocks
     for part in &model.parts {
         if let ModelPart::FormulaDefinition(fd) = part {
             for stmt in &fd.formula.statements {
@@ -248,7 +248,7 @@ fn extract_ltl_formulas_dot(model: &ModelDefinition) -> Vec<String> {
     result
 }
 
-/// Найти начальное состояние из объявлений property/condition уровня модели.
+/// Find the initial state from property/condition declarations at the model level.
 fn find_start_state(model: &ModelDefinition) -> Option<String> {
     for part in &model.parts {
         match part {
@@ -274,15 +274,15 @@ fn find_start_state(model: &ModelDefinition) -> Option<String> {
     None
 }
 
-/// Очистить имя для использования как идентификатора узла DOT.
+/// Sanitize a name for use as a DOT node identifier.
 fn sanitize(name: &str) -> String {
-    // Заменить пробелы и спецсимволы на подчёркивания
+    // Replace spaces and special characters with underscores
     name.chars()
         .map(|c| if c.is_alphanumeric() || c == '_' { c } else { '_' })
         .collect()
 }
 
-/// Экранировать спецсимволы в строках метки DOT.
+/// Escape special characters in DOT label strings.
 fn escape_dot(s: &str) -> String {
     s.replace('\\', "\\\\")
         .replace('"', "\\\"")

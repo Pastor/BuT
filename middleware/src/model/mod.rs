@@ -1,11 +1,11 @@
 mod expression;
 
-use crate::bitaccess;
-use crate::model::expression::{Expression, transform};
+use crate::bitaccess::Checker;
+use crate::model::expression::{transform, Expression};
 use but_grammar::ast::{
-    Annotation, AnnotationDefinition, EnumDefinition, FunctionDefinition, Identifier, Loc,
+    Annotation, AnnotationDefinition, EnumDefinition, FunctionDefinition, Loc,
     ModelDefinition, ModelPart, PropertyDefinition, SourceUnit, SourceUnitPart, StructDefinition,
-    TypeDefinition, VariableDefinition,
+    Type, TypeDefinition, VariableDefinition,
 };
 use but_grammar::diagnostics::Diagnostic;
 use log::warn;
@@ -69,10 +69,7 @@ fn extract(
             .unwrap_or(Expression::Identifier(
                 name.unwrap_or("Undefined".to_string()),
             )),
-        models: models
-            .into_iter()
-            .map(|m| (m.clone().name.unwrap(), Box::new(m)))
-            .collect(),
+        models: HashMap::new(),
         enum_table: enums
             .into_iter()
             .map(|e| (e.clone().name.unwrap().name, e.clone()))
@@ -99,7 +96,21 @@ fn extract(
             .collect(),
         annotations,
     };
-    Ok(model)
+    Ok(Model {
+        models: models
+            .into_iter()
+            .map(|m| {
+                (
+                    m.clone().name.unwrap(),
+                    Box::new(Model {
+                        parent: Some(Box::new(model.clone())),
+                        ..m
+                    }),
+                )
+            })
+            .collect(),
+        ..model
+    })
 }
 
 fn search_entry_point(models: Vec<Model>) -> Option<EntryPoint> {
@@ -188,26 +199,44 @@ pub struct Model {
     function_table: HashMap<String, Box<FunctionDefinition>>,
 }
 
+pub trait Visitor {
+    fn visit_model(&mut self, model: &Model) -> Result<bool, Vec<Diagnostic>>;
+    fn visit_annotation(
+        &mut self,
+        annotation: &AnnotationDefinition,
+    ) -> Result<bool, Vec<Diagnostic>>;
+    fn visit_enum(&mut self, enm: &EnumDefinition) -> Result<bool, Vec<Diagnostic>>;
+    fn visit_struct(&mut self, st: &StructDefinition) -> Result<bool, Vec<Diagnostic>>;
+    fn visit_variable(&mut self, var: &VariableDefinition) -> Result<bool, Vec<Diagnostic>>;
+    fn visit_function(&mut self, fun: &FunctionDefinition) -> Result<bool, Vec<Diagnostic>>;
+    fn visit_type(&mut self, ty: &TypeDefinition) -> Result<bool, Vec<Diagnostic>>;
+    fn visit_property(&mut self, p: &PropertyDefinition) -> Result<bool, Vec<Diagnostic>>;
+}
+
 impl Model {
+    pub fn visit(&self, visitor: &mut dyn Visitor) -> Result<(), Vec<Diagnostic>> {
+        for (_, model) in self.models.iter() {
+            let next = visitor.visit_model(model)?;
+            if !next {
+                break;
+            }
+            for (_, model) in model.models.iter() {
+                model.visit(visitor)?;
+            }
+        }
+        for a in self.annotations.iter() {
+            let next = visitor.visit_annotation(a)?;
+            if !next {
+                break;
+            }
+        }
+        Ok(())
+    }
+
     pub(crate) fn analyze(&self) -> Result<EntryPoint, Vec<Diagnostic>> {
-        // let mut diagnostics = Vec::new();
-        // let globe = self
-        //     .variable_table
-        //     .iter()
-        //     .map(|v| (v.0.clone(), v.1.ty.clone()))
-        //     .collect();
-        // let models = <HashMap<String, Box<Model>> as Clone>::clone(&self.models)
-        //     .into_values()
-        //     .collect::<Vec<Box<Model>>>();
-        // bitaccess::check_models(&models, &globe, &self.type_table, &mut diagnostics);
-        //
-        // if !diagnostics.is_empty() {
-        //     return Err(diagnostics);
-        // }
         if let Some(entrypoint) = self.entrypoint.clone() {
-            let models = self.models.clone();
             entrypoint.implement.visit(&|s| {
-                let search = models.get(&s);
+                let search = self.get_model(&s, false);
                 if search.is_none() {
                     return Err(vec![Diagnostic::decl_error(
                         Loc::Builtin,
@@ -216,13 +245,98 @@ impl Model {
                 }
                 Ok(())
             })?;
-            return Ok(entrypoint);
+            let mut checker = Checker::new(self);
+            self.visit(&mut checker)?;
+
+            if !checker.diags.is_empty() {
+                return Err(checker.diags);
+            }
+            Ok(entrypoint)
         } else {
             Err(vec![Diagnostic::decl_error(
                 Loc::Builtin,
                 String::from("Can't find main model"),
             )])
         }
+    }
+
+    pub fn get_model(&self, name: &str, upper: bool) -> Option<&Model> {
+        if let Some(model) = self.models.get(name) {
+            return Some(model);
+        } else if let Some(parent) = &self.parent
+            && upper
+        {
+            return parent.get_model(name, upper);
+        }
+        None
+    }
+
+    pub fn get_models(&self, upper: bool) -> Vec<Model> {
+        let mut v = Vec::new();
+        self.models.iter().for_each(|(_, model)| {
+            v.push(*model.clone());
+        });
+        if upper {
+            v.clone().iter().for_each(|model| {
+                model.get_models(upper).iter().for_each(|model| {
+                    v.push(model.clone());
+                })
+            })
+        }
+        v
+    }
+
+    pub fn get_variable_types(&self) -> HashMap<String, Type> {
+        let mut map = HashMap::new();
+        self.variable_table.iter().for_each(|(k, v)| {
+            map.insert(k.clone(), v.ty.clone());
+        });
+        map
+    }
+
+    pub fn get_types(&self) -> HashMap<String, Box<TypeDefinition>> {
+        let mut map = HashMap::new();
+        self.type_table.iter().for_each(|(k, v)| {
+            map.insert(k.clone(), v.clone());
+        });
+        map
+    }
+
+    /// All variables of the model including the parent chain (parent has lower priority).
+    pub fn get_all_variable_types(&self) -> HashMap<String, Type> {
+        let mut map = self
+            .parent
+            .as_ref()
+            .map(|p| p.get_all_variable_types())
+            .unwrap_or_default();
+        map.extend(self.get_variable_types());
+        map
+    }
+
+    /// All type aliases including the parent chain.
+    pub fn get_all_types(&self) -> HashMap<String, Box<TypeDefinition>> {
+        let mut map = self
+            .parent
+            .as_ref()
+            .map(|p| p.get_all_types())
+            .unwrap_or_default();
+        map.extend(self.get_types());
+        map
+    }
+
+    /// Iterator over the model's variables.
+    pub fn variables(&self) -> impl Iterator<Item = &VariableDefinition> {
+        self.variable_table.values().map(|v| v.as_ref())
+    }
+
+    /// Iterator over the model's properties.
+    pub fn properties(&self) -> impl Iterator<Item = &PropertyDefinition> {
+        self.property_table.values().map(|p| p.as_ref())
+    }
+
+    /// Iterator over the model's functions.
+    pub fn functions(&self) -> impl Iterator<Item = &FunctionDefinition> {
+        self.function_table.values().map(|f| f.as_ref())
     }
 }
 
@@ -320,15 +434,31 @@ mod tests {
     use super::*;
 
     #[test]
+    fn get_model() {
+        let src = r#"
+            #[main, name(Main)]
+            model One {
+                model Inner {
+                }
+                start Start {
+                    ref End: true;
+                }
+                state End {}
+            }
+        "#;
+        let unit = but_grammar::parse(src, 0).unwrap();
+        let model = Model::new(unit.0);
+        let result = model.analyze();
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
     fn analyze() {
         let src = r#"
         model Processor {
-            //Начальное состояние
             start Start {
                 ref End: is_complete;
             }
-            //Терминальное состояние - нет переходов
-            //Модель считается завершенной/отработанной если она находится в одном из терминальных состояний
             state End {}
         }
         model Memory {
@@ -346,11 +476,7 @@ mod tests {
             state End {}
         }
 
-        //Атрибутами задается основная модель которая будет попадать при генерации кода
-        //main - основная модель. Если модель не имеет этого атрибута или не используется явно или не явно - код для нее не генерируется
-        //name(Main) - задает имя модели при генерации
         #[main, name(Main)]
-        //Описывает сложную компоновку модели
         model Refresh = (Processor | Memory) + Floppy {}
 
         port is_complete: bool = 0:0x058849;

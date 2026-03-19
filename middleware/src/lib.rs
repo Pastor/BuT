@@ -133,7 +133,7 @@ mod tests {
                     let mut start_line = loc.start();
                     let mut end_line = loc.end();
                     'position: loop {
-                        //TODO: Зачем?
+                        //TODO: Why?
                         if start_line == 0 {
                             start_line = 0;
                             break;

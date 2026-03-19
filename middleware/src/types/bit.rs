@@ -36,7 +36,7 @@ impl BitSlice {
         }
     }
 
-    /// Создать BitSlice из массива битовых значений (каждый u8 — 0 или 1).
+    /// Create a BitSlice from an array of bit values (each u8 is 0 or 1).
     pub fn from_bit_values(bits: &[u8]) -> Self {
         let mut inner = BitVec::with_capacity(bits.len());
         for &b in bits {

@@ -20,9 +20,9 @@ mod tests {
     use crate::value::Value;
 
     fn simulate_source(src: &str, steps: usize, port_name: &str, port_val: Value) -> String {
-        let (unit, _) = parse(src, 0).expect("ошибка разбора");
-        let machines = build_all(&unit).expect("ошибка построения");
-        let mut sim = Simulator::new(machines.into_iter().next().expect("нет автомата"));
+        let (unit, _) = parse(src, 0).expect("parse error");
+        let machines = build_all(&unit).expect("build error");
+        let mut sim = Simulator::new(machines.into_iter().next().expect("no machine"));
         sim.set_port(port_name, port_val);
         sim.run_n(steps);
         sim.current_state().unwrap_or("").to_string()
@@ -48,7 +48,7 @@ model Delay {
 port input : bit = 0x01;
 port output: bit = 0x02;
 "#;
-        // Начало в None, input=1 → переход в One
+        // Start in None, input=1 → transition to One
         let state = simulate_source(src, 1, "input", Value::Int(1));
         assert_eq!(state, "One");
     }
@@ -73,7 +73,7 @@ model Delay {
 port input : bit = 0x01;
 port output: bit = 0x02;
 "#;
-        // Начало в None, input=0 → остаётся в None
+        // Start in None, input=0 → stays in None
         let state = simulate_source(src, 1, "input", Value::Int(0));
         assert_eq!(state, "None");
     }

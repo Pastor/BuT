@@ -8,17 +8,17 @@ use thiserror::Error;
 pub use dot::{model_to_dot, source_to_dots, condition_to_label};
 pub use render::{render_to_png, render_to_svg, dot_available, RenderError};
 
-/// Ошибка при визуализации.
+/// Error during visualization.
 #[derive(Debug, Error)]
 pub enum VisualError {
-    #[error("Ошибка рендеринга: {0}")]
+    #[error("Render error: {0}")]
     Render(#[from] RenderError),
-    #[error("Ошибка ввода/вывода: {0}")]
+    #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 }
 
-/// Визуализировать одну модель в PNG-файл.
-/// Если указан `current_state`, это состояние будет выделено красным цветом.
+/// Visualize a single model to a PNG file.
+/// If `current_state` is provided, that state will be highlighted in red.
 pub fn visualize_model(
     model: &ModelDefinition,
     current_state: Option<&str>,
@@ -26,17 +26,17 @@ pub fn visualize_model(
 ) -> Result<(), VisualError> {
     let dot_src = model_to_dot(model, current_state);
 
-    // Всегда сохраняем DOT-файл рядом с PNG
+    // Always save the DOT file alongside the PNG
     let dot_path = out_path.with_extension("dot");
     std::fs::write(&dot_path, &dot_src)?;
 
-    // Рендерим в PNG, если Graphviz доступен
+    // Render to PNG if Graphviz is available
     if dot_available() {
         render_to_png(&dot_src, out_path)?;
         println!("[visual] Generated: {}", out_path.display());
     } else {
         println!(
-            "[visual] DOT сохранён в {}. Установите Graphviz для генерации PNG.",
+            "[visual] DOT saved to {}. Install Graphviz to generate PNG.",
             dot_path.display()
         );
     }
@@ -44,7 +44,7 @@ pub fn visualize_model(
     Ok(())
 }
 
-/// Визуализировать все модели из SourceUnit, сохранив PNG в `out_dir/<model_name>.png`.
+/// Visualize all models from a SourceUnit, saving PNGs to `out_dir/<model_name>.png`.
 pub fn visualize_all(source: &SourceUnit, out_dir: &Path) -> Result<(), VisualError> {
     std::fs::create_dir_all(out_dir)?;
     let dots = source_to_dots(source);
@@ -57,7 +57,7 @@ pub fn visualize_all(source: &SourceUnit, out_dir: &Path) -> Result<(), VisualEr
             println!("[visual] Generated: {}", png_path.display());
         } else {
             println!(
-                "[visual] DOT сохранён в {}. Установите Graphviz для генерации PNG.",
+                "[visual] DOT saved to {}. Install Graphviz to generate PNG.",
                 dot_path.display()
             );
         }

@@ -72,8 +72,8 @@ impl Variable {
     }
 
     fn local_initialized(ty: Type, bits: &[u8]) -> Self {
-        // Каждый элемент bits — битовое значение (0 или 1).
-        // size — количество бит в типе.
+        // Each element of bits is a bit value (0 or 1).
+        // size is the number of bits in the type.
         if let Type::ArrayNamed(_, size) = ty {
             if size != bits.len() as u64 {
                 return Variable::None;
@@ -98,7 +98,7 @@ impl Variable {
         Self::None
     }
 
-    /// Дополняет вектор байт нулями слева до нужного размера.
+    /// Pads a byte vector with leading zeros to the required size.
     fn pad_bytes(bytes: Vec<u8>, size: usize) -> Vec<u8> {
         if bytes.len() >= size {
             bytes[bytes.len() - size..].to_vec()

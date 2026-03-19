@@ -2,29 +2,29 @@ use but_grammar::ast;
 use indexmap::IndexMap;
 use crate::context::SimContext;
 
-/// Переход между состояниями (объявление ref).
+/// Transition between states (a `ref` declaration).
 #[derive(Debug, Clone)]
 pub struct Transition {
-    /// Имя целевого состояния.
+    /// Name of the target state.
     pub target: String,
-    /// Условие перехода. `None` — безусловный переход (всегда истинно).
+    /// Transition condition. `None` means unconditional (always true).
     pub condition: Option<ast::Condition>,
 }
 
-/// Состояние автомата в режиме выполнения.
+/// A state machine state at runtime.
 #[derive(Debug, Clone)]
 pub struct State {
-    /// Имя состояния.
+    /// State name.
     pub name: String,
-    /// Исходящие переходы (объявления ref).
+    /// Outgoing transitions (ref declarations).
     pub transitions: Vec<Transition>,
-    /// Обработчики, выполняемые на каждом такте в этом состоянии.
+    /// Handlers executed every tick while in this state.
     pub enter: Vec<ast::Statement>,
-    /// Обработчики, выполняемые при выходе из состояния.
+    /// Handlers executed when leaving this state.
     pub exit: Vec<ast::Statement>,
-    /// Обработчики, выполняемые перед переходом в новое состояние.
+    /// Handlers executed before transitioning into this state.
     pub before: Vec<ast::Statement>,
-    /// Вложенный подавтомат (для составных состояний).
+    /// Nested sub-machine (for composite states).
     pub submachine: Option<Box<MachineKind>>,
 }
 
@@ -41,22 +41,22 @@ impl State {
     }
 }
 
-/// Конкретный экземпляр конечного автомата.
+/// A concrete finite state machine instance.
 #[derive(Debug, Clone)]
 pub struct Machine {
-    /// Имя автомата.
+    /// Machine name.
     pub name: String,
-    /// Все состояния, индексированные по имени.
+    /// All states indexed by name.
     pub states: IndexMap<String, State>,
-    /// Текущее состояние.
+    /// Current state.
     pub current: String,
-    /// Контекст выполнения (переменные + порты).
+    /// Execution context (variables + ports).
     pub context: SimContext,
-    /// Глобальные обработчики enter (выполняются на каждом такте).
+    /// Global enter handlers (executed every tick).
     pub model_enter: Vec<ast::Statement>,
-    /// Глобальные обработчики завершения автомата.
+    /// Global machine completion handlers.
     pub model_end: Vec<ast::Statement>,
-    /// LTL-формулы, извлечённые из аннотаций и блоков formula.
+    /// LTL formulas extracted from annotations and formula blocks.
     pub ltl_formulas: Vec<String>,
 }
 
@@ -78,19 +78,19 @@ impl Machine {
     }
 }
 
-/// Автомат может быть одиночным, последовательным или параллельным.
+/// A machine can be single, sequential, or parallel.
 #[derive(Debug, Clone)]
 pub enum MachineKind {
-    /// Одиночный плоский конечный автомат.
+    /// A single flat finite state machine.
     Single(Machine),
-    /// Последовательная композиция: автоматы выполняются один за другим.
+    /// Sequential composition: machines execute one after another.
     Sequence(Vec<MachineKind>),
-    /// Параллельная композиция: автоматы выполняются одновременно.
+    /// Parallel composition: machines execute simultaneously.
     Parallel(Vec<MachineKind>),
 }
 
 impl MachineKind {
-    /// Получить имя текущего состояния (для одиночных автоматов).
+    /// Get the name of the current state (for single machines).
     pub fn current_state(&self) -> Option<&str> {
         match self {
             MachineKind::Single(m) => Some(m.current.as_str()),
@@ -99,7 +99,7 @@ impl MachineKind {
         }
     }
 
-    /// Получить имя автомата (для одиночных автоматов).
+    /// Get the machine name (for single machines).
     pub fn name(&self) -> Option<&str> {
         match self {
             MachineKind::Single(m) => Some(m.name.as_str()),
@@ -107,7 +107,7 @@ impl MachineKind {
         }
     }
 
-    /// Получить изменяемую ссылку на контекст (для одиночных автоматов).
+    /// Get a mutable reference to the context (for single machines).
     pub fn context_mut(&mut self) -> Option<&mut SimContext> {
         match self {
             MachineKind::Single(m) => Some(&mut m.context),
@@ -115,7 +115,7 @@ impl MachineKind {
         }
     }
 
-    /// Получить ссылку на контекст (для одиночных автоматов).
+    /// Get a reference to the context (for single machines).
     pub fn context(&self) -> Option<&SimContext> {
         match self {
             MachineKind::Single(m) => Some(&m.context),
@@ -128,27 +128,27 @@ impl MachineKind {
 mod tests {
     use super::*;
 
-    // Вспомогательная функция: создать пустой контекст
-    fn пустой_контекст() -> SimContext {
+    // Helper: create an empty context
+    fn empty_context() -> SimContext {
         SimContext::new()
     }
 
     // --- State::new ---
 
     #[test]
-    fn state_new_имя_сохраняется() {
+    fn state_new_name_is_stored() {
         let s = State::new("Idle".to_string());
         assert_eq!(s.name, "Idle");
     }
 
     #[test]
-    fn state_new_переходы_пусты() {
+    fn state_new_transitions_are_empty() {
         let s = State::new("A".to_string());
         assert!(s.transitions.is_empty());
     }
 
     #[test]
-    fn state_new_обработчики_пусты() {
+    fn state_new_handlers_are_empty() {
         let s = State::new("B".to_string());
         assert!(s.enter.is_empty());
         assert!(s.exit.is_empty());
@@ -156,7 +156,7 @@ mod tests {
     }
 
     #[test]
-    fn state_new_подавтомат_отсутствует() {
+    fn state_new_submachine_is_absent() {
         let s = State::new("C".to_string());
         assert!(s.submachine.is_none());
     }
@@ -164,45 +164,45 @@ mod tests {
     // --- Machine::new ---
 
     #[test]
-    fn machine_new_имя_сохраняется() {
-        let m = Machine::new("Delay".to_string(), "None".to_string(), пустой_контекст());
+    fn machine_new_name_is_stored() {
+        let m = Machine::new("Delay".to_string(), "None".to_string(), empty_context());
         assert_eq!(m.name, "Delay");
     }
 
     #[test]
-    fn machine_new_начальное_состояние_сохраняется() {
-        let m = Machine::new("X".to_string(), "Start".to_string(), пустой_контекст());
+    fn machine_new_initial_state_is_stored() {
+        let m = Machine::new("X".to_string(), "Start".to_string(), empty_context());
         assert_eq!(m.current, "Start");
     }
 
     #[test]
-    fn machine_new_состояния_пусты() {
-        let m = Machine::new("X".to_string(), "S0".to_string(), пустой_контекст());
+    fn machine_new_states_are_empty() {
+        let m = Machine::new("X".to_string(), "S0".to_string(), empty_context());
         assert!(m.states.is_empty());
     }
 
     #[test]
-    fn machine_new_обработчики_пусты() {
-        let m = Machine::new("X".to_string(), "S0".to_string(), пустой_контекст());
+    fn machine_new_handlers_are_empty() {
+        let m = Machine::new("X".to_string(), "S0".to_string(), empty_context());
         assert!(m.model_enter.is_empty());
         assert!(m.model_end.is_empty());
     }
 
     #[test]
-    fn machine_new_ltl_формулы_пусты() {
-        let m = Machine::new("X".to_string(), "S0".to_string(), пустой_контекст());
+    fn machine_new_ltl_formulas_are_empty() {
+        let m = Machine::new("X".to_string(), "S0".to_string(), empty_context());
         assert!(m.ltl_formulas.is_empty());
     }
 
     #[test]
-    fn machine_current_state_возвращает_none_если_нет_состояний() {
-        let m = Machine::new("X".to_string(), "Ghost".to_string(), пустой_контекст());
+    fn machine_current_state_returns_none_when_no_states() {
+        let m = Machine::new("X".to_string(), "Ghost".to_string(), empty_context());
         assert!(m.current_state().is_none());
     }
 
     #[test]
-    fn machine_current_state_возвращает_состояние() {
-        let mut m = Machine::new("X".to_string(), "Active".to_string(), пустой_контекст());
+    fn machine_current_state_returns_state() {
+        let mut m = Machine::new("X".to_string(), "Active".to_string(), empty_context());
         m.states.insert("Active".to_string(), State::new("Active".to_string()));
         let s = m.current_state();
         assert!(s.is_some());
@@ -213,15 +213,15 @@ mod tests {
 
     #[test]
     fn machinekind_single_current_state() {
-        let m = Machine::new("M".to_string(), "Running".to_string(), пустой_контекст());
+        let m = Machine::new("M".to_string(), "Running".to_string(), empty_context());
         let kind = MachineKind::Single(m);
         assert_eq!(kind.current_state(), Some("Running"));
     }
 
     #[test]
-    fn machinekind_sequence_current_state_из_первого() {
-        let m1 = Machine::new("A".to_string(), "S1".to_string(), пустой_контекст());
-        let m2 = Machine::new("B".to_string(), "S2".to_string(), пустой_контекст());
+    fn machinekind_sequence_current_state_from_first() {
+        let m1 = Machine::new("A".to_string(), "S1".to_string(), empty_context());
+        let m2 = Machine::new("B".to_string(), "S2".to_string(), empty_context());
         let seq = MachineKind::Sequence(vec![
             MachineKind::Single(m1),
             MachineKind::Single(m2),
@@ -230,20 +230,20 @@ mod tests {
     }
 
     #[test]
-    fn machinekind_sequence_пустая_возвращает_none() {
+    fn machinekind_sequence_empty_returns_none() {
         let seq = MachineKind::Sequence(vec![]);
         assert_eq!(seq.current_state(), None);
     }
 
     #[test]
-    fn machinekind_parallel_current_state_из_первого() {
-        let m1 = Machine::new("P".to_string(), "PA".to_string(), пустой_контекст());
+    fn machinekind_parallel_current_state_from_first() {
+        let m1 = Machine::new("P".to_string(), "PA".to_string(), empty_context());
         let par = MachineKind::Parallel(vec![MachineKind::Single(m1)]);
         assert_eq!(par.current_state(), Some("PA"));
     }
 
     #[test]
-    fn machinekind_parallel_пустая_возвращает_none() {
+    fn machinekind_parallel_empty_returns_none() {
         let par = MachineKind::Parallel(vec![]);
         assert_eq!(par.current_state(), None);
     }
@@ -251,8 +251,8 @@ mod tests {
     // --- MachineKind::name ---
 
     #[test]
-    fn machinekind_single_name_возвращает_имя() {
-        let m = Machine::new("Delay".to_string(), "None".to_string(), пустой_контекст());
+    fn machinekind_single_name_returns_name() {
+        let m = Machine::new("Delay".to_string(), "None".to_string(), empty_context());
         let kind = MachineKind::Single(m);
         assert_eq!(kind.name(), Some("Delay"));
     }

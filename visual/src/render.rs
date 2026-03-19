@@ -3,30 +3,30 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use thiserror::Error;
 
-/// Ошибка при рендеринге.
+/// Error during rendering.
 #[derive(Debug, Error)]
 pub enum RenderError {
-    #[error("Команда 'dot' (Graphviz) не найдена. Установите: brew install graphviz")]
+    #[error("Command 'dot' (Graphviz) not found. Install with: brew install graphviz")]
     GraphvizNotFound,
-    #[error("Команда dot завершилась с ошибкой: {0}")]
+    #[error("The dot command failed: {0}")]
     DotFailed(String),
-    #[error("Ошибка ввода/вывода: {0}")]
+    #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 }
 
-/// Отрендерить DOT-строку в PNG-файл с помощью внешней команды `dot`.
+/// Render a DOT string to a PNG file using the external `dot` command.
 pub fn render_to_png(dot_src: &str, output_path: &Path) -> Result<(), RenderError> {
     render(dot_src, output_path, "png")
 }
 
-/// Отрендерить DOT-строку в SVG-файл с помощью внешней команды `dot`.
+/// Render a DOT string to an SVG file using the external `dot` command.
 pub fn render_to_svg(dot_src: &str, output_path: &Path) -> Result<(), RenderError> {
     render(dot_src, output_path, "svg")
 }
 
-/// Отрендерить DOT-строку в файл с помощью внешней команды `dot`.
+/// Render a DOT string to a file using the external `dot` command.
 pub fn render(dot_src: &str, output_path: &Path, format: &str) -> Result<(), RenderError> {
-    // Создать родительские директории при необходимости
+    // Create parent directories if necessary
     if let Some(parent) = output_path.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -61,7 +61,7 @@ pub fn render(dot_src: &str, output_path: &Path, format: &str) -> Result<(), Ren
     Ok(())
 }
 
-/// Проверить наличие команды `dot` (Graphviz) в PATH.
+/// Check whether the `dot` command (Graphviz) is available in PATH.
 pub fn dot_available() -> bool {
     Command::new("dot")
         .arg("-V")

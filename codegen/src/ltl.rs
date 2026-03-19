@@ -1,28 +1,28 @@
-//! Утилиты для извлечения LTL-формул из AST и встраивания в генерируемый код.
+//! Utilities for extracting LTL formulas from the AST and embedding them in generated code.
 //!
-//! Поддерживает два источника LTL-формул:
-//! 1. Аннотации `#![ltl = "формула"]` и `#[ltl = "формула"]`
-//! 2. Блоки `formula "LTL" { ... }` (функциональные вызовы внутри)
+//! Supports two sources of LTL formulas:
+//! 1. Annotations `#![ltl = "formula"]` and `#[ltl = "formula"]`
+//! 2. Blocks `formula "LTL" { ... }` (function calls inside)
 
 use but_grammar::ast::{
     Annotation, AnnotationDefinition, Expression, FormulaStatement, ModelDefinition, ModelPart,
 };
 
-/// Извлечь все LTL-формулы из модели.
+/// Extract all LTL formulas from a model.
 pub fn extract_ltl_formulas(model: &ModelDefinition) -> Vec<String> {
     let mut result = vec![];
 
-    // Аннотации модели (#![ltl = "..."] / #[ltl = "..."])
+    // Model annotations (#![ltl = "..."] / #[ltl = "..."])
     result.extend(extract_from_annotations(&model.annotations));
 
-    // Аннотации внутри тела модели (ModelPart::AnnotationDefinition)
+    // Annotations inside the model body (ModelPart::AnnotationDefinition)
     for part in &model.parts {
         if let ModelPart::AnnotationDefinition(ann_def) = part {
             result.extend(extract_from_annotations(std::slice::from_ref(ann_def)));
         }
     }
 
-    // Блоки formula { ... }
+    // formula { ... } blocks
     for part in &model.parts {
         if let ModelPart::FormulaDefinition(fd) = part {
             for stmt in &fd.formula.statements {
@@ -42,12 +42,12 @@ pub fn extract_ltl_formulas(model: &ModelDefinition) -> Vec<String> {
     result
 }
 
-/// Сгенерировать блок LTL-комментариев в стиле C (/* ... */).
+/// Generate a block of LTL comments in C style (/* ... */).
 pub fn ltl_comments_c(formulas: &[String]) -> String {
     if formulas.is_empty() {
         return String::new();
     }
-    let mut out = String::from("/* LTL-спецификации:\n");
+    let mut out = String::from("/* LTL specifications:\n");
     for f in formulas {
         out.push_str(&format!(" *   {}\n", f));
     }
@@ -55,24 +55,24 @@ pub fn ltl_comments_c(formulas: &[String]) -> String {
     out
 }
 
-/// Сгенерировать блок LTL-комментариев в стиле Verilog (// ...).
+/// Generate a block of LTL comments in Verilog style (// ...).
 pub fn ltl_comments_verilog(formulas: &[String]) -> String {
     if formulas.is_empty() {
         return String::new();
     }
-    let mut out = String::from("// LTL-спецификации:\n");
+    let mut out = String::from("// LTL specifications:\n");
     for f in formulas {
         out.push_str(&format!("//   {}\n", f));
     }
     out
 }
 
-/// Сгенерировать блок LTL-комментариев в стиле ST ((* ... *)).
+/// Generate a block of LTL comments in ST style ((* ... *)).
 pub fn ltl_comments_st(formulas: &[String]) -> String {
     if formulas.is_empty() {
         return String::new();
     }
-    let mut out = String::from("(* LTL-спецификации:\n");
+    let mut out = String::from("(* LTL specifications:\n");
     for f in formulas {
         out.push_str(&format!(" *   {}\n", f));
     }
@@ -80,24 +80,24 @@ pub fn ltl_comments_st(formulas: &[String]) -> String {
     out
 }
 
-/// Сгенерировать блок LTL-комментариев в стиле ассемблера (; ...).
+/// Generate a block of LTL comments in assembly style (; ...).
 pub fn ltl_comments_asm(formulas: &[String]) -> String {
     if formulas.is_empty() {
         return String::new();
     }
-    let mut out = String::from("; LTL-спецификации:\n");
+    let mut out = String::from("; LTL specifications:\n");
     for f in formulas {
         out.push_str(&format!(";   {}\n", f));
     }
     out
 }
 
-/// Сгенерировать блок LTL-комментариев в стиле C (/* ... */) для ARM Thumb.
+/// Generate a block of LTL comments in C style (/* ... */) for ARM Thumb.
 pub fn ltl_comments_thumb(formulas: &[String]) -> String {
     if formulas.is_empty() {
         return String::new();
     }
-    let mut out = String::from("/* LTL-спецификации:\n");
+    let mut out = String::from("/* LTL specifications:\n");
     for f in formulas {
         out.push_str(&format!(" *   {}\n", f));
     }
@@ -105,7 +105,7 @@ pub fn ltl_comments_thumb(formulas: &[String]) -> String {
     out
 }
 
-/// Извлечь LTL-формулы из аннотаций.
+/// Extract LTL formulas from annotations.
 fn extract_from_annotations(annotations: &[AnnotationDefinition]) -> Vec<String> {
     let mut result = vec![];
     for ann_def in annotations {
@@ -129,7 +129,7 @@ fn extract_from_annotations(annotations: &[AnnotationDefinition]) -> Vec<String>
     result
 }
 
-/// Преобразовать выражение формулы в строку.
+/// Convert a formula expression to a string.
 fn formula_expr_to_str(expr: &but_grammar::ast::FormulaExpression) -> String {
     use but_grammar::ast::FormulaExpression;
     match expr {

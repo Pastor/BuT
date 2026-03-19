@@ -4,20 +4,20 @@ use thiserror::Error;
 use crate::context::SimContext;
 use crate::value::Value;
 
-/// Ошибка при вычислении выражения.
+/// Error during expression evaluation.
 #[derive(Debug, Error)]
 pub enum EvalError {
-    #[error("Неизвестная переменная или порт: '{0}'")]
+    #[error("Unknown variable or port: '{0}'")]
     UnknownVariable(String),
-    #[error("Ошибка типа: невозможно применить оператор к {0:?} и {1:?}")]
+    #[error("Type error: cannot apply operator to {0:?} and {1:?}")]
     TypeError(Value, Value),
-    #[error("Деление на ноль")]
+    #[error("Division by zero")]
     DivisionByZero,
-    #[error("Неподдерживаемое выражение")]
+    #[error("Unsupported expression")]
     Unsupported,
 }
 
-/// Вычислить условие `Condition` (используется в переходах между состояниями).
+/// Evaluate a `Condition` (used in state transitions).
 pub fn eval_condition(cond: &Condition, ctx: &SimContext) -> Result<Value, EvalError> {
     match cond {
         Condition::BoolLiteral(_, b) => Ok(Value::Bool(*b)),
@@ -78,7 +78,7 @@ pub fn eval_condition(cond: &Condition, ctx: &SimContext) -> Result<Value, EvalE
             Ok(Value::Bool(!compare_lt(&lv, &rv)?))
         }
 
-        // Логические операции
+        // Logical operations
         Condition::And(_, l, r) => {
             let lv = eval_condition(l, ctx)?;
             if !lv.is_truthy() {
@@ -96,7 +96,7 @@ pub fn eval_condition(cond: &Condition, ctx: &SimContext) -> Result<Value, EvalE
             Ok(Value::Bool(rv.is_truthy()))
         }
 
-        // Арифметика (can appear in conditions)
+        // Arithmetic (can appear in conditions)
         Condition::Add(_, l, r) => {
             let lv = eval_condition(l, ctx)?;
             let rv = eval_condition(r, ctx)?;
@@ -113,7 +113,7 @@ pub fn eval_condition(cond: &Condition, ctx: &SimContext) -> Result<Value, EvalE
 
         // Array subscript / member access: not fully supported in simulation
         Condition::ArraySubscript(_, ident, idx) => {
-            // Попытка найти базовую переменную; возвращаем Unit если не найдено
+            // Attempt to find the base variable; return Unit if not found
             let _ = (ident, idx);
             Ok(Value::Unit)
         }
@@ -126,7 +126,7 @@ pub fn eval_condition(cond: &Condition, ctx: &SimContext) -> Result<Value, EvalE
             match ident.name.as_str() {
                 "S" => {
                     // S(MachineName) = StateName — handled at transition level
-                    // Возвращаем символический заполнитель; фактическое сравнение — выше
+                    // Return a symbolic placeholder; actual comparison is done above
                     if let Some(arg) = args.first() {
                         if let Condition::Variable(v) = arg {
                             return Ok(Value::Str(format!("__state__{}", v.name)));
@@ -135,7 +135,7 @@ pub fn eval_condition(cond: &Condition, ctx: &SimContext) -> Result<Value, EvalE
                     Ok(Value::Unit)
                 }
                 _ => {
-                    // Неизвестная функция: возвращаем Unit
+                    // Unknown function: return Unit
                     Ok(Value::Unit)
                 }
             }
@@ -153,7 +153,7 @@ pub fn eval_condition(cond: &Condition, ctx: &SimContext) -> Result<Value, EvalE
     }
 }
 
-/// Вычислить выражение `Expression` (используется в операторах действий).
+/// Evaluate an `Expression` (used in action statements).
 pub fn eval_expr(expr: &Expression, ctx: &mut SimContext) -> Result<Value, EvalError> {
     match expr {
         Expression::NumberLiteral(_, n) => Ok(Value::Int(*n)),
@@ -179,21 +179,21 @@ pub fn eval_expr(expr: &Expression, ctx: &mut SimContext) -> Result<Value, EvalE
 
         Expression::Parenthesis(_, inner) => eval_expr(inner, ctx),
 
-        // Присваивание: lhs = rhs
+        // Assignment: lhs = rhs
         Expression::Assign(_, lhs, rhs) => {
             let val = eval_expr(rhs, ctx)?;
             assign_expr(lhs, val.clone(), ctx)?;
             Ok(val)
         }
 
-        // Составные присваивания
+        // Compound assignments
         Expression::AssignAdd(_, lhs, rhs) => compound_assign(lhs, rhs, ctx, add_values),
         Expression::AssignSubtract(_, lhs, rhs) => compound_assign(lhs, rhs, ctx, sub_values),
         Expression::AssignMultiply(_, lhs, rhs) => compound_assign(lhs, rhs, ctx, mul_values),
         Expression::AssignDivide(_, lhs, rhs) => compound_assign(lhs, rhs, ctx, div_values),
         Expression::AssignModulo(_, lhs, rhs) => compound_assign(lhs, rhs, ctx, mod_values),
 
-        // Арифметика
+        // Arithmetic
         Expression::Add(_, l, r) => {
             let lv = eval_expr(l, ctx)?;
             let rv = eval_expr(r, ctx)?;
@@ -225,7 +225,7 @@ pub fn eval_expr(expr: &Expression, ctx: &mut SimContext) -> Result<Value, EvalE
             pow_values(&lv, &rv)
         }
 
-        // Сравнение
+        // Comparison
         Expression::Equal(_, l, r) => {
             let lv = eval_expr(l, ctx)?;
             let rv = eval_expr(r, ctx)?;
@@ -257,7 +257,7 @@ pub fn eval_expr(expr: &Expression, ctx: &mut SimContext) -> Result<Value, EvalE
             Ok(Value::Bool(!compare_lt(&lv, &rv)?))
         }
 
-        // Логические операции
+        // Logical operations
         Expression::And(_, l, r) => {
             let lv = eval_expr(l, ctx)?;
             if !lv.is_truthy() {
@@ -287,7 +287,7 @@ pub fn eval_expr(expr: &Expression, ctx: &mut SimContext) -> Result<Value, EvalE
             }
         }
 
-        // Инкремент / декремент
+        // Increment / decrement
         Expression::PostIncrement(_, inner) | Expression::PreIncrement(_, inner) => {
             let val = eval_expr(inner, ctx)?;
             let new_val = match &val {
@@ -311,12 +311,12 @@ pub fn eval_expr(expr: &Expression, ctx: &mut SimContext) -> Result<Value, EvalE
 
         // Function calls: best-effort (call known builtins, skip unknown)
         Expression::FunctionCall(_, ident, _args) => {
-            // Встроенные функции: пока возвращаем Unit
-            eprintln!("[sim] вызов функции '{}' не реализован", ident.name);
+            // Built-in functions: return Unit for now
+            eprintln!("[sim] function call '{}' is not implemented", ident.name);
             Ok(Value::Unit)
         }
 
-        // Условный оператор: cond ? then : else
+        // Conditional operator: cond ? then : else
         Expression::ConditionalOperator(_, cond, then_e, else_e) => {
             let cv = eval_expr(cond, ctx)?;
             if cv.is_truthy() {
@@ -326,7 +326,7 @@ pub fn eval_expr(expr: &Expression, ctx: &mut SimContext) -> Result<Value, EvalE
             }
         }
 
-        // Побитовые операции (трактуются как арифметика для Int)
+        // Bitwise operations (treated as arithmetic for Int)
         Expression::BitwiseAnd(_, l, r) => {
             let lv = eval_expr(l, ctx)?;
             let rv = eval_expr(r, ctx)?;
@@ -368,7 +368,7 @@ pub fn eval_expr(expr: &Expression, ctx: &mut SimContext) -> Result<Value, EvalE
             }
         }
 
-        // Варианты массивов и присваиваний
+        // Array and assignment variants
         Expression::AssignOr(_, lhs, rhs) => compound_assign(lhs, rhs, ctx, |l, r| {
             match (l, r) {
                 (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a | b)),
@@ -400,15 +400,15 @@ pub fn eval_expr(expr: &Expression, ctx: &mut SimContext) -> Result<Value, EvalE
             }
         }),
 
-        // Всё остальное: возвращаем Unit
+        // Everything else: return Unit
         _ => {
-            eprintln!("[sim] неподдерживаемое выражение: {:?}", expr);
+            eprintln!("[sim] unsupported expression: {:?}", expr);
             Ok(Value::Unit)
         }
     }
 }
 
-/// Выполнить оператор (изменяет контекст).
+/// Execute a statement (modifies the context).
 pub fn exec_statement(stmt: &Statement, ctx: &mut SimContext) -> Result<(), EvalError> {
     match stmt {
         Statement::Block { statements, .. } => {
@@ -460,7 +460,7 @@ pub fn exec_statement(stmt: &Statement, ctx: &mut SimContext) -> Result<(), Eval
             }
         }
         Statement::Return(_, _) => {
-            // Return не поддерживается в обработчиках верхнего уровня
+            // Return is not supported in top-level handlers
         }
         Statement::VariableDefinition(_, decl, init) => {
             let name = decl.name.as_ref().map(|n| n.name.as_str()).unwrap_or("");
@@ -477,7 +477,7 @@ pub fn exec_statement(stmt: &Statement, ctx: &mut SimContext) -> Result<(), Eval
     Ok(())
 }
 
-/// Присвоить значение l-выражению.
+/// Assign a value to an l-expression.
 fn assign_expr(lhs: &Expression, val: Value, ctx: &mut SimContext) -> Result<(), EvalError> {
     match lhs {
         Expression::Variable(ident) => {
@@ -486,13 +486,13 @@ fn assign_expr(lhs: &Expression, val: Value, ctx: &mut SimContext) -> Result<(),
         }
         Expression::Parenthesis(_, inner) => assign_expr(inner, val, ctx),
         _ => {
-            eprintln!("[sim] неподдерживаемый lvalue: {:?}", lhs);
+            eprintln!("[sim] unsupported lvalue: {:?}", lhs);
             Ok(())
         }
     }
 }
 
-/// Вспомогательная функция для составного присваивания.
+/// Helper for compound assignment.
 fn compound_assign(
     lhs: &Expression,
     rhs: &Expression,
@@ -506,7 +506,7 @@ fn compound_assign(
     Ok(result)
 }
 
-// ── Арифметические вспомогательные функции ─────────────────────────────────────
+// ── Arithmetic helper functions ─────────────────────────────────────────────────
 
 pub fn values_equal(a: &Value, b: &Value) -> bool {
     match (a, b) {

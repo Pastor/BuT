@@ -7,9 +7,9 @@ use but_grammar::ast::{
     StatePart, VariableAttribute,
 };
 
-// ── Публичный API ────────────────────────────────────────────────────────────────
+// ── Public API ────────────────────────────────────────────────────────────────
 
-/// Сгенерировать объединённый C-заголовочный файл для всех моделей из SourceUnit.
+/// Generate a combined C header file for all models from a SourceUnit.
 pub fn generate_c_header_all(source: &SourceUnit, base_name: &str, ctx: &CodegenContext) -> String {
     let guard = base_name.to_uppercase().replace('-', "_").replace('.', "_");
     let mut out = String::new();
@@ -17,7 +17,7 @@ pub fn generate_c_header_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
     out.push_str(&format!("#define __{}_H__\n\n", guard));
     out.push_str("#include <stdint.h>\n\n");
 
-    // Внешние объявления глобальных портов
+    // External declarations for global ports
     for vd in &ctx.global_vars {
         if vd
             .attrs
@@ -45,12 +45,12 @@ pub fn generate_c_header_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
     out
 }
 
-/// Сгенерировать объединённый C-исходный файл для всех моделей из SourceUnit.
+/// Generate a combined C source file for all models from a SourceUnit.
 pub fn generate_c_source_all(source: &SourceUnit, base_name: &str, ctx: &CodegenContext) -> String {
     let mut out = String::new();
     out.push_str(&format!("#include \"{}.h\"\n\n", base_name.to_lowercase()));
 
-    // Определения глобальных портов
+    // Global port definitions
     for vd in &ctx.global_vars {
         if vd
             .attrs
@@ -81,7 +81,7 @@ pub fn generate_c_source_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
     out
 }
 
-/// Сгенерировать заголовочный C-файл для одной модели (для прямого использования в тестах).
+/// Generate a C header file for a single model (for direct use in tests).
 pub fn generate_c_header(model: &ModelDefinition, ctx: &CodegenContext) -> String {
     let name = model_name(model);
     let upper = name.to_uppercase();
@@ -112,19 +112,19 @@ pub fn generate_c_header(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
     out
 }
 
-/// Сгенерировать исходный C-файл для одной модели (для прямого использования в тестах).
+/// Generate a C source file for a single model (for direct use in tests).
 pub fn generate_c_source(model: &ModelDefinition, ctx: &CodegenContext) -> String {
     generate_c_model_source(model, ctx)
 }
 
-/// Сгенерировать C-заголовок и исходник для всех моделей (объединённый вывод).
+/// Generate C header and source for all models (combined output).
 ///
-/// Возвращает `(header_content, source_content)` — содержимое одного `.h` и одного `.c` файла.
+/// Returns `(header_content, source_content)` — contents of a single `.h` and `.c` file.
 pub fn generate_c_all(source: &SourceUnit, ctx: &CodegenContext) -> (String, String) {
     generate_c_all_named(source, "model", ctx)
 }
 
-/// Сгенерировать объединённый C-вывод с заданным базовым именем файла.
+/// Generate combined C output with a specified base file name.
 pub fn generate_c_all_named(
     source: &SourceUnit,
     base_name: &str,
@@ -136,9 +136,9 @@ pub fn generate_c_all_named(
     )
 }
 
-// ── Внутренняя генерация по одной модели ─────────────────────────────────────────
+// ── Internal generation per model ─────────────────────────────────────────────────
 
-/// Блок объявлений (прототипы + enum состояний) для одной модели — без include-guard.
+/// Declaration block (prototypes + state enum) for a single model — without include guard.
 fn generate_c_model_header(model: &ModelDefinition, ctx: &CodegenContext) -> String {
     let name = model_name(model);
     let upper = name.to_uppercase();
@@ -152,7 +152,7 @@ fn generate_c_model_header(model: &ModelDefinition, ctx: &CodegenContext) -> Str
 
     let behavior = find_behavior(model);
     if let Some(bk) = &behavior {
-        // Для компоновочных моделей — enum фаз вместо состояний
+        // For composition models — phase enum instead of states
         out.push_str(&generate_c_behavior_enum(
             &name,
             &upper,
@@ -160,7 +160,7 @@ fn generate_c_model_header(model: &ModelDefinition, ctx: &CodegenContext) -> Str
             ctx.indent.level(1).as_str(),
         ));
     } else {
-        // Перечисление состояний FSM
+        // FSM state enumeration
         let i1 = ctx.indent.level(1);
         out.push_str(&format!("typedef enum {{\n"));
         let states = collect_states(model);
@@ -175,7 +175,7 @@ fn generate_c_model_header(model: &ModelDefinition, ctx: &CodegenContext) -> Str
     out
 }
 
-/// Генерация enum фаз для компоновочной модели.
+/// Generate a phase enum for a composition model.
 fn generate_c_behavior_enum(name: &str, upper: &str, bk: &BehaviorKind, i1: &str) -> String {
     let mut out = String::new();
     out.push_str(&format!("typedef enum {{\n"));
@@ -188,7 +188,7 @@ fn generate_c_behavior_enum(name: &str, upper: &str, bk: &BehaviorKind, i1: &str
     out
 }
 
-/// Объявления функций для модели (общие для FSM и компоновки).
+/// Function declarations for a model (shared between FSM and composition).
 fn model_declarations(name: &str, upper: &str, model: &ModelDefinition) -> String {
     let mut out = String::new();
     let terminals = find_terminal_states(model);
@@ -211,7 +211,7 @@ fn model_declarations(name: &str, upper: &str, model: &ModelDefinition) -> Strin
     out
 }
 
-/// Сгенерировать C-реализацию для одной модели.
+/// Generate the C implementation for a single model.
 fn generate_c_model_source(model: &ModelDefinition, ctx: &CodegenContext) -> String {
     if let Some(bk) = find_behavior(model) {
         generate_c_behavior_source(model, &bk, ctx)
@@ -220,7 +220,7 @@ fn generate_c_model_source(model: &ModelDefinition, ctx: &CodegenContext) -> Str
     }
 }
 
-/// Исходник для обычного FSM-автомата.
+/// Source for a regular FSM automaton.
 fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> String {
     let name = model_name(model);
     let upper = name.to_uppercase();
@@ -239,7 +239,7 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
 
     out.push_str(&format!("static {}_State_t _{}_state;\n", name, name));
 
-    // Переменные модели
+    // Model variables
     for part in &model.parts {
         if let ModelPart::VariableDefinition(vd) = part {
             if vd
@@ -266,7 +266,7 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
     let terminal_states = find_terminal_states(model);
     let end_prop = find_end_property(model);
 
-    // Функция инициализации
+    // Initialization function
     out.push_str(&format!("void {}_init(void) {{\n", name));
     out.push_str(&format!(
         "{}_{}_state = {}_{};\n",
@@ -285,12 +285,12 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
     }
     out.push_str("}\n\n");
 
-    // Запрос текущего состояния
+    // Query current state
     out.push_str(&format!("{}_State_t {}_state(void) {{\n", name, name));
     out.push_str(&format!("{}return _{}_state;\n", i1, name));
     out.push_str("}\n\n");
 
-    // is_done() — если есть терминальные состояния
+    // is_done() — if there are terminal states
     if !terminal_states.is_empty() {
         out.push_str(&format!("int {}_is_done(void) {{\n", name));
         let conditions: Vec<String> = terminal_states
@@ -301,10 +301,10 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
         out.push_str("}\n\n");
     }
 
-    // Функция шага
+    // Step function
     out.push_str(&format!("void {}_step(void) {{\n", name));
 
-    // Enter уровня модели (каждый такт)
+    // Model-level enter handler (every tick)
     for part in &model.parts {
         if let ModelPart::PropertyDefinition(pd) = part {
             if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
@@ -327,7 +327,7 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
                 sname.to_uppercase()
             ));
 
-            // Обработчик enter состояния
+            // State enter handler
             for sp in &sd.parts {
                 if let StatePart::PropertyDefinition(pd) = sp {
                     if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
@@ -336,7 +336,7 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
                 }
             }
 
-            // Переходы
+            // Transitions
             for sp in &sd.parts {
                 if let StatePart::Reference(_, target, cond) = sp {
                     let cond_str = cond
@@ -346,7 +346,7 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
 
                     out.push_str(&format!("{}if ({}) {{\n", i3, cond_str));
 
-                    // Обработчики exit
+                    // exit handlers
                     for sp2 in &sd.parts {
                         if let StatePart::PropertyDefinition(pd2) = sp2 {
                             if pd2.name.as_ref().map(|n| n.name.as_str()) == Some("exit") {
@@ -355,7 +355,7 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
                         }
                     }
 
-                    // Обработчики before на целевом состоянии
+                    // before handlers on the target state
                     if let Some(target_part) = model.parts.iter().find(|p| {
                         if let ModelPart::StateDefinition(ts) = p {
                             ts.name.as_ref().map(|n| n.name.as_str()) == Some(target.name.as_str())
@@ -386,7 +386,7 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
                 }
             }
 
-            // Терминальное состояние: обработчик end
+            // Terminal state: end handler
             if is_terminal {
                 if let Some(ep) = end_prop {
                     out.push_str(&format!("{}/* end handler */\n", i3));
@@ -404,7 +404,7 @@ fn generate_c_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
     out
 }
 
-/// Исходник для компоновочной модели (behavior).
+/// Source for a composition model (behavior).
 fn generate_c_behavior_source(
     model: &ModelDefinition,
     bk: &BehaviorKind,
@@ -422,8 +422,8 @@ fn generate_c_behavior_source(
     match bk {
         BehaviorKind::Sequential(_) => {
             out.push_str(&format!(
-                "/* Последовательная компоновка: {} */\n",
-                models.join(" → ")
+                "/* Sequential composition: {} */\n",
+                models.join(" -> ")
             ));
             out.push_str(&format!("static {}_Phase_t _{}_phase;\n\n", name, name));
 
@@ -497,8 +497,8 @@ fn generate_c_behavior_source(
 
         BehaviorKind::Parallel(_) => {
             out.push_str(&format!(
-                "/* Параллельная компоновка: {} */\n",
-                models.join(" ∥ ")
+                "/* Parallel composition: {} */\n",
+                models.join(" || ")
             ));
             out.push_str(&format!("static int _{}_done;\n\n", name));
 
@@ -542,13 +542,13 @@ fn generate_c_behavior_source(
 
         BehaviorKind::Choice(_) => {
             out.push_str(&format!(
-                "/* Компоновка выбора: {} */\n",
+                "/* Choice composition: {} */\n",
                 models.join(" | ")
             ));
             out.push_str(&format!("static int _{}_active_idx;\n", name));
             out.push_str(&format!("static int _{}_done;\n\n", name));
 
-            // init — запускаем первую готовую (здесь просто первую)
+            // init — start the first ready model (here simply the first one)
             out.push_str(&format!("void {}_init(void) {{\n", name));
             out.push_str(&format!("{}_{}_active_idx = 0;\n", i1, name));
             out.push_str(&format!("{}_{}_done = 0;\n", i1, name));
@@ -588,7 +588,7 @@ fn generate_c_behavior_source(
     out
 }
 
-// ── Вспомогательные функции ───────────────────────────────────────────────────────
+// ── Helper functions ───────────────────────────────────────────────────────────────
 
 fn property_to_c(prop: &Property, ctx: &CodegenContext, level: usize) -> String {
     match prop {

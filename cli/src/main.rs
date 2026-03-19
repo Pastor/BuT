@@ -9,70 +9,70 @@ use but_middleware::include::IncludeResolver;
 use but_simulators::{build_all, Simulator, Value};
 use but_visual::visualize_all;
 
-/// Компилятор и симулятор BuT FSM
+/// BuT FSM compiler and simulator
 #[derive(Parser, Debug)]
-#[command(name = "but", about = "Инструментарий BuT FSM: симуляция, визуализация, генерация кода")]
+#[command(name = "but", about = "BuT FSM toolchain: simulation, visualization, code generation")]
 struct Args {
-    /// Входной файл .but
+    /// Input .but file
     #[arg(value_name = "FILE")]
     source: PathBuf,
 
-    /// Запустить симуляцию
+    /// Run simulation
     #[arg(long, short = 's')]
     simulate: bool,
 
-    /// Количество шагов симуляции
+    /// Number of simulation steps
     #[arg(long, default_value_t = 10)]
     steps: usize,
 
-    /// Установить значения портов (формат: имя=значение), можно повторять
+    /// Set port values (format: name=value), can be repeated
     #[arg(long, value_name = "NAME=VALUE")]
     port: Vec<String>,
 
-    /// Сгенерировать DOT/PNG визуализацию
+    /// Generate DOT/PNG visualization
     #[arg(long, short = 'v')]
     visualize: bool,
 
-    /// Сгенерировать C-код
+    /// Generate C code
     #[arg(long)]
     gen_c: bool,
 
-    /// Сгенерировать Verilog-код
+    /// Generate Verilog code
     #[arg(long)]
     gen_verilog: bool,
 
-    /// Сгенерировать Structured Text (МЭК 61131-3)
+    /// Generate Structured Text (IEC 61131-3)
     #[arg(long)]
     gen_st: bool,
 
-    /// Сгенерировать ассемблер LC3
+    /// Generate LC3 assembly
     #[arg(long)]
     gen_lc3: bool,
 
-    /// Сгенерировать ассемблер ARM Thumb
+    /// Generate ARM Thumb assembly
     #[arg(long)]
     gen_thumb: bool,
 
-    /// Сгенерировать все выходные данные (симуляция + визуализация + все генераторы)
+    /// Generate all outputs (simulation + visualization + all generators)
     #[arg(long, short = 'a')]
     all: bool,
 
-    /// Выходная директория
+    /// Output directory
     #[arg(long, short = 'o', default_value = "gen")]
     output_dir: PathBuf,
 
-    /// Дополнительные директории для поиска include-файлов (.but).
-    /// Можно указывать несколько раз: -I ./lib -I ./shared
-    /// Порядок поиска: директория исходного файла → указанные директории (слева направо).
+    /// Additional directories to search for include files (.but).
+    /// Can be specified multiple times: -I ./lib -I ./shared
+    /// Search order: source file directory -> specified directories (left to right).
     #[arg(long = "include-dir", short = 'I', value_name = "DIR")]
     include_dirs: Vec<PathBuf>,
 
-    /// Количество пробелов на один уровень отступа при генерации кода (по умолчанию: 4).
-    /// Игнорируется при использовании --indent-tab.
+    /// Number of spaces per indentation level in generated code (default: 4).
+    /// Ignored when --indent-tab is used.
     #[arg(long, default_value_t = 4, value_name = "N")]
     indent_size: usize,
 
-    /// Использовать символ табуляции вместо пробелов для отступов в генерируемом коде.
+    /// Use a tab character instead of spaces for indentation in generated code.
     #[arg(long)]
     indent_tab: bool,
 }
@@ -80,16 +80,16 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    // Читаем исходный файл
+    // Read the source file
     let source_text = match fs::read_to_string(&args.source) {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("Ошибка чтения {}: {}", args.source.display(), e);
+            eprintln!("Error reading {}: {}", args.source.display(), e);
             std::process::exit(1);
         }
     };
 
-    // Базовое имя файла для именования выходных файлов (без расширения)
+    // Base file name for naming output files (without extension)
     let base_name = args
         .source
         .file_stem()
@@ -97,43 +97,43 @@ fn main() {
         .unwrap_or("model")
         .to_string();
 
-    // Разбор
+    // Parse
     let (unit, _comments) = match but_grammar::parse(&source_text, 0) {
         Ok(r) => r,
         Err(diagnostics) => {
             for d in &diagnostics {
-                eprintln!("Ошибка разбора: {:?}", d);
+                eprintln!("Parse error: {:?}", d);
             }
             std::process::exit(1);
         }
     };
 
-    // Разрешение директив import (рекурсивное включение файлов)
+    // Resolve import directives (recursive file inclusion)
     let unit = {
         let mut resolver = IncludeResolver::from_file(&args.source);
         for dir in &args.include_dirs {
             if dir.is_dir() {
                 resolver.add_search_path(dir.clone());
             } else {
-                eprintln!("Предупреждение: директория не найдена: {}", dir.display());
+                eprintln!("Warning: directory not found: {}", dir.display());
             }
         }
         match resolver.resolve(unit, &args.source) {
             Ok(merged) => merged,
             Err(errs) => {
                 for e in &errs {
-                    eprintln!("Ошибка импорта: {}", e);
+                    eprintln!("Import error: {}", e);
                 }
                 std::process::exit(1);
             }
         }
     };
 
-    // Семантический анализ (продолжаем даже при предупреждениях)
+    // Semantic analysis (continue even with warnings)
     let unit = match but_middleware::processing(unit) {
         Ok(unit) => unit,
         Err(diagnostics) => {
-            eprintln!("[предупреждение] Семантические диагностики:");
+            eprintln!("[warning] Semantic diagnostics:");
             for d in &diagnostics {
                 eprintln!("  {:?}", d);
             }
@@ -141,9 +141,9 @@ fn main() {
         }
     };
 
-    // Создаём выходную директорию
+    // Create the output directory
     if let Err(e) = fs::create_dir_all(&args.output_dir) {
-        eprintln!("Не удаётся создать выходную директорию {}: {}", args.output_dir.display(), e);
+        eprintln!("Cannot create output directory {}: {}", args.output_dir.display(), e);
         std::process::exit(1);
     }
 
@@ -155,9 +155,9 @@ fn main() {
     let do_gen_lc3 = args.gen_lc3 || args.all;
     let do_gen_thumb = args.gen_thumb || args.all;
 
-    // ── Симуляция ─────────────────────────────────────────────────────────────────
+    // -- Simulation -------------------------------------------------------------------
     if do_simulate {
-        println!("\n=== Симуляция ===");
+        println!("\n=== Simulation ===");
         match build_all(&unit) {
             Ok(machines) => {
                 for machine in machines {
@@ -171,41 +171,41 @@ fn main() {
                     }
 
                     println!(
-                        "Начальное состояние: {}",
-                        sim.current_state().unwrap_or("<неизвестно>")
+                        "Initial state: {}",
+                        sim.current_state().unwrap_or("<unknown>")
                     );
 
                     for step in 0..args.steps {
                         let changed = sim.step();
-                        let state = sim.current_state().unwrap_or("<завершён>");
+                        let state = sim.current_state().unwrap_or("<done>");
                         if changed {
-                            println!("  Шаг {}: → {}", step + 1, state);
+                            println!("  Step {}: -> {}", step + 1, state);
                         }
                     }
 
-                    println!("Конечное состояние: {}", sim.current_state().unwrap_or("<неизвестно>"));
+                    println!("Final state: {}", sim.current_state().unwrap_or("<unknown>"));
                     sim.print_ltl();
                     sim.print_state();
                 }
             }
             Err(e) => {
-                eprintln!("Ошибка симуляции: {}", e);
+                eprintln!("Simulation error: {}", e);
             }
         }
     }
 
-    // ── Визуализация ──────────────────────────────────────────────────────────────
+    // -- Visualization ----------------------------------------------------------------
     if do_visualize {
-        println!("\n=== Визуализация ===");
+        println!("\n=== Visualization ===");
         match visualize_all(&unit, &args.output_dir) {
             Ok(()) => {}
-            Err(e) => eprintln!("Ошибка визуализации: {}", e),
+            Err(e) => eprintln!("Visualization error: {}", e),
         }
     }
 
-    // ── Кодогенерация ────────────────────────────────────────────────────────────
+    // -- Code generation --------------------------------------------------------------
     if do_gen_c || do_gen_verilog || do_gen_st || do_gen_lc3 || do_gen_thumb {
-        println!("\n=== Кодогенерация (базовое имя: {}) ===", base_name);
+        println!("\n=== Code generation (base name: {}) ===", base_name);
         let indent = if args.indent_tab {
             IndentStyle::Tab
         } else {
@@ -240,7 +240,7 @@ fn generate_outputs(
     let output = AllOutput::generate_with_ctx(unit, base_name, ctx);
 
     if gen_c {
-        // Один .h + один .c для всех моделей
+        // One .h + one .c for all models
         let c_dir = out_dir.join("c");
         let _ = fs::create_dir_all(&c_dir);
         write_file(&c_dir.join(format!("{}.h", base_name)), &output.c.0);
@@ -248,14 +248,14 @@ fn generate_outputs(
     }
 
     if gen_verilog {
-        // Один .v файл для всех модулей
+        // One .v file for all modules
         let v_dir = out_dir.join("verilog");
         let _ = fs::create_dir_all(&v_dir);
         write_file(&v_dir.join(format!("{}.v", base_name)), &output.verilog);
     }
 
     if gen_st {
-        // Один .FB.DECL.st + один .FB.PRGS.st для всех моделей
+        // One .FB.DECL.st + one .FB.PRGS.st for all models
         let st_dir = out_dir.join("st");
         let _ = fs::create_dir_all(&st_dir);
         write_file(&st_dir.join(format!("{}.FB.DECL.st", base_name)), &output.st.0);
@@ -263,14 +263,14 @@ fn generate_outputs(
     }
 
     if gen_lc3 {
-        // Один .asm файл для всех моделей
+        // One .asm file for all models
         let lc3_dir = out_dir.join("lc3");
         let _ = fs::create_dir_all(&lc3_dir);
         write_file(&lc3_dir.join(format!("{}.asm", base_name)), &output.lc3);
     }
 
     if gen_thumb {
-        // Один .S файл для всех моделей
+        // One .S file for all models
         let thumb_dir = out_dir.join("thumb");
         let _ = fs::create_dir_all(&thumb_dir);
         write_file(&thumb_dir.join(format!("{}.S", base_name)), &output.thumb);
@@ -280,7 +280,7 @@ fn generate_outputs(
 fn write_file(path: &Path, content: &str) {
     match fs::write(path, content) {
         Ok(()) => println!("[codegen] Written: {}", path.display()),
-        Err(e) => eprintln!("[codegen] Ошибка записи {}: {}", path.display(), e),
+        Err(e) => eprintln!("[codegen] Write error {}: {}", path.display(), e),
     }
 }
 

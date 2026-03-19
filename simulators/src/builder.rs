@@ -12,22 +12,22 @@ use crate::ltl::extract_ltl_formulas;
 use crate::machine::{Machine, MachineKind, State, Transition};
 use crate::value::Value;
 
-/// Ошибка при построении автомата.
+/// Error while building a state machine.
 #[derive(Debug, Error)]
 pub enum BuildError {
-    #[error("Модель '{0}' не имеет начального состояния")]
+    #[error("Model '{0}' has no start state")]
     NoStartState(String),
-    #[error("Модель '{0}' ссылается на несуществующее состояние '{1}'")]
+    #[error("Model '{0}' references a non-existent state '{1}'")]
     UndefinedState(String, String),
-    #[error("Неизвестная ссылка на модель '{0}' в выражении поведения")]
+    #[error("Unknown model reference '{0}' in behavior expression")]
     UnknownModelRef(String),
 }
 
-/// Построить все автоматы из SourceUnit (обрабатывает глобальное поведение → композицию).
+/// Build all state machines from a SourceUnit (handles global behavior → composition).
 pub fn build_all(
     source: &SourceUnit,
 ) -> Result<Vec<MachineKind>, BuildError> {
-    // Собрать глобальные объявления переменных/портов и псевдонимы типов
+    // Collect global variable/port declarations and type aliases
     let mut global_vars: Vec<Box<VariableDefinition>> = vec![];
     let mut models: Vec<Box<ModelDefinition>> = vec![];
     let mut type_aliases: HashMap<String, Type> = HashMap::new();
@@ -43,14 +43,14 @@ pub fn build_all(
         }
     }
 
-    // Построить все модели как отдельные автоматы
+    // Build all models as separate state machines
     let mut machines: Vec<MachineKind> = vec![];
     for model in &models {
         let machine = build_machine(model, &global_vars, &type_aliases)?;
         machines.push(machine);
     }
 
-    // Найти выражение композиции поведения на уровне исходного файла
+    // Find the behavior composition expression at the source-file level
     for part in &source.0 {
         if let SourceUnitPart::PropertyDefinition(pd) = part {
             if let Some(name) = &pd.name {
@@ -67,25 +67,25 @@ pub fn build_all(
     Ok(machines)
 }
 
-/// Рекурсивно построить композицию автоматов из выражения поведения.
+/// Recursively build a machine composition from a behavior expression.
 fn compose_from_expr(
     expr: &Expression,
     machines: &mut Vec<MachineKind>,
 ) -> Result<MachineKind, BuildError> {
     match expr {
-        // A | B → Параллельное выполнение
+        // A | B → Parallel execution
         Expression::BitwiseOr(_, l, r) => {
             let lm = compose_from_expr(l, machines)?;
             let rm = compose_from_expr(r, machines)?;
             Ok(MachineKind::Parallel(vec![lm, rm]))
         }
-        // A + B → Последовательная композиция
+        // A + B → Sequential composition
         Expression::Add(_, l, r) => {
             let lm = compose_from_expr(l, machines)?;
             let rm = compose_from_expr(r, machines)?;
             Ok(MachineKind::Sequence(vec![lm, rm]))
         }
-        // Ссылка на переменную → поиск автомата по имени
+        // Variable reference → look up machine by name
         Expression::Variable(ident) => {
             let pos = machines
                 .iter()
@@ -95,14 +95,14 @@ fn compose_from_expr(
                 None => Err(BuildError::UnknownModelRef(ident.name.clone())),
             }
         }
-        // Скобки
+        // Parentheses
         Expression::Parenthesis(_, inner) => compose_from_expr(inner, machines),
-        // Неподдерживаемый вариант
+        // Unsupported variant
         _ => Err(BuildError::UnknownModelRef("?".to_string())),
     }
 }
 
-/// Построить автомат времени выполнения из AST ModelDefinition.
+/// Build a runtime state machine from an AST ModelDefinition.
 pub fn build_machine(
     model: &ModelDefinition,
     global_vars: &[Box<VariableDefinition>],
@@ -120,15 +120,15 @@ pub fn build_machine(
     let mut model_enter: Vec<ast::Statement> = vec![];
     let mut model_end: Vec<ast::Statement> = vec![];
 
-    // Извлечь LTL-формулы из аннотаций и блоков formula
+    // Extract LTL formulas from annotations and formula blocks
     let ltl_formulas = extract_ltl_formulas(model);
 
-    // Объявить глобальные переменные/порты в контексте
+    // Declare global variables/ports in the context
     for vd in global_vars {
         declare_variable_def(&mut context, vd, type_aliases);
     }
 
-    // Первый проход: зарегистрировать все имена состояний и объявления уровня модели
+    // First pass: register all state names and model-level declarations
     for part in &model.parts {
         match part {
             ModelPart::StateDefinition(sd) => {
@@ -152,7 +152,7 @@ pub fn build_machine(
         }
     }
 
-    // Второй проход: построить содержимое состояний (переходы, обработчики)
+    // Second pass: build state contents (transitions, handlers)
     for part in &model.parts {
         if let ModelPart::StateDefinition(sd) = part {
             let sname = sd
@@ -161,7 +161,7 @@ pub fn build_machine(
                 .map(|n| n.name.clone())
                 .unwrap_or_default();
 
-            // Сначала собрать вложенные автоматы (без изменяемой ссылки на states)
+            // Collect nested machines first (without mutable borrow on states)
             let mut sub_machine: Option<MachineKind> = None;
             let mut extra_vars: Vec<Box<ast::VariableDefinition>> = vec![];
 
@@ -176,12 +176,12 @@ pub fn build_machine(
                 }
             }
 
-            // Применить переменные состояния
+            // Apply state-level variables
             for vd in &extra_vars {
                 declare_variable_def(&mut context, vd, type_aliases);
             }
 
-            // Теперь взять изменяемую ссылку и применить все изменения
+            // Now take a mutable reference and apply all changes
             let state = states.get_mut(&sname).unwrap();
 
             for sp in &sd.parts {
@@ -227,7 +227,7 @@ pub fn build_machine(
     Ok(MachineKind::Single(machine))
 }
 
-/// Рекурсивно разрешить псевдоним типа через таблицу псевдонимов (до 8 уровней).
+/// Recursively resolve a type alias through the alias table (up to 8 levels).
 fn resolve_type_alias(ty: &Type, aliases: &HashMap<String, Type>, depth: u8) -> Type {
     if depth == 0 {
         return ty.clone();
@@ -241,8 +241,8 @@ fn resolve_type_alias(ty: &Type, aliases: &HashMap<String, Type>, depth: u8) -> 
     }
 }
 
-/// Определить начальное значение по умолчанию для типа (с разрешением псевдонимов).
-/// Используется при объявлении переменных без явного инициализатора.
+/// Determine the default initial value for a type (with alias resolution).
+/// Used when declaring variables without an explicit initializer.
 fn default_value_for_type(ty: &Type, aliases: &HashMap<String, Type>) -> Value {
     match resolve_type_alias(ty, aliases, 8) {
         Type::Bool => Value::Bool(false),
@@ -256,14 +256,14 @@ fn default_value_for_type(ty: &Type, aliases: &HashMap<String, Type>) -> Value {
     }
 }
 
-/// Объявить переменную в контексте.
+/// Declare a variable in the context.
 fn declare_variable_def(ctx: &mut SimContext, vd: &VariableDefinition, type_aliases: &HashMap<String, Type>) {
     let name = match &vd.name {
         Some(n) => n.name.clone(),
         None => return,
     };
 
-    // Проверить, является ли переменная портом
+    // Check whether the variable is a port
     let is_port = vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_)));
     let is_const = vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Constant(_)));
 
@@ -278,11 +278,11 @@ fn declare_variable_def(ctx: &mut SimContext, vd: &VariableDefinition, type_alia
     } else {
         ctx.declare_var(&name, initial);
     }
-    // Константные переменные хранятся в контексте; неизменяемость не проверяется в симуляторе
+    // Constant variables are stored in the context; immutability is not enforced by the simulator
     let _ = is_const;
 }
 
-/// Вычислить литеральное выражение в значение (только для инициализаторов).
+/// Evaluate a literal expression to a value (for initializers only).
 pub fn eval_literal(expr: &Expression) -> Option<Value> {
     match expr {
         Expression::NumberLiteral(_, n) => Some(Value::Int(*n)),
@@ -299,7 +299,7 @@ pub fn eval_literal(expr: &Expression) -> Option<Value> {
     }
 }
 
-/// Обработать PropertyDefinition уровня модели (start, enter, exit, end, behavior).
+/// Handle a model-level PropertyDefinition (start, enter, exit, end, behavior).
 fn handle_model_property(
     pd: &PropertyDefinition,
     start_state: &mut Option<String>,
@@ -325,13 +325,13 @@ fn handle_model_property(
         "end" => {
             model_end.push(property_to_statement(&pd.value));
         }
-        // exit/before на уровне модели — редко используются
+        // exit/before at model level — rarely used
         "exit" | "before" => {}
         _ => {}
     }
 }
 
-/// Обработать ConditionDefinition уровня модели (синтаксис `start: State;`).
+/// Handle a model-level ConditionDefinition (syntax `start: State;`).
 fn handle_model_condition(
     cd: &ConditionDefinition,
     start_state: &mut Option<String>,
@@ -348,7 +348,7 @@ fn handle_model_condition(
     }
 }
 
-/// Преобразовать Property в Statement для выполнения.
+/// Convert a Property to a Statement for execution.
 pub fn property_to_statement(prop: &Property) -> ast::Statement {
     match prop {
         Property::Function(stmt) => stmt.clone(),
@@ -367,15 +367,15 @@ mod tests {
         Identifier::new(name)
     }
 
-    /// Парсировать BuT-исходник и построить автоматы.
+    /// Parse a BuT source string and build state machines.
     fn parse_and_build(src: &str) -> Result<Vec<MachineKind>, BuildError> {
-        let (source, _) = but_grammar::parse(src, 0).expect("Ошибка парсинга");
+        let (source, _) = but_grammar::parse(src, 0).expect("parse error");
         build_all(&source)
     }
 
-    /// Парсировать BuT-исходник и вернуть CodegenContext-подобный контекст.
+    /// Parse a BuT source string and return a type alias table.
     fn collect_type_aliases(src: &str) -> HashMap<String, Type> {
-        let (source, _) = but_grammar::parse(src, 0).expect("Ошибка парсинга");
+        let (source, _) = but_grammar::parse(src, 0).expect("parse error");
         let mut aliases = HashMap::new();
         for part in &source.0 {
             if let SourceUnitPart::TypeDefinition(td) = part {
@@ -385,10 +385,10 @@ mod tests {
         aliases
     }
 
-    // ===== Сбор псевдонимов типов =====
+    // ===== Type alias collection =====
 
     #[test]
-    fn build_all_собирает_type_aliases() {
+    fn build_all_collects_type_aliases() {
         let aliases = collect_type_aliases(r#"
 type MyByte = u8;
 type Counter = u32;
@@ -400,12 +400,12 @@ model M { start -> M; }
     }
 
     #[test]
-    fn build_all_без_псевдонимов_пустая_таблица() {
+    fn build_all_no_aliases_empty_table() {
         let aliases = collect_type_aliases("model M { start -> M; }");
         assert!(aliases.is_empty());
     }
 
-    // ===== Значения по умолчанию через псевдонимы =====
+    // ===== Default values via aliases =====
 
     #[test]
     fn default_value_for_bool_type() {
@@ -422,7 +422,7 @@ model M { start -> M; }
     }
 
     #[test]
-    fn default_value_для_псевдонима_bool() {
+    fn default_value_for_alias_bool() {
         let aliases = HashMap::new();
         let val = default_value_for_type(
             &Type::Alias(ident("bool")),
@@ -432,7 +432,7 @@ model M { start -> M; }
     }
 
     #[test]
-    fn default_value_для_псевдонима_f64() {
+    fn default_value_for_alias_f64() {
         let aliases = HashMap::new();
         let val = default_value_for_type(
             &Type::Alias(ident("f64")),
@@ -442,7 +442,7 @@ model M { start -> M; }
     }
 
     #[test]
-    fn default_value_для_пользовательского_псевдонима_на_bool() {
+    fn default_value_for_user_alias_to_bool() {
         // type Flag = bool; → default Value::Bool(false)
         let mut aliases = HashMap::new();
         aliases.insert("Flag".to_string(), Type::Bool);
@@ -451,7 +451,7 @@ model M { start -> M; }
     }
 
     #[test]
-    fn default_value_для_пользовательского_псевдонима_на_u32() {
+    fn default_value_for_user_alias_to_u32() {
         // type Counter = u32; → default Value::Int(0)
         let mut aliases = HashMap::new();
         aliases.insert("Counter".to_string(), Type::Alias(ident("u32")));
@@ -459,23 +459,23 @@ model M { start -> M; }
         assert_eq!(val, Value::Int(0));
     }
 
-    // ===== Построение автомата с типами =====
+    // ===== Building machines with types =====
 
     #[test]
-    fn build_all_с_псевдонимами_типов_и_переменными() {
-        // Переменная типа-псевдонима должна объявляться в контексте
+    fn build_all_with_type_aliases_and_variables() {
+        // A variable of an alias type should be declared in the context
         let machines = parse_and_build(r#"
 type Counter = u32;
 model M {
     state Active { ref Active: 1 = 0; }
     start -> Active;
 }
-"#).expect("Сборка должна пройти успешно");
+"#).expect("build should succeed");
         assert_eq!(machines.len(), 1);
     }
 
     #[test]
-    fn resolve_type_alias_цепочка() {
+    fn resolve_type_alias_chain() {
         let mut aliases = HashMap::new();
         aliases.insert("A".to_string(), Type::Alias(ident("B")));
         aliases.insert("B".to_string(), Type::Alias(ident("u8")));
@@ -484,12 +484,12 @@ model M {
     }
 
     #[test]
-    fn resolve_type_alias_предел_глубины() {
-        // Цикличная цепочка не должна вызывать бесконечную рекурсию
+    fn resolve_type_alias_depth_limit() {
+        // A cyclic chain must not cause infinite recursion
         let mut aliases = HashMap::new();
         aliases.insert("A".to_string(), Type::Alias(ident("B")));
         aliases.insert("B".to_string(), Type::Alias(ident("A")));
-        // Не должно паниковать, должно вернуть что-то
+        // Must not panic; should return something
         let _ = resolve_type_alias(&Type::Alias(ident("A")), &aliases, 8);
     }
 }

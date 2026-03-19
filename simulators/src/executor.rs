@@ -4,7 +4,7 @@ use crate::ltl::print_ltl_info;
 use crate::machine::{Machine, MachineKind};
 use crate::value::Value;
 
-/// Симулятор FSM: пошагово выполняет `MachineKind`.
+/// FSM simulator: executes a `MachineKind` step by step.
 pub struct Simulator {
     pub machine: MachineKind,
 }
@@ -14,13 +14,13 @@ impl Simulator {
         Self { machine }
     }
 
-    /// Выполнить один шаг симуляции.
-    /// Возвращает `true`, если произошёл переход состояния.
+    /// Execute one simulation step.
+    /// Returns `true` if a state transition occurred.
     pub fn step(&mut self) -> bool {
         step_machine(&mut self.machine)
     }
 
-    /// Выполнить до `n` шагов. Возвращает количество шагов с переходами.
+    /// Execute up to `n` steps. Returns the number of steps with transitions.
     pub fn run_n(&mut self, n: usize) -> usize {
         let mut transitions = 0;
         for _ in 0..n {
@@ -31,24 +31,24 @@ impl Simulator {
         transitions
     }
 
-    /// Получить текущее состояние верхнего уровня автомата.
+    /// Get the current state of the top-level machine.
     pub fn current_state(&self) -> Option<&str> {
         self.machine.current_state()
     }
 
-    /// Получить неизменяемую ссылку на контекст выполнения.
+    /// Get an immutable reference to the execution context.
     pub fn context(&self) -> Option<&SimContext> {
         self.machine.context()
     }
 
-    /// Установить значение порта (внешний ввод).
+    /// Set a port value (external input).
     pub fn set_port(&mut self, name: &str, val: Value) {
         if let Some(ctx) = self.machine.context_mut() {
             ctx.set_port(name, val);
         }
     }
 
-    /// Напечатать текущее состояние автомата.
+    /// Print the current state of the machine.
     pub fn print_state(&self) {
         match &self.machine {
             MachineKind::Single(m) => print_machine_state(m),
@@ -69,14 +69,14 @@ impl Simulator {
         }
     }
 
-    /// Напечатать LTL-спецификации всех автоматов.
+    /// Print LTL specifications for all machines.
     pub fn print_ltl(&self) {
         self.for_each_machine(|m| {
             print_ltl_info(&m.name, &m.ltl_formulas);
         });
     }
 
-    /// Обойти все одиночные автоматы.
+    /// Visit all single machines.
     fn for_each_machine(&self, mut f: impl FnMut(&Machine)) {
         visit_machine(&self.machine, &mut f);
     }
@@ -103,12 +103,12 @@ fn print_machine_state(m: &Machine) {
     }
 }
 
-/// Рекурсивно выполнить шаг для MachineKind.
+/// Recursively execute one step for a MachineKind.
 fn step_machine(mk: &mut MachineKind) -> bool {
     match mk {
         MachineKind::Single(m) => step_single(m),
         MachineKind::Sequence(ms) => {
-            // Выполнить первый незавершённый автомат
+            // Execute the first unfinished machine
             for m in ms.iter_mut() {
                 if step_machine(m) {
                     return true;
@@ -117,7 +117,7 @@ fn step_machine(mk: &mut MachineKind) -> bool {
             false
         }
         MachineKind::Parallel(ms) => {
-            // Выполнить все автоматы одновременно
+            // Execute all machines simultaneously
             let mut any = false;
             for m in ms.iter_mut() {
                 if step_machine(m) {
@@ -129,9 +129,9 @@ fn step_machine(mk: &mut MachineKind) -> bool {
     }
 }
 
-/// Выполнить один шаг для одиночного автомата.
+/// Execute one step for a single machine.
 fn step_single(m: &mut Machine) -> bool {
-    // Выполнить глобальные обработчики enter (каждый такт)
+    // Execute global enter handlers (every tick)
     let model_enter = m.model_enter.clone();
     for stmt in &model_enter {
         let _ = exec_statement(stmt, &mut m.context);
@@ -139,7 +139,7 @@ fn step_single(m: &mut Machine) -> bool {
 
     let current_name = m.current.clone();
 
-    // Получить обработчики enter текущего состояния (каждый такт)
+    // Get the enter handlers for the current state (every tick)
     let state_enter = m
         .states
         .get(&current_name)
@@ -150,7 +150,7 @@ fn step_single(m: &mut Machine) -> bool {
         let _ = exec_statement(stmt, &mut m.context);
     }
 
-    // Вычислить переходы
+    // Evaluate transitions
     let transitions = m
         .states
         .get(&current_name)
@@ -166,7 +166,7 @@ fn step_single(m: &mut Machine) -> bool {
         };
 
         if should_transition {
-            // Выполнить обработчики exit
+            // Execute exit handlers
             let exit_stmts = m
                 .states
                 .get(&current_name)
@@ -176,7 +176,7 @@ fn step_single(m: &mut Machine) -> bool {
                 let _ = exec_statement(stmt, &mut m.context);
             }
 
-            // Выполнить обработчики before целевого состояния
+            // Execute before handlers of the target state
             let before_stmts = m
                 .states
                 .get(&tr.target)
@@ -186,7 +186,7 @@ fn step_single(m: &mut Machine) -> bool {
                 let _ = exec_statement(stmt, &mut m.context);
             }
 
-            // Выполнить переход
+            // Perform the transition
             let target = tr.target.clone();
             m.current = target;
             return true;

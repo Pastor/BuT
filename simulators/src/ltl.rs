@@ -1,30 +1,30 @@
-//! Утилиты для извлечения и отображения LTL-формул из AST.
+//! Utilities for extracting and displaying LTL formulas from the AST.
 //!
-//! Поддерживает два источника LTL-формул:
-//! 1. Аннотации `#![ltl = "формула"]` и `#[ltl = "формула"]`
-//! 2. Блоки `formula "LTL" { ... }` (функциональные вызовы внутри)
+//! Supports two sources of LTL formulas:
+//! 1. Annotations `#![ltl = "formula"]` and `#[ltl = "formula"]`
+//! 2. `formula "LTL" { ... }` blocks (function calls inside)
 
 use but_grammar::ast::{
     Annotation, AnnotationDefinition, Expression, FormulaStatement, ModelDefinition, ModelPart,
 };
 
-/// Извлечь все LTL-формулы из модели.
+/// Extract all LTL formulas from a model.
 ///
-/// Возвращает строки формул в исходном виде.
+/// Returns formula strings in their original form.
 pub fn extract_ltl_formulas(model: &ModelDefinition) -> Vec<String> {
     let mut result = vec![];
 
-    // Извлечение из аннотаций модели (#![ltl = "..."] и #[ltl = "..."])
+    // Extract from model annotations (#![ltl = "..."] and #[ltl = "..."])
     result.extend(extract_from_annotations(&model.annotations));
 
-    // Извлечение из аннотаций внутри тела модели (ModelPart::AnnotationDefinition)
+    // Extract from annotations inside the model body (ModelPart::AnnotationDefinition)
     for part in &model.parts {
         if let ModelPart::AnnotationDefinition(ann_def) = part {
             result.extend(extract_from_annotations(std::slice::from_ref(ann_def)));
         }
     }
 
-    // Извлечение из блоков formula { ... }
+    // Extract from formula { ... } blocks
     for part in &model.parts {
         if let ModelPart::FormulaDefinition(fd) = part {
             for stmt in &fd.formula.statements {
@@ -44,18 +44,18 @@ pub fn extract_ltl_formulas(model: &ModelDefinition) -> Vec<String> {
     result
 }
 
-/// Напечатать LTL-формулы модели во время симуляции.
+/// Print LTL formulas for a model during simulation.
 pub fn print_ltl_info(name: &str, formulas: &[String]) {
     if formulas.is_empty() {
         return;
     }
-    println!("[ltl] Спецификации модели «{}»:", name);
+    println!("[ltl] Specifications for model '{}':", name);
     for f in formulas {
         println!("  {}", f);
     }
 }
 
-/// Извлечь LTL-формулы из аннотаций (#![ltl = "..."], #[ltl = "..."]).
+/// Extract LTL formulas from annotations (#![ltl = "..."], #[ltl = "..."]).
 fn extract_from_annotations(annotations: &[AnnotationDefinition]) -> Vec<String> {
     let mut result = vec![];
     for ann_def in annotations {
@@ -79,7 +79,7 @@ fn extract_from_annotations(annotations: &[AnnotationDefinition]) -> Vec<String>
     result
 }
 
-/// Преобразовать выражение формулы в строку.
+/// Convert a formula expression to a string.
 fn formula_expr_to_str(expr: &but_grammar::ast::FormulaExpression) -> String {
     use but_grammar::ast::FormulaExpression;
     match expr {
