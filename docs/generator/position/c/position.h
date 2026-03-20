@@ -42,102 +42,102 @@ struct Port {
        : def)
 
 struct Main {
-    struct {
-        enum {
-            MAIN_COMMAND_INIT,
-            MAIN_COMMAND_READING,
-            MAIN_COMMAND_SAVING,
-            MAIN_COMMAND_DECODE,
-            MAIN_COMMAND_PUSHING_UP_CODE,
-            MAIN_COMMAND_PUSHING_DOWN_CODE,
-            MAIN_COMMAND_ROTATE_LEFT_CODE,
-            MAIN_COMMAND_ROTATE_RIGHT_CODE,
-            MAIN_COMMAND_MOVING_UP_CODE,
-            MAIN_COMMAND_MOVING_DOWN_CODE,
-            MAIN_COMMAND_MOVING_SHIFT_LEFT_CODE,
-            MAIN_COMMAND_MOVING_SHIFT_RIGHT_CODE,
-            MAIN_COMMAND_UNKNOWN_CODE,
-            MAIN_COMMAND_RESET_CODE,
-            MAIN_COMMAND_COMPLETE_CODE,
-            MAIN_COMMAND_EMERGENCY,
-            MAIN_COMMAND_END,
-        } state;
-        int32_t code;
-        double next_angle;
-        double next_angl_up;
-        double next_angl_down;
-        int32_t next_point;
-        int32_t next_level;
-    } command;
-    struct {
-        struct {
-            enum {
-                MAIN_CONTROLLER_DETECT_ANGLE_INIT,
-                MAIN_CONTROLLER_DETECT_ANGLE_START,
-                MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_45,
-                MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_90,
-                MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_135,
-                MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_180,
-                MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_225,
-                MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_270,
-                MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_315,
-                MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_360,
-                MAIN_CONTROLLER_DETECT_ANGLE_END,
-            } state;
-        } detect_angle;
-        struct {
-            enum {
-                MAIN_CONTROLLER_DETECT_LINE_INIT,
-                MAIN_CONTROLLER_DETECT_LINE_START,
-                MAIN_CONTROLLER_DETECT_LINE_UP,
-                MAIN_CONTROLLER_DETECT_LINE_LEFT,
-                MAIN_CONTROLLER_DETECT_LINE_BOTTOM,
-                MAIN_CONTROLLER_DETECT_LINE_RIGHT,
-                MAIN_CONTROLLER_DETECT_LINE_DETECT_WALL,
-                MAIN_CONTROLLER_DETECT_LINE_WALL_LEFT,
-                MAIN_CONTROLLER_DETECT_LINE_WALL_RIGHT,
-                MAIN_CONTROLLER_DETECT_LINE_WALL_TOP,
-                MAIN_CONTROLLER_DETECT_LINE_WALL_BOTTOM,
-                MAIN_CONTROLLER_DETECT_LINE_END,
-            } state;
-            int32_t it;
-            int32_t step;
-        } detect_line;
-        struct {
-            enum {
-                MAIN_CONTROLLER_DETECT_POINT_INIT,
-                MAIN_CONTROLLER_DETECT_POINT_START,
-                MAIN_CONTROLLER_DETECT_POINT_UP,
-                MAIN_CONTROLLER_DETECT_POINT_DOWN,
-                MAIN_CONTROLLER_DETECT_POINT_LEFT,
-                MAIN_CONTROLLER_DETECT_POINT_RIGHT,
-                MAIN_CONTROLLER_DETECT_POINT_COMPROMISE,
-                MAIN_CONTROLLER_DETECT_POINT_END,
-            } state;
-            int32_t direct;
-        } detect_point;
-        enum {
-            MAIN_CONTROLLER_INIT,
-            MAIN_CONTROLLER_START,
-            MAIN_CONTROLLER_DETECT_ANGLE,
-            MAIN_CONTROLLER_DETECT_LINE,
-            MAIN_CONTROLLER_DETECT_POINT,
-            MAIN_CONTROLLER_RESET,
-            MAIN_CONTROLLER_WAITING,
-            MAIN_CONTROLLER_EXECUTING_COMMAND,
-            MAIN_CONTROLLER_ERROR,
-            MAIN_CONTROLLER_END,
-        } state;
-        int32_t raise;
-    } controller;
-    int watchdog;
-    bool reset;
+  struct {
     enum {
-        MAIN_IMPLEMENT_INIT,
-        MAIN_IMPLEMENT_TICK,
-        MAIN_IMPLEMENT_END
+      MAIN_COMMAND_INIT,
+      MAIN_COMMAND_READING,
+      MAIN_COMMAND_SAVING,
+      MAIN_COMMAND_DECODE,
+      MAIN_COMMAND_PUSHING_UP_CODE,
+      MAIN_COMMAND_PUSHING_DOWN_CODE,
+      MAIN_COMMAND_ROTATE_LEFT_CODE,
+      MAIN_COMMAND_ROTATE_RIGHT_CODE,
+      MAIN_COMMAND_MOVING_UP_CODE,
+      MAIN_COMMAND_MOVING_DOWN_CODE,
+      MAIN_COMMAND_MOVING_SHIFT_LEFT_CODE,
+      MAIN_COMMAND_MOVING_SHIFT_RIGHT_CODE,
+      MAIN_COMMAND_UNKNOWN_CODE,
+      MAIN_COMMAND_RESET_CODE,
+      MAIN_COMMAND_COMPLETE_CODE,
+      MAIN_COMMAND_EMERGENCY,
+      MAIN_COMMAND_END,
     } state;
-    struct Port port;
+    int32_t code;
+    double next_angle;
+    double next_angl_up;
+    double next_angl_down;
+    int32_t next_point;
+    int32_t next_level;
+  } command;
+  struct {
+    struct {
+      enum {
+        MAIN_CONTROLLER_DETECT_ANGLE_INIT,
+        MAIN_CONTROLLER_DETECT_ANGLE_START,
+        MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_45,
+        MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_90,
+        MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_135,
+        MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_180,
+        MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_225,
+        MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_270,
+        MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_315,
+        MAIN_CONTROLLER_DETECT_ANGLE_ANGLE_360,
+        MAIN_CONTROLLER_DETECT_ANGLE_END,
+      } state;
+    } detect_angle;
+    struct {
+      enum {
+        MAIN_CONTROLLER_DETECT_LINE_INIT,
+        MAIN_CONTROLLER_DETECT_LINE_START,
+        MAIN_CONTROLLER_DETECT_LINE_UP,
+        MAIN_CONTROLLER_DETECT_LINE_LEFT,
+        MAIN_CONTROLLER_DETECT_LINE_BOTTOM,
+        MAIN_CONTROLLER_DETECT_LINE_RIGHT,
+        MAIN_CONTROLLER_DETECT_LINE_DETECT_WALL,
+        MAIN_CONTROLLER_DETECT_LINE_WALL_LEFT,
+        MAIN_CONTROLLER_DETECT_LINE_WALL_RIGHT,
+        MAIN_CONTROLLER_DETECT_LINE_WALL_TOP,
+        MAIN_CONTROLLER_DETECT_LINE_WALL_BOTTOM,
+        MAIN_CONTROLLER_DETECT_LINE_END,
+      } state;
+      int32_t it;
+      int32_t step;
+    } detect_line;
+    struct {
+      enum {
+        MAIN_CONTROLLER_DETECT_POINT_INIT,
+        MAIN_CONTROLLER_DETECT_POINT_START,
+        MAIN_CONTROLLER_DETECT_POINT_UP,
+        MAIN_CONTROLLER_DETECT_POINT_DOWN,
+        MAIN_CONTROLLER_DETECT_POINT_LEFT,
+        MAIN_CONTROLLER_DETECT_POINT_RIGHT,
+        MAIN_CONTROLLER_DETECT_POINT_COMPROMISE,
+        MAIN_CONTROLLER_DETECT_POINT_END,
+      } state;
+      int32_t direct;
+    } detect_point;
+    enum {
+      MAIN_CONTROLLER_INIT,
+      MAIN_CONTROLLER_START,
+      MAIN_CONTROLLER_DETECT_ANGLE,
+      MAIN_CONTROLLER_DETECT_LINE,
+      MAIN_CONTROLLER_DETECT_POINT,
+      MAIN_CONTROLLER_RESET,
+      MAIN_CONTROLLER_WAITING,
+      MAIN_CONTROLLER_EXECUTING_COMMAND,
+      MAIN_CONTROLLER_ERROR,
+      MAIN_CONTROLLER_END,
+    } state;
+    int32_t raise;
+  } controller;
+  int watchdog;
+  bool reset;
+  enum {
+    MAIN_IMPLEMENT_INIT,
+    MAIN_IMPLEMENT_TICK,
+    MAIN_IMPLEMENT_END
+  } state;
+  struct Port port;
 };
 
 void Main_init(struct Main *main);

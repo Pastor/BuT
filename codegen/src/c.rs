@@ -33,7 +33,11 @@ fn classify_port_kind(ty: &Type, aliases: &HashMap<String, Type>) -> PortKind {
         // 1-bit types → Bit
         Type::Alias(id) if id.name == "bit" => PortKind::Bit,
         // Arrays of bits
-        Type::Array { element_type, element_count, .. } => {
+        Type::Array {
+            element_type,
+            element_count,
+            ..
+        } => {
             if is_bit_type(element_type) {
                 if *element_count == 1 {
                     PortKind::Bit
@@ -79,7 +83,10 @@ fn extract_port_address(expr: &Expression) -> Option<i64> {
 fn build_port_map(ctx: &CodegenContext) -> HashMap<String, PortInfo> {
     let mut map = HashMap::new();
     for vd in &ctx.global_vars {
-        let is_port = vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_)));
+        let is_port = vd
+            .attrs
+            .iter()
+            .any(|a| matches!(a, VariableAttribute::Portable(_)));
         if !is_port {
             continue;
         }
@@ -102,9 +109,11 @@ fn build_port_map(ctx: &CodegenContext) -> HashMap<String, PortInfo> {
 
 /// Determine if the source has any port (global_vars with Portable attribute).
 fn has_ports(ctx: &CodegenContext) -> bool {
-    ctx.global_vars
-        .iter()
-        .any(|vd| vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))))
+    ctx.global_vars.iter().any(|vd| {
+        vd.attrs
+            .iter()
+            .any(|a| matches!(a, VariableAttribute::Portable(_)))
+    })
 }
 
 /// Convert port name to PORT_ADDRESS_XXX constant name.
@@ -149,7 +158,6 @@ pub fn generate_c_header_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
     out.push_str(&format!("#ifndef {}_H__\n", guard));
     out.push_str(&format!("#define {}_H__\n\n", guard));
     out.push_str("#include <stdbool.h>\n");
-    out.push_str("#include <stdint.h>\n");
 
     let with_ports = has_ports(ctx);
     if with_ports {
@@ -184,7 +192,9 @@ pub fn generate_c_header_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
     if with_ports {
         out.push_str("struct Port {\n");
         out.push_str("  void *userdata;\n");
-        out.push_str("  void (*port_bit_write)(int address, int bit, bool value, void *userdata);\n");
+        out.push_str(
+            "  void (*port_bit_write)(int address, int bit, bool value, void *userdata);\n",
+        );
         out.push_str("  bool (*port_bit_read)(int address, int bit, void *userdata);\n");
         out.push_str("  void (*port_int_write)(int address, int value, void *userdata);\n");
         out.push_str("  int (*port_int_read)(int address, void *userdata);\n");
@@ -192,30 +202,64 @@ pub fn generate_c_header_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
         out.push_str("  float (*port_real_read)(int address, void *userdata);\n");
         out.push_str("};\n\n");
 
-        out.push_str("#define write_bit_port(port, address, bit, value)                              \\\n");
-        out.push_str("  {                                                                            \\\n");
-        out.push_str("    if ((port).port_bit_write != 0)                                            \\\n");
-        out.push_str("      (port).port_bit_write(address, bit, value, (port).userdata);             \\\n");
+        out.push_str(
+            "#define write_bit_port(port, address, bit, value)                              \\\n",
+        );
+        out.push_str(
+            "  {                                                                            \\\n",
+        );
+        out.push_str(
+            "    if ((port).port_bit_write != 0)                                            \\\n",
+        );
+        out.push_str(
+            "      (port).port_bit_write(address, bit, value, (port).userdata);             \\\n",
+        );
         out.push_str("  }\n");
-        out.push_str("#define write_int_port(port, address, value)                                   \\\n");
-        out.push_str("  {                                                                            \\\n");
-        out.push_str("    if ((port).port_int_write != 0)                                            \\\n");
-        out.push_str("      (port).port_int_write(address, value, (port).userdata);                  \\\n");
+        out.push_str(
+            "#define write_int_port(port, address, value)                                   \\\n",
+        );
+        out.push_str(
+            "  {                                                                            \\\n",
+        );
+        out.push_str(
+            "    if ((port).port_int_write != 0)                                            \\\n",
+        );
+        out.push_str(
+            "      (port).port_int_write(address, value, (port).userdata);                  \\\n",
+        );
         out.push_str("  }\n");
         out.push('\n');
         out.push_str("#define debug(message) printf(\"%s\\n\", message)\n");
         out.push('\n');
-        out.push_str("#define read_int_port(port, address, def)                                      \\\n");
-        out.push_str("  (((port).port_int_read != 0)                                                 \\\n");
-        out.push_str("       ? (port).port_int_read(address, (port).userdata)                        \\\n");
+        out.push_str(
+            "#define read_int_port(port, address, def)                                      \\\n",
+        );
+        out.push_str(
+            "  (((port).port_int_read != 0)                                                 \\\n",
+        );
+        out.push_str(
+            "       ? (port).port_int_read(address, (port).userdata)                        \\\n",
+        );
         out.push_str("       : def)\n");
-        out.push_str("#define read_real_port(port, address, def)                                     \\\n");
-        out.push_str("  (((port).port_real_read != 0)                                                \\\n");
-        out.push_str("       ? (port).port_real_read(address, (port).userdata)                       \\\n");
+        out.push_str(
+            "#define read_real_port(port, address, def)                                     \\\n",
+        );
+        out.push_str(
+            "  (((port).port_real_read != 0)                                                \\\n",
+        );
+        out.push_str(
+            "       ? (port).port_real_read(address, (port).userdata)                       \\\n",
+        );
         out.push_str("       : def)\n");
-        out.push_str("#define read_bit_port(port, address, bit, def)                                 \\\n");
-        out.push_str("  (((port).port_bit_read != 0)                                                 \\\n");
-        out.push_str("       ? (port).port_bit_read(address, bit, (port).userdata)                   \\\n");
+        out.push_str(
+            "#define read_bit_port(port, address, bit, def)                                 \\\n",
+        );
+        out.push_str(
+            "  (((port).port_bit_read != 0)                                                 \\\n",
+        );
+        out.push_str(
+            "       ? (port).port_bit_read(address, bit, (port).userdata)                   \\\n",
+        );
         out.push_str("       : def)\n");
         out.push('\n');
     }
@@ -243,8 +287,8 @@ pub fn generate_c_header_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
 /// Generate a combined C source file for all models from a SourceUnit.
 pub fn generate_c_source_all(source: &SourceUnit, base_name: &str, ctx: &CodegenContext) -> String {
     let mut out = String::new();
-    out.push_str("#include <assert.h>\n");
     out.push_str(&format!("#include \"{}.h\"\n", base_name.to_lowercase()));
+    out.push_str("#include <assert.h>\n");
 
     let port_map = build_port_map(ctx);
 
@@ -255,7 +299,29 @@ pub fn generate_c_source_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
         let mut ports_sorted: Vec<(&String, &PortInfo)> = port_map.iter().collect();
         ports_sorted.sort_by(|a, b| a.1.address.cmp(&b.1.address).then(a.0.cmp(b.0)));
         for (pname, pinfo) in &ports_sorted {
-            out.push_str(&format!("#define {} {}\n", port_address_name(pname), pinfo.address));
+            out.push_str(&format!(
+                "#define {} {}\n",
+                port_address_name(pname),
+                pinfo.address
+            ));
+        }
+    }
+
+    // Constant macros (const global vars)
+    let const_vars: Vec<_> = ctx.global_vars.iter().filter(|vd| {
+        vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Constant(_)))
+    }).collect();
+    if !const_vars.is_empty() {
+        out.push('\n');
+        for vd in &const_vars {
+            if let (Some(vname), Some(init)) = (&vd.name, &vd.initializer) {
+                let val_str = expr_to_c(init);
+                out.push_str(&format!(
+                    "#define {} {}\n",
+                    vname.name.to_uppercase(),
+                    val_str
+                ));
+            }
         }
     }
 
@@ -368,10 +434,15 @@ fn gen_model_struct(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
                     // Find the delegated model states (skip "End" since we add _END explicitly)
                     if let Some(del_md) = find_model_in_source(source, del_impl_name) {
                         for s in collect_state_names(del_md) {
-                            if s == "End" { continue; } // _END is added explicitly below
+                            if s == "End" {
+                                continue;
+                            } // _END is added explicitly below
                             out.push_str(&format!(
                                 "{}{}_{}_{}_{}",
-                                i4, upper, leaf_upper, del_upper,
+                                i4,
+                                upper,
+                                leaf_upper,
+                                del_upper,
                                 s.to_uppercase()
                             ));
                             out.push_str(",\n");
@@ -387,7 +458,11 @@ fn gen_model_struct(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
                     if let Some(del_md) = find_model_in_source(source, del_impl_name) {
                         for part in &del_md.parts {
                             if let ModelPart::VariableDefinition(vd) = part {
-                                if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+                                if vd
+                                    .attrs
+                                    .iter()
+                                    .any(|a| matches!(a, VariableAttribute::Portable(_)))
+                                {
                                     continue;
                                 }
                                 if let Some(vname) = &vd.name {
@@ -408,10 +483,15 @@ fn gen_model_struct(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
                 out.push_str(&format!("{}enum {{\n", i2));
                 out.push_str(&format!("{}{}_{}_INIT,\n", i3, upper, leaf_upper));
                 for s in collect_state_names(sub_md) {
-                    if s == "End" { continue; }
+                    if s == "End" {
+                        continue;
+                    }
                     out.push_str(&format!(
                         "{}{}_{}_{},\n",
-                        i3, upper, leaf_upper, s.to_uppercase()
+                        i3,
+                        upper,
+                        leaf_upper,
+                        s.to_uppercase()
                     ));
                 }
                 out.push_str(&format!("{}{}_{}_END,\n", i3, upper, leaf_upper));
@@ -419,7 +499,11 @@ fn gen_model_struct(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
                 // Local variables of the sub-model (non-port)
                 for part in &sub_md.parts {
                     if let ModelPart::VariableDefinition(vd) = part {
-                        if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+                        if vd
+                            .attrs
+                            .iter()
+                            .any(|a| matches!(a, VariableAttribute::Portable(_)))
+                        {
                             continue;
                         }
                         if let Some(vname) = &vd.name {
@@ -445,8 +529,14 @@ fn gen_model_struct(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
         }
         // Global vars embedded in the top-level struct (non-port, non-const)
         for vd in &ctx.global_vars {
-            let is_port = vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_)));
-            let is_const = vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Constant(_)));
+            let is_port = vd
+                .attrs
+                .iter()
+                .any(|a| matches!(a, VariableAttribute::Portable(_)));
+            let is_const = vd
+                .attrs
+                .iter()
+                .any(|a| matches!(a, VariableAttribute::Constant(_)));
             if is_port || is_const {
                 continue;
             }
@@ -458,8 +548,10 @@ fn gen_model_struct(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
         }
         // Composition phase state
         out.push_str(&format!("{}enum {{\n", i1));
-        out.push_str(&format!("{}{}_IMPLEMENT_INIT, {}_IMPLEMENT_TICK, {}_IMPLEMENT_END", i2, upper, upper, upper));
-        out.push_str(&format!(" }} state;\n"));
+        out.push_str(&format!("{}{}_IMPLEMENT_INIT,\n", i2, upper));
+        out.push_str(&format!("{}{}_IMPLEMENT_TICK,\n", i2, upper));
+        out.push_str(&format!("{}{}_IMPLEMENT_END\n", i2, upper));
+        out.push_str(&format!("{}}} state;\n", i1));
         // Port struct if ports exist
         if has_ports(ctx) {
             out.push_str(&format!("{}struct Port port;\n", i1));
@@ -467,7 +559,11 @@ fn gen_model_struct(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
         // Own local variables of the composition model (non-port)
         for part in &model.parts {
             if let ModelPart::VariableDefinition(vd) = part {
-                if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+                if vd
+                    .attrs
+                    .iter()
+                    .any(|a| matches!(a, VariableAttribute::Portable(_)))
+                {
                     continue;
                 }
                 if let Some(vname) = &vd.name {
@@ -487,7 +583,11 @@ fn gen_model_struct(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
         out.push_str(&format!("{}}} state;\n", i1));
         for part in &model.parts {
             if let ModelPart::VariableDefinition(vd) = part {
-                if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+                if vd
+                    .attrs
+                    .iter()
+                    .any(|a| matches!(a, VariableAttribute::Portable(_)))
+                {
                     continue;
                 }
                 if let Some(vname) = &vd.name {
@@ -523,7 +623,11 @@ fn type_to_global_c_type(ty: &Type, aliases: &HashMap<String, Type>) -> String {
             _ => type_to_c_ctx(ty, aliases),
         },
         // A [32: bit] array → int (if it came from `type int = [32: bit]`)
-        Type::Array { element_type, element_count, .. } => {
+        Type::Array {
+            element_type,
+            element_count,
+            ..
+        } => {
             if is_bit_type(element_type) {
                 match element_count {
                     1 => "bool".to_string(),
@@ -572,7 +676,11 @@ fn type_to_struct_field_c(ty: &Type, aliases: &HashMap<String, Type>) -> String 
             "u64" => "uint64_t".to_string(),
             _ => type_to_c_ctx(ty, aliases),
         },
-        Type::Array { element_type, element_count, .. } => {
+        Type::Array {
+            element_type,
+            element_count,
+            ..
+        } => {
             if is_bit_type(element_type) {
                 match element_count {
                     1 => "bool".to_string(),
@@ -595,8 +703,13 @@ fn collect_global_var_names(ctx: &CodegenContext) -> Vec<String> {
     ctx.global_vars
         .iter()
         .filter(|vd| {
-            !vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_)))
-                && !vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Constant(_)))
+            !vd.attrs
+                .iter()
+                .any(|a| matches!(a, VariableAttribute::Portable(_)))
+                && !vd
+                    .attrs
+                    .iter()
+                    .any(|a| matches!(a, VariableAttribute::Constant(_)))
         })
         .filter_map(|vd| vd.name.as_ref().map(|n| n.name.clone()))
         .collect()
@@ -606,8 +719,17 @@ fn collect_global_var_names(ctx: &CodegenContext) -> Vec<String> {
 fn is_reserved_c_keyword(name: &str) -> bool {
     matches!(
         name,
-        "int" | "bool" | "float" | "double" | "char" | "long" | "short"
-            | "void" | "unsigned" | "signed" | "real"
+        "int"
+            | "bool"
+            | "float"
+            | "double"
+            | "char"
+            | "long"
+            | "short"
+            | "void"
+            | "unsigned"
+            | "signed"
+            | "real"
     )
 }
 
@@ -678,7 +800,10 @@ fn gen_model_source(
                 for (_del_state_name, del_impl_name) in collect_delegating_states(sub_md) {
                     if !del_impl_to_leaf.contains_key(&del_impl_name) {
                         all_del_impl_names.push(del_impl_name.clone());
-                        del_impl_to_leaf.insert(del_impl_name, (leaf.clone(), leaf_upper.clone(), field.clone()));
+                        del_impl_to_leaf.insert(
+                            del_impl_name,
+                            (leaf.clone(), leaf_upper.clone(), field.clone()),
+                        );
                     }
                 }
             }
@@ -854,7 +979,7 @@ fn gen_delegated_sub_model_funcs(
     _del_field: &str,
     del_name: &str,
     del_upper: &str,
-    del_path: &str,  // e.g. "controller.detect_angle"
+    del_path: &str, // e.g. "controller.detect_angle"
     _enum_prefix: &str,
     param: &str,
     port_map: &HashMap<String, PortInfo>,
@@ -873,7 +998,7 @@ fn gen_delegated_sub_model_funcs(
 
     // reset
     out.push_str(&format!(
-        "{}void {}_reset({}) {{\n",
+        "{}void\n{}_reset({}) {{\n",
         inline, func_prefix, struct_param
     ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
@@ -881,11 +1006,26 @@ fn gen_delegated_sub_model_funcs(
         "{}{}->{}.state = {}_INIT;\n",
         i1, param, del_path, enum_prefix
     ));
+    // Initialize local variables of the delegated model
+    for part in &del_md.parts {
+        if let ModelPart::VariableDefinition(vd) = part {
+            if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+                continue;
+            }
+            if let (Some(vname), Some(init)) = (&vd.name, &vd.initializer) {
+                let val_str = expr_to_c(init);
+                out.push_str(&format!(
+                    "{}{}->{}.{} = {};\n",
+                    i1, param, del_path, vname.name, val_str
+                ));
+            }
+        }
+    }
     out.push_str("}\n\n");
 
     // init
     out.push_str(&format!(
-        "{}void {}_init({}) {{\n",
+        "{}void\n{}_init({}) {{\n",
         inline, func_prefix, struct_param
     ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
@@ -894,7 +1034,7 @@ fn gen_delegated_sub_model_funcs(
 
     // tick: emit port reads as const locals
     out.push_str(&format!(
-        "{}void {}_tick({}) {{\n",
+        "{}void\n{}_tick({}) {{\n",
         inline, func_prefix, struct_param
     ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
@@ -906,15 +1046,26 @@ fn gen_delegated_sub_model_funcs(
         }
     }
     // Switch on del_path.state
-    out.push_str(&format!("{}switch ({}->{}.state) {{\n", i1, param, del_path));
+    out.push_str(&format!(
+        "{}switch ({}->{}.state) {{\n",
+        i1, param, del_path
+    ));
 
     // INIT case
-    out.push_str(&format!("{}case {}_INIT: {{\n", ctx.indent.level(1), enum_prefix));
+    out.push_str(&format!(
+        "{}case {}_INIT: {{\n",
+        ctx.indent.level(1),
+        enum_prefix
+    ));
     // Var initializations
     let del_local_vars = collect_local_var_names(del_md);
     for part in &del_md.parts {
         if let ModelPart::VariableDefinition(vd) = part {
-            if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+            if vd
+                .attrs
+                .iter()
+                .any(|a| matches!(a, VariableAttribute::Portable(_)))
+            {
                 continue;
             }
             if let Some(vname) = &vd.name {
@@ -924,16 +1075,37 @@ fn gen_delegated_sub_model_funcs(
                             for (i, v) in vals.iter().enumerate() {
                                 out.push_str(&format!(
                                     "{}{}->{}.{}[{}] = {};\n",
-                                    ctx.indent.level(2), param, del_path, vname.name, i,
-                                    expr_with_ctx_ports(v, param, del_path, &del_local_vars, port_map, ctx)
+                                    ctx.indent.level(2),
+                                    param,
+                                    del_path,
+                                    vname.name,
+                                    i,
+                                    expr_with_ctx_ports(
+                                        v,
+                                        param,
+                                        del_path,
+                                        &del_local_vars,
+                                        port_map,
+                                        ctx
+                                    )
                                 ));
                             }
                         }
                         _ => {
                             out.push_str(&format!(
                                 "{}{}->{}.{} = {};\n",
-                                ctx.indent.level(2), param, del_path, vname.name,
-                                expr_with_ctx_ports(init, param, del_path, &del_local_vars, port_map, ctx)
+                                ctx.indent.level(2),
+                                param,
+                                del_path,
+                                vname.name,
+                                expr_with_ctx_ports(
+                                    init,
+                                    param,
+                                    del_path,
+                                    &del_local_vars,
+                                    port_map,
+                                    ctx
+                                )
                             ));
                         }
                     }
@@ -945,7 +1117,11 @@ fn gen_delegated_sub_model_funcs(
     if let Some(start) = find_start_state(del_md) {
         out.push_str(&format!(
             "{}{}->{}.state = {}_{};\n",
-            ctx.indent.level(2), param, del_path, enum_prefix, start.to_uppercase()
+            ctx.indent.level(2),
+            param,
+            del_path,
+            enum_prefix,
+            start.to_uppercase()
         ));
     }
     out.push_str(&format!("{}break;\n", ctx.indent.level(2)));
@@ -953,6 +1129,8 @@ fn gen_delegated_sub_model_funcs(
 
     // State cases
     let empty_peer_map: HashMap<String, String> = HashMap::new();
+    let global_var_names = collect_global_var_names(ctx);
+    let del_current_upper = format!("{}_{}", leaf_upper, del_upper);
     for part in &del_md.parts {
         if let ModelPart::StateDefinition(sd) = part {
             let sname = sd.name.as_ref().map(|n| n.name.as_str()).unwrap_or("?");
@@ -961,56 +1139,150 @@ fn gen_delegated_sub_model_funcs(
 
             out.push_str(&format!(
                 "{}case {}_{}: {{\n",
-                ctx.indent.level(1), enum_prefix, sname_up
+                ctx.indent.level(1),
+                enum_prefix,
+                sname_up
             ));
 
-            // Transitions
+            // State-level always handler
             for sp in &sd.parts {
-                if let StatePart::Reference(_, target, cond_opt) = sp {
-                    let global_var_names = collect_global_var_names(ctx);
-                    let cond_str = if let Some(cond) = cond_opt {
-                        cond_with_ctx_ports(
-                            cond,
+                if let StatePart::PropertyDefinition(pd) = sp {
+                    if pd.name.as_ref().map(|n| n.name.as_str()) == Some("always") {
+                        out.push_str(&format!("{}// Always\n", ctx.indent.level(2)));
+                        out.push_str(&format!("{}{{\n", ctx.indent.level(2)));
+                        out.push_str(&property_with_ctx(
+                            &pd.value,
                             param,
                             del_path,
                             &del_local_vars,
-                            parent_upper,
-                            &format!("{}_{}", leaf_upper, del_upper),
-                            &empty_peer_map,
                             port_map,
-                            &global_var_names,
-                        )
-                    } else {
-                        "1".to_string()
-                    };
-                    out.push_str(&format!("{}if ({}) {{\n", ctx.indent.level(2), cond_str));
+                            ctx,
+                            3,
+                        ));
+                        out.push_str(&format!("{}}}\n", ctx.indent.level(2)));
+                        out.push_str(&format!("{}//\n", ctx.indent.level(2)));
+                    }
+                }
+            }
 
-                    // Enter handler of target
-                    if let Some(target_sd) = find_state_in_model(del_md, &target.name) {
-                        for tsp in &target_sd.parts {
-                            if let StatePart::PropertyDefinition(pd) = tsp {
-                                if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
-                                    out.push_str(&property_with_ctx(
-                                        &pd.value,
-                                        param,
-                                        del_path,
-                                        &del_local_vars,
-                                        port_map,
-                                        ctx,
-                                        3,
-                                    ));
-                                }
+            // Collect exit props for this state
+            let state_exit_props: Vec<&Property> = sd.parts.iter().filter_map(|sp| {
+                if let StatePart::PropertyDefinition(pd) = sp {
+                    if pd.name.as_ref().map(|n| n.name.as_str()) == Some("exit") {
+                        Some(&pd.value)
+                    } else { None }
+                } else { None }
+            }).collect();
+
+            // Transitions as else-if chain
+            let transitions: Vec<_> = sd.parts.iter().filter_map(|sp| {
+                if let StatePart::Reference(_, target, cond_opt) = sp {
+                    Some((target, cond_opt))
+                } else { None }
+            }).collect();
+
+            let mut first_t = true;
+            for (target, cond_opt) in &transitions {
+                let cond_str = if let Some(cond) = cond_opt {
+                    cond_with_ctx_ports(
+                        cond,
+                        param,
+                        del_path,
+                        &del_local_vars,
+                        parent_upper,
+                        &del_current_upper,
+                        &empty_peer_map,
+                        port_map,
+                        &global_var_names,
+                    )
+                } else {
+                    "1".to_string()
+                };
+
+                if first_t {
+                    out.push_str(&format!("{}if ({}) {{\n", ctx.indent.level(2), cond_str));
+                    first_t = false;
+                } else {
+                    out.push_str(&format!("{}}} else if ({}) {{\n", ctx.indent.level(2), cond_str));
+                }
+
+                // State change
+                out.push_str(&format!(
+                    "{}{}->{}.state = {}_{};\n",
+                    ctx.indent.level(3),
+                    param,
+                    del_path,
+                    enum_prefix,
+                    target.name.to_uppercase()
+                ));
+
+                // State exit code
+                for prop in &state_exit_props {
+                    out.push_str(&property_with_ctx(
+                        prop,
+                        param,
+                        del_path,
+                        &del_local_vars,
+                        port_map,
+                        ctx,
+                        3,
+                    ));
+                }
+
+                // Model-level exit if transitioning to terminal state
+                let target_is_terminal = terminal_states.iter().any(|t| t == &target.name);
+                if target_is_terminal {
+                    for mp in &del_md.parts {
+                        if let ModelPart::PropertyDefinition(pd) = mp {
+                            if pd.name.as_ref().map(|n| n.name.as_str()) == Some("exit") {
+                                out.push_str(&format!("{}// Exit\n", ctx.indent.level(3)));
+                                out.push_str(&property_with_ctx(
+                                    &pd.value,
+                                    param,
+                                    del_path,
+                                    &del_local_vars,
+                                    port_map,
+                                    ctx,
+                                    3,
+                                ));
                             }
                         }
                     }
-
-                    out.push_str(&format!(
-                        "{}{}->{}.state = {}_{};\n",
-                        ctx.indent.level(3), param, del_path, enum_prefix,
-                        target.name.to_uppercase()
-                    ));
-                    out.push_str(&format!("{}}}\n", ctx.indent.level(2)));
                 }
+
+                // Before/enter handler of target state
+                if let Some(target_sd) = find_state_in_model(del_md, &target.name) {
+                    for tsp in &target_sd.parts {
+                        if let StatePart::PropertyDefinition(pd) = tsp {
+                            let pname = pd.name.as_ref().map(|n| n.name.as_str());
+                            if pname == Some("before") {
+                                out.push_str(&format!("{}// Before\n", ctx.indent.level(3)));
+                                out.push_str(&property_with_ctx(
+                                    &pd.value,
+                                    param,
+                                    del_path,
+                                    &del_local_vars,
+                                    port_map,
+                                    ctx,
+                                    3,
+                                ));
+                            } else if pname == Some("enter") {
+                                out.push_str(&property_with_ctx(
+                                    &pd.value,
+                                    param,
+                                    del_path,
+                                    &del_local_vars,
+                                    port_map,
+                                    ctx,
+                                    3,
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+            if !first_t {
+                out.push_str(&format!("{}}}\n", ctx.indent.level(2)));
             }
 
             let _ = is_terminal;
@@ -1019,6 +1291,7 @@ fn gen_delegated_sub_model_funcs(
         }
     }
 
+    out.push_str(&format!("{}default: break;\n", ctx.indent.level(1)));
     out.push_str(&format!("{}}}\n", i1));
     out.push_str("}\n");
 
@@ -1034,7 +1307,10 @@ fn gen_delegated_sub_model_funcs(
             .map(|s| {
                 format!(
                     "{}->{}.state == {}_{}",
-                    param, del_path, enum_prefix, s.to_uppercase()
+                    param,
+                    del_path,
+                    enum_prefix,
+                    s.to_uppercase()
                 )
             })
             .collect();
@@ -1077,7 +1353,7 @@ fn gen_delegating_fsm_funcs(
 
     // reset
     out.push_str(&format!(
-        "{}void {}_{}_reset({}) {{\n",
+        "{}void\n{}_{}_reset({}) {{\n",
         inline, parent_name, field_name, struct_param
     ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
@@ -1089,16 +1365,19 @@ fn gen_delegating_fsm_funcs(
 
     // init
     out.push_str(&format!(
-        "{}void {}_{}_init({}) {{\n",
+        "{}void\n{}_{}_init({}) {{\n",
         inline, parent_name, field_name, struct_param
     ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
-    out.push_str(&format!("{}{}_{}_reset({});\n", i1, parent_name, field_name, param));
+    out.push_str(&format!(
+        "{}{}_{}_reset({});\n",
+        i1, parent_name, field_name, param
+    ));
     out.push_str("}\n");
 
     // tick: port reads
     out.push_str(&format!(
-        "{}void {}_{}_tick({}) {{\n",
+        "{}void\n{}_{}_tick({}) {{\n",
         inline, parent_name, field_name, struct_param
     ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
@@ -1113,11 +1392,20 @@ fn gen_delegating_fsm_funcs(
     out.push_str(&format!("{}switch ({}->{}.state) {{\n", i1, param, field));
 
     // INIT case
-    out.push_str(&format!("{}case {}_{}_INIT: {{\n", ctx.indent.level(1), parent_upper, field_upper));
+    out.push_str(&format!(
+        "{}case {}_{}_INIT: {{\n",
+        ctx.indent.level(1),
+        parent_upper,
+        field_upper
+    ));
     // Var initializations
     for part in &sub_md.parts {
         if let ModelPart::VariableDefinition(vd) = part {
-            if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+            if vd
+                .attrs
+                .iter()
+                .any(|a| matches!(a, VariableAttribute::Portable(_)))
+            {
                 continue;
             }
             if let Some(vname) = &vd.name {
@@ -1127,15 +1415,29 @@ fn gen_delegating_fsm_funcs(
                             for (i, v) in vals.iter().enumerate() {
                                 out.push_str(&format!(
                                     "{}{}->{}.{}[{}] = {};\n",
-                                    ctx.indent.level(2), param, field, vname.name, i,
-                                    expr_with_ctx_ports(v, param, field, &local_vars, port_map, ctx)
+                                    ctx.indent.level(2),
+                                    param,
+                                    field,
+                                    vname.name,
+                                    i,
+                                    expr_with_ctx_ports(
+                                        v,
+                                        param,
+                                        field,
+                                        &local_vars,
+                                        port_map,
+                                        ctx
+                                    )
                                 ));
                             }
                         }
                         _ => {
                             out.push_str(&format!(
                                 "{}{}->{}.{} = {};\n",
-                                ctx.indent.level(2), param, field, vname.name,
+                                ctx.indent.level(2),
+                                param,
+                                field,
+                                vname.name,
                                 expr_with_ctx_ports(init, param, field, &local_vars, port_map, ctx)
                             ));
                         }
@@ -1148,13 +1450,19 @@ fn gen_delegating_fsm_funcs(
     if let Some(start) = find_start_state(sub_md) {
         out.push_str(&format!(
             "{}{}->{}.state = {}_{}_{};\n",
-            ctx.indent.level(2), param, field, parent_upper, field_upper, start.to_uppercase()
+            ctx.indent.level(2),
+            param,
+            field,
+            parent_upper,
+            field_upper,
+            start.to_uppercase()
         ));
     }
     out.push_str(&format!("{}break;\n", ctx.indent.level(2)));
     out.push_str(&format!("{}}}\n", ctx.indent.level(1)));
 
     // State cases
+    let global_var_names_del = collect_global_var_names(ctx);
     for part in &sub_md.parts {
         if let ModelPart::StateDefinition(sd) = part {
             let sname = sd.name.as_ref().map(|n| n.name.as_str()).unwrap_or("?");
@@ -1162,8 +1470,41 @@ fn gen_delegating_fsm_funcs(
 
             out.push_str(&format!(
                 "{}case {}_{}_{}: {{\n",
-                ctx.indent.level(1), parent_upper, field_upper, sname_up
+                ctx.indent.level(1),
+                parent_upper,
+                field_upper,
+                sname_up
             ));
+
+            // State-level always handler
+            for sp in &sd.parts {
+                if let StatePart::PropertyDefinition(pd) = sp {
+                    if pd.name.as_ref().map(|n| n.name.as_str()) == Some("always") {
+                        out.push_str(&format!("{}// Always\n", ctx.indent.level(2)));
+                        out.push_str(&format!("{}{{\n", ctx.indent.level(2)));
+                        out.push_str(&property_with_ctx(
+                            &pd.value,
+                            param,
+                            field,
+                            &local_vars,
+                            port_map,
+                            ctx,
+                            3,
+                        ));
+                        out.push_str(&format!("{}}}\n", ctx.indent.level(2)));
+                        out.push_str(&format!("{}//\n", ctx.indent.level(2)));
+                    }
+                }
+            }
+
+            // Collect exit props for this state
+            let state_exit_props: Vec<&Property> = sd.parts.iter().filter_map(|sp| {
+                if let StatePart::PropertyDefinition(pd) = sp {
+                    if pd.name.as_ref().map(|n| n.name.as_str()) == Some("exit") {
+                        Some(&pd.value)
+                    } else { None }
+                } else { None }
+            }).collect();
 
             // Check if this is a delegating state
             if let Some(del_impl_name) = del_state_map.get(sname) {
@@ -1174,130 +1515,267 @@ fn gen_delegating_fsm_funcs(
                 let del_enum_prefix = format!("{}_{}_{}", parent_upper, field_upper, del_upper);
 
                 // Tick the delegated sub-model
-                out.push_str(&format!("{}{}_tick({});\n", ctx.indent.level(2), del_func_prefix, param));
+                out.push_str(&format!(
+                    "{}{}_tick({});\n",
+                    ctx.indent.level(2),
+                    del_func_prefix,
+                    param
+                ));
 
-                // Transitions from this delegating state
-                for sp in &sd.parts {
+                // Collect transitions from this delegating state
+                let transitions: Vec<_> = sd.parts.iter().filter_map(|sp| {
                     if let StatePart::Reference(_, target, cond_opt) = sp {
-                        let global_var_names = collect_global_var_names(ctx);
-                        let cond_str = if let Some(cond) = cond_opt {
-                            // The condition may reference S(SubModel) = End | reset pattern
-                            cond_with_ctx_delegating(
-                                cond,
-                                param,
-                                field,
-                                &local_vars,
-                                parent_upper,
-                                field_upper,
-                                peer_map,
-                                port_map,
-                                // For S(Detect_Angle) = End, we need the del sub-model state path
-                                &del_path,
-                                &del_enum_prefix,
-                                sname, // current delegating state name
-                                del_impl_name,
-                                &global_var_names,
-                            )
-                        } else {
-                            "1".to_string()
-                        };
+                        Some((target, cond_opt))
+                    } else { None }
+                }).collect();
 
+                let mut first_t = true;
+                for (target, cond_opt) in &transitions {
+                    let cond_str = if let Some(cond) = cond_opt {
+                        // The condition may reference S(SubModel) = End | reset pattern
+                        cond_with_ctx_delegating(
+                            cond,
+                            param,
+                            field,
+                            &local_vars,
+                            parent_upper,
+                            field_upper,
+                            peer_map,
+                            port_map,
+                            // For S(Detect_Angle) = End, we need the del sub-model state path
+                            &del_path,
+                            &del_enum_prefix,
+                            sname, // current delegating state name
+                            del_impl_name,
+                            &global_var_names_del,
+                        )
+                    } else {
+                        "1".to_string()
+                    };
+
+                    if first_t {
                         out.push_str(&format!("{}if ({}) {{\n", ctx.indent.level(2), cond_str));
+                        first_t = false;
+                    } else {
+                        out.push_str(&format!("{}}} else if ({}) {{\n", ctx.indent.level(2), cond_str));
+                    }
 
-                        // Enter handler of target (inline)
-                        if let Some(target_sd) = find_state_in_model(sub_md, &target.name) {
-                            for tsp in &target_sd.parts {
-                                if let StatePart::PropertyDefinition(pd) = tsp {
-                                    if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
-                                        out.push_str(&property_with_ctx(
-                                            &pd.value,
-                                            param,
-                                            field,
-                                            &local_vars,
-                                            port_map,
-                                            ctx,
-                                            3,
-                                        ));
-                                    }
+                    // State change
+                    out.push_str(&format!(
+                        "{}{}->{}.state = {}_{}_{};",
+                        ctx.indent.level(3),
+                        param,
+                        field,
+                        parent_upper,
+                        field_upper,
+                        target.name.to_uppercase()
+                    ));
+                    out.push('\n');
+
+                    // State exit code
+                    for prop in &state_exit_props {
+                        out.push_str(&property_with_ctx(
+                            prop,
+                            param,
+                            field,
+                            &local_vars,
+                            port_map,
+                            ctx,
+                            3,
+                        ));
+                    }
+
+                    // Model-level exit if target is terminal
+                    let target_is_terminal = terminal_states.iter().any(|t| t == &target.name);
+                    if target_is_terminal {
+                        for mp in &sub_md.parts {
+                            if let ModelPart::PropertyDefinition(pd) = mp {
+                                if pd.name.as_ref().map(|n| n.name.as_str()) == Some("exit") {
+                                    out.push_str(&format!("{}// Exit\n", ctx.indent.level(3)));
+                                    out.push_str(&property_with_ctx(
+                                        &pd.value,
+                                        param,
+                                        field,
+                                        &local_vars,
+                                        port_map,
+                                        ctx,
+                                        3,
+                                    ));
                                 }
                             }
                         }
-                        // If transitioning to another delegating state, also init that state's sub-model
-                        if let Some(next_del_impl) = del_state_map.get(&target.name) {
-                            let next_del_func = format!("{}_{}_{}", parent_name, field_name, next_del_impl);
-                            out.push_str(&format!(
-                                "{}{}_init({});\n",
-                                ctx.indent.level(3), next_del_func, param
-                            ));
-                        }
-
-                        out.push_str(&format!(
-                            "{}{}->{}.state = {}_{}_{} ;\n",
-                            ctx.indent.level(3), param, field, parent_upper, field_upper,
-                            target.name.to_uppercase()
-                        ));
-                        out.push_str(&format!("{}}}\n", ctx.indent.level(2)));
                     }
+
+                    // Enter handler of target (inline)
+                    if let Some(target_sd) = find_state_in_model(sub_md, &target.name) {
+                        for tsp in &target_sd.parts {
+                            if let StatePart::PropertyDefinition(pd) = tsp {
+                                let pname = pd.name.as_ref().map(|n| n.name.as_str());
+                                if pname == Some("before") {
+                                    out.push_str(&format!("{}// Before\n", ctx.indent.level(3)));
+                                    out.push_str(&property_with_ctx(
+                                        &pd.value,
+                                        param,
+                                        field,
+                                        &local_vars,
+                                        port_map,
+                                        ctx,
+                                        3,
+                                    ));
+                                } else if pname == Some("enter") {
+                                    out.push_str(&property_with_ctx(
+                                        &pd.value,
+                                        param,
+                                        field,
+                                        &local_vars,
+                                        port_map,
+                                        ctx,
+                                        3,
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                    // If transitioning to another delegating state, also init that state's sub-model
+                    if let Some(next_del_impl) = del_state_map.get(&target.name) {
+                        let next_del_func =
+                            format!("{}_{}_{}", parent_name, field_name, next_del_impl);
+                        out.push_str(&format!(
+                            "{}{}_init({});\n",
+                            ctx.indent.level(3),
+                            next_del_func,
+                            param
+                        ));
+                    }
+                }
+                if !first_t {
+                    out.push_str(&format!("{}}}\n", ctx.indent.level(2)));
                 }
                 let _ = del_func_prefix;
                 let _ = del_enum_prefix;
             } else {
                 // Normal (non-delegating) state
-                for sp in &sd.parts {
+                let transitions: Vec<_> = sd.parts.iter().filter_map(|sp| {
                     if let StatePart::Reference(_, target, cond_opt) = sp {
-                        let global_var_names = collect_global_var_names(ctx);
-                        let cond_str = if let Some(cond) = cond_opt {
-                            cond_with_ctx_ports(
-                                cond,
-                                param,
-                                field,
-                                &local_vars,
-                                parent_upper,
-                                field_upper,
-                                peer_map,
-                                port_map,
-                                &global_var_names,
-                            )
-                        } else {
-                            "1".to_string()
-                        };
+                        Some((target, cond_opt))
+                    } else { None }
+                }).collect();
 
+                let mut first_t = true;
+                for (target, cond_opt) in &transitions {
+                    let cond_str = if let Some(cond) = cond_opt {
+                        cond_with_ctx_ports(
+                            cond,
+                            param,
+                            field,
+                            &local_vars,
+                            parent_upper,
+                            field_upper,
+                            peer_map,
+                            port_map,
+                            &global_var_names_del,
+                        )
+                    } else {
+                        "1".to_string()
+                    };
+
+                    if first_t {
                         out.push_str(&format!("{}if ({}) {{\n", ctx.indent.level(2), cond_str));
+                        first_t = false;
+                    } else {
+                        out.push_str(&format!("{}}} else if ({}) {{\n", ctx.indent.level(2), cond_str));
+                    }
 
-                        // Enter handler of target
-                        if let Some(target_sd) = find_state_in_model(sub_md, &target.name) {
-                            for tsp in &target_sd.parts {
-                                if let StatePart::PropertyDefinition(pd) = tsp {
-                                    if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
-                                        out.push_str(&property_with_ctx(
-                                            &pd.value,
-                                            param,
-                                            field,
-                                            &local_vars,
-                                            port_map,
-                                            ctx,
-                                            3,
-                                        ));
-                                    }
+                    // State change
+                    out.push_str(&format!(
+                        "{}{}->{}.state = {}_{}_{};",
+                        ctx.indent.level(3),
+                        param,
+                        field,
+                        parent_upper,
+                        field_upper,
+                        target.name.to_uppercase()
+                    ));
+                    out.push('\n');
+
+                    // State exit code
+                    for prop in &state_exit_props {
+                        out.push_str(&property_with_ctx(
+                            prop,
+                            param,
+                            field,
+                            &local_vars,
+                            port_map,
+                            ctx,
+                            3,
+                        ));
+                    }
+
+                    // Model-level exit if target is terminal
+                    let target_is_terminal = terminal_states.iter().any(|t| t == &target.name);
+                    if target_is_terminal {
+                        for mp in &sub_md.parts {
+                            if let ModelPart::PropertyDefinition(pd) = mp {
+                                if pd.name.as_ref().map(|n| n.name.as_str()) == Some("exit") {
+                                    out.push_str(&format!("{}// Exit\n", ctx.indent.level(3)));
+                                    out.push_str(&property_with_ctx(
+                                        &pd.value,
+                                        param,
+                                        field,
+                                        &local_vars,
+                                        port_map,
+                                        ctx,
+                                        3,
+                                    ));
                                 }
                             }
                         }
-                        // If target is a delegating state, init its sub-model
-                        if let Some(next_del_impl) = del_state_map.get(&target.name) {
-                            let next_del_func = format!("{}_{}_{}", parent_name, field_name, next_del_impl);
-                            out.push_str(&format!(
-                                "{}{}_init({});\n",
-                                ctx.indent.level(3), next_del_func, param
-                            ));
-                        }
-
-                        out.push_str(&format!(
-                            "{}{}->{}.state = {}_{}_{} ;\n",
-                            ctx.indent.level(3), param, field, parent_upper, field_upper,
-                            target.name.to_uppercase()
-                        ));
-                        out.push_str(&format!("{}}}\n", ctx.indent.level(2)));
                     }
+
+                    // Enter/before handler of target
+                    if let Some(target_sd) = find_state_in_model(sub_md, &target.name) {
+                        for tsp in &target_sd.parts {
+                            if let StatePart::PropertyDefinition(pd) = tsp {
+                                let pname = pd.name.as_ref().map(|n| n.name.as_str());
+                                if pname == Some("before") {
+                                    out.push_str(&format!("{}// Before\n", ctx.indent.level(3)));
+                                    out.push_str(&property_with_ctx(
+                                        &pd.value,
+                                        param,
+                                        field,
+                                        &local_vars,
+                                        port_map,
+                                        ctx,
+                                        3,
+                                    ));
+                                } else if pname == Some("enter") {
+                                    out.push_str(&property_with_ctx(
+                                        &pd.value,
+                                        param,
+                                        field,
+                                        &local_vars,
+                                        port_map,
+                                        ctx,
+                                        3,
+                                    ));
+                                }
+                            }
+                        }
+                    }
+                    // If target is a delegating state, init its sub-model
+                    if let Some(next_del_impl) = del_state_map.get(&target.name) {
+                        let next_del_func =
+                            format!("{}_{}_{}", parent_name, field_name, next_del_impl);
+                        out.push_str(&format!(
+                            "{}{}_init({});\n",
+                            ctx.indent.level(3),
+                            next_del_func,
+                            param
+                        ));
+                    }
+                }
+                if !first_t {
+                    out.push_str(&format!("{}}}\n", ctx.indent.level(2)));
                 }
             }
 
@@ -1306,13 +1784,14 @@ fn gen_delegating_fsm_funcs(
         }
     }
 
+    out.push_str(&format!("{}default: break;\n", i1));
     out.push_str(&format!("{}}}\n", i1));
     out.push_str("}\n");
 
     // finished
     let const_qualifier = if with_ports { "const " } else { "" };
     out.push_str(&format!(
-        "{}bool {}_{}_finished({}struct {} *{}) {{\n",
+        "{}bool\n{}_{}_finished({}struct {} *{}) {{\n",
         inline, parent_name, field_name, const_qualifier, parent_name, param
     ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
@@ -1323,8 +1802,12 @@ fn gen_delegating_fsm_funcs(
             .iter()
             .map(|s| {
                 format!(
-                    "{}->{}.state == {}_{}_{} ",
-                    param, field, parent_upper, field_upper, s.to_uppercase()
+                    "{}->{}.state == {}_{}_{}",
+                    param,
+                    field,
+                    parent_upper,
+                    field_upper,
+                    s.to_uppercase()
                 )
             })
             .collect();
@@ -1362,7 +1845,7 @@ fn gen_sub_model_funcs(
 
     // reset
     out.push_str(&format!(
-        "{}void {}_{}_reset({}) {{\n",
+        "{}void\n{}_{}_reset({}) {{\n",
         inline, parent_name, field_name, struct_param
     ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
@@ -1374,16 +1857,19 @@ fn gen_sub_model_funcs(
 
     // init
     out.push_str(&format!(
-        "{}void {}_{}_init({}) {{\n",
+        "{}void\n{}_{}_init({}) {{\n",
         inline, parent_name, field_name, struct_param
     ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
-    out.push_str(&format!("{}{}_{}_reset({});\n", i1, parent_name, field_name, param));
+    out.push_str(&format!(
+        "{}{}_{}_reset({});\n",
+        i1, parent_name, field_name, param
+    ));
     out.push_str("}\n");
 
     // tick
     out.push_str(&format!(
-        "{}void {}_{}_tick({}) {{\n",
+        "{}void\n{}_{}_tick({}) {{\n",
         inline, parent_name, field_name, struct_param
     ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
@@ -1399,11 +1885,17 @@ fn gen_sub_model_funcs(
     // INIT case: set initial values, transition to start
     out.push_str(&format!(
         "{}case {}_{}_INIT: {{\n",
-        ctx.indent.level(1), parent_upper, field_upper
+        ctx.indent.level(1),
+        parent_upper,
+        field_upper
     ));
     for part in &sub_md.parts {
         if let ModelPart::VariableDefinition(vd) = part {
-            if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+            if vd
+                .attrs
+                .iter()
+                .any(|a| matches!(a, VariableAttribute::Portable(_)))
+            {
                 continue;
             }
             if let Some(vname) = &vd.name {
@@ -1413,15 +1905,29 @@ fn gen_sub_model_funcs(
                             for (i, v) in vals.iter().enumerate() {
                                 out.push_str(&format!(
                                     "{}{}->{}.{}[{}] = {};\n",
-                                    ctx.indent.level(2), param, field, vname.name, i,
-                                    expr_with_ctx_ports(v, param, field, &local_vars, port_map, ctx)
+                                    ctx.indent.level(2),
+                                    param,
+                                    field,
+                                    vname.name,
+                                    i,
+                                    expr_with_ctx_ports(
+                                        v,
+                                        param,
+                                        field,
+                                        &local_vars,
+                                        port_map,
+                                        ctx
+                                    )
                                 ));
                             }
                         }
                         _ => {
                             out.push_str(&format!(
                                 "{}{}->{}.{} = {};\n",
-                                ctx.indent.level(2), param, field, vname.name,
+                                ctx.indent.level(2),
+                                param,
+                                field,
+                                vname.name,
                                 expr_with_ctx_ports(init, param, field, &local_vars, port_map, ctx)
                             ));
                         }
@@ -1432,14 +1938,20 @@ fn gen_sub_model_funcs(
     }
     if let Some(start) = find_start_state(sub_md) {
         out.push_str(&format!(
-            "{}{}->{}.state = {}_{}_{} ;\n",
-            ctx.indent.level(2), param, field, parent_upper, field_upper, start.to_uppercase()
+            "{}{}->{}.state = {}_{}_{};\n",
+            ctx.indent.level(2),
+            param,
+            field,
+            parent_upper,
+            field_upper,
+            start.to_uppercase()
         ));
     }
     out.push_str(&format!("{}break;\n", ctx.indent.level(2)));
     out.push_str(&format!("{}}}\n", ctx.indent.level(1)));
 
     // Regular state cases
+    let global_var_names_sub = collect_global_var_names(ctx);
     for part in &sub_md.parts {
         if let ModelPart::StateDefinition(sd) = part {
             let sname = sd.name.as_ref().map(|n| n.name.as_str()).unwrap_or("?");
@@ -1448,60 +1960,152 @@ fn gen_sub_model_funcs(
 
             out.push_str(&format!(
                 "{}case {}_{}_{}: {{\n",
-                ctx.indent.level(1), parent_upper, field_upper, sname_up
+                ctx.indent.level(1),
+                parent_upper,
+                field_upper,
+                sname_up
             ));
 
-            // Transitions
+            // State-level always handler
             for sp in &sd.parts {
-                if let StatePart::Reference(_, target, cond_opt) = sp {
-                    let global_var_names = collect_global_var_names(ctx);
-                    let cond_str = if let Some(cond) = cond_opt {
-                        cond_with_ctx_ports(
-                            cond,
+                if let StatePart::PropertyDefinition(pd) = sp {
+                    if pd.name.as_ref().map(|n| n.name.as_str()) == Some("always") {
+                        out.push_str(&format!("{}// Always\n", ctx.indent.level(2)));
+                        out.push_str(&format!("{}{{\n", ctx.indent.level(2)));
+                        out.push_str(&property_with_ctx(
+                            &pd.value,
                             param,
                             field,
                             &local_vars,
-                            parent_upper,
-                            field_upper,
-                            peer_map,
                             port_map,
-                            &global_var_names,
-                        )
-                    } else {
-                        "1".to_string()
-                    };
-                    out.push_str(&format!("{}if ({}) {{\n", ctx.indent.level(2), cond_str));
+                            ctx,
+                            3,
+                        ));
+                        out.push_str(&format!("{}}}\n", ctx.indent.level(2)));
+                        out.push_str(&format!("{}//\n", ctx.indent.level(2)));
+                    }
+                }
+            }
 
-                    // Enter handler of target state
-                    if let Some(target_sd) = find_state_in_model(sub_md, &target.name) {
-                        for tsp in &target_sd.parts {
-                            if let StatePart::PropertyDefinition(pd) = tsp {
-                                if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
-                                    out.push_str(&property_with_ctx(
-                                        &pd.value,
-                                        param,
-                                        field,
-                                        &local_vars,
-                                        port_map,
-                                        ctx,
-                                        3,
-                                    ));
-                                }
+            // Collect exit props
+            let state_exit_props: Vec<&Property> = sd.parts.iter().filter_map(|sp| {
+                if let StatePart::PropertyDefinition(pd) = sp {
+                    if pd.name.as_ref().map(|n| n.name.as_str()) == Some("exit") {
+                        Some(&pd.value)
+                    } else { None }
+                } else { None }
+            }).collect();
+
+            // Transitions as else-if chain
+            let transitions: Vec<_> = sd.parts.iter().filter_map(|sp| {
+                if let StatePart::Reference(_, target, cond_opt) = sp {
+                    Some((target, cond_opt))
+                } else { None }
+            }).collect();
+
+            let mut first_t = true;
+            for (target, cond_opt) in &transitions {
+                let cond_str = if let Some(cond) = cond_opt {
+                    cond_with_ctx_ports(
+                        cond,
+                        param,
+                        field,
+                        &local_vars,
+                        parent_upper,
+                        field_upper,
+                        peer_map,
+                        port_map,
+                        &global_var_names_sub,
+                    )
+                } else {
+                    "1".to_string()
+                };
+
+                if first_t {
+                    out.push_str(&format!("{}if ({}) {{\n", ctx.indent.level(2), cond_str));
+                    first_t = false;
+                } else {
+                    out.push_str(&format!("{}}} else if ({}) {{\n", ctx.indent.level(2), cond_str));
+                }
+
+                // State change
+                out.push_str(&format!(
+                    "{}{}->{}.state = {}_{}_{};\n",
+                    ctx.indent.level(3),
+                    param,
+                    field,
+                    parent_upper,
+                    field_upper,
+                    target.name.to_uppercase()
+                ));
+
+                // State exit code
+                for prop in &state_exit_props {
+                    out.push_str(&property_with_ctx(
+                        prop,
+                        param,
+                        field,
+                        &local_vars,
+                        port_map,
+                        ctx,
+                        3,
+                    ));
+                }
+
+                // Model-level exit if target is terminal
+                let target_is_terminal = terminal_states.iter().any(|t| t == &target.name);
+                if target_is_terminal {
+                    for mp in &sub_md.parts {
+                        if let ModelPart::PropertyDefinition(pd) = mp {
+                            if pd.name.as_ref().map(|n| n.name.as_str()) == Some("exit") {
+                                out.push_str(&format!("{}// Exit\n", ctx.indent.level(3)));
+                                out.push_str(&property_with_ctx(
+                                    &pd.value,
+                                    param,
+                                    field,
+                                    &local_vars,
+                                    port_map,
+                                    ctx,
+                                    3,
+                                ));
                             }
                         }
                     }
-
-                    out.push_str(&format!(
-                        "{}{}->{}.state = {}_{}_{} ;\n",
-                        ctx.indent.level(3),
-                        param,
-                        field,
-                        parent_upper,
-                        field_upper,
-                        target.name.to_uppercase()
-                    ));
-                    out.push_str(&format!("{}}}\n", ctx.indent.level(2)));
                 }
+
+                // Enter/before handler of target state
+                if let Some(target_sd) = find_state_in_model(sub_md, &target.name) {
+                    for tsp in &target_sd.parts {
+                        if let StatePart::PropertyDefinition(pd) = tsp {
+                            let pname = pd.name.as_ref().map(|n| n.name.as_str());
+                            if pname == Some("before") {
+                                out.push_str(&format!("{}// Before\n", ctx.indent.level(3)));
+                                out.push_str(&property_with_ctx(
+                                    &pd.value,
+                                    param,
+                                    field,
+                                    &local_vars,
+                                    port_map,
+                                    ctx,
+                                    3,
+                                ));
+                            } else if pname == Some("enter") {
+                                out.push_str(&property_with_ctx(
+                                    &pd.value,
+                                    param,
+                                    field,
+                                    &local_vars,
+                                    port_map,
+                                    ctx,
+                                    3,
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+            if !first_t {
+                out.push_str(&format!("{}}}\n", ctx.indent.level(2)));
             }
 
             let _ = is_terminal;
@@ -1510,13 +2114,14 @@ fn gen_sub_model_funcs(
         }
     }
 
+    out.push_str(&format!("{}default: break;\n", i1));
     out.push_str(&format!("{}}}\n", i1));
     out.push_str("}\n");
 
     // finished
     let const_qualifier = if with_ports { "const " } else { "" };
     out.push_str(&format!(
-        "{}bool {}_{}_finished({}struct {} *{}) {{\n",
+        "{}bool\n{}_{}_finished({}struct {} *{}) {{\n",
         inline, parent_name, field_name, const_qualifier, parent_name, param
     ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
@@ -1599,7 +2204,11 @@ fn gen_fsm_source(
     out.push_str(&format!("{}case {}_INIT: {{\n", i2, upper));
     for part in &model.parts {
         if let ModelPart::VariableDefinition(vd) = part {
-            if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+            if vd
+                .attrs
+                .iter()
+                .any(|a| matches!(a, VariableAttribute::Portable(_)))
+            {
                 continue;
             }
             if let Some(vname) = &vd.name {
@@ -1609,7 +2218,10 @@ fn gen_fsm_source(
                             for (i, v) in vals.iter().enumerate() {
                                 out.push_str(&format!(
                                     "{}{}->{}[{}] = {};\n",
-                                    i3, param, vname.name, i,
+                                    i3,
+                                    param,
+                                    vname.name,
+                                    i,
                                     expr_with_ctx(v, &param, "", &local_vars)
                                 ));
                             }
@@ -1617,7 +2229,9 @@ fn gen_fsm_source(
                         _ => {
                             out.push_str(&format!(
                                 "{}{}->{} = {};\n",
-                                i3, param, vname.name,
+                                i3,
+                                param,
+                                vname.name,
                                 expr_with_ctx(init, &param, "", &local_vars)
                             ));
                         }
@@ -1647,7 +2261,11 @@ fn gen_fsm_source(
         }
         out.push_str(&format!(
             "{}{}->{} = {}_{};\n",
-            i3, param, "state", upper, start.to_uppercase()
+            i3,
+            param,
+            "state",
+            upper,
+            start.to_uppercase()
         ));
     }
     out.push_str(&format!("{}break;\n", i3));
@@ -1664,48 +2282,161 @@ fn gen_fsm_source(
 
             let empty_peer_map: HashMap<String, String> = HashMap::new();
             let global_var_names = collect_global_var_names(ctx);
-            // Transitions
+
+            // State-level always handler
             for sp in &sd.parts {
-                if let StatePart::Reference(_, target, cond_opt) = sp {
-                    let cond_str = if let Some(cond) = cond_opt {
-                        cond_with_ctx_ports(cond, &param, "", &local_vars, &upper, "", &empty_peer_map, port_map, &global_var_names)
-                    } else {
-                        "1".to_string()
-                    };
-                    out.push_str(&format!("{}if ({}) {{\n", i3, cond_str));
-
-                    // Enter handler of target state
-                    if let Some(target_sd) = find_state_in_model(model, &target.name) {
-                        for tsp in &target_sd.parts {
-                            if let StatePart::PropertyDefinition(pd) = tsp {
-                                if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
-                                    out.push_str(&property_with_ctx(
-                                        &pd.value,
-                                        &param,
-                                        "",
-                                        &local_vars,
-                                        port_map,
-                                        ctx,
-                                        4,
-                                    ));
-                                }
-                            }
-                        }
+                if let StatePart::PropertyDefinition(pd) = sp {
+                    if pd.name.as_ref().map(|n| n.name.as_str()) == Some("always") {
+                        out.push_str(&format!("{}// Always\n", i3));
+                        out.push_str(&format!("{}{{\n", i3));
+                        out.push_str(&property_with_ctx(
+                            &pd.value,
+                            &param,
+                            "",
+                            &local_vars,
+                            port_map,
+                            ctx,
+                            4,
+                        ));
+                        out.push_str(&format!("{}}}\n", i3));
+                        out.push_str(&format!("{}//\n", i3));
                     }
-
-                    out.push_str(&format!(
-                        "{}{}->{} = {}_{};\n",
-                        i4, param, "state", upper, target.name.to_uppercase()
-                    ));
-                    out.push_str(&format!("{}}}\n", i3));
                 }
             }
 
-            // End handler for terminal states
+            // Collect exit props
+            let state_exit_props_fsm: Vec<&Property> = sd.parts.iter().filter_map(|sp| {
+                if let StatePart::PropertyDefinition(pd) = sp {
+                    if pd.name.as_ref().map(|n| n.name.as_str()) == Some("exit") {
+                        Some(&pd.value)
+                    } else { None }
+                } else { None }
+            }).collect();
+
+            // Transitions as else-if chain
+            let transitions: Vec<_> = sd.parts.iter().filter_map(|sp| {
+                if let StatePart::Reference(_, target, cond_opt) = sp {
+                    Some((target, cond_opt))
+                } else { None }
+            }).collect();
+
+            let mut first_t = true;
+            for (target, cond_opt) in &transitions {
+                let cond_str = if let Some(cond) = cond_opt {
+                    cond_with_ctx_ports(
+                        cond,
+                        &param,
+                        "",
+                        &local_vars,
+                        &upper,
+                        "",
+                        &empty_peer_map,
+                        port_map,
+                        &global_var_names,
+                    )
+                } else {
+                    "1".to_string()
+                };
+
+                if first_t {
+                    out.push_str(&format!("{}if ({}) {{\n", i3, cond_str));
+                    first_t = false;
+                } else {
+                    out.push_str(&format!("{}}} else if ({}) {{\n", i3, cond_str));
+                }
+
+                // State change
+                out.push_str(&format!(
+                    "{}{}->{} = {}_{};\n",
+                    i4,
+                    param,
+                    "state",
+                    upper,
+                    target.name.to_uppercase()
+                ));
+
+                // State exit code
+                for prop in &state_exit_props_fsm {
+                    out.push_str(&property_with_ctx(
+                        prop,
+                        &param,
+                        "",
+                        &local_vars,
+                        port_map,
+                        ctx,
+                        4,
+                    ));
+                }
+
+                // Model-level exit if target is terminal
+                let target_is_terminal = terminal_states.iter().any(|t| t == &target.name);
+                if target_is_terminal {
+                    for mp in &model.parts {
+                        if let ModelPart::PropertyDefinition(pd) = mp {
+                            if pd.name.as_ref().map(|n| n.name.as_str()) == Some("exit") {
+                                out.push_str(&format!("{}// Exit\n", i4));
+                                out.push_str(&property_with_ctx(
+                                    &pd.value,
+                                    &param,
+                                    "",
+                                    &local_vars,
+                                    port_map,
+                                    ctx,
+                                    4,
+                                ));
+                            }
+                        }
+                    }
+                }
+
+                // Enter/before handler of target state
+                if let Some(target_sd) = find_state_in_model(model, &target.name) {
+                    for tsp in &target_sd.parts {
+                        if let StatePart::PropertyDefinition(pd) = tsp {
+                            let pname = pd.name.as_ref().map(|n| n.name.as_str());
+                            if pname == Some("before") {
+                                out.push_str(&format!("{}// Before\n", i4));
+                                out.push_str(&property_with_ctx(
+                                    &pd.value,
+                                    &param,
+                                    "",
+                                    &local_vars,
+                                    port_map,
+                                    ctx,
+                                    4,
+                                ));
+                            } else if pname == Some("enter") {
+                                out.push_str(&property_with_ctx(
+                                    &pd.value,
+                                    &param,
+                                    "",
+                                    &local_vars,
+                                    port_map,
+                                    ctx,
+                                    4,
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+            if !first_t {
+                out.push_str(&format!("{}}}\n", i3));
+            }
+
+            // End handler for terminal states (legacy - keep for compatibility)
             if is_terminal {
                 if let Some(ep) = find_end_property(model) {
                     out.push_str(&format!("{}/* end handler */\n", i3));
-                    out.push_str(&property_with_ctx(ep, &param, "", &local_vars, port_map, ctx, 3));
+                    out.push_str(&property_with_ctx(
+                        ep,
+                        &param,
+                        "",
+                        &local_vars,
+                        port_map,
+                        ctx,
+                        3,
+                    ));
                 }
             }
 
@@ -1714,13 +2445,17 @@ fn gen_fsm_source(
         }
     }
 
+    out.push_str(&format!("{}default: break;\n", i1));
     out.push_str(&format!("{}}}\n", i1));
     out.push_str("}\n\n");
 
     // finished
     if !terminal_states.is_empty() {
         let const_qualifier = if with_ports { "const " } else { "" };
-        out.push_str(&format!("bool {}_finished({}struct {} *{}) {{\n", name, const_qualifier, name, param));
+        out.push_str(&format!(
+            "bool {}_finished({}struct {} *{}) {{\n",
+            name, const_qualifier, name, param
+        ));
         out.push_str(&format!("{}assert({} != 0);\n", i1, param));
         let conds: Vec<String> = terminal_states
             .iter()
@@ -1774,11 +2509,14 @@ fn gen_port_write(pname: &str, pinfo: &PortInfo, param: &str, value_str: &str) -
 }
 
 /// Collect the set of port names used in a model's conditions and expressions.
-fn collect_used_ports_in_model(model: &ModelDefinition, port_map: &HashMap<String, PortInfo>) -> Vec<String> {
+fn collect_used_ports_in_model(
+    model: &ModelDefinition,
+    port_map: &HashMap<String, PortInfo>,
+) -> Vec<String> {
     let mut used: Vec<String> = Vec::new();
     let mut seen: HashSet<String> = HashSet::new();
     for (pname, _) in port_map {
-        if is_port_used_in_model(model, pname) {
+        if is_port_in_ref_conditions(model, pname) {
             if seen.insert(pname.clone()) {
                 used.push(pname.clone());
             }
@@ -1787,6 +2525,88 @@ fn collect_used_ports_in_model(model: &ModelDefinition, port_map: &HashMap<Strin
     // Sort by address for deterministic output
     used.sort_by_key(|n| port_map.get(n).map(|p| p.address).unwrap_or(0));
     used
+}
+
+/// Check if a port name is READ in the model (used in conditions or as RHS in expressions).
+/// Excludes ports only used as direct LHS of assignment (write-only output ports).
+fn is_port_in_ref_conditions(model: &ModelDefinition, pname: &str) -> bool {
+    for part in &model.parts {
+        match part {
+            ModelPart::StateDefinition(sd) => {
+                for sp in &sd.parts {
+                    match sp {
+                        StatePart::Reference(_, _, Some(cond)) => {
+                            if cond_contains_var(cond, pname) {
+                                return true;
+                            }
+                        }
+                        StatePart::PropertyDefinition(pd) => {
+                            if property_reads_var(&pd.value, pname) {
+                                return true;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            ModelPart::PropertyDefinition(pd) => {
+                if property_reads_var(&pd.value, pname) {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
+}
+
+/// Check if a property expression READS a variable name.
+/// For assignments `lhs = rhs`, only the RHS is considered a read.
+/// Standalone variables (conditions) are reads.
+fn property_reads_var(prop: &Property, name: &str) -> bool {
+    match prop {
+        Property::Expression(e) => expr_reads_var(e, name),
+        Property::Function(s) => stmt_reads_var(s, name),
+    }
+}
+
+fn expr_reads_var(expr: &Expression, name: &str) -> bool {
+    match expr {
+        // Assignment: only RHS is a read; LHS is a write
+        Expression::Assign(_, l, r) => {
+            // LHS is written — only check if it's a non-trivial LHS (array subscript etc.)
+            // For a simple variable LHS, it's only a write, not a read
+            let lhs_is_simple_var = matches!(l.as_ref(), Expression::Variable(_));
+            if !lhs_is_simple_var {
+                // Complex LHS (e.g., array subscript) may still read the name
+                if expr_reads_var(l, name) {
+                    return true;
+                }
+            }
+            expr_reads_var(r, name)
+        }
+        Expression::Variable(id) => id.name == name,
+        Expression::Add(_, l, r)
+        | Expression::Subtract(_, l, r)
+        | Expression::Multiply(_, l, r)
+        | Expression::Divide(_, l, r) => expr_reads_var(l, name) || expr_reads_var(r, name),
+        Expression::FunctionCall(_, _, args) => args.iter().any(|a| expr_reads_var(a, name)),
+        _ => false,
+    }
+}
+
+fn stmt_reads_var(stmt: &but_grammar::ast::Statement, name: &str) -> bool {
+    use but_grammar::ast::Statement;
+    match stmt {
+        Statement::Block { statements, .. } => statements.iter().any(|s| stmt_reads_var(s, name)),
+        Statement::Expression(_, e) => expr_reads_var(e, name),
+        Statement::If(_, cond, then_s, else_s) => {
+            expr_reads_var(cond, name)
+                || stmt_reads_var(then_s, name)
+                || else_s.as_ref().map(|s| stmt_reads_var(s, name)).unwrap_or(false)
+        }
+        _ => false,
+    }
 }
 
 fn is_port_used_in_model(model: &ModelDefinition, pname: &str) -> bool {
@@ -1855,9 +2675,7 @@ fn expr_contains_var(expr: &Expression, name: &str) -> bool {
         Expression::Add(_, l, r)
         | Expression::Subtract(_, l, r)
         | Expression::Multiply(_, l, r)
-        | Expression::Divide(_, l, r) => {
-            expr_contains_var(l, name) || expr_contains_var(r, name)
-        }
+        | Expression::Divide(_, l, r) => expr_contains_var(l, name) || expr_contains_var(r, name),
         _ => false,
     }
 }
@@ -2053,52 +2871,232 @@ fn cond_with_ctx_ports(
                     }
                 }
             }
-            let ls = cond_with_ctx_ports(l, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names);
-            let rs = cond_with_ctx_ports(r, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names);
+            let ls = cond_with_ctx_ports(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names,
+            );
+            let rs = cond_with_ctx_ports(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names,
+            );
             format!("{} == {}", ls, rs)
         }
         Condition::NotEqual(_, l, r) => format!(
             "{} != {}",
-            cond_with_ctx_ports(l, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names),
-            cond_with_ctx_ports(r, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names)
+            cond_with_ctx_ports(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            ),
+            cond_with_ctx_ports(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            )
         ),
         Condition::Less(_, l, r) => format!(
             "{} < {}",
-            cond_with_ctx_ports(l, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names),
-            cond_with_ctx_ports(r, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names)
+            cond_with_ctx_ports(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            ),
+            cond_with_ctx_ports(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            )
         ),
         Condition::LessEqual(_, l, r) => format!(
             "{} <= {}",
-            cond_with_ctx_ports(l, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names),
-            cond_with_ctx_ports(r, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names)
+            cond_with_ctx_ports(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            ),
+            cond_with_ctx_ports(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            )
         ),
         Condition::More(_, l, r) => format!(
             "{} > {}",
-            cond_with_ctx_ports(l, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names),
-            cond_with_ctx_ports(r, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names)
+            cond_with_ctx_ports(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            ),
+            cond_with_ctx_ports(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            )
         ),
         Condition::MoreEqual(_, l, r) => format!(
             "{} >= {}",
-            cond_with_ctx_ports(l, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names),
-            cond_with_ctx_ports(r, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names)
+            cond_with_ctx_ports(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            ),
+            cond_with_ctx_ports(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            )
         ),
         Condition::And(_, l, r) => format!(
-            "({} && {})",
-            cond_with_ctx_ports(l, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names),
-            cond_with_ctx_ports(r, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names)
+            "{} && {}",
+            cond_with_ctx_ports(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            ),
+            cond_with_ctx_ports(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            )
         ),
         Condition::Or(_, l, r) => format!(
-            "({} || {})",
-            cond_with_ctx_ports(l, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names),
-            cond_with_ctx_ports(r, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names)
+            "{} || {}",
+            cond_with_ctx_ports(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            ),
+            cond_with_ctx_ports(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            )
         ),
         Condition::Not(_, inner) => format!(
             "(!{})",
-            cond_with_ctx_ports(inner, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names)
+            cond_with_ctx_ports(
+                inner,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            )
         ),
         Condition::Parenthesis(_, inner) => format!(
             "({})",
-            cond_with_ctx_ports(inner, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names)
+            cond_with_ctx_ports(
+                inner,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            )
         ),
         Condition::BoolLiteral(_, b) => {
             if *b {
@@ -2109,13 +3107,53 @@ fn cond_with_ctx_ports(
         }
         Condition::Add(_, l, r) => format!(
             "({} + {})",
-            cond_with_ctx_ports(l, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names),
-            cond_with_ctx_ports(r, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names)
+            cond_with_ctx_ports(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            ),
+            cond_with_ctx_ports(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            )
         ),
         Condition::Subtract(_, l, r) => format!(
             "({} - {})",
-            cond_with_ctx_ports(l, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names),
-            cond_with_ctx_ports(r, param, field, local_vars, parent_upper, current_upper, peer_map, port_map, global_var_names)
+            cond_with_ctx_ports(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            ),
+            cond_with_ctx_ports(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map,
+                port_map,
+                global_var_names
+            )
         ),
         // Fallback to generic translation
         _ => condition_to_c(cond),
@@ -2176,7 +3214,21 @@ fn cond_with_ctx_delegating(
                                         "{}->{}.state == {}_{}",
                                         param, del_path, del_enum_prefix, su
                                     );
-                                    let extra = cond_with_ctx_delegating(or_r, param, field, local_vars, parent_upper, field_upper, peer_map, port_map, del_path, del_enum_prefix, _delegating_state_name, del_impl_name, global_var_names);
+                                    let extra = cond_with_ctx_delegating(
+                                        or_r,
+                                        param,
+                                        field,
+                                        local_vars,
+                                        parent_upper,
+                                        field_upper,
+                                        peer_map,
+                                        port_map,
+                                        del_path,
+                                        del_enum_prefix,
+                                        _delegating_state_name,
+                                        del_impl_name,
+                                        global_var_names,
+                                    );
                                     return format!("{} || {}", state_check, extra);
                                 }
                             }
@@ -2192,26 +3244,140 @@ fn cond_with_ctx_delegating(
                     }
                 }
             }
-            let ls = cond_with_ctx_delegating(cond_inner_l(cond), param, field, local_vars, parent_upper, field_upper, peer_map, port_map, del_path, del_enum_prefix, _delegating_state_name, del_impl_name, global_var_names);
-            let rs = cond_with_ctx_delegating(cond_inner_r(cond), param, field, local_vars, parent_upper, field_upper, peer_map, port_map, del_path, del_enum_prefix, _delegating_state_name, del_impl_name, global_var_names);
+            let ls = cond_with_ctx_delegating(
+                cond_inner_l(cond),
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                field_upper,
+                peer_map,
+                port_map,
+                del_path,
+                del_enum_prefix,
+                _delegating_state_name,
+                del_impl_name,
+                global_var_names,
+            );
+            let rs = cond_with_ctx_delegating(
+                cond_inner_r(cond),
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                field_upper,
+                peer_map,
+                port_map,
+                del_path,
+                del_enum_prefix,
+                _delegating_state_name,
+                del_impl_name,
+                global_var_names,
+            );
             format!("{} == {}", ls, rs)
         }
         Condition::Or(_, l, r) => format!(
-            "({} || {})",
-            cond_with_ctx_delegating(l, param, field, local_vars, parent_upper, field_upper, peer_map, port_map, del_path, del_enum_prefix, _delegating_state_name, del_impl_name, global_var_names),
-            cond_with_ctx_delegating(r, param, field, local_vars, parent_upper, field_upper, peer_map, port_map, del_path, del_enum_prefix, _delegating_state_name, del_impl_name, global_var_names)
+            "{} || {}",
+            cond_with_ctx_delegating(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                field_upper,
+                peer_map,
+                port_map,
+                del_path,
+                del_enum_prefix,
+                _delegating_state_name,
+                del_impl_name,
+                global_var_names
+            ),
+            cond_with_ctx_delegating(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                field_upper,
+                peer_map,
+                port_map,
+                del_path,
+                del_enum_prefix,
+                _delegating_state_name,
+                del_impl_name,
+                global_var_names
+            )
         ),
         Condition::And(_, l, r) => format!(
-            "({} && {})",
-            cond_with_ctx_delegating(l, param, field, local_vars, parent_upper, field_upper, peer_map, port_map, del_path, del_enum_prefix, _delegating_state_name, del_impl_name, global_var_names),
-            cond_with_ctx_delegating(r, param, field, local_vars, parent_upper, field_upper, peer_map, port_map, del_path, del_enum_prefix, _delegating_state_name, del_impl_name, global_var_names)
+            "{} && {}",
+            cond_with_ctx_delegating(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                field_upper,
+                peer_map,
+                port_map,
+                del_path,
+                del_enum_prefix,
+                _delegating_state_name,
+                del_impl_name,
+                global_var_names
+            ),
+            cond_with_ctx_delegating(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                field_upper,
+                peer_map,
+                port_map,
+                del_path,
+                del_enum_prefix,
+                _delegating_state_name,
+                del_impl_name,
+                global_var_names
+            )
         ),
         Condition::Not(_, inner) => format!(
             "(!{})",
-            cond_with_ctx_delegating(inner, param, field, local_vars, parent_upper, field_upper, peer_map, port_map, del_path, del_enum_prefix, _delegating_state_name, del_impl_name, global_var_names)
+            cond_with_ctx_delegating(
+                inner,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                field_upper,
+                peer_map,
+                port_map,
+                del_path,
+                del_enum_prefix,
+                _delegating_state_name,
+                del_impl_name,
+                global_var_names
+            )
         ),
-        Condition::BoolLiteral(_, b) => if *b { "true".to_string() } else { "false".to_string() },
-        _ => cond_with_ctx_ports(cond, param, field, local_vars, parent_upper, field_upper, peer_map, port_map, global_var_names),
+        Condition::BoolLiteral(_, b) => {
+            if *b {
+                "true".to_string()
+            } else {
+                "false".to_string()
+            }
+        }
+        _ => cond_with_ctx_ports(
+            cond,
+            param,
+            field,
+            local_vars,
+            parent_upper,
+            field_upper,
+            peer_map,
+            port_map,
+            global_var_names,
+        ),
     }
 }
 
@@ -2494,7 +3660,9 @@ fn stmt_with_ctx(
         Statement::If(_, cond, then_s, else_s) => {
             let cond_str = expr_with_ctx_ports(cond, param, field, local_vars, port_map, ctx);
             let mut out = format!("{}if ({}) ", pad, cond_str);
-            out.push_str(&stmt_with_ctx(then_s, param, field, local_vars, port_map, ctx, level));
+            out.push_str(&stmt_with_ctx(
+                then_s, param, field, local_vars, port_map, ctx, level,
+            ));
             if let Some(else_body) = else_s {
                 out.push_str(&format!("{}else ", pad));
                 out.push_str(&stmt_with_ctx(
@@ -2574,6 +3742,7 @@ fn find_start_state(model: &ModelDefinition) -> Option<String> {
             }
         }
     }
+    // TODO: deprecated use property as start state
     // Fallback: look for `start -> StateName;` property syntax
     for part in &model.parts {
         if let ModelPart::PropertyDefinition(pd) = part {

@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 use but_grammar::ast::{SourceUnit, SourceUnitPart, Type, VariableDefinition};
 
-pub use behavior::{model_composition, find_end_property, find_terminal_states, BehaviorKind};
+pub use behavior::{BehaviorKind, find_end_property, find_terminal_states, model_composition};
 pub use c::{generate_c_all, generate_c_all_named, generate_c_header, generate_c_source};
 pub use lc3::{generate_lc3, generate_lc3_all};
 pub use st::{generate_st_all, generate_st_decl, generate_st_program};
@@ -189,8 +189,8 @@ model M { start M { } }
 
     #[test]
     fn from_source_empty_source_no_variables() {
-        let (src, _) = but_grammar::parse("model Empty { start Empty { } }", 0)
-            .expect("Parsing empty model");
+        let (src, _) =
+            but_grammar::parse("model Empty { start Empty { } }", 0).expect("Parsing empty model");
         let ctx = CodegenContext::from_source(&src);
         assert_eq!(ctx.global_vars.len(), 0);
     }
@@ -207,8 +207,8 @@ model M { start M { } }
 
     #[test]
     fn from_source_empty_source_no_aliases() {
-        let (src, _) = but_grammar::parse("model Empty { start Empty { } }", 0)
-            .expect("Parsing empty model");
+        let (src, _) =
+            but_grammar::parse("model Empty { start Empty { } }", 0).expect("Parsing empty model");
         let ctx = CodegenContext::from_source(&src);
         assert!(ctx.type_aliases.is_empty());
     }
@@ -236,7 +236,10 @@ model M { start M { } }
         assert!(!out.c.0.is_empty(), "C header should be non-empty");
         assert!(!out.c.1.is_empty(), "C source should be non-empty");
         assert!(!out.verilog.is_empty(), "Verilog should be non-empty");
-        assert!(!out.st.0.is_empty() || !out.st.1.is_empty(), "ST should be non-empty");
+        assert!(
+            !out.st.0.is_empty() || !out.st.1.is_empty(),
+            "ST should be non-empty"
+        );
         assert!(!out.lc3.is_empty(), "LC-3 should be non-empty");
         assert!(!out.thumb.is_empty(), "Thumb should be non-empty");
     }
@@ -245,12 +248,20 @@ model M { start M { } }
     fn all_output_contains_model_name_delay() {
         let src = parse_delay();
         let out = AllOutput::generate(&src);
-        assert!(out.c.0.contains("DELAY") || out.c.0.contains("delay"),
-            "C header should contain the model name Delay: {}", out.c.0);
-        assert!(out.verilog.contains("delay") || out.verilog.contains("Delay"),
-            "Verilog should contain the model name: {}", out.verilog);
-        assert!(out.st.0.contains("DELAY") || out.st.1.contains("DELAY"),
-            "ST should contain the model name DELAY");
+        assert!(
+            out.c.0.contains("DELAY") || out.c.0.contains("delay"),
+            "C header should contain the model name Delay: {}",
+            out.c.0
+        );
+        assert!(
+            out.verilog.contains("delay") || out.verilog.contains("Delay"),
+            "Verilog should contain the model name: {}",
+            out.verilog
+        );
+        assert!(
+            out.st.0.contains("DELAY") || out.st.1.contains("DELAY"),
+            "ST should contain the model name DELAY"
+        );
     }
 
     // ===== generate_c_all =====
@@ -260,8 +271,11 @@ model M { start M { } }
         let src = parse_delay();
         let ctx = CodegenContext::from_source(&src);
         let (header, source) = generate_c_all(&src, &ctx);
-        assert!(header.contains("DELAY") || header.contains("delay"),
-            "Header should contain the model name: {}", header);
+        assert!(
+            header.contains("DELAY") || header.contains("delay"),
+            "Header should contain the model name: {}",
+            header
+        );
         assert!(!source.is_empty(), "Source should not be empty");
     }
 
@@ -273,8 +287,16 @@ model M { start M { } }
         let ctx = CodegenContext::from_source(&src);
         let verilog = generate_verilog_all(&src, &ctx);
         assert!(!verilog.is_empty());
-        assert!(verilog.contains("module"), "Verilog should contain 'module': {}", verilog);
-        assert!(verilog.contains("delay"), "Verilog should contain the model name: {}", verilog);
+        assert!(
+            verilog.contains("module"),
+            "Verilog should contain 'module': {}",
+            verilog
+        );
+        assert!(
+            verilog.contains("delay"),
+            "Verilog should contain the model name: {}",
+            verilog
+        );
     }
 
     // ===== generate_st_all =====
@@ -284,8 +306,14 @@ model M { start M { } }
         let src = parse_delay();
         let ctx = CodegenContext::from_source(&src);
         let (decl, prog) = generate_st_all(&src, &ctx);
-        assert!(!decl.is_empty() || !prog.is_empty(), "ST should have non-empty output");
-        assert!(decl.contains("DELAY") || prog.contains("DELAY"), "ST should contain DELAY");
+        assert!(
+            !decl.is_empty() || !prog.is_empty(),
+            "ST should have non-empty output"
+        );
+        assert!(
+            decl.contains("DELAY") || prog.contains("DELAY"),
+            "ST should contain DELAY"
+        );
     }
 
     // ===== generate_lc3_all =====
@@ -338,8 +366,11 @@ model Sensor {
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
         // With port-callback architecture, Byte alias appears as typedef in header
-        assert!(header.contains("uint8_t Byte") || header.contains("uint8_t sensor"),
-            "Expected uint8_t for Byte alias in header:\n{}", header);
+        assert!(
+            header.contains("uint8_t Byte") || header.contains("uint8_t sensor"),
+            "Expected uint8_t for Byte alias in header:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -348,8 +379,11 @@ model Sensor {
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
         // Counter alias resolved to uint32_t appears as typedef
-        assert!(header.contains("uint32_t Counter") || header.contains("uint32_t count"),
-            "Expected uint32_t for Counter alias in header:\n{}", header);
+        assert!(
+            header.contains("uint32_t Counter") || header.contains("uint32_t count"),
+            "Expected uint32_t for Counter alias in header:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -358,8 +392,11 @@ model Sensor {
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
         // Flag = bool resolves to int in C, appears as typedef
-        assert!(header.contains("int Flag") || header.contains("int alarm"),
-            "Expected int for Flag (bool→int) in header:\n{}", header);
+        assert!(
+            header.contains("int Flag") || header.contains("int alarm"),
+            "Expected int for Flag (bool→int) in header:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -368,8 +405,11 @@ model Sensor {
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
         // Speed = f64 resolves to double, appears as typedef
-        assert!(header.contains("double Speed") || header.contains("double rate"),
-            "Expected double for Speed (f64) in header:\n{}", header);
+        assert!(
+            header.contains("double Speed") || header.contains("double rate"),
+            "Expected double for Speed (f64) in header:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -378,8 +418,11 @@ model Sensor {
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
         // NestedAlias = Byte = u8 resolves to uint8_t
-        assert!(header.contains("uint8_t NestedAlias") || header.contains("uint8_t raw"),
-            "Expected uint8_t for NestedAlias→Byte→u8 in header:\n{}", header);
+        assert!(
+            header.contains("uint8_t NestedAlias") || header.contains("uint8_t raw"),
+            "Expected uint8_t for NestedAlias→Byte→u8 in header:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -387,8 +430,11 @@ model Sensor {
         let src = parse_type_alias_ports();
         let ctx = CodegenContext::from_source(&src);
         let (decl, _) = generate_st_all(&src, &ctx);
-        assert!(decl.contains("DWORD"),
-            "Expected DWORD for Counter→u32, declaration:\n{}", decl);
+        assert!(
+            decl.contains("DWORD"),
+            "Expected DWORD for Counter→u32, declaration:\n{}",
+            decl
+        );
     }
 
     #[test]
@@ -396,8 +442,11 @@ model Sensor {
         let src = parse_type_alias_ports();
         let ctx = CodegenContext::from_source(&src);
         let (decl, _) = generate_st_all(&src, &ctx);
-        assert!(decl.contains("BOOL"),
-            "Expected BOOL for Flag→bool, declaration:\n{}", decl);
+        assert!(
+            decl.contains("BOOL"),
+            "Expected BOOL for Flag→bool, declaration:\n{}",
+            decl
+        );
     }
 
     // ===== Integration tests: type system (bit and float as primitive types) =====
@@ -432,8 +481,11 @@ model Test { start A { } }
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
         // u8 = [8: bit] → typedef uint8_t u8
-        assert!(header.contains("uint8_t u8") || header.contains("uint8_t x8"),
-            "Expected uint8_t for u8=[8:bit], header:\n{}", header);
+        assert!(
+            header.contains("uint8_t u8") || header.contains("uint8_t x8"),
+            "Expected uint8_t for u8=[8:bit], header:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -442,8 +494,11 @@ model Test { start A { } }
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
         // u16 = [16: bit] → typedef uint16_t u16
-        assert!(header.contains("uint16_t u16") || header.contains("uint16_t x16"),
-            "Expected uint16_t for u16=[16:bit], header:\n{}", header);
+        assert!(
+            header.contains("uint16_t u16") || header.contains("uint16_t x16"),
+            "Expected uint16_t for u16=[16:bit], header:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -452,8 +507,11 @@ model Test { start A { } }
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
         // u32 = [32: bit] → typedef uint32_t u32
-        assert!(header.contains("uint32_t u32") || header.contains("uint32_t x32"),
-            "Expected uint32_t for u32=[32:bit], header:\n{}", header);
+        assert!(
+            header.contains("uint32_t u32") || header.contains("uint32_t x32"),
+            "Expected uint32_t for u32=[32:bit], header:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -462,8 +520,11 @@ model Test { start A { } }
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
         // u64 = [64: bit] → typedef uint64_t u64
-        assert!(header.contains("uint64_t u64") || header.contains("uint64_t x64"),
-            "Expected uint64_t for u64=[64:bit], header:\n{}", header);
+        assert!(
+            header.contains("uint64_t u64") || header.contains("uint64_t x64"),
+            "Expected uint64_t for u64=[64:bit], header:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -473,8 +534,11 @@ model Test { start A { } }
         let (header, _) = generate_c_all(&src, &ctx);
         // u128 = [128: bit] → uint64_t[2] which contains array syntax — no typedef
         // But the header still shows uint64_t typedefs for other types
-        assert!(header.contains("uint64_t"),
-            "Expected uint64_t in header for u128=[128:bit], header:\n{}", header);
+        assert!(
+            header.contains("uint64_t"),
+            "Expected uint64_t in header for u128=[128:bit], header:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -484,8 +548,11 @@ model Test { start A { } }
         let (header, _) = generate_c_all(&src, &ctx);
         // bool = bit (1-bit type) — 'bool' is a reserved C keyword, no typedef generated
         // The header should at minimum include stdbool.h for bool support
-        assert!(header.contains("stdbool.h") || header.contains("uint8_t"),
-            "Expected stdbool.h or uint8_t in header for bool=bit, header:\n{}", header);
+        assert!(
+            header.contains("stdbool.h") || header.contains("uint8_t"),
+            "Expected stdbool.h or uint8_t in header for bool=bit, header:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -494,8 +561,11 @@ model Test { start A { } }
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
         // Counter = u32 = [32: bit] → typedef uint32_t Counter
-        assert!(header.contains("uint32_t Counter") || header.contains("uint32_t cnt"),
-            "Expected uint32_t for Counter→u32→[32:bit], header:\n{}", header);
+        assert!(
+            header.contains("uint32_t Counter") || header.contains("uint32_t cnt"),
+            "Expected uint32_t for Counter→u32→[32:bit], header:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -503,8 +573,11 @@ model Test { start A { } }
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
         let (decl, _) = generate_st_all(&src, &ctx);
-        assert!(decl.contains("BYTE"),
-            "Expected BYTE for u8=[8:bit], declaration:\n{}", decl);
+        assert!(
+            decl.contains("BYTE"),
+            "Expected BYTE for u8=[8:bit], declaration:\n{}",
+            decl
+        );
     }
 
     #[test]
@@ -512,8 +585,11 @@ model Test { start A { } }
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
         let (decl, _) = generate_st_all(&src, &ctx);
-        assert!(decl.contains("DWORD"),
-            "Expected DWORD for u32=[32:bit], declaration:\n{}", decl);
+        assert!(
+            decl.contains("DWORD"),
+            "Expected DWORD for u32=[32:bit], declaration:\n{}",
+            decl
+        );
     }
 
     #[test]
@@ -521,8 +597,11 @@ model Test { start A { } }
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
         let (decl, _) = generate_st_all(&src, &ctx);
-        assert!(decl.contains("ARRAY [0..1] OF LWORD"),
-            "Expected ARRAY [0..1] OF LWORD for u128=[128:bit], declaration:\n{}", decl);
+        assert!(
+            decl.contains("ARRAY [0..1] OF LWORD"),
+            "Expected ARRAY [0..1] OF LWORD for u128=[128:bit], declaration:\n{}",
+            decl
+        );
     }
 
     // ===== IndentStyle =====
@@ -561,7 +640,10 @@ model Test { start A { } }
 
     #[test]
     fn indent_style_unit_returns_one_level() {
-        assert_eq!(IndentStyle::Spaces(4).unit(), IndentStyle::Spaces(4).level(1));
+        assert_eq!(
+            IndentStyle::Spaces(4).unit(),
+            IndentStyle::Spaces(4).level(1)
+        );
         assert_eq!(IndentStyle::Tab.unit(), "\t");
     }
 
@@ -577,8 +659,11 @@ model Test { start A { } }
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(2));
         let (_, source) = generate_c_all(&src, &ctx);
-        assert!(source.contains("\n  switch"),
-            "Expected 2-space indent before switch:\n{}", source);
+        assert!(
+            source.contains("\n  switch"),
+            "Expected 2-space indent before switch:\n{}",
+            source
+        );
     }
 
     #[test]
@@ -586,8 +671,11 @@ model Test { start A { } }
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Tab);
         let (_, source) = generate_c_all(&src, &ctx);
-        assert!(source.contains('\t'),
-            "Expected tab character in code with IndentStyle::Tab:\n{}", source);
+        assert!(
+            source.contains('\t'),
+            "Expected tab character in code with IndentStyle::Tab:\n{}",
+            source
+        );
     }
 
     #[test]
@@ -595,8 +683,11 @@ model Test { start A { } }
         let src = parse_delay();
         let ctx = CodegenContext::from_source(&src);
         let (_, source) = generate_c_all(&src, &ctx);
-        assert!(source.contains("\n    switch"),
-            "Expected 4-space indent before switch:\n{}", source);
+        assert!(
+            source.contains("\n    switch"),
+            "Expected 4-space indent before switch:\n{}",
+            source
+        );
     }
 
     #[test]
@@ -604,8 +695,11 @@ model Test { start A { } }
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(0));
         let (_, source) = generate_c_all(&src, &ctx);
-        assert!(source.contains("\nswitch"),
-            "With zero indent, switch should have no leading spaces:\n{}", source);
+        assert!(
+            source.contains("\nswitch"),
+            "With zero indent, switch should have no leading spaces:\n{}",
+            source
+        );
     }
 
     // ===== ST generation with configurable indentation =====
@@ -615,8 +709,11 @@ model Test { start A { } }
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(2));
         let (decl, _) = generate_st_all(&src, &ctx);
-        assert!(decl.contains("\n  state"),
-            "Expected 2-space indent before 'state' in declaration:\n{}", decl);
+        assert!(
+            decl.contains("\n  state"),
+            "Expected 2-space indent before 'state' in declaration:\n{}",
+            decl
+        );
     }
 
     #[test]
@@ -624,8 +721,11 @@ model Test { start A { } }
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Tab);
         let (_, prog) = generate_st_all(&src, &ctx);
-        assert!(prog.contains('\t'),
-            "Expected tab character in ST program with IndentStyle::Tab:\n{}", prog);
+        assert!(
+            prog.contains('\t'),
+            "Expected tab character in ST program with IndentStyle::Tab:\n{}",
+            prog
+        );
     }
 
     // ===== Verilog generation with configurable indentation =====
@@ -635,8 +735,11 @@ model Test { start A { } }
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Spaces(2));
         let code = generate_verilog_all(&src, &ctx);
-        assert!(code.contains("\n  input wire clk"),
-            "Expected 2-space indent before 'input wire clk':\n{}", code);
+        assert!(
+            code.contains("\n  input wire clk"),
+            "Expected 2-space indent before 'input wire clk':\n{}",
+            code
+        );
     }
 
     #[test]
@@ -644,8 +747,11 @@ model Test { start A { } }
         let src = parse_delay();
         let ctx = CodegenContext::from_source_with_indent(&src, IndentStyle::Tab);
         let code = generate_verilog_all(&src, &ctx);
-        assert!(code.contains('\t'),
-            "Expected tab character in Verilog code with IndentStyle::Tab:\n{}", code);
+        assert!(
+            code.contains('\t'),
+            "Expected tab character in Verilog code with IndentStyle::Tab:\n{}",
+            code
+        );
     }
 
     // ===== from_source_with_indent =====
@@ -703,8 +809,11 @@ port finished : bit = 0;
         let src = parse_behavior(BEHAVIOR_SRC);
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
-        assert!(header.contains("finished") || header.contains("is_done"),
-            "Header should contain finished/is_done for terminal state Done:\n{}", header);
+        assert!(
+            header.contains("finished") || header.contains("is_done"),
+            "Header should contain finished/is_done for terminal state Done:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -712,8 +821,11 @@ port finished : bit = 0;
         let src = parse_behavior(BEHAVIOR_SRC);
         let ctx = CodegenContext::from_source(&src);
         let (_, source) = generate_c_all(&src, &ctx);
-        assert!(source.contains("end handler") || source.contains("cleanup"),
-            "Source should contain end handler:\n{}", source);
+        assert!(
+            source.contains("end handler") || source.contains("cleanup"),
+            "Source should contain end handler:\n{}",
+            source
+        );
     }
 
     #[test]
@@ -721,10 +833,16 @@ port finished : bit = 0;
         let src = parse_behavior(SEQUENTIAL_SRC);
         let ctx = CodegenContext::from_source(&src);
         let (_, source) = generate_c_all(&src, &ctx);
-        assert!(source.contains("pipeline_init") || source.contains("Pipeline_init"),
-            "Source should contain pipeline_init:\n{}", source);
-        assert!(source.contains("PHASE") || source.contains("phase"),
-            "Source should contain composition phases:\n{}", source);
+        assert!(
+            source.contains("pipeline_init") || source.contains("Pipeline_init"),
+            "Source should contain pipeline_init:\n{}",
+            source
+        );
+        assert!(
+            source.contains("PHASE") || source.contains("phase"),
+            "Source should contain composition phases:\n{}",
+            source
+        );
     }
 
     #[test]
@@ -732,8 +850,11 @@ port finished : bit = 0;
         let src = parse_behavior(PARALLEL_SRC);
         let ctx = CodegenContext::from_source(&src);
         let (_, source) = generate_c_all(&src, &ctx);
-        assert!(source.contains("finished") || source.contains("is_done") || source.contains("_done"),
-            "Parallel composition should contain completion check:\n{}", source);
+        assert!(
+            source.contains("finished") || source.contains("is_done") || source.contains("_done"),
+            "Parallel composition should contain completion check:\n{}",
+            source
+        );
     }
 
     #[test]
@@ -741,8 +862,11 @@ port finished : bit = 0;
         let src = parse_behavior(SEQUENTIAL_SRC);
         let ctx = CodegenContext::from_source(&src);
         let (decl, _) = generate_st_all(&src, &ctx);
-        assert!(decl.contains("phase") || decl.contains("PHASE"),
-            "ST declaration should contain phase variable:\n{}", decl);
+        assert!(
+            decl.contains("phase") || decl.contains("PHASE"),
+            "ST declaration should contain phase variable:\n{}",
+            decl
+        );
     }
 
     #[test]
@@ -750,8 +874,11 @@ port finished : bit = 0;
         let src = parse_behavior(BEHAVIOR_SRC);
         let ctx = CodegenContext::from_source(&src);
         let verilog = generate_verilog_all(&src, &ctx);
-        assert!(verilog.contains("done"),
-            "Verilog should contain done signal:\n{}", verilog);
+        assert!(
+            verilog.contains("done"),
+            "Verilog should contain done signal:\n{}",
+            verilog
+        );
     }
 
     #[test]
@@ -759,8 +886,11 @@ port finished : bit = 0;
         let src = parse_behavior(BEHAVIOR_SRC);
         let ctx = CodegenContext::from_source(&src);
         let asm = generate_lc3_all(&src, &ctx);
-        assert!(asm.contains("WORKER") || asm.contains("Worker"),
-            "LC-3 should contain model name Worker:\n{}", asm);
+        assert!(
+            asm.contains("WORKER") || asm.contains("Worker"),
+            "LC-3 should contain model name Worker:\n{}",
+            asm
+        );
     }
 
     #[test]
@@ -768,8 +898,11 @@ port finished : bit = 0;
         let src = parse_delay();
         let ctx = CodegenContext::from_source(&src);
         let asm = generate_thumb_all(&src, &ctx);
-        assert!(asm.contains("init"),
-            "Thumb should contain init function:\n{}", asm);
+        assert!(
+            asm.contains("init"),
+            "Thumb should contain init function:\n{}",
+            asm
+        );
     }
 
     // ===== Port-callback architecture verification tests =====
@@ -808,8 +941,11 @@ model Engine = (Producer | Consumer) + Acceptor {
         let src = parse_engine();
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all_named(&src, "engine", &ctx);
-        assert!(!header.contains("struct Port"),
-            "Engine header should NOT have struct Port (no global ports):\n{}", header);
+        assert!(
+            !header.contains("struct Port"),
+            "Engine header should NOT have struct Port (no global ports):\n{}",
+            header
+        );
     }
 
     #[test]
@@ -817,8 +953,11 @@ model Engine = (Producer | Consumer) + Acceptor {
         let src = parse_engine();
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all_named(&src, "engine", &ctx);
-        assert!(!header.contains("stdio.h"),
-            "Engine header should NOT include stdio.h:\n{}", header);
+        assert!(
+            !header.contains("stdio.h"),
+            "Engine header should NOT include stdio.h:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -827,8 +966,11 @@ model Engine = (Producer | Consumer) + Acceptor {
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all_named(&src, "engine", &ctx);
         // Engine has no ports → finished is non-const
-        assert!(header.contains("bool Engine_finished(struct Engine *engine)"),
-            "Engine_finished should be non-const (no global ports):\n{}", header);
+        assert!(
+            header.contains("bool Engine_finished(struct Engine *engine)"),
+            "Engine_finished should be non-const (no global ports):\n{}",
+            header
+        );
     }
 
     #[test]
@@ -836,12 +978,21 @@ model Engine = (Producer | Consumer) + Acceptor {
         let src = parse_engine();
         let ctx = CodegenContext::from_source(&src);
         let (_, source) = generate_c_all_named(&src, "engine", &ctx);
-        assert!(source.contains("Engine_Producer_tick"),
-            "Engine source should have Producer tick:\n{}", source);
-        assert!(source.contains("Engine_Consumer_tick"),
-            "Engine source should have Consumer tick:\n{}", source);
-        assert!(source.contains("Engine_Acceptor_tick"),
-            "Engine source should have Acceptor tick:\n{}", source);
+        assert!(
+            source.contains("Engine_Producer_tick"),
+            "Engine source should have Producer tick:\n{}",
+            source
+        );
+        assert!(
+            source.contains("Engine_Consumer_tick"),
+            "Engine source should have Consumer tick:\n{}",
+            source
+        );
+        assert!(
+            source.contains("Engine_Acceptor_tick"),
+            "Engine source should have Acceptor tick:\n{}",
+            source
+        );
     }
 
     const PORT_SRC: &str = r#"
@@ -870,8 +1021,11 @@ port output: bool = 1;
         let src = parse_port_src();
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
-        assert!(header.contains("struct Port"),
-            "Header with ports should include struct Port:\n{}", header);
+        assert!(
+            header.contains("struct Port"),
+            "Header with ports should include struct Port:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -879,8 +1033,11 @@ port output: bool = 1;
         let src = parse_port_src();
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
-        assert!(header.contains("read_bit_port"),
-            "Header with ports should include read_bit_port macro:\n{}", header);
+        assert!(
+            header.contains("read_bit_port"),
+            "Header with ports should include read_bit_port macro:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -890,8 +1047,11 @@ port output: bool = 1;
         let (header, _) = generate_c_all(&src, &ctx);
         // bool is reserved, not typedef'd. Sensor has terminal states.
         // With ports: finished should be const
-        assert!(header.contains("const struct Sensor *sensor"),
-            "Sensor_finished should be const with global ports:\n{}", header);
+        assert!(
+            header.contains("const struct Sensor *sensor"),
+            "Sensor_finished should be const with global ports:\n{}",
+            header
+        );
     }
 
     #[test]
@@ -899,8 +1059,11 @@ port output: bool = 1;
         let src = parse_port_src();
         let ctx = CodegenContext::from_source(&src);
         let (_, source) = generate_c_all(&src, &ctx);
-        assert!(source.contains("PORT_ADDRESS_INPUT") || source.contains("PORT_ADDRESS_OUTPUT"),
-            "Source should have PORT_ADDRESS defines:\n{}", source);
+        assert!(
+            source.contains("PORT_ADDRESS_INPUT") || source.contains("PORT_ADDRESS_OUTPUT"),
+            "Source should have PORT_ADDRESS defines:\n{}",
+            source
+        );
     }
 
     #[test]
@@ -908,8 +1071,11 @@ port output: bool = 1;
         let src = parse_port_src();
         let ctx = CodegenContext::from_source(&src);
         let (_, source) = generate_c_all(&src, &ctx);
-        assert!(source.contains("const bool input") || source.contains("read_bit_port"),
-            "Source tick should have const port read locals:\n{}", source);
+        assert!(
+            source.contains("const bool input") || source.contains("read_bit_port"),
+            "Source tick should have const port read locals:\n{}",
+            source
+        );
     }
 
     #[test]
@@ -917,19 +1083,21 @@ port output: bool = 1;
         let src = parse_port_src();
         let ctx = CodegenContext::from_source(&src);
         let (_, source) = generate_c_all(&src, &ctx);
-        assert!(source.contains("write_bit_port"),
-            "Source should have write_bit_port macro for output port write:\n{}", source);
+        assert!(
+            source.contains("write_bit_port"),
+            "Source should have write_bit_port macro for output port write:\n{}",
+            source
+        );
     }
 
     #[test]
     fn position_gen_test() {
-        let src_text = include_str!("/Users/pastor/github/BuT/docs/generator/position.but_");
+        let src_text = include_str!("/Users/pastor/github/BuT/docs/generator/position.but");
         let (source, _) = but_grammar::parse(src_text, 0).expect("parse ok");
-        let ctx = CodegenContext::from_source(&source);
+        let ctx = CodegenContext::from_source_with_indent(&source, IndentStyle::Spaces(2));
         let (header, source_c) = generate_c_all_named(&source, "position", &ctx);
         std::fs::write("/tmp/position_gen.h", &header).unwrap();
         std::fs::write("/tmp/position_gen.c", &source_c).unwrap();
         assert!(true);
     }
 }
-
