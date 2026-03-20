@@ -300,26 +300,26 @@ Condition: Condition = {
 }
 
 Condition6: Condition = {
-    <a:@L> <l:Condition6> "=" <r:Condition5> <b:@R> => Condition::Equal(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
-    <a:@L> <l:Condition6> "!=" <r:Condition5> <b:@R> => Condition::NotEqual(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition6> "|" <r:Condition5> <b:@R> => Condition::Or(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
     Condition5,
 }
 
 Condition5: Condition = {
-    <a:@L> <l:Condition5> "<" <r:Condition4> <b:@R> => Condition::Less(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
-    <a:@L> <l:Condition5> ">" <r:Condition4> <b:@R> => Condition::More(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
-    <a:@L> <l:Condition5> "<=" <r:Condition4> <b:@R> => Condition::LessEqual(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
-    <a:@L> <l:Condition5> ">=" <r:Condition4> <b:@R> => Condition::MoreEqual(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition5> "&" <r:Condition4> <b:@R> => Condition::And(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
     Condition4,
 }
 
 Condition4: Condition = {
-    <a:@L> <l:Condition4> "|" <r:Condition3> <b:@R> => Condition::Or(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition4> "=" <r:Condition3> <b:@R> => Condition::Equal(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition4> "!=" <r:Condition3> <b:@R> => Condition::NotEqual(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
     Condition3,
 }
 
 Condition3: Condition = {
-    <a:@L> <l:Condition3> "&" <r:Condition2> <b:@R> => Condition::And(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition3> "<" <r:Condition2> <b:@R> => Condition::Less(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition3> ">" <r:Condition2> <b:@R> => Condition::More(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition3> "<=" <r:Condition2> <b:@R> => Condition::LessEqual(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
+    <a:@L> <l:Condition3> ">=" <r:Condition2> <b:@R> => Condition::MoreEqual(Loc::Source(file_no, a, b), Box::new(l), Box::new(r)),
     Condition2,
 }
 

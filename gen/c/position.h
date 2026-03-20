@@ -3,6 +3,7 @@
 #define POSITION_H__
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 
 struct Port {
@@ -133,10 +134,7 @@ struct Main {
     int watchdog;
     bool reset;
     enum {
-        MAIN_IMPLEMENT_INIT,
-        MAIN_IMPLEMENT_TICK,
-        MAIN_IMPLEMENT_END
-    } state;
+        MAIN_IMPLEMENT_INIT, MAIN_IMPLEMENT_TICK, MAIN_IMPLEMENT_END } state;
     struct Port port;
 };
 
