@@ -1,6 +1,89 @@
 /// Helper functions for working with model composition and the `end` property.
 use but_grammar::ast::{Expression, ModelDefinition, ModelPart, Property, StatePart};
 
+/// Full nested composition tree — supports parallel groups inside sequential sequences.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CompositionTree {
+    /// A single model by name.
+    Single(String),
+    /// All children run in parallel until all finish.
+    Parallel(Vec<CompositionTree>),
+    /// Children run sequentially (each waits for the previous).
+    Sequential(Vec<CompositionTree>),
+}
+
+impl CompositionTree {
+    /// Collect all leaf model names (in order).
+    pub fn leaves(&self) -> Vec<String> {
+        match self {
+            CompositionTree::Single(n) => vec![n.clone()],
+            CompositionTree::Parallel(ch) | CompositionTree::Sequential(ch) => {
+                ch.iter().flat_map(|c| c.leaves()).collect()
+            }
+        }
+    }
+}
+
+/// Determine the full composition tree from the `implements` clause of a model.
+pub fn model_composition_tree(model: &ModelDefinition) -> Option<CompositionTree> {
+    let expr = model.implements.as_ref()?;
+    parse_composition_tree(expr)
+}
+
+fn parse_composition_tree(expr: &Expression) -> Option<CompositionTree> {
+    match expr {
+        Expression::Add(..) => {
+            let ch = flatten_add_tree(expr);
+            if ch.is_empty() { None } else { Some(CompositionTree::Sequential(ch)) }
+        }
+        Expression::BitwiseOr(..) => {
+            let ch = flatten_bitor_tree(expr);
+            if ch.is_empty() { None } else { Some(CompositionTree::Parallel(ch)) }
+        }
+        Expression::Variable(id) => Some(CompositionTree::Single(id.name.clone())),
+        Expression::Parenthesis(_, inner) => parse_composition_tree(inner),
+        _ => None,
+    }
+}
+
+fn flatten_add_tree(expr: &Expression) -> Vec<CompositionTree> {
+    match expr {
+        Expression::Add(_, l, r) => {
+            let mut v = flatten_add_tree(l);
+            v.extend(flatten_add_tree(r));
+            v
+        }
+        Expression::Variable(id) => vec![CompositionTree::Single(id.name.clone())],
+        Expression::Parenthesis(_, inner) => {
+            if let Some(tree) = parse_composition_tree(inner) {
+                vec![tree]
+            } else {
+                flatten_add_tree(inner)
+            }
+        }
+        _ => vec![],
+    }
+}
+
+fn flatten_bitor_tree(expr: &Expression) -> Vec<CompositionTree> {
+    match expr {
+        Expression::BitwiseOr(_, l, r) => {
+            let mut v = flatten_bitor_tree(l);
+            v.extend(flatten_bitor_tree(r));
+            v
+        }
+        Expression::Variable(id) => vec![CompositionTree::Single(id.name.clone())],
+        Expression::Parenthesis(_, inner) => {
+            if let Some(tree) = parse_composition_tree(inner) {
+                vec![tree]
+            } else {
+                flatten_bitor_tree(inner)
+            }
+        }
+        _ => vec![],
+    }
+}
+
 /// Composition kind for a model — derived from the `implements` clause (`= ...`).
 ///
 /// Syntax in the BuT language:

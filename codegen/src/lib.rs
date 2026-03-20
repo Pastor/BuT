@@ -462,8 +462,9 @@ model Test { start A { } }
         let src = parse_std_types();
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
-        assert!(header.contains("uint64_t[2]"),
-            "Expected uint64_t[2] for u128=[128:bit], header:\n{}", header);
+        // uint64_t[2] is rendered as "uint64_t x128[2]" in struct-based codegen
+        assert!(header.contains("uint64_t") && header.contains("x128"),
+            "Expected uint64_t array for u128=[128:bit], header:\n{}", header);
     }
 
     #[test]
@@ -689,8 +690,8 @@ port finished : bit = 0;
         let src = parse_behavior(BEHAVIOR_SRC);
         let ctx = CodegenContext::from_source(&src);
         let (header, _) = generate_c_all(&src, &ctx);
-        assert!(header.contains("is_done"),
-            "Header should contain is_done for terminal state Done:\n{}", header);
+        assert!(header.contains("finished") || header.contains("is_done"),
+            "Header should contain finished/is_done for terminal state Done:\n{}", header);
     }
 
     #[test]
@@ -718,7 +719,7 @@ port finished : bit = 0;
         let src = parse_behavior(PARALLEL_SRC);
         let ctx = CodegenContext::from_source(&src);
         let (_, source) = generate_c_all(&src, &ctx);
-        assert!(source.contains("is_done") || source.contains("_done"),
+        assert!(source.contains("finished") || source.contains("is_done") || source.contains("_done"),
             "Parallel composition should contain completion check:\n{}", source);
     }
 

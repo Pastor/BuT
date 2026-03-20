@@ -158,6 +158,7 @@ pub fn expr_to_c(expr: &Expression) -> String {
             let args_str = args.iter().map(expr_to_c).collect::<Vec<_>>().join(", ");
             format!("{}({})", id.name, args_str)
         }
+        Expression::ArraySubscript(_, id, idx) => format!("{}[{}]", id.name, idx),
         Expression::PostIncrement(_, e) => format!("{}++", expr_to_c(e)),
         Expression::PostDecrement(_, e) => format!("{}--", expr_to_c(e)),
         Expression::PreIncrement(_, e) => format!("++{}", expr_to_c(e)),
