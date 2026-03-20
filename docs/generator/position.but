@@ -6,12 +6,11 @@ model Detect_Line {
         ref Detect_Wall : distance_top >= 0 | distance_bottom >= 0 | distance_left >= 0 | distance_right >= 0;
         ref Up: true;
     }
-
     state Up {
         ref End: on_line | point > 0;
         ref Detect_Wall : distance_top >= 0 | distance_bottom >= 0 | distance_left >= 0 | distance_right >= 0;
         ref Left: it >= step;
-        enter -> {
+        always -> {
             it = it + 1;
             machine_gas = true;
         }
@@ -25,7 +24,7 @@ model Detect_Line {
         ref End: on_line | point > 0;
         ref Detect_Wall : distance_top >= 0 | distance_bottom >= 0 | distance_left >= 0 | distance_right >= 0;
         ref Bottom: it >= step;
-        enter -> {
+        always -> {
             it = it + 1;
             machine_shift_left = true;
         }
@@ -39,7 +38,7 @@ model Detect_Line {
         ref End: on_line | point > 0;
         ref Detect_Wall : distance_top >= 0 | distance_bottom >= 0 | distance_left >= 0 | distance_right >= 0;
         ref Right: it >= step;
-        enter -> {
+        always -> {
             it = it + 1;
             machine_back = true;
         }
@@ -53,7 +52,7 @@ model Detect_Line {
         ref End: on_line | point > 0;
         ref Detect_Wall : distance_top >= 0 | distance_bottom >= 0 | distance_left >= 0 | distance_right >= 0;
         ref Start: it >= step;
-        enter -> {
+        always -> {
             it = it + 1;
             machine_shift_right = true;
         }
@@ -74,7 +73,7 @@ model Detect_Line {
     state Wall_Left {
         ref Start: distance_top >= 0 | distance_bottom >= 0 | distance_right >= 0;
         ref End  : on_line | point > 0;
-        enter -> {
+        always -> {
             machine_shift_right = true;
         }
         exit -> {
@@ -84,7 +83,7 @@ model Detect_Line {
     state Wall_Right {
         ref Start: distance_top >= 0 | distance_bottom >= 0 | distance_left >= 0;
         ref End: on_line | point > 0;
-        enter -> {
+        always -> {
             machine_shift_left = true;
         }
         exit -> {
@@ -94,7 +93,7 @@ model Detect_Line {
     state Wall_Top {
         ref Start: distance_left >= 0 | distance_bottom >= 0 | distance_right >= 0;
         ref End: on_line | point > 0;
-        enter -> {
+        always -> {
             machine_back = true;
         }
         exit -> {
@@ -104,7 +103,7 @@ model Detect_Line {
     state Wall_Bottom {
         ref Start: distance_top >= 0 | distance_left >= 0 | distance_right >= 0;
         ref End: on_line | point > 0;
-        enter -> {
+        always -> {
             machine_gas = true;
         }
         exit -> {
@@ -112,7 +111,7 @@ model Detect_Line {
         }
     }
 
-    enter -> busy = true;
+    always -> busy = true;
     exit ->  watchdog = 0;
 
     let mut it       : int = 0;
@@ -140,7 +139,7 @@ model Detect_Angle {
         ref Angle_315: angle > 270 & angle < 315;
         ref Angle_360: angle >= 315 & angle < 360;
         ref End : angle = 0;
-        enter -> machine_rot_left = true;
+        always -> machine_rot_left = true;
         exit -> machine_rot_left = false;
     }
     state Angle_90 {
@@ -152,7 +151,7 @@ model Detect_Angle {
         ref Angle_315: angle > 270 & angle < 315;
         ref Angle_360: angle >= 315 & angle < 360;
         ref End: angle = 90;
-        enter -> machine_rot_right = true;
+        always -> machine_rot_right = true;
         exit -> machine_rot_right = false;
     }
     state Angle_135 {
@@ -164,7 +163,7 @@ model Detect_Angle {
         ref Angle_315: angle > 270 & angle < 315;
         ref Angle_360: angle >= 315 & angle < 360;
         ref End: angle = 90;
-        enter -> machine_rot_left = true;
+        always -> machine_rot_left = true;
         exit -> machine_rot_left = false;
     }
     state Angle_180 {
@@ -176,7 +175,7 @@ model Detect_Angle {
         ref Angle_315: angle > 270 & angle < 315;
         ref Angle_360: angle >= 315 & angle < 360;
         ref End: angle = 180;
-        enter -> machine_rot_right = true;
+        always -> machine_rot_right = true;
         exit -> machine_rot_right = false;
     }
     state Angle_225 {
@@ -188,7 +187,7 @@ model Detect_Angle {
         ref Angle_315: angle > 270 & angle < 315;
         ref Angle_360: angle >= 315 & angle < 360;
         ref End: angle = 180;
-        enter -> machine_rot_left = true;
+        always -> machine_rot_left = true;
         exit -> machine_rot_left = false;
     }
     state Angle_270 {
@@ -200,7 +199,7 @@ model Detect_Angle {
         ref Angle_315: angle > 270 & angle < 315;
         ref Angle_360: angle >= 315 & angle < 360;
         ref End: angle = 180;
-        enter -> machine_rot_right = true;
+        always -> machine_rot_right = true;
         exit -> machine_rot_right = false;
     }
     state Angle_315 {
@@ -212,7 +211,7 @@ model Detect_Angle {
         ref Angle_225: angle > 180 & angle < 225;
         ref Angle_270: angle >= 225 & angle < 270;
         ref End: angle = 270;
-        enter -> machine_rot_left = true;
+        always -> machine_rot_left = true;
         exit -> machine_rot_left = false;
     }
     state Angle_360 {
@@ -224,14 +223,14 @@ model Detect_Angle {
         ref Angle_225: angle > 180 & angle < 225;
         ref Angle_270: angle >= 225 & angle < 270;
         ref End: angle = 0;
-        enter -> machine_rot_right = true;
+        always -> machine_rot_right = true;
         exit -> machine_rot_right = false;
     }
 
     state End {
     }
 
-    enter -> busy = true;
+    always -> busy = true;
     exit -> {
         watchdog = 0;
         reset = false;
@@ -252,7 +251,7 @@ model Detect_Point {
             machine_back = true;
             direct = 1;
         }
-        enter -> machine_gas = true;
+        always -> machine_gas = true;
     }
     state Down {
         ref Compromise: point > 0;
@@ -262,7 +261,7 @@ model Detect_Point {
             machine_shift_left = true;
             direct = 2;
         }
-        enter -> machine_back = true;
+        always -> machine_back = true;
     }
     state Left {
         ref Compromise: point > 0;
@@ -272,17 +271,17 @@ model Detect_Point {
             machine_shift_right = true;
             direct = 3;
         }
-        enter -> machine_shift_left = true;
+        always -> machine_shift_left = true;
     }
     state Right {
         ref Compromise: point > 0;
         ref Start: !on_line & point < 0;
         exit -> machine_shift_right = false;
-        enter -> machine_shift_right = true;
+        always -> machine_shift_right = true;
     }
     state Compromise {
         ref End: true;
-        enter -> {
+        always -> {
             if direct == 1 {
                 machine_gas = true;
             } else if direct == 2 {
@@ -294,7 +293,7 @@ model Detect_Point {
     }
     state End {}
 
-    enter -> busy = true;
+    always -> busy = true;
     exit -> watchdog = 0;
 
     let mut  direct  : int = -1;
@@ -304,11 +303,11 @@ model Detect_Point {
 model Command {
     start Reading {
         ref Saving: command_ready & !busy & !error;
-        enter -> command_executing = false;
+        always -> command_executing = false;
     }
     state Saving {
         ref Decode: true;
-        enter -> {
+        always -> {
             code = command_code;
             command_executing = true;
             next_point = command_point;
@@ -326,26 +325,26 @@ model Command {
         ref Pushing_Up_Code         : code = 8;
         ref Pushing_Down_Code       : code = 9;
         ref Unknown_Code: true;
-        enter -> busy = true;
-        enter -> command_executing = true;
+        always -> busy = true;
+        always -> command_executing = true;
         exit -> command_reset = true;
     }
     state Pushing_Up_Code  {
         ref Reading: next_level = push_level;
         before -> next_level = command_level;
         exit ->  push_up = false;
-        enter ->  push_up = true;
-        enter ->  command_executing = true;
+        always ->  push_up = true;
+        always ->  command_executing = true;
     }
     state Pushing_Down_Code  {
         ref Reading: 0 = push_level;
         exit ->  push_down = false;
-        enter ->  push_down = true;
-        enter ->  command_executing = true;
+        always ->  push_down = true;
+        always ->  command_executing = true;
     }
     state Rotate_Left_Code {
         ref Reading: angle >= next_angl_up | angle <= next_angl_down;
-        enter ->  machine_rot_left = true;
+        always ->  machine_rot_left = true;
         before -> {
             next_angl_up   = angle - ANGLE_DELTA - ROUND_DELTA;
             next_angl_down = angle - ANGLE_DELTA + ROUND_DELTA;
@@ -361,11 +360,11 @@ model Command {
             }
         }
         exit ->  machine_rot_left = false;
-        enter -> command_executing = true;
+        always -> command_executing = true;
     }
     state Rotate_Right_Code {
         ref Reading: angle >= next_angl_up & angle <= next_angl_down;
-        enter ->  machine_rot_right = true;
+        always ->  machine_rot_right = true;
         before -> {
             next_angl_up   = angle + ANGLE_DELTA - ROUND_DELTA;
             next_angl_down = angle + ANGLE_DELTA + ROUND_DELTA;
@@ -381,57 +380,57 @@ model Command {
             }
         }
         exit ->  machine_rot_right = false;
-        enter -> command_executing = true;
+        always -> command_executing = true;
     }
     state Moving_Up_Code {
         ref Reading  : next_point = point;
         ref Emergency: distance_top >= 0 & distance_top <= 2;
-        enter ->  machine_gas = true;
+        always ->  machine_gas = true;
         exit ->  machine_gas = false;
-        enter -> command_executing = true;
+        always -> command_executing = true;
     }
     state Moving_Down_Code {
         ref Reading  : next_point = point;
         ref Emergency: distance_bottom >= 0 & distance_bottom <= 2;
-        enter ->  machine_back = true;
+        always ->  machine_back = true;
         exit ->  machine_back = false;
-        enter -> command_executing = true;
+        always -> command_executing = true;
     }
     state Moving_Shift_Left_Code {
         ref Reading  : next_point = point;
         ref Emergency: distance_left >= 0 & distance_left <= 2;
-        enter ->  machine_shift_left = true;
+        always ->  machine_shift_left = true;
         exit ->  machine_shift_left = false;
-        enter -> command_executing = true;
+        always -> command_executing = true;
     }
     state Moving_Shift_Right_Code {
         ref Reading  : next_point = point;
         ref Emergency: distance_right >= 0 & distance_right <= 2;
-        enter ->  machine_shift_right = true;
+        always ->  machine_shift_right = true;
         exit ->  machine_shift_right = false;
-        enter -> command_executing = true;
+        always -> command_executing = true;
     }
     state Unknown_Code {
         ref Reading: true;
-        enter -> busy = true;
-        enter -> command_executing = true;
+        always -> busy = true;
+        always -> command_executing = true;
     }
     state Reset_Code {
         ref Reading: true;
-        enter -> busy = true;
-        enter -> {
+        always -> busy = true;
+        always -> {
             command_executing = true;
             reset = true;
         }
     }
     state Complete_Code {
         ref Reading: true;
-        enter -> busy = true;
-        enter -> command_executing = true;
+        always -> busy = true;
+        always -> command_executing = true;
     }
     state Emergency {
         ref Reading: true;
-        enter -> error = true;
+        always -> error = true;
     }
     state End {}
 
@@ -465,12 +464,12 @@ model Controller {
         ref Start: reset;
         ref Error: error;
         ref Waiting: true;
-        enter -> busy = true;
+        always -> busy = true;
     }
 
     state Waiting {
         ref Executing_Command: command_executing;
-        enter -> { 
+        always -> { 
             busy = false; 
             watchdog = 0;
         }
@@ -478,7 +477,7 @@ model Controller {
 
     state Executing_Command {
         ref    Waiting: !command_executing;
-        enter -> {
+        always -> {
             busy = true;
             watchdog = 0;
         }
@@ -486,12 +485,12 @@ model Controller {
 
     state Error {
         ref    Start: reset;
-        enter -> debug("Сработал Watchdog");
+        always -> debug("Сработал Watchdog");
     }
 
     state End {}
 
-    enter -> {
+    always -> {
         watchdog = watchdog + 1;
         if watchdog > MAX_EXECUTING_TICKS {
             reset = true;
