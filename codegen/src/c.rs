@@ -4,11 +4,11 @@ use crate::behavior::{
 };
 use crate::condition::{condition_to_c, expr_to_c, type_to_c_ctx};
 use crate::ltl::{extract_ltl_formulas, ltl_comments_c};
-use std::collections::{HashMap, HashSet};
 use but_grammar::ast::{
     Annotation, Condition, Expression, ModelDefinition, ModelPart, Property, SourceUnit,
     SourceUnitPart, StatePart, VariableAttribute,
 };
+use std::collections::{HashMap, HashSet};
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -17,14 +17,14 @@ pub fn generate_c_header_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
     let guard = base_name.to_uppercase().replace('-', "_").replace('.', "_");
     let mut out = String::new();
     out.push_str("#pragma once\n");
-    out.push_str(&format!("#if !defined(__{}_H__)\n", guard));
-    out.push_str(&format!("#define __{}_H__\n\n", guard));
-    out.push_str("#include <stdio.h>\n");
+    out.push_str(&format!("#ifndef {}_H__\n", guard));
+    out.push_str(&format!("#define {}_H__\n\n", guard));
     out.push_str("#include <stdbool.h>\n");
     out.push_str("#include <stdint.h>\n\n");
 
     // Type alias typedefs
-    let mut alias_names: Vec<(&String, &but_grammar::ast::Type)> = ctx.type_aliases.iter().collect();
+    let mut alias_names: Vec<(&String, &but_grammar::ast::Type)> =
+        ctx.type_aliases.iter().collect();
     alias_names.sort_by_key(|(k, _)| k.as_str());
     for (alias, ty) in &alias_names {
         let resolved = type_to_c_ctx(ty, &ctx.type_aliases);
@@ -39,10 +39,17 @@ pub fn generate_c_header_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
 
     // Global port extern declarations
     for vd in &ctx.global_vars {
-        if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+        if vd
+            .attrs
+            .iter()
+            .any(|a| matches!(a, VariableAttribute::Portable(_)))
+        {
             if let Some(vname) = &vd.name {
                 let ty = type_to_c_ctx(&vd.ty, &ctx.type_aliases);
-                out.push_str(&format!("extern {};\n", format_field_decl(&vname.name, &ty)));
+                out.push_str(&format!(
+                    "extern {};\n",
+                    format_field_decl(&vname.name, &ty)
+                ));
             }
         }
     }
@@ -66,7 +73,7 @@ pub fn generate_c_header_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
         }
     }
 
-    out.push_str(&format!("#endif /* __{}_H__ */\n", guard));
+    out.push_str(&format!("#endif /* {}_H__ */\n", guard));
     out
 }
 
@@ -78,11 +85,23 @@ pub fn generate_c_source_all(source: &SourceUnit, base_name: &str, ctx: &Codegen
 
     // Global port definitions
     for vd in &ctx.global_vars {
-        if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+        if vd
+            .attrs
+            .iter()
+            .any(|a| matches!(a, VariableAttribute::Portable(_)))
+        {
             if let Some(vname) = &vd.name {
                 let ty = type_to_c_ctx(&vd.ty, &ctx.type_aliases);
-                let init = vd.initializer.as_ref().map(expr_to_c).unwrap_or_else(|| "0".to_string());
-                out.push_str(&format!("{} = {};\n", format_field_decl(&vname.name, &ty), init));
+                let init = vd
+                    .initializer
+                    .as_ref()
+                    .map(expr_to_c)
+                    .unwrap_or_else(|| "0".to_string());
+                out.push_str(&format!(
+                    "{} = {};\n",
+                    format_field_decl(&vname.name, &ty),
+                    init
+                ));
             }
         }
     }
@@ -123,10 +142,17 @@ pub fn generate_c_header(model: &ModelDefinition, ctx: &CodegenContext) -> Strin
         out.push('\n');
     }
     for vd in &ctx.global_vars {
-        if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+        if vd
+            .attrs
+            .iter()
+            .any(|a| matches!(a, VariableAttribute::Portable(_)))
+        {
             if let Some(vname) = &vd.name {
                 let ty = type_to_c_ctx(&vd.ty, &ctx.type_aliases);
-                out.push_str(&format!("extern {};\n", format_field_decl(&vname.name, &ty)));
+                out.push_str(&format!(
+                    "extern {};\n",
+                    format_field_decl(&vname.name, &ty)
+                ));
             }
         }
     }
@@ -197,21 +223,30 @@ fn gen_model_struct(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
                 for s in collect_state_names(sub_md) {
                     out.push_str(&format!(
                         "{}{}_{}_{},\n",
-                        i3, upper, leaf_upper, s.to_uppercase()
+                        i3,
+                        upper,
+                        leaf_upper,
+                        s.to_uppercase()
                     ));
                 }
                 out.push_str(&format!("{}}} state;\n", i2));
                 // Local variables
                 for part in &sub_md.parts {
                     if let ModelPart::VariableDefinition(vd) = part {
-                        if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+                        if vd
+                            .attrs
+                            .iter()
+                            .any(|a| matches!(a, VariableAttribute::Portable(_)))
+                        {
                             continue;
                         }
                         if let Some(vname) = &vd.name {
                             let ty = type_to_c_ctx(&vd.ty, &ctx.type_aliases);
                             out.push_str(&format!(
                                 "{}{}{};\n",
-                                i1, i1, format_field_decl(&vname.name, &ty)
+                                i1,
+                                i1,
+                                format_field_decl(&vname.name, &ty)
                             ));
                         }
                     }
@@ -236,7 +271,11 @@ fn gen_model_struct(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
         // Own local variables of the composition model
         for part in &model.parts {
             if let ModelPart::VariableDefinition(vd) = part {
-                if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+                if vd
+                    .attrs
+                    .iter()
+                    .any(|a| matches!(a, VariableAttribute::Portable(_)))
+                {
                     continue;
                 }
                 if let Some(vname) = &vd.name {
@@ -250,13 +289,17 @@ fn gen_model_struct(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
         out.push_str(&format!("{}enum {{\n", i1));
         out.push_str(&format!("{}{}_INIT,\n", i2, upper));
         for s in collect_state_names(model) {
-            out.push_str(&format!("{}{}_{}",  i2, upper, s.to_uppercase()));
+            out.push_str(&format!("{}{}_{}", i2, upper, s.to_uppercase()));
             out.push_str(",\n");
         }
         out.push_str(&format!("{}}} state;\n", i1));
         for part in &model.parts {
             if let ModelPart::VariableDefinition(vd) = part {
-                if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+                if vd
+                    .attrs
+                    .iter()
+                    .any(|a| matches!(a, VariableAttribute::Portable(_)))
+                {
                     continue;
                 }
                 if let Some(vname) = &vd.name {
@@ -316,7 +359,15 @@ fn gen_model_source(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
             let leaf_upper = leaf.to_uppercase();
             if let Some(sub_md) = find_model_in_source(source, leaf) {
                 out.push_str(&gen_sub_model_funcs(
-                    sub_md, &name, &upper, &field, leaf, &leaf_upper, &param, &peer_map, ctx,
+                    sub_md,
+                    &name,
+                    &upper,
+                    &field,
+                    leaf,
+                    &leaf_upper,
+                    &param,
+                    &peer_map,
+                    ctx,
                 ));
             }
         }
@@ -325,28 +376,51 @@ fn gen_model_source(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
         out.push_str(&format!("//model: {}\n", name));
 
         // reset
-        out.push_str(&format!("void {}_reset(struct {} *{}) {{\n", name, name, param));
+        out.push_str(&format!(
+            "void {}_reset(struct {} *{}) {{\n",
+            name, name, param
+        ));
         out.push_str(&format!("{}assert({} != 0);\n", i1, param));
-        out.push_str(&format!("{}{}->{} = {}_IMPLEMENT_INIT;\n", i1, param, "state", upper));
+        out.push_str(&format!(
+            "{}{}->{} = {}_IMPLEMENT_INIT;\n",
+            i1, param, "state", upper
+        ));
         for leaf in &leaves {
             out.push_str(&format!("{}{}_{}_reset({});\n", i1, name, leaf, param));
         }
         // Own local var init
         for part in &model.parts {
             if let ModelPart::VariableDefinition(vd) = part {
-                if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) { continue; }
+                if vd
+                    .attrs
+                    .iter()
+                    .any(|a| matches!(a, VariableAttribute::Portable(_)))
+                {
+                    continue;
+                }
                 if let Some(vname) = &vd.name {
                     if let Some(init) = &vd.initializer {
                         match init {
                             Expression::Initializer(_, vals) => {
                                 for (i, v) in vals.iter().enumerate() {
-                                    out.push_str(&format!("{}{}->{}[{}] = {};\n",
-                                        i1, param, vname.name, i, expr_to_c(v)));
+                                    out.push_str(&format!(
+                                        "{}{}->{}[{}] = {};\n",
+                                        i1,
+                                        param,
+                                        vname.name,
+                                        i,
+                                        expr_to_c(v)
+                                    ));
                                 }
                             }
                             _ => {
-                                out.push_str(&format!("{}{}->{} = {};\n",
-                                    i1, param, vname.name, expr_to_c(init)));
+                                out.push_str(&format!(
+                                    "{}{}->{} = {};\n",
+                                    i1,
+                                    param,
+                                    vname.name,
+                                    expr_to_c(init)
+                                ));
                             }
                         }
                     }
@@ -356,13 +430,19 @@ fn gen_model_source(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
         out.push_str("}\n\n");
 
         // init
-        out.push_str(&format!("void {}_init(struct {} *{}) {{\n", name, name, param));
+        out.push_str(&format!(
+            "void {}_init(struct {} *{}) {{\n",
+            name, name, param
+        ));
         out.push_str(&format!("{}assert({} != 0);\n", i1, param));
         out.push_str(&format!("{}{}_reset({});\n", i1, name, param));
         out.push_str("}\n\n");
 
         // tick
-        out.push_str(&format!("void {}_tick(struct {} *{}) {{\n", name, name, param));
+        out.push_str(&format!(
+            "void {}_tick(struct {} *{}) {{\n",
+            name, name, param
+        ));
         out.push_str(&format!("{}assert({} != 0);\n", i1, param));
         out.push_str(&format!("{}switch ({}->{}) {{\n", i1, param, "state"));
 
@@ -371,7 +451,10 @@ fn gen_model_source(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
         for leaf in &leaves {
             out.push_str(&format!("{}{}_{}_init({});\n", i3, name, leaf, param));
         }
-        out.push_str(&format!("{}{}->{} = {}_IMPLEMENT_TICK;\n", i3, param, "state", upper));
+        out.push_str(&format!(
+            "{}{}->{} = {}_IMPLEMENT_TICK;\n",
+            i3, param, "state", upper
+        ));
         out.push_str(&format!("{}break;\n", i3));
         out.push_str(&format!("{}}}\n", i2));
 
@@ -393,11 +476,16 @@ fn gen_model_source(model: &ModelDefinition, source: &SourceUnit, ctx: &CodegenC
         out.push_str("}\n\n");
 
         // finished
-        out.push_str(&format!("bool {}_finished(struct {} *{}) {{\n", name, name, param));
+        out.push_str(&format!(
+            "bool {}_finished(struct {} *{}) {{\n",
+            name, name, param
+        ));
         out.push_str(&format!("{}assert({} != 0);\n", i1, param));
-        out.push_str(&format!("{}return {}->{} == {}_IMPLEMENT_END;\n", i1, param, "state", upper));
+        out.push_str(&format!(
+            "{}return {}->{} == {}_IMPLEMENT_END;\n",
+            i1, param, "state", upper
+        ));
         out.push_str("}\n");
-
     } else {
         // --- FSM model ---
         out.push_str(&gen_fsm_source(model, ctx));
@@ -434,39 +522,76 @@ fn gen_sub_model_funcs(
     out.push_str(&format!("//model: {}\n", field_name));
 
     // reset
-    out.push_str(&format!("{}void {}_{}_reset({}) {{\n", inline, parent_name, field_name, struct_param));
+    out.push_str(&format!(
+        "{}void {}_{}_reset({}) {{\n",
+        inline, parent_name, field_name, struct_param
+    ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
-    out.push_str(&format!("{}{}->{}.state = {}_{}_INIT;\n", i1, param, field, parent_upper, field_upper));
+    out.push_str(&format!(
+        "{}{}->{}.state = {}_{}_INIT;\n",
+        i1, param, field, parent_upper, field_upper
+    ));
     out.push_str("}\n");
 
     // init
-    out.push_str(&format!("{}void {}_{}_init({}) {{\n", inline, parent_name, field_name, struct_param));
+    out.push_str(&format!(
+        "{}void {}_{}_init({}) {{\n",
+        inline, parent_name, field_name, struct_param
+    ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
-    out.push_str(&format!("{}{}_{}_reset({});\n", i1, parent_name, field_name, param));
+    out.push_str(&format!(
+        "{}{}_{}_reset({});\n",
+        i1, parent_name, field_name, param
+    ));
     out.push_str("}\n");
 
     // tick
-    out.push_str(&format!("{}void {}_{}_tick({}) {{\n", inline, parent_name, field_name, struct_param));
+    out.push_str(&format!(
+        "{}void {}_{}_tick({}) {{\n",
+        inline, parent_name, field_name, struct_param
+    ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
     out.push_str(&format!("{}switch ({}->{}.state) {{\n", i1, param, field));
 
     // INIT case: set initial values, transition to start
-    out.push_str(&format!("{}case {}_{}_INIT: {{\n", i2, parent_upper, field_upper));
+    out.push_str(&format!(
+        "{}case {}_{}_INIT: {{\n",
+        i2, parent_upper, field_upper
+    ));
     for part in &sub_md.parts {
         if let ModelPart::VariableDefinition(vd) = part {
-            if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) { continue; }
+            if vd
+                .attrs
+                .iter()
+                .any(|a| matches!(a, VariableAttribute::Portable(_)))
+            {
+                continue;
+            }
             if let Some(vname) = &vd.name {
                 if let Some(init) = &vd.initializer {
                     match init {
                         Expression::Initializer(_, vals) => {
                             for (i, v) in vals.iter().enumerate() {
-                                out.push_str(&format!("{}{}->{}.{}[{}] = {};\n",
-                                    i3, param, field, vname.name, i, expr_to_c(v)));
+                                out.push_str(&format!(
+                                    "{}{}->{}.{}[{}] = {};\n",
+                                    i3,
+                                    param,
+                                    field,
+                                    vname.name,
+                                    i,
+                                    expr_to_c(v)
+                                ));
                             }
                         }
                         _ => {
-                            out.push_str(&format!("{}{}->{}.{} = {};\n",
-                                i3, param, field, vname.name, expr_to_c(init)));
+                            out.push_str(&format!(
+                                "{}{}->{}.{} = {};\n",
+                                i3,
+                                param,
+                                field,
+                                vname.name,
+                                expr_to_c(init)
+                            ));
                         }
                     }
                 }
@@ -474,8 +599,15 @@ fn gen_sub_model_funcs(
         }
     }
     if let Some(start) = &start_state {
-        out.push_str(&format!("{}{}->{}.state = {}_{}_{} ;\n",
-            i3, param, field, parent_upper, field_upper, start.to_uppercase()));
+        out.push_str(&format!(
+            "{}{}->{}.state = {}_{}_{} ;\n",
+            i3,
+            param,
+            field,
+            parent_upper,
+            field_upper,
+            start.to_uppercase()
+        ));
     } else {
         // fallback: no start state found
         out.push_str(&format!("{}/* no start state */\n", i3));
@@ -490,13 +622,24 @@ fn gen_sub_model_funcs(
             let sname_up = sname.to_uppercase();
             let is_terminal = terminal_states.iter().any(|t| t == sname);
 
-            out.push_str(&format!("{}case {}_{}_{}:  {{\n", i2, parent_upper, field_upper, sname_up));
+            out.push_str(&format!(
+                "{}case {}_{}_{}:  {{\n",
+                i2, parent_upper, field_upper, sname_up
+            ));
 
             // Transitions
             for sp in &sd.parts {
                 if let StatePart::Reference(_, target, cond_opt) = sp {
                     let cond_str = if let Some(cond) = cond_opt {
-                        cond_with_ctx(cond, param, field, &local_vars, parent_upper, field_upper, peer_map)
+                        cond_with_ctx(
+                            cond,
+                            param,
+                            field,
+                            &local_vars,
+                            parent_upper,
+                            field_upper,
+                            peer_map,
+                        )
                     } else {
                         "1".to_string()
                     };
@@ -508,15 +651,27 @@ fn gen_sub_model_funcs(
                             if let StatePart::PropertyDefinition(pd) = tsp {
                                 if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
                                     out.push_str(&property_with_ctx(
-                                        &pd.value, param, field, &local_vars, ctx, 4,
+                                        &pd.value,
+                                        param,
+                                        field,
+                                        &local_vars,
+                                        ctx,
+                                        4,
                                     ));
                                 }
                             }
                         }
                     }
 
-                    out.push_str(&format!("{}{}->{}.state = {}_{}_{};\n",
-                        i4, param, field, parent_upper, field_upper, target.name.to_uppercase()));
+                    out.push_str(&format!(
+                        "{}{}->{}.state = {}_{}_{};\n",
+                        i4,
+                        param,
+                        field,
+                        parent_upper,
+                        field_upper,
+                        target.name.to_uppercase()
+                    ));
                     out.push_str(&format!("{}}}\n", i3));
                 }
             }
@@ -530,15 +685,26 @@ fn gen_sub_model_funcs(
     out.push_str("}\n");
 
     // finished
-    out.push_str(&format!("{}bool {}_{}_finished({}) {{\n", inline, parent_name, field_name, struct_param));
+    out.push_str(&format!(
+        "{}bool {}_{}_finished({}) {{\n",
+        inline, parent_name, field_name, struct_param
+    ));
     out.push_str(&format!("{}assert({} != 0);\n", i1, param));
     if terminal_states.is_empty() {
         out.push_str(&format!("{}return false;\n", i1));
     } else {
         let conds: Vec<String> = terminal_states
             .iter()
-            .map(|s| format!("{}->{}.state == {}_{}_{}",
-                param, field, parent_upper, field_upper, s.to_uppercase()))
+            .map(|s| {
+                format!(
+                    "{}->{}.state == {}_{}_{}",
+                    param,
+                    field,
+                    parent_upper,
+                    field_upper,
+                    s.to_uppercase()
+                )
+            })
             .collect();
         out.push_str(&format!("{}return {};\n", i1, conds.join(" || ")));
     }
@@ -592,20 +758,36 @@ fn gen_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> String {
     // Local var initializations
     for part in &model.parts {
         if let ModelPart::VariableDefinition(vd) = part {
-            if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) { continue; }
+            if vd
+                .attrs
+                .iter()
+                .any(|a| matches!(a, VariableAttribute::Portable(_)))
+            {
+                continue;
+            }
             if let Some(vname) = &vd.name {
                 if let Some(init) = &vd.initializer {
                     match init {
                         Expression::Initializer(_, vals) => {
                             for (i, v) in vals.iter().enumerate() {
-                                out.push_str(&format!("{}{}->{}[{}] = {};\n",
-                                    i3, param, vname.name, i, expr_with_ctx(v, &param, "", &local_vars)));
+                                out.push_str(&format!(
+                                    "{}{}->{}[{}] = {};\n",
+                                    i3,
+                                    param,
+                                    vname.name,
+                                    i,
+                                    expr_with_ctx(v, &param, "", &local_vars)
+                                ));
                             }
                         }
                         _ => {
-                            out.push_str(&format!("{}{}->{} = {};\n",
-                                i3, param, vname.name,
-                                expr_with_ctx(init, &param, "", &local_vars)));
+                            out.push_str(&format!(
+                                "{}{}->{} = {};\n",
+                                i3,
+                                param,
+                                vname.name,
+                                expr_with_ctx(init, &param, "", &local_vars)
+                            ));
                         }
                     }
                 }
@@ -618,13 +800,26 @@ fn gen_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> String {
             for sp in &start_sd.parts {
                 if let StatePart::PropertyDefinition(pd) = sp {
                     if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
-                        out.push_str(&property_with_ctx(&pd.value, &param, "", &local_vars, ctx, 3));
+                        out.push_str(&property_with_ctx(
+                            &pd.value,
+                            &param,
+                            "",
+                            &local_vars,
+                            ctx,
+                            3,
+                        ));
                     }
                 }
             }
         }
-        out.push_str(&format!("{}{}->{} = {}_{};\n",
-            i3, param, "state", upper, start.to_uppercase()));
+        out.push_str(&format!(
+            "{}{}->{} = {}_{};\n",
+            i3,
+            param,
+            "state",
+            upper,
+            start.to_uppercase()
+        ));
     }
     out.push_str(&format!("{}break;\n", i3));
     out.push_str(&format!("{}}}\n", i2));
@@ -655,15 +850,26 @@ fn gen_fsm_source(model: &ModelDefinition, ctx: &CodegenContext) -> String {
                             if let StatePart::PropertyDefinition(pd) = tsp {
                                 if pd.name.as_ref().map(|n| n.name.as_str()) == Some("enter") {
                                     out.push_str(&property_with_ctx(
-                                        &pd.value, &param, "", &local_vars, ctx, 4,
+                                        &pd.value,
+                                        &param,
+                                        "",
+                                        &local_vars,
+                                        ctx,
+                                        4,
                                     ));
                                 }
                             }
                         }
                     }
 
-                    out.push_str(&format!("{}{}->{} = {}_{};\n",
-                        i4, param, "state", upper, target.name.to_uppercase()));
+                    out.push_str(&format!(
+                        "{}{}->{} = {}_{};\n",
+                        i4,
+                        param,
+                        "state",
+                        upper,
+                        target.name.to_uppercase()
+                    ));
                     out.push_str(&format!("{}}}\n", i3));
                 }
             }
@@ -727,7 +933,10 @@ fn gen_composition_tick(
                 out.push_str(&actions);
             }
             out.push_str(&format!("{}}} else {{\n", i3));
-            out.push_str(&format!("{}{}->{} = {}_IMPLEMENT_END;\n", i4, param, "state", parent_upper));
+            out.push_str(&format!(
+                "{}{}->{} = {}_IMPLEMENT_END;\n",
+                i4, param, "state", parent_upper
+            ));
             out.push_str(&format!("{}}}\n", i3));
         }
         CompositionTree::Parallel(children) => {
@@ -742,15 +951,24 @@ fn gen_composition_tick(
                 .map(|n| format!("{}_{}_finished({})", parent_name, n, param))
                 .collect();
             out.push_str(&format!("{}if ({}) {{\n", i3, all_done.join(" && ")));
-            out.push_str(&format!("{}{}->{} = {}_IMPLEMENT_END;\n", i4, param, "state", parent_upper));
+            out.push_str(&format!(
+                "{}{}->{} = {}_IMPLEMENT_END;\n",
+                i4, param, "state", parent_upper
+            ));
             out.push_str(&format!("{}}}\n", i3));
         }
         CompositionTree::Single(name) => {
             let not_done = format!("!{}_{}_finished({})", parent_name, name, param);
             out.push_str(&format!("{}if ({}) {{\n", i3, not_done));
-            out.push_str(&format!("{}{}_{}_tick({});\n", i4, parent_name, name, param));
+            out.push_str(&format!(
+                "{}{}_{}_tick({});\n",
+                i4, parent_name, name, param
+            ));
             out.push_str(&format!("{}}} else {{\n", i3));
-            out.push_str(&format!("{}{}->{} = {}_IMPLEMENT_END;\n", i4, param, "state", parent_upper));
+            out.push_str(&format!(
+                "{}{}->{} = {}_IMPLEMENT_END;\n",
+                i4, param, "state", parent_upper
+            ));
             out.push_str(&format!("{}}}\n", i3));
         }
     }
@@ -773,18 +991,21 @@ fn gen_not_done_cond(step: &CompositionTree, parent_name: &str, param: &str) -> 
     }
 }
 
-fn gen_tick_actions(step: &CompositionTree, parent_name: &str, param: &str, indent: &str) -> String {
+fn gen_tick_actions(
+    step: &CompositionTree,
+    parent_name: &str,
+    param: &str,
+    indent: &str,
+) -> String {
     match step {
         CompositionTree::Single(name) => {
             format!("{}{}_{}_tick({});\n", indent, parent_name, name, param)
         }
-        CompositionTree::Parallel(children) | CompositionTree::Sequential(children) => {
-            children
-                .iter()
-                .flat_map(|c| c.leaves())
-                .map(|n| format!("{}{}_{}_tick({});\n", indent, parent_name, n, param))
-                .collect()
-        }
+        CompositionTree::Parallel(children) | CompositionTree::Sequential(children) => children
+            .iter()
+            .flat_map(|c| c.leaves())
+            .map(|n| format!("{}{}_{}_tick({});\n", indent, parent_name, n, param))
+            .collect(),
     }
 }
 
@@ -828,10 +1049,8 @@ fn cond_with_ctx(
         }
         Condition::Equal(_, l, r) => {
             // Detect S(Model) = State pattern
-            if let (
-                Condition::FunctionCall(_, s_id, s_args),
-                Condition::Variable(state_var),
-            ) = (l.as_ref(), r.as_ref())
+            if let (Condition::FunctionCall(_, s_id, s_args), Condition::Variable(state_var)) =
+                (l.as_ref(), r.as_ref())
             {
                 if s_id.name == "S" && s_args.len() == 1 {
                     if let Condition::Variable(model_var) = &s_args[0] {
@@ -839,73 +1058,221 @@ fn cond_with_ctx(
                         if let Some(peer_field) = peer_map.get(mname) {
                             let mu = mname.to_uppercase();
                             let su = state_var.name.to_uppercase();
-                            return format!("{}->{}.state == {}_{}_{}", param, peer_field, parent_upper, mu, su);
+                            return format!(
+                                "{}->{}.state == {}_{}_{}",
+                                param, peer_field, parent_upper, mu, su
+                            );
                         }
                     }
                 }
             }
             format!(
                 "{} == {}",
-                cond_with_ctx(l, param, field, local_vars, parent_upper, current_upper, peer_map),
-                cond_with_ctx(r, param, field, local_vars, parent_upper, current_upper, peer_map)
+                cond_with_ctx(
+                    l,
+                    param,
+                    field,
+                    local_vars,
+                    parent_upper,
+                    current_upper,
+                    peer_map
+                ),
+                cond_with_ctx(
+                    r,
+                    param,
+                    field,
+                    local_vars,
+                    parent_upper,
+                    current_upper,
+                    peer_map
+                )
             )
         }
         Condition::NotEqual(_, l, r) => format!(
             "{} != {}",
-            cond_with_ctx(l, param, field, local_vars, parent_upper, current_upper, peer_map),
-            cond_with_ctx(r, param, field, local_vars, parent_upper, current_upper, peer_map)
+            cond_with_ctx(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            ),
+            cond_with_ctx(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            )
         ),
         Condition::Less(_, l, r) => format!(
             "{} < {}",
-            cond_with_ctx(l, param, field, local_vars, parent_upper, current_upper, peer_map),
-            cond_with_ctx(r, param, field, local_vars, parent_upper, current_upper, peer_map)
+            cond_with_ctx(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            ),
+            cond_with_ctx(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            )
         ),
         Condition::LessEqual(_, l, r) => format!(
             "{} <= {}",
-            cond_with_ctx(l, param, field, local_vars, parent_upper, current_upper, peer_map),
-            cond_with_ctx(r, param, field, local_vars, parent_upper, current_upper, peer_map)
+            cond_with_ctx(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            ),
+            cond_with_ctx(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            )
         ),
         Condition::More(_, l, r) => format!(
             "{} > {}",
-            cond_with_ctx(l, param, field, local_vars, parent_upper, current_upper, peer_map),
-            cond_with_ctx(r, param, field, local_vars, parent_upper, current_upper, peer_map)
+            cond_with_ctx(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            ),
+            cond_with_ctx(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            )
         ),
         Condition::MoreEqual(_, l, r) => format!(
             "{} >= {}",
-            cond_with_ctx(l, param, field, local_vars, parent_upper, current_upper, peer_map),
-            cond_with_ctx(r, param, field, local_vars, parent_upper, current_upper, peer_map)
+            cond_with_ctx(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            ),
+            cond_with_ctx(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            )
         ),
         Condition::And(_, l, r) => format!(
             "({} && {})",
-            cond_with_ctx(l, param, field, local_vars, parent_upper, current_upper, peer_map),
-            cond_with_ctx(r, param, field, local_vars, parent_upper, current_upper, peer_map)
+            cond_with_ctx(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            ),
+            cond_with_ctx(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            )
         ),
         Condition::Or(_, l, r) => format!(
             "({} || {})",
-            cond_with_ctx(l, param, field, local_vars, parent_upper, current_upper, peer_map),
-            cond_with_ctx(r, param, field, local_vars, parent_upper, current_upper, peer_map)
+            cond_with_ctx(
+                l,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            ),
+            cond_with_ctx(
+                r,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            )
         ),
         Condition::Not(_, inner) => format!(
             "(!{})",
-            cond_with_ctx(inner, param, field, local_vars, parent_upper, current_upper, peer_map)
+            cond_with_ctx(
+                inner,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            )
         ),
         Condition::Parenthesis(_, inner) => format!(
             "({})",
-            cond_with_ctx(inner, param, field, local_vars, parent_upper, current_upper, peer_map)
+            cond_with_ctx(
+                inner,
+                param,
+                field,
+                local_vars,
+                parent_upper,
+                current_upper,
+                peer_map
+            )
         ),
-        Condition::BoolLiteral(_, b) => if *b { "true".to_string() } else { "false".to_string() },
+        Condition::BoolLiteral(_, b) => {
+            if *b {
+                "true".to_string()
+            } else {
+                "false".to_string()
+            }
+        }
         // Fallback to generic translation
         _ => condition_to_c(cond),
     }
 }
 
 /// Translate an expression with struct-field context.
-fn expr_with_ctx(
-    expr: &Expression,
-    param: &str,
-    field: &str,
-    local_vars: &[String],
-) -> String {
+fn expr_with_ctx(expr: &Expression, param: &str, field: &str, local_vars: &[String]) -> String {
     match expr {
         Expression::Variable(id) => {
             if local_vars.contains(&id.name) {
@@ -931,7 +1298,9 @@ fn expr_with_ctx(
         }
         Expression::Assign(_, l, r) => {
             // Handle bit-write: a.N = expr
-            if let Expression::MemberAccess(_, base, but_grammar::ast::Member::Number(n)) = l.as_ref() {
+            if let Expression::MemberAccess(_, base, but_grammar::ast::Member::Number(n)) =
+                l.as_ref()
+            {
                 let base_str = expr_with_ctx(base, param, field, local_vars);
                 let rhs_str = expr_with_ctx(r, param, field, local_vars);
                 format!(
@@ -946,7 +1315,13 @@ fn expr_with_ctx(
                 )
             }
         }
-        Expression::BoolLiteral(_, b) => if *b { "true".to_string() } else { "false".to_string() },
+        Expression::BoolLiteral(_, b) => {
+            if *b {
+                "true".to_string()
+            } else {
+                "false".to_string()
+            }
+        }
         _ => expr_to_c(expr),
     }
 }
@@ -965,9 +1340,7 @@ fn property_with_ctx(
         Property::Expression(e) => {
             format!("{}{};\n", pad, expr_with_ctx(e, param, field, local_vars))
         }
-        Property::Function(stmt) => {
-            stmt_with_ctx(stmt, param, field, local_vars, ctx, level)
-        }
+        Property::Function(stmt) => stmt_with_ctx(stmt, param, field, local_vars, ctx, level),
     }
 }
 
@@ -997,13 +1370,20 @@ fn stmt_with_ctx(
             let peer_map = HashMap::new();
             let cond_str = cond_with_ctx(
                 &cond_expr_to_cond(cond),
-                param, field, local_vars, "", "", &peer_map,
+                param,
+                field,
+                local_vars,
+                "",
+                "",
+                &peer_map,
             );
             let mut out = format!("{}if ({}) ", pad, cond_str);
             out.push_str(&stmt_with_ctx(then_s, param, field, local_vars, ctx, level));
             if let Some(else_body) = else_s {
                 out.push_str(&format!("{}else ", pad));
-                out.push_str(&stmt_with_ctx(else_body, param, field, local_vars, ctx, level));
+                out.push_str(&stmt_with_ctx(
+                    else_body, param, field, local_vars, ctx, level,
+                ));
             }
             out
         }
@@ -1108,7 +1488,11 @@ fn collect_local_var_names(model: &ModelDefinition) -> Vec<String> {
         .iter()
         .filter_map(|p| {
             if let ModelPart::VariableDefinition(vd) = p {
-                if vd.attrs.iter().any(|a| matches!(a, VariableAttribute::Portable(_))) {
+                if vd
+                    .attrs
+                    .iter()
+                    .any(|a| matches!(a, VariableAttribute::Portable(_)))
+                {
                     return None;
                 }
                 vd.name.as_ref().map(|n| n.name.clone())
@@ -1120,7 +1504,10 @@ fn collect_local_var_names(model: &ModelDefinition) -> Vec<String> {
 }
 
 /// Find a state definition by name in a model.
-fn find_state_in_model<'a>(model: &'a ModelDefinition, name: &str) -> Option<&'a but_grammar::ast::StateDefinition> {
+fn find_state_in_model<'a>(
+    model: &'a ModelDefinition,
+    name: &str,
+) -> Option<&'a but_grammar::ast::StateDefinition> {
     for part in &model.parts {
         if let ModelPart::StateDefinition(sd) = part {
             if sd.name.as_ref().map(|n| n.name.as_str()) == Some(name) {
@@ -1145,14 +1532,13 @@ pub(crate) fn model_name(model: &ModelDefinition) -> String {
                 && name.name == "name"
                 && !args.is_empty()
             {
-                args.iter()
-                    .find_map(|a| {
-                        if let Annotation::String(s) = a {
-                            Some(s.string.clone())
-                        } else {
-                            None
-                        }
-                    })
+                args.iter().find_map(|a| {
+                    if let Annotation::String(s) = a {
+                        Some(s.string.clone())
+                    } else {
+                        None
+                    }
+                })
             } else {
                 None
             }

@@ -5,15 +5,15 @@ include::docs/generator/engine.but[]
 
 [source,c,linenums,title="engine.h"]
 ----
-include::docs/generator/c/engine.h[]
+include::docs/generator/engine/c/engine.h[]
 ----
 
 [source,c,linenums,title="engine.c"]
 ----
-include::docs/generator/c/engine.c[]
+include::docs/generator/engine/c/engine.c[]
 ----
 
 [source,c,linenums,title="main.c"]
 ----
-include::docs/generator/c/engine_main.c[]
+include::docs/generator/engine/c/engine_main.c[]
 ----

@@ -1,8 +1,7 @@
 #pragma once
-#if !defined(__ENGINE_H__)
-#define __ENGINE_H__
+#ifndef ENGINE_H__
+#define ENGINE_H__
 
-#include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -46,4 +45,4 @@ void Engine_tick(struct Engine *engine);
 bool Engine_finished(struct Engine *engine);
 void Engine_reset(struct Engine *engine);
 
-#endif /* __ENGINE_H__ */
+#endif /* ENGINE_H__ */

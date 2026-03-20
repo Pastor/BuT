@@ -98,7 +98,7 @@ mod tests {
 
     #[test]
     fn real_nonzero_is_truthy() {
-        assert!(Value::Real(3.14).is_truthy());
+        assert!(Value::Real(std::f64::consts::PI).is_truthy());
         assert!(Value::Real(-0.1).is_truthy());
     }
 
