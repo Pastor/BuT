@@ -13,6 +13,12 @@ typedef enum {
     FLOAT_REGULATOR_FLOAT_REGULATOR_PORT_READY = 0,
 } FloatRegulator_Out_BitPort;
 
+// Обёрнут под-моделью (`start Main = FloatRegulator`): модель без под-моделей не
+// даёт typedef корня в цели `c` (дефект 0026). Выходной порт `ready` держит
+// паритет с `regulator.takt` — тот же регулятор, тот же наблюдаемый флаг
+// готовности; гейтом порт здесь НЕ удерживается (в цель `sv` пример без
+// `--float-as-q` не транслируется вовсе — `SV-003`, а контракт сценария
+// проверяет цепочку состояний).
 struct FloatRegulatorFloatRegulator {
     double half;
     double near;
@@ -27,6 +33,12 @@ struct FloatRegulatorFloatRegulator {
     } state;
 };
 
+// Обёрнут под-моделью (`start Main = FloatRegulator`): модель без под-моделей не
+// даёт typedef корня в цели `c` (дефект 0026). Выходной порт `ready` держит
+// паритет с `regulator.takt` — тот же регулятор, тот же наблюдаемый флаг
+// готовности; гейтом порт здесь НЕ удерживается (в цель `sv` пример без
+// `--float-as-q` не транслируется вовсе — `SV-003`, а контракт сценария
+// проверяет цепочку состояний).
 struct FloatRegulator {
     enum {
         FLOAT_REGULATOR_INIT,

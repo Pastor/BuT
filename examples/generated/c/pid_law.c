@@ -7,24 +7,43 @@
 static PidState PidLaw_pid_compute(PidState p, double sp, double pv);
 static PidState PidLaw_pid_init(double kp, double ki, double kd, double ts, double lo, double hi);
 static PidState PidLaw_pid_reset(PidState p);
+// Сброс накопителей. Настройку НЕ трогает: после сброса контур тот же, но без
+// памяти о прошлом — так его перезапускают при смене партии или режима.
+static PidState PidLaw_pid_reset(PidState p) {
+    PidState r = p;
+    r.i_acc = 0.0;
+    r.err_prev = 0.0;
+    r.output = 0.0;
+    return r;
+}
+
+// Шаг регулирования: по уставке и измерению считает воздействие, обновляет
+// накопитель и запоминает ошибку. Возвращает контур в новом состоянии; выход —
+// в поле `output`.
 static PidState PidLaw_pid_compute(PidState p, double sp, double pv) {
     PidState r = p;
     double err = sp - pv;
+    // Пропорциональная составляющая и НОВОЕ значение накопителя — пока без
+    // ограничений: примем его лишь тогда, когда узнаем, насытился ли выход.
     double prop = p.kp * err;
     double i_new = p.i_acc + p.ki * err * p.ts;
+    // Производная — конечная разность назад.
     double deriv = (err - p.err_prev) / p.ts;
     double raw = prop + i_new + p.kd * deriv;
     if (raw > p.out_max) {
         r.output = p.out_max;
         if (err <= 0.0) {
+            // Ошибка толкает выход ДАЛЬШЕ за верхний предел — накопитель замораживаем.
             r.i_acc = i_new;
         }
     } else if (raw < p.out_min) {
         r.output = p.out_min;
         if (err >= 0.0) {
+            // То же у нижнего предела, зеркально.
             r.i_acc = i_new;
         }
     } else {
+        // Выход в допустимом диапазоне — накопитель обновляется свободно.
         r.output = raw;
         r.i_acc = i_new;
     }
@@ -32,6 +51,8 @@ static PidState PidLaw_pid_compute(PidState p, double sp, double pv) {
     return r;
 }
 
+// ─── Операции над контуром ───────────────────────────────────────────────────
+// Настройка контура: коэффициенты, период и пределы выхода; накопители — с нуля.
 static PidState PidLaw_pid_init(double kp, double ki, double kd, double ts, double lo, double hi) {
     PidState p = {0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     p.kp = kp;
@@ -41,14 +62,6 @@ static PidState PidLaw_pid_init(double kp, double ki, double kd, double ts, doub
     p.out_min = lo;
     p.out_max = hi;
     return p;
-}
-
-static PidState PidLaw_pid_reset(PidState p) {
-    PidState r = p;
-    r.i_acc = 0.0;
-    r.err_prev = 0.0;
-    r.output = 0.0;
-    return r;
 }
 
 void PidLaw_init(PidLaw *model) {
@@ -72,6 +85,8 @@ void PidLaw_tick(PidLaw *model) {
             model->loop_pid = PidLaw_pid_compute(model->loop_pid, model->target, model->meas);
             model->ctrl = model->loop_pid.output;
             if (model->hold) {
+                // Уставка достигнута — контур перезапускаем, чтобы накопитель не тянул
+                // за собой историю разгона.
                 model->loop_pid = PidLaw_pid_reset(model->loop_pid);
                 model->ctrl = 0.0;
             }

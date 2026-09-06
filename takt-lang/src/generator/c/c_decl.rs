@@ -259,6 +259,13 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
                         get_function_name(&fun),
                         param_list
                     ));
+                    // Комментарий автора перед объявлением функции (фича
+                    // 0535, задача 04): в корпусе таких 23, и объясняют они
+                    // именно то, что делает функция.
+                    for line in map.leading_comments(fun.loc()) {
+                        definition.push_str(&line);
+                        definition.push('\n');
+                    }
                     definition.push_str(
                         format!(
                             "static {} {}({}) {{\n",

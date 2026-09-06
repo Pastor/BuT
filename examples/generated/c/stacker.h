@@ -40,6 +40,9 @@ typedef enum {
     STACKER_PORT_CMD_TARGET_STACK = 2,
 } Stacker_Out_NumericPort;
 
+// Отслеживает поступление задания от СУС и фиксирует принятие на исполнение.
+// Устанавливает cmd_ack=1 в момент приёма, сохраняет параметры в tgt_*.
+// Переходит в TaskActive (busy=1) до момента завершения задания (busy→0).
 struct StackerCommandReceiver {
     enum {
         STACKER_COMMAND_RECEIVER_INIT,
@@ -50,6 +53,10 @@ struct StackerCommandReceiver {
     } state;
 };
 
+// Реагирует на запросы от MovementController через lift_request/lift_op.
+// Выдвигает вилы (cmd_fork=1), ожидает целевого состояния груза,
+// убирает вилы и выставляет lift_done. При отмене lift_request немедленно
+// убирает вилы и возвращается в простой.
 struct StackerLiftController {
     enum {
         STACKER_LIFT_CONTROLLER_INIT,
@@ -60,6 +67,10 @@ struct StackerLiftController {
     } state;
 };
 
+// Управляет целевыми координатами (cmd_target_*) по трём осям.
+// На каждом этапе, требующем операции вилами, выставляет lift_request и ждёт
+// lift_done от LiftController перед переходом к следующему движению.
+// При разряде батареи прерывает задание и уходит на аварийную зарядку.
 struct StackerMovementController {
     enum {
         STACKER_MOVEMENT_CONTROLLER_INIT,
@@ -79,14 +90,21 @@ struct StackerMovementController {
     } state;
 };
 
+// Внутренний интерфейс между моделями (координационные переменные):
+// lift_request: MovementController запрашивает операцию вилами
+// lift_op:      тип операции (0=захват, 1=укладка/выдача)
+// lift_done:    LiftController подтверждает завершение операции
+// ─── Константы ────────────────────────────────────────────────────────────────
 struct Stacker {
     uint8_t busy;
     uint8_t eta;
     uint8_t lift_done;
     uint8_t lift_op;
+    // ─── Координационные переменные (внутренний интерфейс между моделями) ─────────
     uint8_t lift_request;
     uint8_t tgt_row;
     uint8_t tgt_section;
+    // ─── Рабочие переменные ───────────────────────────────────────────────────────
     uint8_t tgt_stack;
     uint8_t tgt_type;
     enum {

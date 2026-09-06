@@ -3,6 +3,8 @@ mod c;
 mod call_order;
 mod chain_site;
 pub(crate) mod enum_compare;
+// Перенос комментариев автора модели в вывод (фича 0535, задача 04).
+pub mod comments;
 // Шапка порождённого файла (фича 0535): текст один на все цели, обрамление
 // накладывает целевой язык.
 pub(crate) mod header;
@@ -112,6 +114,12 @@ pub enum FloatWidth {
 pub struct GenerateOptions {
     /// Генерировать guard-проверки в целевом коде.
     pub guard_enable: bool,
+    /// Комментарии автора модели для переноса в вывод (фича 0535, задача 04).
+    ///
+    /// `None` — переносить нечего: так работают потребители, у которых нет
+    /// исходника (библиотечный API поверх готового дерева). Заполняет конвейер,
+    /// который единственный видит и текст, и разбор.
+    pub comments: Option<std::rc::Rc<comments::SourceComments>>,
     /// Режим `c-hal` (фича 0020-05): эмитить таблицу адресов портов и дефолтную
     /// реализацию HAL (`*(volatile T*)addr`). В обычном режиме `c` — `false`,
     /// вывод не меняется.
@@ -246,6 +254,7 @@ impl GenerateOptions {
     pub fn new(guard_enable: bool) -> Self {
         Self {
             guard_enable,
+            comments: None,
             hal: false,
             address_map: std::collections::HashMap::new(),
             float_width: FloatWidth::default(),
@@ -266,6 +275,7 @@ impl Default for GenerateOptions {
     fn default() -> Self {
         Self {
             guard_enable: true,
+            comments: None,
             hal: false,
             address_map: std::collections::HashMap::new(),
             float_width: FloatWidth::default(),

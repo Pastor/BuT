@@ -44,7 +44,7 @@ pub(crate) fn parse_and_construct(
     let mut files = diagnostics::FileTable::new(filename);
 
     // Корневой файл — номер 0 (его зарегистрировал `FileTable::new`).
-    let (model_ast, _) = parse(source, 0).map_err(|ds| {
+    let (model_ast, source_comments) = parse(source, 0).map_err(|ds| {
         let d = ds.into_iter().next().unwrap();
         stamp_file(d, &files)
     })?;
@@ -109,7 +109,14 @@ pub(crate) fn parse_and_construct(
     if options.bounds_check {
         semantic::bounds_guard::insert_bounds_guards(&model);
     }
-    Ok(Compilation { model, files })
+    Ok(Compilation {
+        model,
+        files,
+        comments: std::rc::Rc::new(crate::generator::comments::SourceComments::new(
+            source,
+            &source_comments,
+        )),
+    })
 }
 
 /// Единица компиляции: построенная модель **и** реестр её файлов (фича 0212).
@@ -131,6 +138,11 @@ pub(crate) struct Compilation {
     pub(crate) model: std::rc::Rc<std::cell::RefCell<semantic::ModelNode>>,
     /// Реестр файлов компиляции: по нему разрешается путь диагностики.
     files: diagnostics::FileTable,
+    /// Комментарии автора модели (фича 0535, задача 04).
+    ///
+    /// ⚠️ Живут ЗДЕСЬ, а не в опциях вызывающего: их знает только тот, кто
+    /// видел исходник, а опции приходят снаружи и о тексте не осведомлены.
+    comments: std::rc::Rc<crate::generator::comments::SourceComments>,
 }
 
 impl Compilation {
@@ -171,7 +183,11 @@ impl Compilation {
             &self.model,
             crate::semantic::target_block::label_of(&language),
         );
-        crate::generator::generate_texts(language, &self.model.borrow(), options)
+        // Комментарии подставляются здесь: вызывающий их не знает, а
+        // генератору они нужны — иначе переносить нечего.
+        let mut options = options.clone();
+        options.comments = Some(self.comments.clone());
+        crate::generator::generate_texts(language, &self.model.borrow(), &options)
             .map_err(|d| stamp_file(d, &self.files))
     }
 }

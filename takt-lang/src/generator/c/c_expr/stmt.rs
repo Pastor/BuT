@@ -138,7 +138,17 @@ pub(in crate::generator::c) fn generate_code_block(
 
         StatementNode::Block(block) => {
             for stmt in block {
-                generate_code_block(printer, map, owner, params.clone(), stmt, has_model)?;
+                // Комментарии автора обрамляют оператор ровно здесь — в обходе
+                // тела (фича 0535, задача 04). Место одно на цель: печатай их
+                // каждый вид оператора сам, ветви разошлись бы молча.
+                let params = params.clone();
+                crate::generator::comments::emit_around(
+                    printer,
+                    map.comments(),
+                    stmt.loc(),
+                    crate::generator::header::CommentStyle::Slashes,
+                    |p| generate_code_block(p, map, owner, params, stmt, has_model),
+                )?;
             }
             // Неиспользуемая локальная гасится заглушкой (фича 0376): без неё
             // `cc -Wall -Wextra -Werror` отвечает «unused variable», то есть

@@ -57,9 +57,11 @@ void PidHeaterHeater_tick(PidHeaterHeater *model, PidHeater *main) {
             break;
         }
         case PID_HEATER_HEATER_HEATING: {
+            // ─── Шаг закона: операция библиотеки над своим экземпляром ────────
             model->loop_pid = PidHeater_pid_compute(model->loop_pid, main->target, main->meas);
             main->ctrl = model->loop_pid.output;
             model->err = main->target - main->meas;
+            // ─── Объект: подведённая мощность и потери в среду ────────────────
             main->meas = main->meas + main->gain * main->ctrl - main->loss * (main->meas - main->ambient);
             (*main->write_float)(PID_HEATER_HEATER_PORT_TEMPERATURE, 0, main->meas, main->userdata);
             if (model->err <= 0.0) {

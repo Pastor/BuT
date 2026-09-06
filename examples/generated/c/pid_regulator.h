@@ -13,20 +13,29 @@ typedef enum {
     PID_REGULATOR_PID_PORT_READY = 0,
 } PidRegulator_Out_BitPort;
 
+// Обёрнут под-моделью (цель `c`: typedef корня); порт `ready` — наблюдаемая
+// точка схождения контура, на неё смотрит тестбенч цели `sv` (не поднялся —
+// `$error`). Тела написаны НА ПЕРЕМЕННЫХ (не на литералах):
+// литерал `float` в теле дал бы `SV-003` (фича 0096) — литералы только в
+// инициализаторах объявлений.
 struct PidRegulatorPid {
     double ctrl;
     double deriv;
     double eps;
+    // Рабочие величины такта.
     double err;
     double err_prev;
     double i_acc;
+    // Пределы anti-windup и порог завершения.
     double imax;
     double kd;
     double ki;
+    // Коэффициенты ПИД и объекта (дробные — потребитель дробной арифметики).
     double kp;
     double kplant;
     double meas;
     double neg_imax;
+    // Контур управления.
     double target;
     enum {
         PID_REGULATOR_PID_INIT,
@@ -37,6 +46,11 @@ struct PidRegulatorPid {
     } state;
 };
 
+// Обёрнут под-моделью (цель `c`: typedef корня); порт `ready` — наблюдаемая
+// точка схождения контура, на неё смотрит тестбенч цели `sv` (не поднялся —
+// `$error`). Тела написаны НА ПЕРЕМЕННЫХ (не на литералах):
+// литерал `float` в теле дал бы `SV-003` (фича 0096) — литералы только в
+// инициализаторах объявлений.
 struct PidRegulator {
     enum {
         PID_REGULATOR_INIT,

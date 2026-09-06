@@ -15,6 +15,7 @@ typedef enum {
     BATCH_CYCLE_PORT_READY = 0,
 } BatchCycle_Out_BitPort;
 
+// Фаза 1: дозирование. Набираем три порции и закрываем клапан.
 struct BatchCycleDose {
     uint8_t dosed;
     enum {
@@ -25,6 +26,7 @@ struct BatchCycleDose {
     } state;
 };
 
+// Фаза 3: слив.
 struct BatchCycleDrain {
     uint8_t drained;
     enum {
@@ -35,6 +37,7 @@ struct BatchCycleDrain {
     } state;
 };
 
+// Фаза 2: перемешивание.
 struct BatchCycleMix {
     uint8_t stirred;
     enum {
@@ -45,7 +48,12 @@ struct BatchCycleMix {
     } state;
 };
 
+// Выходной порт `ready` — наблюдаемая точка завершения цикла: на него смотрит
+// тестбенч цели `sv` (не поднялся — `$error`), причём вместе с порядком фаз.
+// Бит 0 регистра статуса 0x600: цикл завершён. Инициализатор порта задаёт
+// АДРЕС, а не начальное значение.
 struct BatchCycle {
+    // Номер активной фазы — общая переменная, её пишут все три под-модели.
     uint8_t stage;
     enum {
         BATCH_CYCLE_INIT,

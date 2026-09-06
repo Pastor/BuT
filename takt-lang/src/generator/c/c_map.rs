@@ -27,6 +27,8 @@ pub struct CMap {
     /// идёт **только** через колбэки HAL, поэтому обращение по адресу она
     /// отвергает (`CC-021`), а `c-hal` печатает `*(volatile uintN_t*)`.
     hal: bool,
+    /// Комментарии автора модели (фича 0535, задача 04).
+    comments: Option<std::rc::Rc<crate::generator::comments::SourceComments>>,
     /// Предупреждения цели, накопленные за проход (фича 0314).
     ///
     /// Канал у цели `c` существует с фичи 0168 (`Generator::generate` возвращает
@@ -127,6 +129,7 @@ impl CMap {
             float_width: FloatWidth::default(),
             time_profile: crate::semantic::duration::TimeProfile::default(),
             hal: false,
+            comments: None,
             fsm: crate::generator::FsmForm::default(),
             warnings: RefCell::new(Vec::new()),
         })
@@ -152,6 +155,35 @@ impl CMap {
     /// вещественного: умолчание — цель `c`, и существующие вызовы `new` его не
     /// повторяют. Умолчание при этом **безопасное**: не зная адресов, цель
     /// отказывает, а не печатает доступ наугад.
+    /// Комментарии автора модели для переноса в вывод (фича 0535, задача 04).
+    pub fn with_comments(
+        mut self,
+        comments: Option<std::rc::Rc<crate::generator::comments::SourceComments>>,
+    ) -> Self {
+        self.comments = comments;
+        self
+    }
+
+    /// Ведущие комментарии объявления в форме комментария C.
+    ///
+    /// Для ОБЪЯВЛЕНИЙ отдельный метод: у них нет хвостового комментария (он
+    /// принадлежал бы строке кода, которой у объявления в выводе может не
+    /// быть), и обрамление им не нужно — только строки перед.
+    pub(crate) fn leading_comments(&self, loc: crate::diagnostics::Location) -> Vec<String> {
+        crate::generator::comments::leading_for(
+            self.comments.as_ref(),
+            loc,
+            crate::generator::header::CommentStyle::Slashes,
+        )
+    }
+
+    /// Носитель комментариев автора модели (фича 0535, задача 04).
+    pub(crate) fn comments(
+        &self,
+    ) -> Option<&std::rc::Rc<crate::generator::comments::SourceComments>> {
+        self.comments.as_ref()
+    }
+
     pub fn with_hal(mut self, hal: bool) -> Self {
         self.hal = hal;
         self

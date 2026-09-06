@@ -193,7 +193,7 @@ fn fixed_cast_literal_matches_generated_c() {
 #[test]
 fn literal_cast_needs_no_runtime_floor() {
     let dir = temp_dir("text");
-    let c = generate_c(&dir);
+    let c = code_only(&generate_c(&dir));
     assert!(
         !c.contains("floor("),
         "приведение литерала обязано быть посчитано при компиляции:\n{c}"
@@ -206,4 +206,18 @@ fn literal_cast_needs_no_runtime_floor() {
         );
     }
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Текст вывода без строк-комментариев.
+///
+/// ⚠️ Нужен с задачи 0535-04: комментарии автора модели переносятся в вывод как
+/// есть, и фикстура, объясняющая словами «`floor(...)` компилируется и считает
+/// верно», приносит эти слова в порождённый C. Проверка на ВЫЗОВ обязана
+/// смотреть на код — иначе она красна из-за собственного пояснения (тот же
+/// класс, что ловля предмета по тексту: сторож обязан проверять обещание).
+fn code_only(text: &str) -> String {
+    text.lines()
+        .filter(|l| !l.trim_start().starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n")
 }

@@ -185,7 +185,7 @@ fn fixed_literal_in_place_matches_generated_c() {
 #[test]
 fn every_place_lowers_its_literal() {
     let dir = temp_dir("text");
-    let c = generate_c(&dir);
+    let c = code_only(&generate_c(&dir));
     // 2.0 → 512, 3.0 → 768, 1.0 → 256, 4.0 → 1024 в q(8, 8).
     for expected in ["= 512", "= 768", "> 256", "> 1024"] {
         assert!(
@@ -200,4 +200,18 @@ fn every_place_lowers_its_literal() {
         );
     }
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Текст вывода без строк-комментариев.
+///
+/// ⚠️ Нужен с задачи 0535-04: комментарии автора модели переносятся в вывод как
+/// есть, и фикстура, объясняющая словами «`floor(...)` компилируется и считает
+/// верно», приносит эти слова в порождённый C. Проверка на ВЫЗОВ обязана
+/// смотреть на код — иначе она красна из-за собственного пояснения (тот же
+/// класс, что ловля предмета по тексту: сторож обязан проверять обещание).
+fn code_only(text: &str) -> String {
+    text.lines()
+        .filter(|l| !l.trim_start().starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n")
 }

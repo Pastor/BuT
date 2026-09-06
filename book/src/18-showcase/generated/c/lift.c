@@ -27,7 +27,7 @@ void Lift_tick(Lift *model) {
     }
     switch (model->state) {
         case LIFT_BOARDING: {
-            model->dwell = model->dwell + 1;
+            model->dwell = model->dwell + 1; // (6) отсчёт ВРЕМЕНИ выдержки (в тактах)
             if (model->dwell >= CONST_LIFT_DWELL_TICKS) {
                 model->doors = 0;
                 (*model->write_bit)(LIFT_PORT_DOORS_OPEN, 0, 0, model->userdata);
@@ -49,7 +49,7 @@ void Lift_tick(Lift *model) {
             break;
         }
         case LIFT_GOING_UP: {
-            (*model->write_numeric)(LIFT_PORT_DISPLAY, 0, (*model->read_numeric)(LIFT_PORT_AT_FLOOR, 0, model->userdata), model->userdata);
+            (*model->write_numeric)(LIFT_PORT_DISPLAY, 0, (*model->read_numeric)(LIFT_PORT_AT_FLOOR, 0, model->userdata), model->userdata); // (3) едем; положение — с датчика
             if ((*model->read_numeric)(LIFT_PORT_AT_FLOOR, 0, model->userdata) >= (*model->read_numeric)(LIFT_PORT_CALL, 0, model->userdata)) {
                 model->moving = 0;
                 (*model->write_bit)(LIFT_PORT_MOTOR_UP, 0, 0, model->userdata);
@@ -78,7 +78,7 @@ void Lift_tick(Lift *model) {
             break;
         }
         case LIFT_WAITING: {
-            (*model->write_numeric)(LIFT_PORT_DISPLAY, 0, (*model->read_numeric)(LIFT_PORT_AT_FLOOR, 0, model->userdata), model->userdata);
+            (*model->write_numeric)(LIFT_PORT_DISPLAY, 0, (*model->read_numeric)(LIFT_PORT_AT_FLOOR, 0, model->userdata), model->userdata); // (3) индикатор следует за датчиком
             if ((*model->read_numeric)(LIFT_PORT_CALL, 0, model->userdata) == (*model->read_numeric)(LIFT_PORT_AT_FLOOR, 0, model->userdata)) {
                 model->doors = 1;
                 (*model->write_bit)(LIFT_PORT_DOORS_OPEN, 0, 1, model->userdata);

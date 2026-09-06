@@ -24,6 +24,8 @@ static void StackerMovementController_tick(StackerMovementController *model, Sta
 static bool StackerMovementController_is_done(const StackerMovementController *model);
 
 static uint8_t Stacker_travel_time(const Stacker *model, uint8_t to_stack, uint8_t to_row, uint8_t to_section);
+// Время движения от текущей позиции (pos_stack, pos_row, pos_section)
+// до целевой ячейки. Возвращает число тактов по метрике Чебышёва.
 static uint8_t Stacker_travel_time(const Stacker *model, uint8_t to_stack, uint8_t to_row, uint8_t to_section) {
     uint8_t ds = 0;
     uint8_t dr = 0;

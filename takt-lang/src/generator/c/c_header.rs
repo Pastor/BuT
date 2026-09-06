@@ -270,6 +270,15 @@ fn generate_model_header(
     let num = num.unwrap_or(0);
     let model = map.raw_model_at(name.clone())?;
     let struct_name = name.unique_camelcase();
+    // Комментарий автора перед объявлением модели (фича 0535, задача 04). Их в
+    // корпусе больше всего — 103 из 469: перед `model` автор пишет, что за
+    // установка описана и как она работает. ⚠️ У корневой модели это вводный
+    // блок файла, и он же — самое ценное, что есть в исходнике для читателя
+    // вывода.
+    let model_loc = model.borrow().loc;
+    for line in map.leading_comments(model_loc) {
+        printer.print(&line).nl();
+    }
     printer
         .print(format!("struct {} {{", struct_name).as_str())
         .nl();
@@ -277,10 +286,15 @@ fn generate_model_header(
     for var in model.borrow().variables.clone().into_values() {
         match var {
             VariableNode::Unresolved => {}
-            VariableNode::Simple { name, ty, .. } => {
+            VariableNode::Simple { name, ty, loc, .. } => {
                 // Пропускаем переменные, которые нигде не используются
                 if !map.usage().variables.contains(&name) {
                     continue;
+                }
+                // Комментарий автора перед объявлением переменной модели
+                // (фича 0535, задача 04).
+                for line in map.leading_comments(loc) {
+                    printer.ident(&line).nl();
                 }
                 // 0029-01: прежде отказ отображения давал CC-009 «Variable not
                 // found» — ошибку не по адресу: переменная найдена, невыразим
@@ -531,6 +545,12 @@ pub fn generate_header(
         let structs: Vec<_> = structs.iter().collect();
         if !structs.is_empty() {
             for s in structs {
+                // Комментарий автора перед объявлением типа (фича 0535,
+                // задача 04): в корпусе таких — 45 из 469, больше только у
+                // самой модели.
+                for line in map.leading_comments(s.loc) {
+                    printer.print(&line).nl();
+                }
                 printer
                     .print(&format!("typedef struct {} {{", s.name))
                     .nl()
