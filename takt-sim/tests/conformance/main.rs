@@ -19,6 +19,9 @@
 //! слияния имя потока — `модуль::тест`, и без замены `:` каталог получил бы
 //! двоеточие в пути.
 
+// Общий помощник: текст вывода без комментариев (фича 0535, задача 05).
+mod target_code;
+
 mod conformance_anon_tests;
 mod conformance_array_assign_tests;
 mod conformance_array_param_tests;

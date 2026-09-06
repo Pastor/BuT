@@ -88,9 +88,15 @@ END_VAR
         1: (* Done *)
             state := 4; (* END *)
         2: (* Heating *)
+            (*
+             * ─── Шаг закона: операция библиотеки над своим экземпляром ────────
+             *)
             loop_pid := PidHeater_pid_compute(loop_pid, target, meas);
             ctrl := loop_pid.output;
             err := target - meas;
+            (*
+             * ─── Объект: подведённая мощность и потери в среду ────────────────
+             *)
             meas := (meas + (gain * ctrl)) - (loss * (meas - ambient));
             temperature := meas;
             IF err <= 0.0 THEN
@@ -109,6 +115,12 @@ END_VAR
     is_done := state = 4;
 END_FUNCTION_BLOCK
 
+(*
+ * ⚠️ Настройка задаётся ЗНАЧЕНИЯМИ ПОЛЕЙ структуры, а не параметрами модели. В
+ * этом и разница между регулятором-типом и регулятором-автоматом: контуров
+ * столько, сколько объявлено переменных, и каждый несёт свою настройку — а не
+ * столько, сколько инстанцировано моделей.
+ *)
 FUNCTION_BLOCK PidHeater
 VAR_OUTPUT
     is_done : BOOL;

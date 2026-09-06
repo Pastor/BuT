@@ -99,9 +99,11 @@ impl PidHeaterHeater {
                 self.state = PidHeaterHeaterState::End;
             }
             PidHeaterHeaterState::Heating => {
+                // ─── Шаг закона: операция библиотеки над своим экземпляром ────────
                 self.loop_pid = pid_compute(self.loop_pid, shared.target, shared.meas);
                 shared.ctrl = self.loop_pid.output;
                 self.err = shared.target - shared.meas;
+                // ─── Объект: подведённая мощность и потери в среду ────────────────
                 shared.meas = (shared.meas + (shared.gain * shared.ctrl)) - (shared.loss * (shared.meas - shared.ambient));
                 hal.write_f64(OutF64Port::Temperature, shared.meas);
                 if self.err <= 0.0 {
@@ -150,6 +152,10 @@ struct PidHeaterShared {
     target: f64,
 }
 
+// ⚠️ Настройка задаётся ЗНАЧЕНИЯМИ ПОЛЕЙ структуры, а не параметрами модели. В
+// этом и разница между регулятором-типом и регулятором-автоматом: контуров
+// столько, сколько объявлено переменных, и каждый несёт свою настройку — а не
+// столько, сколько инстанцировано моделей.
 pub struct PidHeater<H: Hal> {
     shared: PidHeaterShared,
     state: PidHeaterState,

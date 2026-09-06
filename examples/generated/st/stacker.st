@@ -51,6 +51,11 @@ END_VAR
     RETURN;
 END_FUNCTION
 
+(*
+ * Отслеживает поступление задания от СУС и фиксирует принятие на исполнение.
+ * Устанавливает cmd_ack=1 в момент приёма, сохраняет параметры в tgt_*.
+ * Переходит в TaskActive (busy=1) до момента завершения задания (busy→0).
+ *)
 FUNCTION_BLOCK StackerCommandReceiver
 VAR_OUTPUT
     is_done : BOOL;
@@ -114,6 +119,12 @@ END_VAR
     is_done := state = 4;
 END_FUNCTION_BLOCK
 
+(*
+ * Реагирует на запросы от MovementController через lift_request/lift_op.
+ * Выдвигает вилы (cmd_fork=1), ожидает целевого состояния груза,
+ * убирает вилы и выставляет lift_done. При отмене lift_request немедленно
+ * убирает вилы и возвращается в простой.
+ *)
 FUNCTION_BLOCK StackerLiftController
 VAR_OUTPUT
     is_done : BOOL;
@@ -173,6 +184,12 @@ END_VAR
     is_done := state = 4;
 END_FUNCTION_BLOCK
 
+(*
+ * Управляет целевыми координатами (cmd_target_* ) по трём осям.
+ * На каждом этапе, требующем операции вилами, выставляет lift_request и ждёт
+ * lift_done от LiftController перед переходом к следующему движению.
+ * При разряде батареи прерывает задание и уходит на аварийную зарядку.
+ *)
 FUNCTION_BLOCK StackerMovementController
 VAR_OUTPUT
     is_done : BOOL;
@@ -356,6 +373,13 @@ END_VAR
     is_done := state = 13;
 END_FUNCTION_BLOCK
 
+(*
+ * Внутренний интерфейс между моделями (координационные переменные):
+ * lift_request: MovementController запрашивает операцию вилами
+ * lift_op:      тип операции (0=захват, 1=укладка/выдача)
+ * lift_done:    LiftController подтверждает завершение операции
+ * ─── Константы ────────────────────────────────────────────────────────────────
+ *)
 FUNCTION_BLOCK Stacker
 VAR_INPUT
     pos_row : USINT;

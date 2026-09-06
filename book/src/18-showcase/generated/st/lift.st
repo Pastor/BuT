@@ -4,6 +4,12 @@
  * Takt language version 0.18.0.
  *)
 
+(*
+ * Такт — шаг ЛОГИКИ, не единица времени или расстояния. Положение кабины даёт
+ * датчик at_floor (шахтная система позиционирования); движение создаёт привод,
+ * а фиксирует — датчик. Выдержка дверей — это отрезок ВРЕМЕНИ, поэтому её порог
+ * задан в тактах и подстраивается под частоту устройства.
+ *)
 FUNCTION_BLOCK Lift
 VAR_INPUT
     at_floor : USINT;
@@ -37,7 +43,7 @@ END_VAR
     END_IF;
     CASE state OF
         1: (* Boarding *)
-            dwell := dwell + 1;
+            dwell := dwell + 1; (* (6) отсчёт ВРЕМЕНИ выдержки (в тактах) *)
             IF dwell >= DWELL_TICKS THEN
                 doors := FALSE;
                 doors_open := FALSE;
@@ -53,7 +59,7 @@ END_VAR
                 state := 5; (* Stopping *)
             END_IF;
         3: (* GoingUp *)
-            display := at_floor;
+            display := at_floor; (* (3) едем; положение — с датчика *)
             IF at_floor >= call THEN
                 moving := FALSE;
                 motor_up := FALSE;
@@ -75,7 +81,7 @@ END_VAR
             dwell := 0;
             state := 1; (* Boarding *)
         6: (* Waiting *)
-            display := at_floor;
+            display := at_floor; (* (3) индикатор следует за датчиком *)
             IF call = at_floor THEN
                 doors := TRUE;
                 doors_open := TRUE;

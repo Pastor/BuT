@@ -4,6 +4,12 @@
  * Takt language version 0.18.0.
  *)
 
+(*
+ * ─── Модель кабины ────────────────────────────────────────────────────────────
+ * Idle   — ожидание вызова (door open), обновление этажа, приём кнопок
+ * Moving — движение к целевому этажу, постоянное обновление этажа по датчикам
+ * AtFloor — прибытие: дверь открыта, ожидаем нажатия DC (закрыть дверь)
+ *)
 FUNCTION_BLOCK ElevatorMiniCabin
 VAR_INPUT
     cabin_button_dc : BOOL;
@@ -194,6 +200,11 @@ END_VAR
     is_done := state = 4;
 END_FUNCTION_BLOCK
 
+(*
+ * ─── Модель мотора ────────────────────────────────────────────────────────────
+ * Простой трёхсостоянный автомат: Idle ↔ Up | Down → Stop → Idle.
+ * Команда Stop или срабатывание концевого датчика прерывает движение.
+ *)
 FUNCTION_BLOCK ElevatorMiniMotor
 VAR_INPUT
     elevator_motor_sensor_d : BOOL;
@@ -249,6 +260,12 @@ END_VAR
     is_done := state = 5;
 END_FUNCTION_BLOCK
 
+(*
+ * Разделяемые переменные (видны обоим авторам):
+ * command       : Command  — направление движения, устанавливается Cabin
+ * current_floor : u8       — текущий этаж (обновляется по датчикам нижней зоны этажа)
+ * target_floor  : u8       — целевой этаж (0 = нет задания)
+ *)
 FUNCTION_BLOCK ElevatorMini
 VAR_OUTPUT
     is_done : BOOL;

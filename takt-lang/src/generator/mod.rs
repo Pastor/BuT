@@ -384,7 +384,16 @@ pub fn generate_texts(
     // координата последнего оператора пережила бы вызов и досталась бы
     // следующей генерации в том же потоке.
     site::reset();
-    generator_of(&l).generate_texts(model, options)
+    // Комментарии автора — тоже потоковое состояние (фича 0535, задача 05), и
+    // по той же причине: печатники четырёх целей принимают три разных
+    // контекста, и протаскивать носитель через все сигнатуры дороже, чем
+    // держать его рядом с позицией оператора.
+    comments::activate(options.comments.clone());
+    let result = generator_of(&l).generate_texts(model, options);
+    // ⚠️ Снимается НА ВСЕХ путях выхода, включая отказ: иначе следующая
+    // генерация в том же потоке взяла бы комментарии чужого исходника.
+    comments::reset();
+    result
 }
 
 /// Запускает генератор кода для заданного языка и пишет файлы на диск.
@@ -397,8 +406,11 @@ pub fn generate(
     options: &GenerateOptions,
 ) -> Result<Vec<Diagnostic>, Diagnostic> {
     site::reset();
+    comments::activate(options.comments.clone());
     let generator = generator_of(&l);
-    let output = generator.generate_texts(model, options)?;
+    let output = generator.generate_texts(model, options);
+    comments::reset();
+    let output = output?;
     write_output(&output.files, output_path, generator.as_ref())?;
     Ok(output.warnings)
 }

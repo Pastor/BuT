@@ -21,6 +21,7 @@ enum BatchCycleDoseState {
     End,
 }
 
+// Фаза 1: дозирование. Набираем три порции и закрываем клапан.
 pub struct BatchCycleDose {
     dosed: u8,
     state: BatchCycleDoseState,
@@ -73,6 +74,7 @@ enum BatchCycleDrainState {
     End,
 }
 
+// Фаза 3: слив.
 pub struct BatchCycleDrain {
     drained: u8,
     state: BatchCycleDrainState,
@@ -125,6 +127,7 @@ enum BatchCycleMixState {
     End,
 }
 
+// Фаза 2: перемешивание.
 pub struct BatchCycleMix {
     stirred: u8,
     state: BatchCycleMixState,
@@ -188,6 +191,10 @@ struct BatchCycleShared {
     stage: u8,
 }
 
+// Выходной порт `ready` — наблюдаемая точка завершения цикла: на него смотрит
+// тестбенч цели `sv` (не поднялся — `$error`), причём вместе с порядком фаз.
+// Бит 0 регистра статуса 0x600: цикл завершён. Инициализатор порта задаёт
+// АДРЕС, а не начальное значение.
 pub struct BatchCycle<H: Hal> {
     shared: BatchCycleShared,
     state: BatchCycleState,

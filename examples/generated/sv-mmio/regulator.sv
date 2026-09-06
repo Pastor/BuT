@@ -2,6 +2,12 @@
 // Do not edit by hand: this file is overwritten on every generation.
 // Takt language version 0.18.0.
 
+// Обёрнут под-моделью (`start Main = Regulator`): модель без под-моделей не даёт
+// typedef корня в цели `c` (дефект 0026). Выходной порт `ready` — наблюдаемая
+// точка завершения: на него смотрит тестбенч цели `sv` (не поднялся — `$error`),
+// а гейту `sv-mmio` этот пример нужен как единственный, у которого ВСЕ порты
+// выходные (шине писать некуда — фича 0214). Снимать порт нельзя: оба гейта
+// покраснеют.
 module regulator (
     input  logic clk,
     input  logic rst_n,

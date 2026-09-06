@@ -5,6 +5,11 @@
  *)
 
 TYPE
+    (*
+     * ⚠️ Файл назван `pid_law.takt`, а не `pid.takt`, намеренно: имя корневой модели
+     * берётся из имени файла, и `pid.takt` дал бы корень `PidState` при структуре `PidState`.
+     * ─── Состояние одного контура ────────────────────────────────────────────────
+     *)
     PidState :
     STRUCT
         kp : LREAL;
@@ -35,22 +40,38 @@ VAR
 END_VAR
     r := p;
     err := sp - pv;
+    (*
+     * Пропорциональная составляющая и НОВОЕ значение накопителя — пока без
+     * ограничений: примем его лишь тогда, когда узнаем, насытился ли выход.
+     *)
     prop := (p.kp) * err;
     i_new := (p.i_acc) + (((p.ki) * err) * (p.ts));
+    (*
+     * Производная — конечная разность назад.
+     *)
     deriv := (err - (p.err_prev)) / (p.ts);
     raw := (prop + i_new) + ((p.kd) * deriv);
     IF raw > (p.out_max) THEN
         r.output := p.out_max;
         IF err <= 0.0 THEN
+            (*
+             * Ошибка толкает выход ДАЛЬШЕ за верхний предел — накопитель замораживаем.
+             *)
             r.i_acc := i_new;
         END_IF;
     ELSE
         IF raw < (p.out_min) THEN
             r.output := p.out_min;
             IF err >= 0.0 THEN
+                (*
+                 * То же у нижнего предела, зеркально.
+                 *)
                 r.i_acc := i_new;
             END_IF;
         ELSE
+            (*
+             * Выход в допустимом диапазоне — накопитель обновляется свободно.
+             *)
             r.output := raw;
             r.i_acc := i_new;
         END_IF;
@@ -106,6 +127,11 @@ END_VAR
     RETURN;
 END_FUNCTION
 
+(*
+ * ⚠️ Файл назван `pid_law.takt`, а не `pid.takt`, намеренно: имя корневой модели
+ * берётся из имени файла, и `pid.takt` дал бы корень `PidState` при структуре `PidState`.
+ * ─── Состояние одного контура ────────────────────────────────────────────────
+ *)
 FUNCTION_BLOCK PidLaw
 VAR_OUTPUT
     is_done : BOOL;
@@ -127,6 +153,10 @@ END_VAR
             loop_pid := PidLaw_pid_compute(loop_pid, target, meas);
             ctrl := loop_pid.output;
             IF hold THEN
+                (*
+                 * Уставка достигнута — контур перезапускаем, чтобы накопитель не тянул
+                 * за собой историю разгона.
+                 *)
                 loop_pid := PidLaw_pid_reset(loop_pid);
                 ctrl := 0.0;
             END_IF;

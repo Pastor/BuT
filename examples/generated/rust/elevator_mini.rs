@@ -68,6 +68,10 @@ enum ElevatorMiniCabinState {
     End,
 }
 
+// ─── Модель кабины ────────────────────────────────────────────────────────────
+// Idle   — ожидание вызова (door open), обновление этажа, приём кнопок
+// Moving — движение к целевому этажу, постоянное обновление этажа по датчикам
+// AtFloor — прибытие: дверь открыта, ожидаем нажатия DC (закрыть дверь)
 pub struct ElevatorMiniCabin {
     state: ElevatorMiniCabinState,
 }
@@ -244,6 +248,9 @@ enum ElevatorMiniMotorState {
     End,
 }
 
+// ─── Модель мотора ────────────────────────────────────────────────────────────
+// Простой трёхсостоянный автомат: Idle ↔ Up | Down → Stop → Idle.
+// Команда Stop или срабатывание концевого датчика прерывает движение.
 pub struct ElevatorMiniMotor {
     state: ElevatorMiniMotorState,
 }
@@ -315,6 +322,10 @@ struct ElevatorMiniShared {
     target_floor: u8,
 }
 
+// Разделяемые переменные (видны обоим авторам):
+// command       : Command  — направление движения, устанавливается Cabin
+// current_floor : u8       — текущий этаж (обновляется по датчикам нижней зоны этажа)
+// target_floor  : u8       — целевой этаж (0 = нет задания)
 pub struct ElevatorMini<H: Hal> {
     shared: ElevatorMiniShared,
     state: ElevatorMiniState,

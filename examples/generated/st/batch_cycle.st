@@ -4,6 +4,9 @@
  * Takt language version 0.18.0.
  *)
 
+(*
+ * Фаза 1: дозирование. Набираем три порции и закрываем клапан.
+ *)
 FUNCTION_BLOCK BatchCycleDose
 VAR_OUTPUT
     is_done : BOOL;
@@ -33,6 +36,9 @@ END_VAR
     is_done := state = 3;
 END_FUNCTION_BLOCK
 
+(*
+ * Фаза 3: слив.
+ *)
 FUNCTION_BLOCK BatchCycleDrain
 VAR_OUTPUT
     is_done : BOOL;
@@ -62,6 +68,9 @@ END_VAR
     is_done := state = 3;
 END_FUNCTION_BLOCK
 
+(*
+ * Фаза 2: перемешивание.
+ *)
 FUNCTION_BLOCK BatchCycleMix
 VAR_OUTPUT
     is_done : BOOL;
@@ -91,6 +100,12 @@ END_VAR
     is_done := state = 3;
 END_FUNCTION_BLOCK
 
+(*
+ * Выходной порт `ready` — наблюдаемая точка завершения цикла: на него смотрит
+ * тестбенч цели `sv` (не поднялся — `$error`), причём вместе с порядком фаз.
+ * Бит 0 регистра статуса 0x600: цикл завершён. Инициализатор порта задаёт
+ * АДРЕС, а не начальное значение.
+ *)
 FUNCTION_BLOCK BatchCycle
 VAR_OUTPUT
     is_done : BOOL;

@@ -262,7 +262,10 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
                     // Комментарий автора перед объявлением функции (фича
                     // 0535, задача 04): в корпусе таких 23, и объясняют они
                     // именно то, что делает функция.
-                    for line in map.leading_comments(fun.loc()) {
+                    for line in crate::generator::comments::leading(
+                        fun.loc(),
+                        crate::generator::header::CommentStyle::Slashes,
+                    ) {
                         definition.push_str(&line);
                         definition.push('\n');
                     }

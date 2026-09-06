@@ -76,7 +76,9 @@ pub(crate) fn emit_struct_types(
     models: &[(Name, Rc<RefCell<ModelNode>>)],
     shared_arrays: &[String],
 ) -> Result<bool, Diagnostic> {
-    let mut declared: Vec<(String, Vec<(String, String)>)> = Vec::new();
+    // Позиция объявления едет вместе с ним: комментарий автора привязан к ней
+    // (фича 0535, задача 05), а печать идёт ниже, где узла уже нет.
+    let mut declared: Vec<DeclaredStruct> = Vec::new();
     for (_, model_rc) in models {
         let model = &*model_rc.borrow();
         // Порядок — по ЗАВИСИМОСТЯМ (фича 0341), а не алфавитный: вложенная
@@ -84,14 +86,14 @@ pub(crate) fn emit_struct_types(
         // отвечает «invalid specification in structure element declaration».
         for node in crate::generator::struct_order::sorted(&model.structs) {
             let name = &node.name;
-            if declared.iter().any(|(n, _)| n == name) {
+            if declared.iter().any(|(n, _, _)| n == name) {
                 continue;
             }
             let mut fields = Vec::new();
             for (field, ty) in &node.fields {
                 fields.push((field.clone(), get_st_type(ty, model)?));
             }
-            declared.push((name.clone(), fields));
+            declared.push((name.clone(), fields, node.loc));
         }
     }
     // Именованные типы массивов, разделяемых через `VAR_IN_OUT` (фича 0210):
@@ -118,7 +120,13 @@ pub(crate) fn emit_struct_types(
     // (инвариант 0048) обеспечивает сам обход: он идёт по `BTreeMap`.
     p.ident("TYPE").nl();
     p.up();
-    for (name, fields) in &declared {
+    for (name, fields, loc) in &declared {
+        for line in crate::generator::comments::leading(
+            *loc,
+            crate::generator::header::CommentStyle::IecBlock,
+        ) {
+            p.ident(&line).nl();
+        }
         p.ident(&format!("{} :", name)).nl();
         p.ident("STRUCT").nl();
         p.up();
@@ -145,6 +153,12 @@ pub(crate) fn emit_struct_types(
 ///
 /// ⚠️ Тип объявляется по **переменной корня**, а не по под-моделям: под-моделей
 /// может быть несколько, и все они видят один и тот же массив.
+/// Объявление структуры, готовое к печати: имя, поля и место в исходнике.
+///
+/// Тип именован ради читаемости: тройка с вложенным вектором пар — как раз тот
+/// случай, о котором говорит `clippy::type_complexity`.
+type DeclaredStruct = (String, Vec<(String, String)>, crate::diagnostics::Location);
+
 fn shared_array_types(
     models: &[(Name, Rc<RefCell<ModelNode>>)],
     shared_arrays: &[String],

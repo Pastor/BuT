@@ -47,6 +47,21 @@ pub enum CommentStyle {
 }
 
 impl CommentStyle {
+    /// Обрамляет ОДНУ строку в комментарий, помещающийся в строку кода.
+    ///
+    /// ⚠️ Нужен хвостовому комментарию (фича 0535): блочная форма IEC
+    /// многострочна, и её первая строка — голое `(*`. Приклеенная к строке
+    /// кода, она открывала комментарий и не закрывала его: `iec2c` отвечал
+    /// «invalid statement in ST statement», то есть вывод был НЕВАЛИДЕН при
+    /// нулевом коде возврата `taktc`. Поймано гейтом цели.
+    pub fn wrap_inline(self, text: &str) -> String {
+        match self {
+            Self::Slashes => format!("// {text}"),
+            Self::IecBlock => format!("(* {text} *)"),
+            Self::Quote => format!("' {text}"),
+        }
+    }
+
     /// Обрамляет строки текста в комментарий целевого языка.
     pub fn wrap(self, lines: &[String]) -> Vec<String> {
         match self {

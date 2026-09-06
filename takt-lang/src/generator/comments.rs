@@ -172,7 +172,16 @@ impl SourceComments {
                     .get(end..*s)
                     .is_some_and(|gap| gap.contains('\n'))
         })?;
-        wrap_all(&[text.as_str()], style).into_iter().next()
+        // Хвостовой комментарий обязан помещаться В СТРОКУ КОДА: многострочная
+        // блочная форма оставила бы в ней открывающее `(*` без закрытия.
+        let body: Vec<String> = strip_markers(text)
+            .into_iter()
+            .map(|line| defuse(&line, style))
+            .collect();
+        if body.is_empty() {
+            return None;
+        }
+        Some(style.wrap_inline(&body.join(" ")))
     }
 
     /// Смещение начала пробельного участка, кончающегося в `at`.
@@ -243,25 +252,45 @@ pub fn defuse(text: &str, style: CommentStyle) -> String {
     }
 }
 
-/// Ведущие комментарии оператора, если носитель есть — иначе пусто.
-///
-/// Обёртка существует, чтобы у каждой цели не появилось своё `if let Some(…)`:
-/// восемь копий одного условия разошлись бы молча (класс 0084).
-pub(crate) fn leading_for(
-    carrier: Option<&std::rc::Rc<SourceComments>>,
-    loc: Location,
-    style: CommentStyle,
-) -> Vec<String> {
-    carrier.map_or_else(Vec::new, |c| c.leading(loc, style))
+thread_local! {
+    /// Комментарии исходника, действующие в текущей генерации.
+    ///
+    /// ⚠️ Носитель ПОТОКОВЫЙ — тот же приём, что у позиции оператора
+    /// ([`crate::generator::site`], фича 0277) и по той же причине: печатники
+    /// операторов у четырёх целей принимают три разных контекста (`ModelNode`,
+    /// `Scope`, карту), и протаскивание комментариев через все сигнатуры
+    /// стоило бы правки десятков функций ради данных, которые нужны в двух
+    /// местах на цель.
+    ///
+    /// ⚠️ Сброс обязателен: состояние переживает вызов, и следующая генерация
+    /// получила бы комментарии чужого исходника. Ставит и снимает его
+    /// диспетчер `generate_texts` — там же, где `site::reset`.
+    static ACTIVE: std::cell::RefCell<Option<std::rc::Rc<SourceComments>>> =
+        const { std::cell::RefCell::new(None) };
 }
 
-/// Хвостовой комментарий оператора, если носитель есть.
-pub(crate) fn trailing_for(
-    carrier: Option<&std::rc::Rc<SourceComments>>,
-    loc: Location,
-    style: CommentStyle,
-) -> Option<String> {
-    carrier.and_then(|c| c.trailing(loc, style))
+/// Делает комментарии исходника действующими до [`reset`].
+pub(crate) fn activate(comments: Option<std::rc::Rc<SourceComments>>) {
+    ACTIVE.with(|cell| *cell.borrow_mut() = comments);
+}
+
+/// Снимает носитель. Обязателен на всех путях выхода из генерации.
+pub(crate) fn reset() {
+    ACTIVE.with(|cell| *cell.borrow_mut() = None);
+}
+
+/// Ведущие комментарии оператора или объявления на активном носителе.
+pub(crate) fn leading(loc: Location, style: CommentStyle) -> Vec<String> {
+    ACTIVE.with(|cell| {
+        cell.borrow()
+            .as_ref()
+            .map_or_else(Vec::new, |c| c.leading(loc, style))
+    })
+}
+
+/// Хвостовой комментарий оператора на активном носителе.
+pub(crate) fn trailing(loc: Location, style: CommentStyle) -> Option<String> {
+    ACTIVE.with(|cell| cell.borrow().as_ref().and_then(|c| c.trailing(loc, style)))
 }
 
 /// Печатает оператор, обрамив его комментариями автора.
@@ -277,12 +306,11 @@ pub(crate) fn trailing_for(
 /// ⚠️ Виден только внутри крейта: он принимает `Printer`, а тот — деталь
 /// печати, и в открытом API ей не место (иначе `clippy` требует у неё `Debug`).
 ///
-/// ⚠️ Помощник ОДИН на все цели: восемь копий обрамления разошлись бы молча
+/// ⚠️ Помощник ОДИН на все цели: копии обрамления разошлись бы молча
 /// (класс 0084), а место печати комментария — это место в выводе, то есть
 /// наблюдаемое поведение.
 pub(crate) fn emit_around<F>(
     printer: &mut crate::generator::indent::Printer,
-    carrier: Option<&std::rc::Rc<SourceComments>>,
     loc: Location,
     style: CommentStyle,
     body: F,
@@ -290,10 +318,10 @@ pub(crate) fn emit_around<F>(
 where
     F: FnOnce(&mut crate::generator::indent::Printer) -> Result<(), crate::diagnostics::Diagnostic>,
 {
-    for line in leading_for(carrier, loc, style) {
+    for line in leading(loc, style) {
         printer.ident(&line).nl();
     }
-    let Some(tail) = trailing_for(carrier, loc, style) else {
+    let Some(tail) = trailing(loc, style) else {
         return body(printer);
     };
     let mut buffer = String::new();
@@ -463,6 +491,27 @@ model M { start S; }
         assert_eq!(
             c.leading(loc, CommentStyle::Slashes),
             vec!["// Состояние контура регулятора."]
+        );
+    }
+
+    /// Хвостовой комментарий помещается В СТРОКУ, а не открывает блок.
+    ///
+    /// ⚠️ Класс пойман гейтом цели: блочная форма IEC многострочна, и её первая
+    /// строка — голое `(*`. Приклеенная к строке кода, она открывала
+    /// комментарий и не закрывала его, а `iec2c` отвечал «invalid statement in
+    /// ST statement» — невалидный вывод при нулевом коде возврата `taktc`.
+    #[test]
+    fn a_trailing_comment_fits_one_line() {
+        let c = comments(SRC);
+        let at = SRC.find("x := x + 1;").expect("оператор в пробе") as u32;
+        let loc = Location::Source(0, at, at + 11);
+        let tail = c
+            .trailing(loc, CommentStyle::IecBlock)
+            .expect("хвостовой комментарий");
+        assert_eq!(tail, "(* хвостовой *)");
+        assert!(
+            !tail.contains('\n'),
+            "перевода строки быть не должно: {tail}"
         );
     }
 

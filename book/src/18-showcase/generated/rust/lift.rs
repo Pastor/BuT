@@ -43,6 +43,10 @@ enum LiftState {
     End,
 }
 
+// Такт — шаг ЛОГИКИ, не единица времени или расстояния. Положение кабины даёт
+// датчик at_floor (шахтная система позиционирования); движение создаёт привод,
+// а фиксирует — датчик. Выдержка дверей — это отрезок ВРЕМЕНИ, поэтому её порог
+// задан в тактах и подстраивается под частоту устройства.
 pub struct Lift<H: Hal> {
     doors: bool,
     dwell: u8,
@@ -82,7 +86,7 @@ impl<H: Hal> Lift<H> {
         }
         match self.state {
             LiftState::Boarding => {
-                self.dwell = self.dwell.wrapping_add(1);
+                self.dwell = self.dwell.wrapping_add(1); // (6) отсчёт ВРЕМЕНИ выдержки (в тактах)
                 if self.dwell >= LIFT_DWELL_TICKS {
                     self.doors = false;
                     self.hal.write_bit(OutBitPort::DoorsOpen, false);
@@ -100,7 +104,7 @@ impl<H: Hal> Lift<H> {
                 }
             }
             LiftState::GoingUp => {
-                { let takt_value = self.hal.read_u8(InU8Port::AtFloor); self.hal.write_u8(OutU8Port::Display, takt_value) };
+                { let takt_value = self.hal.read_u8(InU8Port::AtFloor); self.hal.write_u8(OutU8Port::Display, takt_value) }; // (3) едем; положение — с датчика
                 if self.hal.read_u8(InU8Port::AtFloor) >= self.hal.read_u8(InU8Port::Call) {
                     self.moving = false;
                     self.hal.write_bit(OutBitPort::MotorUp, false);
@@ -125,7 +129,7 @@ impl<H: Hal> Lift<H> {
                 self.state = LiftState::Boarding;
             }
             LiftState::Waiting => {
-                { let takt_value = self.hal.read_u8(InU8Port::AtFloor); self.hal.write_u8(OutU8Port::Display, takt_value) };
+                { let takt_value = self.hal.read_u8(InU8Port::AtFloor); self.hal.write_u8(OutU8Port::Display, takt_value) }; // (3) индикатор следует за датчиком
                 if self.hal.read_u8(InU8Port::Call) == self.hal.read_u8(InU8Port::AtFloor) {
                     self.doors = true;
                     self.hal.write_bit(OutBitPort::DoorsOpen, true);

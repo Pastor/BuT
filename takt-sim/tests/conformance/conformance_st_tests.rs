@@ -598,8 +598,12 @@ fn float_embedded_matches_explicit_q_st() {
     .expect("q → st");
     let st_f = std::fs::read_to_string(out_f.join("twin.st")).expect(".st float");
     let st_q = std::fs::read_to_string(out_q.join("twin.st")).expect(".st q");
+    // ⚠️ Сравнивается КОД: фикстуры — разные файлы, и комментарии авторов в
+    // них законно различаются, а с задачи 0535-05 они доезжают до вывода.
+    // Предмет проверки — совпадение порождённого кода, а не текста.
     assert_eq!(
-        st_f, st_q,
+        crate::target_code::code_only(&st_f),
+        crate::target_code::code_only(&st_q),
         "float→q(8,8) под --float-embedded обязан дать ровно тот же ST, что явный q(8,8)"
     );
     let _ = std::fs::remove_dir_all(&dir);
@@ -818,7 +822,7 @@ fn after_ticks_profile_generates_valid_st() {
         "профиль «такты» — счётчик:\n{st}"
     );
     assert!(
-        !st.contains("TON"),
+        !crate::target_code::code_only(&st).contains("TON"),
         "профиль «такты» не должен эмитить TON:\n{st}"
     );
 

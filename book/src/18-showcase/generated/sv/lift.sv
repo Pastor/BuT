@@ -2,6 +2,10 @@
 // Do not edit by hand: this file is overwritten on every generation.
 // Takt language version 0.18.0.
 
+// Такт — шаг ЛОГИКИ, не единица времени или расстояния. Положение кабины даёт
+// датчик at_floor (шахтная система позиционирования); движение создаёт привод,
+// а фиксирует — датчик. Выдержка дверей — это отрезок ВРЕМЕНИ, поэтому её порог
+// задан в тактах и подстраивается под частоту устройства.
 module lift (
     input  logic clk,
     input  logic rst_n,
@@ -55,7 +59,7 @@ module lift (
         assert (((lift_moving_next == 0) || (lift_doors_next == 0)));
         unique case (state)
             LIFT_BOARDING: begin
-                lift_dwell_next = (lift_dwell_next + 1);
+                lift_dwell_next = (lift_dwell_next + 1); // (6) отсчёт ВРЕМЕНИ выдержки (в тактах)
                 if ((lift_dwell_next >= lift_DWELL_TICKS)) begin
                     lift_doors_next = 0;
                     doors_open_next = 0;
@@ -73,7 +77,7 @@ module lift (
                 end
             end
             LIFT_GOING_UP: begin
-                display_next = at_floor;
+                display_next = at_floor; // (3) едем; положение — с датчика
                 if ((at_floor >= call)) begin
                     lift_moving_next = 0;
                     motor_up_next = 0;
@@ -102,7 +106,7 @@ module lift (
                 end
             end
             LIFT_WAITING: begin
-                display_next = at_floor;
+                display_next = at_floor; // (3) индикатор следует за датчиком
                 if ((call == at_floor)) begin
                     lift_doors_next = 1;
                     doors_open_next = 1;

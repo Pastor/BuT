@@ -2,6 +2,11 @@
 // Do not edit by hand: this file is overwritten on every generation.
 // Takt language version 0.18.0.
 
+// Обёрнут под-моделью (цель `c`: typedef корня); порт `ready` — наблюдаемая
+// точка схождения контура, на неё смотрит тестбенч цели `sv` (не поднялся —
+// `$error`). Тела написаны НА ПЕРЕМЕННЫХ (не на литералах):
+// литерал `float` в теле дал бы `SV-003` (фича 0096) — литералы только в
+// инициализаторах объявлений.
 module pid_regulator (
     input  logic clk,
     input  logic rst_n,

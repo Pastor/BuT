@@ -4,6 +4,9 @@
 
 #![forbid(unsafe_code)]
 
+// ⚠️ Файл назван `pid_law.takt`, а не `pid.takt`, намеренно: имя корневой модели
+// берётся из имени файла, и `pid.takt` дал бы корень `PidState` при структуре `PidState`.
+// ─── Состояние одного контура ────────────────────────────────────────────────
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct PidState {
     pub kp: f64,
@@ -20,22 +23,28 @@ pub struct PidState {
 fn pid_compute(p: PidState, sp: f64, pv: f64) -> PidState {
     let mut r: PidState = p;
     let err: f64 = sp - pv;
+    // Пропорциональная составляющая и НОВОЕ значение накопителя — пока без
+    // ограничений: примем его лишь тогда, когда узнаем, насытился ли выход.
     let prop: f64 = p.kp * err;
     let i_new: f64 = p.i_acc + ((p.ki * err) * p.ts);
+    // Производная — конечная разность назад.
     let deriv: f64 = (err - p.err_prev) / p.ts;
     let raw: f64 = (prop + i_new) + (p.kd * deriv);
     if raw > p.out_max {
         r.output = p.out_max;
         if err <= 0.0 {
+            // Ошибка толкает выход ДАЛЬШЕ за верхний предел — накопитель замораживаем.
             r.i_acc = i_new;
         }
     } else {
         if raw < p.out_min {
             r.output = p.out_min;
             if err >= 0.0 {
+                // То же у нижнего предела, зеркально.
                 r.i_acc = i_new;
             }
         } else {
+            // Выход в допустимом диапазоне — накопитель обновляется свободно.
             r.output = raw;
             r.i_acc = i_new;
         }
@@ -70,6 +79,9 @@ enum PidLawState {
     End,
 }
 
+// ⚠️ Файл назван `pid_law.takt`, а не `pid.takt`, намеренно: имя корневой модели
+// берётся из имени файла, и `pid.takt` дал бы корень `PidState` при структуре `PidState`.
+// ─── Состояние одного контура ────────────────────────────────────────────────
 pub struct PidLaw {
     ctrl: f64,
     hold: bool,
@@ -110,6 +122,8 @@ impl PidLaw {
                 self.loop_pid = pid_compute(self.loop_pid, self.target, self.meas);
                 self.ctrl = self.loop_pid.output;
                 if self.hold {
+                    // Уставка достигнута — контур перезапускаем, чтобы накопитель не тянул
+                    // за собой историю разгона.
                     self.loop_pid = pid_reset(self.loop_pid);
                     self.ctrl = 0.0;
                 }

@@ -68,6 +68,7 @@ enum ComprehensiveControllerState {
     End,
 }
 
+// Модель контроллера термоциклирования
 pub struct ComprehensiveController {
     count: u8,
     mode: Mode,
@@ -161,6 +162,15 @@ enum ComprehensiveState {
     End,
 }
 
+// Всесторонний пример: демонстрирует возможности языка Takt.
+// Модель — контроллер термоциклирования испытательной камеры: прогреть объект
+// до MAX_TEMP, охладить до нуля, повторить MAX_COUNT раз, завершить работу.
+// Заявленный сценарий: Idle → Heating → Cooling → … ×MAX_COUNT → Done;
+// он проверяется прогоном (`takt-sim/tests/sim/examples_scenario_tests.rs`).
+// Использует: переменные, константы, перечисления, внешние функции,
+// условные операторы (if/else), циклы (loop, for, while), вызовы функций,
+// именованные условия (cond), состояния (start/state), оператор match.
+// Перечисление режимов работы
 pub struct Comprehensive<H: Hal> {
     state: ComprehensiveState,
     entry: ComprehensiveController,

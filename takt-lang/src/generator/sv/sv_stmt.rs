@@ -55,7 +55,13 @@ pub(crate) fn print_statement(
         }
         StatementNode::Block(stmts) => {
             for s in stmts {
-                print_statement(p, s, scope)?;
+                // Комментарий автора обрамляет оператор (фича 0535, задача 05).
+                crate::generator::comments::emit_around(
+                    p,
+                    s.loc(),
+                    crate::generator::header::CommentStyle::Slashes,
+                    |p| print_statement(p, s, scope),
+                )?;
             }
             Ok(())
         }

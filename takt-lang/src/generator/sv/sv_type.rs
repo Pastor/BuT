@@ -173,6 +173,13 @@ pub(crate) fn emit_structs(
                 continue;
             }
             let def = &def;
+            // Комментарий автора перед объявлением типа (фича 0535, задача 05).
+            for line in crate::generator::comments::leading(
+                def.loc,
+                crate::generator::header::CommentStyle::Slashes,
+            ) {
+                p.ident(&line).nl();
+            }
             p.ident("typedef struct packed {").nl();
             p.up();
             for (field, ty) in &def.fields {

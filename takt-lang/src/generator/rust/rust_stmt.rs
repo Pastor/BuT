@@ -263,7 +263,20 @@ pub(crate) fn print_block(
             idx += 1;
             continue;
         }
-        let eaten = print_statement_ctx(&items[idx], &items[idx + 1..], scope, p, out)?;
+        // Комментарий автора обрамляет оператор (фича 0535, задача 05).
+        // ⚠️ Ставится только на общем пути печати: у свёрнутого объявления
+        // (`folded_at`) и у хвоста свои печатники, и комментарий, поставленный
+        // здесь, уехал бы к чужой строке.
+        let mut eaten = 0;
+        crate::generator::comments::emit_around(
+            p,
+            items[idx].loc(),
+            crate::generator::header::CommentStyle::Slashes,
+            |p| {
+                eaten = print_statement_ctx(&items[idx], &items[idx + 1..], scope, p, out)?;
+                Ok(())
+            },
+        )?;
         idx += 1 + eaten;
     }
     // Неиспользуемая локальная гасится заглушкой (фича 0376): без неё

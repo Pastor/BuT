@@ -2,6 +2,10 @@
 // Do not edit by hand: this file is overwritten on every generation.
 // Takt language version 0.18.0.
 
+// Выходной порт `ready` — наблюдаемая точка завершения цикла: на него смотрит
+// тестбенч цели `sv` (не поднялся — `$error`), причём вместе с порядком фаз.
+// Бит 0 регистра статуса 0x600: цикл завершён. Инициализатор порта задаёт
+// АДРЕС, а не начальное значение.
 module batch_cycle (
     input  logic clk,
     input  logic rst_n,

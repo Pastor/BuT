@@ -4,6 +4,14 @@
  * Takt language version 0.18.0.
  *)
 
+(*
+ * Обёрнут под-моделью (`start Main = FloatRegulator`): модель без под-моделей не
+ * даёт typedef корня в цели `c` (дефект 0026). Выходной порт `ready` держит
+ * паритет с `regulator.takt` — тот же регулятор, тот же наблюдаемый флаг
+ * готовности; гейтом порт здесь НЕ удерживается (в цель `sv` пример без
+ * `--float-as-q` не транслируется вовсе — `SV-003`, а контракт сценария
+ * проверяет цепочку состояний).
+ *)
 FUNCTION_BLOCK FloatRegulatorFloatRegulator
 VAR_OUTPUT
     is_done : BOOL;
@@ -36,6 +44,14 @@ END_VAR
     is_done := state = 4;
 END_FUNCTION_BLOCK
 
+(*
+ * Обёрнут под-моделью (`start Main = FloatRegulator`): модель без под-моделей не
+ * даёт typedef корня в цели `c` (дефект 0026). Выходной порт `ready` держит
+ * паритет с `regulator.takt` — тот же регулятор, тот же наблюдаемый флаг
+ * готовности; гейтом порт здесь НЕ удерживается (в цель `sv` пример без
+ * `--float-as-q` не транслируется вовсе — `SV-003`, а контракт сценария
+ * проверяет цепочку состояний).
+ *)
 FUNCTION_BLOCK FloatRegulator
 VAR_OUTPUT
     is_done : BOOL;

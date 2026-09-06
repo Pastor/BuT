@@ -276,7 +276,7 @@ fn generate_model_header(
     // блок файла, и он же — самое ценное, что есть в исходнике для читателя
     // вывода.
     let model_loc = model.borrow().loc;
-    for line in map.leading_comments(model_loc) {
+    for line in decl_comments(model_loc) {
         printer.print(&line).nl();
     }
     printer
@@ -293,7 +293,7 @@ fn generate_model_header(
                 }
                 // Комментарий автора перед объявлением переменной модели
                 // (фича 0535, задача 04).
-                for line in map.leading_comments(loc) {
+                for line in decl_comments(loc) {
                     printer.ident(&line).nl();
                 }
                 // 0029-01: прежде отказ отображения давал CC-009 «Variable not
@@ -459,6 +459,11 @@ pub(super) fn c_target_name(hal: bool) -> &'static str {
     if hal { "C (HAL profile)" } else { "C" }
 }
 
+/// Ведущие комментарии объявления в форме комментария C.
+fn decl_comments(loc: crate::diagnostics::Location) -> Vec<String> {
+    crate::generator::comments::leading(loc, crate::generator::header::CommentStyle::Slashes)
+}
+
 pub fn generate_header(
     filename: &str,
     map: &CMap,
@@ -548,7 +553,7 @@ pub fn generate_header(
                 // Комментарий автора перед объявлением типа (фича 0535,
                 // задача 04): в корпусе таких — 45 из 469, больше только у
                 // самой модели.
-                for line in map.leading_comments(s.loc) {
+                for line in decl_comments(s.loc) {
                     printer.print(&line).nl();
                 }
                 printer

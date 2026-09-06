@@ -114,7 +114,8 @@ impl AsGenerator for Generator {
             options.guard_enable,
         )?
         .with_time_profile(profile)
-        .with_fsm(options.fsm);
+        .with_fsm(options.fsm)
+        .with_comments(options.comments.clone());
         let (program, warnings) = generate_program(&map)?;
         let filename = map.get_filename();
         Ok(Output {

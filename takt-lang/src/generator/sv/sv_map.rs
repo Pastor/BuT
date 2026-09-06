@@ -39,6 +39,8 @@ pub(crate) struct SvMap {
     time_profile: crate::semantic::duration::TimeProfile,
     /// Форма печати автомата (фича 0441): `unique case` либо таблица переходов.
     fsm: crate::generator::FsmForm,
+    /// Комментарии автора модели для переноса в вывод (фича 0535, задача 05).
+    comments: Option<std::rc::Rc<crate::generator::comments::SourceComments>>,
 }
 
 impl SvMap {
@@ -60,11 +62,21 @@ impl SvMap {
             guard_enable,
             time_profile: crate::semantic::duration::TimeProfile::default(),
             fsm: crate::generator::FsmForm::default(),
+            comments: None,
         })
     }
 
     /// Задаёт профиль времени (фича 0134); умолчание — «часы» (аддитивно).
     /// Задаёт форму печати автомата (фича 0441); умолчание — `unique case`.
+    /// Комментарии автора модели (фича 0535, задача 05).
+    pub(crate) fn with_comments(
+        mut self,
+        comments: Option<std::rc::Rc<crate::generator::comments::SourceComments>>,
+    ) -> Self {
+        self.comments = comments;
+        self
+    }
+
     pub(crate) fn with_fsm(mut self, fsm: crate::generator::FsmForm) -> Self {
         self.fsm = fsm;
         self
@@ -162,6 +174,12 @@ impl SvMap {
     }
 
     /// Корневая модель.
+    /// Позиция корневой модели в исходнике — для переноса её комментария.
+    pub(crate) fn root_model_loc(&self) -> crate::diagnostics::Location {
+        self.root_model_node()
+            .map_or(crate::diagnostics::Location::Codegen, |m| m.borrow().loc)
+    }
+
     pub(crate) fn root_model_node(&self) -> Option<Rc<RefCell<ModelNode>>> {
         self.map.model_at(None)
     }

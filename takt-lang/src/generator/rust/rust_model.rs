@@ -304,6 +304,17 @@ pub(crate) fn emit_model(
     // (`ElevatorMini<H>`). Повторить границу в аргументах — ошибка E0229.
     let generics = if is_root && uses_hal { "<H: Hal>" } else { "" };
     let type_args = if is_root && uses_hal { "<H>" } else { "" };
+    // Комментарий автора перед объявлением модели (фича 0535, задача 05): их
+    // в корпусе больше всего — 103 из 469.
+    if let Ok(model_rc) = map.raw_model_at(name.clone()) {
+        let loc = model_rc.borrow().loc;
+        for line in crate::generator::comments::leading(
+            loc,
+            crate::generator::header::CommentStyle::Slashes,
+        ) {
+            p.ident(&line).nl();
+        }
+    }
     p.ident(&format!("pub struct {}{} {{", struct_name, generics))
         .nl();
     let _ = &type_args;

@@ -95,7 +95,15 @@ pub(crate) fn print_statement(
         }
         StatementNode::Block(items) => {
             for item in items {
-                print_statement(item, model, p, out, fn_name)?;
+                // Комментарий автора обрамляет оператор (фича 0535, задача 05).
+                // Форма — блочная IEC: `(* … *)`, и закрывающая
+                // последовательность в тексте автора обезврежена носителем.
+                crate::generator::comments::emit_around(
+                    p,
+                    item.loc(),
+                    crate::generator::header::CommentStyle::IecBlock,
+                    |p| print_statement(item, model, p, out, fn_name),
+                )?;
             }
             Ok(())
         }

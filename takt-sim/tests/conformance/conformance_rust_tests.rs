@@ -588,8 +588,12 @@ fn float_embedded_matches_explicit_q_rust() {
     .expect("q → rust");
     let rs_f = std::fs::read_to_string(out_f.join("twin.rs")).expect(".rs float");
     let rs_q = std::fs::read_to_string(out_q.join("twin.rs")).expect(".rs q");
+    // ⚠️ Сравнивается КОД: фикстуры — разные файлы, и комментарии авторов в
+    // них законно различаются, а с задачи 0535-05 они доезжают до вывода.
+    // Предмет проверки — совпадение порождённого кода, а не текста.
     assert_eq!(
-        rs_f, rs_q,
+        crate::target_code::code_only(&rs_f),
+        crate::target_code::code_only(&rs_q),
         "float→q(8,8) под --float-embedded обязан дать ровно тот же rust, что явный q(8,8)"
     );
 }

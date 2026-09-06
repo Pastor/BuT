@@ -8,6 +8,10 @@ typedef enum logic [1:0] {
     COMMAND_STOP = 2'd2
 } command_e;
 
+// Разделяемые переменные (видны обоим авторам):
+// command       : Command  — направление движения, устанавливается Cabin
+// current_floor : u8       — текущий этаж (обновляется по датчикам нижней зоны этажа)
+// target_floor  : u8       — целевой этаж (0 = нет задания)
 module elevator_mini (
     input  logic clk,
     input  logic rst_n,

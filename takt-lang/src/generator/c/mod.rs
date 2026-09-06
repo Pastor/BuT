@@ -197,8 +197,7 @@ impl AsGenerator for Generator {
         .with_float_width(options.float_width)
         .with_time_profile(profile)
         .with_fsm(options.fsm)
-        .with_hal(options.hal)
-        .with_comments(options.comments.clone());
+        .with_hal(options.hal);
         let header = generate_header(map.get_filename(), &map, options)?;
         let source = generate_source(map.get_filename(), &map)?;
         let filename = map.get_filename();

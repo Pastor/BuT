@@ -103,7 +103,8 @@ impl AsGenerator for Generator {
             options.guard_enable,
         )?
         .with_time_profile(profile)
-        .with_fsm(options.fsm);
+        .with_fsm(options.fsm)
+        .with_comments(options.comments.clone());
         let (program, warnings, adapter) =
             generate_program(&map, self.mmio, &options.address_map, options.bus)?;
         let filename = map.get_filename();
@@ -271,6 +272,16 @@ fn generate_program(
     sv_enums::emit_enums(&mut p, &blocks)?;
     sv_type::emit_structs(&mut p, &blocks)?;
 
+    // Комментарий автора перед объявлением модели (фича 0535, задача 05).
+    // ⚠️ Печатается ЗДЕСЬ, а не в `emit_module_header`: узла модели тот не
+    // видит, а тащить его туда ради двух строк — лишний параметр в общей
+    // функции печати заголовка.
+    for line in crate::generator::comments::leading(
+        map.root_model_loc(),
+        crate::generator::header::CommentStyle::Slashes,
+    ) {
+        p.ident(&line).nl();
+    }
     sv_module::emit_module_header(&mut p, &module, &ports, mmio_map.as_ref(), time_ms_bits);
 
     p.up();

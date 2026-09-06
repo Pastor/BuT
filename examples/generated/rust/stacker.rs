@@ -77,6 +77,9 @@ enum StackerCommandReceiverState {
     End,
 }
 
+// Отслеживает поступление задания от СУС и фиксирует принятие на исполнение.
+// Устанавливает cmd_ack=1 в момент приёма, сохраняет параметры в tgt_*.
+// Переходит в TaskActive (busy=1) до момента завершения задания (busy→0).
 pub struct StackerCommandReceiver {
     state: StackerCommandReceiverState,
 }
@@ -140,6 +143,10 @@ enum StackerLiftControllerState {
     End,
 }
 
+// Реагирует на запросы от MovementController через lift_request/lift_op.
+// Выдвигает вилы (cmd_fork=1), ожидает целевого состояния груза,
+// убирает вилы и выставляет lift_done. При отмене lift_request немедленно
+// убирает вилы и возвращается в простой.
 pub struct StackerLiftController {
     state: StackerLiftControllerState,
 }
@@ -212,6 +219,10 @@ enum StackerMovementControllerState {
     End,
 }
 
+// Управляет целевыми координатами (cmd_target_*) по трём осям.
+// На каждом этапе, требующем операции вилами, выставляет lift_request и ждёт
+// lift_done от LiftController перед переходом к следующему движению.
+// При разряде батареи прерывает задание и уходит на аварийную зарядку.
 pub struct StackerMovementController {
     state: StackerMovementControllerState,
 }
@@ -409,6 +420,11 @@ struct StackerShared {
     tgt_type: bool,
 }
 
+// Внутренний интерфейс между моделями (координационные переменные):
+// lift_request: MovementController запрашивает операцию вилами
+// lift_op:      тип операции (0=захват, 1=укладка/выдача)
+// lift_done:    LiftController подтверждает завершение операции
+// ─── Константы ────────────────────────────────────────────────────────────────
 pub struct Stacker<H: Hal> {
     shared: StackerShared,
     state: StackerState,

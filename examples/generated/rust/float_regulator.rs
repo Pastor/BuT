@@ -22,6 +22,12 @@ enum FloatRegulatorFloatRegulatorState {
     End,
 }
 
+// Обёрнут под-моделью (`start Main = FloatRegulator`): модель без под-моделей не
+// даёт typedef корня в цели `c` (дефект 0026). Выходной порт `ready` держит
+// паритет с `regulator.takt` — тот же регулятор, тот же наблюдаемый флаг
+// готовности; гейтом порт здесь НЕ удерживается (в цель `sv` пример без
+// `--float-as-q` не транслируется вовсе — `SV-003`, а контракт сценария
+// проверяет цепочку состояний).
 pub struct FloatRegulatorFloatRegulator {
     half: f64,
     near: f64,
@@ -85,6 +91,12 @@ enum FloatRegulatorState {
     End,
 }
 
+// Обёрнут под-моделью (`start Main = FloatRegulator`): модель без под-моделей не
+// даёт typedef корня в цели `c` (дефект 0026). Выходной порт `ready` держит
+// паритет с `regulator.takt` — тот же регулятор, тот же наблюдаемый флаг
+// готовности; гейтом порт здесь НЕ удерживается (в цель `sv` пример без
+// `--float-as-q` не транслируется вовсе — `SV-003`, а контракт сценария
+// проверяет цепочку состояний).
 pub struct FloatRegulator<H: Hal> {
     state: FloatRegulatorState,
     main: FloatRegulatorFloatRegulator,

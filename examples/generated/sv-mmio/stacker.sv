@@ -2,6 +2,11 @@
 // Do not edit by hand: this file is overwritten on every generation.
 // Takt language version 0.18.0.
 
+// Внутренний интерфейс между моделями (координационные переменные):
+// lift_request: MovementController запрашивает операцию вилами
+// lift_op:      тип операции (0=захват, 1=укладка/выдача)
+// lift_done:    LiftController подтверждает завершение операции
+// ─── Константы ────────────────────────────────────────────────────────────────
 module stacker (
     input  logic clk,
     input  logic rst_n,

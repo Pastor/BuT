@@ -388,6 +388,16 @@ pub(crate) fn emit_structs(
                 &TypeNode::Struct(def.name.clone()),
                 &model,
             );
+            // Комментарий автора перед объявлением типа (фича 0535, задача
+            // 05). ⚠️ Печатается ДО атрибутов: между `#[derive]` и `struct`
+            // комментарий разорвал бы объявление, а Rust-читатель ждёт его
+            // сверху.
+            for line in crate::generator::comments::leading(
+                def.loc,
+                crate::generator::header::CommentStyle::Slashes,
+            ) {
+                p.ident(&line).nl();
+            }
             if derived {
                 p.ident("#[derive(Debug, Clone, Copy, PartialEq, Default)]")
                     .nl();

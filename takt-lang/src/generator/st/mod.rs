@@ -98,7 +98,8 @@ impl AsGenerator for Generator {
             options.address_map.clone(),
         )?
         .with_time_profile(profile)
-        .with_fsm(options.fsm);
+        .with_fsm(options.fsm)
+        .with_comments(options.comments.clone());
         let (program, warnings) = generate_program(&map)?;
         let filename = map.get_filename();
         Ok(Output {
@@ -631,6 +632,13 @@ fn emit_function_block(
             crate::semantic::StateNode::Unresolved => continue,
         };
         st_reserved::check_st_state_name(state_name, loc)?;
+    }
+    // Комментарий автора перед объявлением модели (фича 0535, задача 05).
+    for line in crate::generator::comments::leading(
+        model.loc,
+        crate::generator::header::CommentStyle::IecBlock,
+    ) {
+        p.ident(&line).nl();
     }
     let mut header = String::new();
     let _ = write!(header, "FUNCTION_BLOCK {}", fb_name);

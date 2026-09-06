@@ -69,7 +69,7 @@ fn test_st_array_variable_is_emitted_as_real_array() {
         "массив [u8; 4] обязан дать ARRAY [0..3] OF USINT:\n{st}"
     );
     assert!(
-        !st.contains("uint4_t"),
+        !st_code(&st).contains("uint4_t"),
         "разрядность не должна подменяться числом элементов:\n{st}"
     );
 }
@@ -267,7 +267,10 @@ fn test_ports_without_at_in_plain_st() {
     let st = compile_fixture("ports_at");
     assert!(st.contains("btn : BOOL;"), "нет входного порта:\n{st}");
     assert!(st.contains("lamp : BOOL;"), "нет выходного порта:\n{st}");
-    assert!(!st.contains("AT %"), "цель st адрес не эмитит:\n{st}");
+    assert!(
+        !st_code(&st).contains("AT %"),
+        "цель st адрес не эмитит:\n{st}"
+    );
 }
 
 /// Цель `st-at`: тот же исходник даёт `VAR_GLOBAL … AT %…` в `CONFIGURATION`.
@@ -618,4 +621,25 @@ fn test_st_same_named_fns_get_distinct_prefixed_functions() {
         !st.contains("FUNCTION helper "),
         "голое имя FUNCTION helper означало бы возврат склейки:\n{st}"
     );
+}
+
+/// Текст вывода ST без комментариев — блочных `(* … *)` и построчных.
+///
+/// ⚠️ Нужен с задачи 0535-05: комментарии автора модели переносятся в вывод, и
+/// фикстура, объясняющая словами «адрес не эмитится, а `st-at` даёт
+/// `AT %IX256.0`», приносит эти слова в порождённый ST. Проверка на ОТСУТСТВИЕ
+/// конструкции обязана смотреть на код — иначе она красна из-за собственного
+/// пояснения (тот же класс, что у сверок фикстур `conformance_fixed_*`).
+fn st_code(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(open) = rest.find("(*") {
+        out.push_str(&rest[..open]);
+        let Some(close) = rest[open..].find("*)") else {
+            return out;
+        };
+        rest = &rest[open + close + 2..];
+    }
+    out.push_str(rest);
+    out
 }

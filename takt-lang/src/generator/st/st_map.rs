@@ -33,6 +33,8 @@ pub(crate) struct StMap {
     time_profile: crate::semantic::duration::TimeProfile,
     /// Форма печати автомата (фича 0440): `CASE` либо таблица переходов.
     fsm: crate::generator::FsmForm,
+    /// Комментарии автора модели для переноса в вывод (фича 0535, задача 05).
+    comments: Option<std::rc::Rc<crate::generator::comments::SourceComments>>,
 }
 
 /// Собирает имена моделей из дерева реализации состояния.
@@ -67,10 +69,20 @@ impl StMap {
             addresses,
             time_profile: crate::semantic::duration::TimeProfile::default(),
             fsm: crate::generator::FsmForm::default(),
+            comments: None,
         })
     }
 
     /// Задаёт форму печати автомата (фича 0440); умолчание — `CASE`.
+    /// Комментарии автора модели (фича 0535, задача 05).
+    pub(crate) fn with_comments(
+        mut self,
+        comments: Option<std::rc::Rc<crate::generator::comments::SourceComments>>,
+    ) -> Self {
+        self.comments = comments;
+        self
+    }
+
     pub(crate) fn with_fsm(mut self, fsm: crate::generator::FsmForm) -> Self {
         self.fsm = fsm;
         self

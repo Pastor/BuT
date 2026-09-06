@@ -26,6 +26,8 @@ pub(crate) struct RustMap {
     guard_enable: bool,
     /// Форма печати автомата (фича 0440): `match` либо таблица переходов.
     fsm: crate::generator::FsmForm,
+    /// Комментарии автора модели для переноса в вывод (фича 0535, задача 05).
+    comments: Option<std::rc::Rc<crate::generator::comments::SourceComments>>,
     /// Профиль времени (фича 0134): «часы» либо «такты». Разрешается общим слоем
     /// (`resolve_profile`) в `generate` и кладётся сюда — по образцу `CMap`.
     time_profile: TimeProfile,
@@ -49,6 +51,7 @@ impl RustMap {
             usage,
             guard_enable,
             fsm: crate::generator::FsmForm::default(),
+            comments: None,
             time_profile: TimeProfile::default(),
         })
     }
@@ -82,6 +85,15 @@ impl RustMap {
 
     /// Эмитить ли guard-проверки.
     /// Задаёт форму печати автомата (фича 0440).
+    /// Комментарии автора модели (фича 0535, задача 05).
+    pub(crate) fn with_comments(
+        mut self,
+        comments: Option<std::rc::Rc<crate::generator::comments::SourceComments>>,
+    ) -> Self {
+        self.comments = comments;
+        self
+    }
+
     pub(crate) fn with_fsm(mut self, fsm: crate::generator::FsmForm) -> Self {
         self.fsm = fsm;
         self

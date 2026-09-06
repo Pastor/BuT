@@ -144,7 +144,6 @@ pub(in crate::generator::c) fn generate_code_block(
                 let params = params.clone();
                 crate::generator::comments::emit_around(
                     printer,
-                    map.comments(),
                     stmt.loc(),
                     crate::generator::header::CommentStyle::Slashes,
                     |p| generate_code_block(p, map, owner, params, stmt, has_model),
