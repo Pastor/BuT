@@ -433,19 +433,145 @@ async fn tokens_follow_the_user_they_belong_to() {
 
 #[tokio::test]
 async fn foreign_schema_version_is_refused_by_name() {
-    // Молчаливый переход между версиями схемы — это порча данных стенда.
+    // База НОВЕЕ сервера — переходить некуда: вперёд знает только тот сервер,
+    // который её и создал. Молчаливое продолжение работы означало бы, что
+    // старый код правит таблицы, о половине которых не знает.
     let Some(stand) = Stand::open("version").await else {
         return skipped("версия схемы");
     };
     let pool = db::pool(&stand.scoped()).expect("пул");
-    let client = pool.get().await.expect("соединение");
+    let mut client = pool.get().await.expect("соединение");
     client
         .execute("UPDATE schema_version SET version = 99", &[])
         .await
         .expect("версия подменена");
-    let error = db::prepare(&client).await.expect_err("чужая версия");
+    let error = db::prepare(&mut client).await.expect_err("чужая версия");
     let text = error.to_string();
     assert!(text.contains("99"), "{text}");
+    assert!(text.contains(&db::SCHEMA_VERSION.to_string()), "{text}");
+    stand.drop_schema().await;
+}
+
+/// Обе дороги к схеме дают ОДНО И ТО ЖЕ (главный сторож перехода).
+///
+/// ⚠️ `SCHEMA` и шаги перехода — два носителя одного знания (класс 0084).
+/// Разъедься они, база, поднятая с нуля, и база, прошедшая переход, окажутся
+/// РАЗНЫМИ при одинаковом номере версии — и расхождение придёт не отказом, а
+/// отвергнутой записью у читателя стенда.
+///
+/// Проверка сравнивает состав колонок (имя, тип, обязательность, умолчание) и
+/// текст ограничений `CHECK`: именно ими отличались версии 5 и 6.
+#[tokio::test]
+async fn both_roads_lead_to_the_same_schema() {
+    let Some(fresh) = Stand::open("schema_fresh").await else {
+        return skipped("сверка дорог к схеме");
+    };
+    // Вторая база строится КАК СТАРАЯ: схема версии 4 — это нынешняя без того,
+    // что принесли шаги. Разворачиваем её обратно и заявляем версию 4, после
+    // чего `prepare` обязан привести её к текущей.
+    let Some(aged) = Stand::open("schema_aged").await else {
+        return skipped("сверка дорог к схеме");
+    };
+    let pool = db::pool(&aged.scoped()).expect("пул");
+    let mut client = pool.get().await.expect("соединение");
+    client
+        .batch_execute(
+            "ALTER TABLE projects DROP COLUMN build_target;
+             ALTER TABLE projects DROP COLUMN build_args;
+             ALTER TABLE projects DROP COLUMN main_scenario;
+             ALTER TABLE project_files DROP CONSTRAINT project_files_kind_check;
+             ALTER TABLE project_files
+                 ADD CONSTRAINT project_files_kind_check
+                 CHECK (kind IN ('takt', 'scenario'));
+             UPDATE schema_version SET version = 4;",
+        )
+        .await
+        .expect("схема состарена до версии 4");
+    db::prepare(&mut client).await.expect("переход 4 → текущая");
+
+    let version: i64 = client
+        .query_one("SELECT version FROM schema_version", &[])
+        .await
+        .expect("версия")
+        .get(0);
+    assert_eq!(version, db::SCHEMA_VERSION, "переход не довёл до текущей");
+
+    assert_eq!(
+        columns(&fresh).await,
+        columns(&aged).await,
+        "состав колонок разошёлся: SCHEMA и шаги перехода описывают РАЗНОЕ"
+    );
+    assert_eq!(
+        checks(&fresh).await,
+        checks(&aged).await,
+        "ограничения CHECK разошлись"
+    );
+    fresh.drop_schema().await;
+    aged.drop_schema().await;
+}
+
+/// Состав колонок схемы стенда: таблица, колонка, тип, обязательность, умолчание.
+async fn columns(stand: &Stand) -> Vec<(String, String, String, String, String)> {
+    let pool = db::pool(&stand.scoped()).expect("пул");
+    let client = pool.get().await.expect("соединение");
+    client
+        .query(
+            "SELECT table_name, column_name, data_type, is_nullable,
+                    coalesce(column_default, '')
+             FROM information_schema.columns
+             WHERE table_schema = current_schema()
+             ORDER BY table_name, column_name",
+            &[],
+        )
+        .await
+        .expect("колонки")
+        .iter()
+        .map(|r| (r.get(0), r.get(1), r.get(2), r.get(3), r.get(4)))
+        .collect()
+}
+
+/// Тексты ограничений `CHECK` схемы стенда.
+async fn checks(stand: &Stand) -> Vec<String> {
+    let pool = db::pool(&stand.scoped()).expect("пул");
+    let client = pool.get().await.expect("соединение");
+    let mut out: Vec<String> = client
+        .query(
+            "SELECT pg_get_constraintdef(c.oid)
+             FROM pg_constraint c
+             JOIN pg_namespace n ON n.oid = c.connamespace
+             WHERE n.nspname = current_schema() AND c.contype = 'c'",
+            &[],
+        )
+        .await
+        .expect("ограничения")
+        .iter()
+        .map(|r| r.get::<_, String>(0))
+        .collect();
+    out.sort();
+    out
+}
+
+/// Версия, до которой шага перехода нет, отвергается — и называет обе.
+///
+/// ⚠️ Контроль к переходу: без него «переход есть» доказывалось бы только
+/// удачными случаями, а база из будущего прошлого (версия 1, шага с которой
+/// никто не писал) молча осталась бы неприведённой.
+#[tokio::test]
+async fn version_without_a_step_is_refused_by_name() {
+    let Some(stand) = Stand::open("nostep").await else {
+        return skipped("версия без шага");
+    };
+    let pool = db::pool(&stand.scoped()).expect("пул");
+    let mut client = pool.get().await.expect("соединение");
+    client
+        .execute("UPDATE schema_version SET version = 1", &[])
+        .await
+        .expect("версия подменена");
+    let error = db::prepare(&mut client)
+        .await
+        .expect_err("шага перехода нет");
+    let text = error.to_string();
+    assert!(text.contains('1'), "{text}");
     assert!(text.contains(&db::SCHEMA_VERSION.to_string()), "{text}");
     stand.drop_schema().await;
 }

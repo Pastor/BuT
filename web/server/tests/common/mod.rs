@@ -79,8 +79,8 @@ impl Stand {
 
         let scoped = scoped_url(&url, &schema);
         let pool = db::pool(&scoped).ok()?;
-        let client = pool.get().await.ok()?;
-        db::prepare(&client).await.ok()?;
+        let mut client = pool.get().await.ok()?;
+        db::prepare(&mut client).await.ok()?;
 
         // Хранилище исходников — свой каталог на каждую проверку: они идут
         // параллельно, и общий каталог сделал бы их зависимыми друг от друга

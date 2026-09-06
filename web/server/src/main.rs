@@ -41,8 +41,8 @@ async fn main() -> anyhow::Result<()> {
     let config = Config::from_env()?;
     let pool = db::pool(&config.database_url)?;
     {
-        let client = pool.get().await?;
-        db::prepare(&client).await?;
+        let mut client = pool.get().await?;
+        db::prepare(&mut client).await?;
     }
 
     let arguments: Vec<String> = std::env::args().skip(1).collect();

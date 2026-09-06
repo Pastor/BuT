@@ -11,12 +11,23 @@
 //! средствами самой базы; словарь `russian` разбирает кириллицу без
 //! дополнительных расширений.
 //!
-//! # Схема — одна функция, а не каталог миграций
+//! # Схема одним местом, переходы — приращениями
 //!
-//! Версия лежит в таблице `schema_version`, а сама схема описана **одним
-//! местом**: пока выпуска не было, «миграция» с первой версии на вторую — это
-//! лишний носитель того же знания (класс 0084). Появится выложенный стенд с
-//! данными — появится и шаг перехода, и он будет виден в номере версии.
+//! Версия лежит в таблице `schema_version`, схема целиком описана [`SCHEMA`], а
+//! [`MIGRATIONS`] несёт шаги «с версии на следующую».
+//!
+//! ⚠️ Шагов сперва не было намеренно: пока выпуска не случилось, переход с
+//! первой версии на вторую — лишний носитель того же знания (класс 0084), а
+//! база чужой версии просто отвергалась словами. **Стенд это допущение
+//! отменил**: 2026-09-06 на нём осталась база версии 4, сервер ушёл на 6, и
+//! выкатка уронила работавший сервис отказом при старте. Данные уцелели —
+//! отказ сработал как задумано, — но выкатываться стало нечем.
+//!
+//! ⚠️ Цена решения названа: носителей знания о схеме теперь **два**, и
+//! разъехаться они могут молча — база с нуля и база после перехода окажутся
+//! разными при одном номере версии. Сторож — тест
+//! `both_roads_lead_to_the_same_schema`: он строит обе и сравнивает состав
+//! колонок и ограничений.
 //!
 //! # Чего в схеме нет и почему
 //!
@@ -53,32 +64,92 @@ pub fn pool(url: &str) -> anyhow::Result<Pool> {
     Ok(pool)
 }
 
+/// Шаги перехода: «с какой версии» → SQL, приводящий её к следующей.
+///
+/// ⚠️ Появились не сразу и по факту: пока выпуска не было, база прежней версии
+/// просто отвергалась — «шага перехода нет намеренно». Стенд с живыми данными
+/// это допущение отменил: там осталась база версии 4, а сервер ушёл на 6, и
+/// подъём свежего кода уронил сервис отказом. Данные при этом уцелели — отказ
+/// сработал как задумано, — но выкатываться стало нечем.
+///
+/// ⚠️ **Второй носитель того же знания.** [`SCHEMA`] описывает схему целиком, а
+/// шаги — её приращения: разъедься они, база, поднятая с нуля, и база,
+/// прошедшая переход, будут РАЗНЫМИ при одинаковом номере версии. Класс
+/// 0084, и сторожит его тест `both_roads_lead_to_the_same_schema`: он строит
+/// базу обоими путями и сравнивает состав колонок и ограничений.
+///
+/// Каждый шаг обязан быть идемпотентным по построению (`IF NOT EXISTS`): его
+/// повторное применение случается при обрыве связи между `ALTER` и записью
+/// номера версии.
+const MIGRATIONS: &[(i64, &str)] = &[
+    // 4 → 5 (задача 09p): цель и ключи сборки стали свойством проекта.
+    (
+        4,
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS build_target TEXT NOT NULL DEFAULT 'c';
+         ALTER TABLE projects ADD COLUMN IF NOT EXISTS build_args   TEXT NOT NULL DEFAULT '';",
+    ),
+    // 5 → 6 (задача 09n): активный сценарий и род файла `markdown`.
+    //
+    // ⚠️ Ограничение `CHECK` заменяется целиком: в PostgreSQL его нельзя
+    // «дополнить», а без замены запись файла-пояснения отказала бы на последнем
+    // рубеже — том самом, ради которого список родов в базе и повторён.
+    (
+        5,
+        "ALTER TABLE projects ADD COLUMN IF NOT EXISTS main_scenario TEXT;
+         ALTER TABLE project_files DROP CONSTRAINT IF EXISTS project_files_kind_check;
+         ALTER TABLE project_files
+             ADD CONSTRAINT project_files_kind_check
+             CHECK (kind IN ('takt', 'scenario', 'markdown'));",
+    ),
+];
+
 /// Приводит схему к [`SCHEMA_VERSION`].
 ///
+/// Пустая база строится из [`SCHEMA`] целиком; база прежней версии проходит
+/// шаги [`MIGRATIONS`] по одному, каждый — **в своей транзакции** вместе с
+/// записью нового номера: обрыв посреди перехода иначе оставил бы схему
+/// изменённой, а номер — прежним.
+///
 /// # Ошибки
-/// База чужой версии — отказ с обоими номерами: молчаливый переход между
-/// версиями означал бы порчу данных стенда.
-pub async fn prepare(client: &tokio_postgres::Client) -> anyhow::Result<()> {
+/// База новее сервера, шага перехода нет, либо шаг не применился. ⚠️ Отказ
+/// **называет обе версии**: молчаливый переход означал бы порчу данных стенда.
+pub async fn prepare(client: &mut tokio_postgres::Client) -> anyhow::Result<()> {
     client
         .batch_execute("CREATE TABLE IF NOT EXISTS schema_version (version BIGINT NOT NULL)")
         .await?;
     let rows = client
         .query("SELECT version FROM schema_version", &[])
         .await?;
-    match rows.first().map(|row| row.get::<_, i64>(0)) {
-        Some(version) if version == SCHEMA_VERSION => return Ok(()),
-        Some(version) => {
-            anyhow::bail!("база версии {version}, а сервер знает {SCHEMA_VERSION}");
-        }
-        None => {}
+    let Some(mut version) = rows.first().map(|row| row.get::<_, i64>(0)) else {
+        client.batch_execute(SCHEMA).await?;
+        client
+            .execute(
+                "INSERT INTO schema_version(version) VALUES ($1)",
+                &[&SCHEMA_VERSION],
+            )
+            .await?;
+        return Ok(());
+    };
+
+    if version > SCHEMA_VERSION {
+        anyhow::bail!(
+            "база версии {version} новее сервера ({SCHEMA_VERSION}): выкатите сервер посвежее"
+        );
     }
-    client.batch_execute(SCHEMA).await?;
-    client
-        .execute(
-            "INSERT INTO schema_version(version) VALUES ($1)",
-            &[&SCHEMA_VERSION],
-        )
-        .await?;
+    while version < SCHEMA_VERSION {
+        let Some((_, sql)) = MIGRATIONS.iter().find(|(from, _)| *from == version) else {
+            anyhow::bail!(
+                "база версии {version}, а сервер знает {SCHEMA_VERSION}: шага перехода нет"
+            );
+        };
+        let step = client.transaction().await?;
+        step.batch_execute(sql).await?;
+        step.execute("UPDATE schema_version SET version = $1", &[&(version + 1)])
+            .await?;
+        step.commit().await?;
+        version += 1;
+        tracing::info!(version, "схема переведена на следующую версию");
+    }
     Ok(())
 }
 
