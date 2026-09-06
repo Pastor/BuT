@@ -93,16 +93,6 @@ pub(crate) fn emit_tables(p: &mut Printer, map: &SvMap, models: &[Name]) -> Resu
             .map(|row| format!("{width}'({})", target_variant(model, row)))
             .collect();
         p.ident(&format!(
-            "// Отношение переходов модели '{}' (форма --fsm=table): строка {} бит,",
-            model, width
-        ))
-        .nl();
-        p.ident(&format!(
-            "// строк {}; порядок просмотра — тот же, что у формы unique case.",
-            rows.len()
-        ))
-        .nl();
-        p.ident(&format!(
             "localparam logic [{}:0] {} = {{{}}};",
             bits - 1,
             from_vector(model),

@@ -655,8 +655,6 @@ pub(crate) fn print_statement_ctx(
                 // Пустая ветвь `then` при непустом `else` в Rust законна, но
                 // `clippy` её не принимает — печатаем комментарий-заполнитель.
                 p.up();
-                p.ident("// тело ветви до цели не доезжает — см. SE-055")
-                    .nl();
                 p.down();
             } else {
                 p.print(&then_text);

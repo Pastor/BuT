@@ -268,18 +268,11 @@ fn generate_model_header(
 ) -> Result<usize, Diagnostic> {
     let num = num.unwrap_or(0);
     let model = map.raw_model_at(name.clone())?;
-    printer
-        .ident(format!("// NOTICE: Определение констант для модели {}", name).as_str())
-        .nl();
     let struct_name = name.unique_camelcase();
-    printer.print(format!("/* Model {} */", name).as_str()).nl();
     printer
         .print(format!("struct {} {{", struct_name).as_str())
         .nl();
     printer.up();
-    printer
-        .ident("// NOTICE: Определение переменных модели")
-        .nl();
     for var in model.borrow().variables.clone().into_values() {
         match var {
             VariableNode::Unresolved => {}
@@ -343,7 +336,6 @@ fn generate_model_header(
             && let Element::StateExtend { extend, .. } = state
         {
             if !is_extend {
-                printer.ident("// NOTICE: Определение extend").nl();
                 is_extend = true;
             }
             build_extend_header(printer, &state_name, &extend)?;
@@ -368,9 +360,6 @@ fn generate_model_header(
         // портовыми колбэками — и требует `userdata`, даже если портов нет.
         let needs_now_ms = crate::generator::c::c_time::needs_now_ms(map, &model.borrow());
         if has_any || needs_now_ms {
-            printer
-                .ident("/// NOTICE: Функции портов ввода вывода")
-                .nl();
             printer.ident("void  *userdata;").nl();
             if has_out_bit {
                 let bit_out = PortClass::Bit
@@ -434,8 +423,6 @@ fn generate_model_header(
             }
             if needs_now_ms {
                 printer
-                    .ident("// NOTICE: Источник времени, миллисекунды (профиль «часы», фича 0134)")
-                    .nl()
                     .ident(&format!(
                         "uint64_t (*{now_ms})(void *userdata);",
                         now_ms = crate::generator::c::FUNCTION_TIME_NOW_MS
@@ -510,7 +497,6 @@ pub fn generate_header(
     // 0020-05) с ней слили в один путь: расхождение целей и было причиной того,
     // что `c-hal` работал, а `c` — нет. Единый путь не даёт этому воспроизвестись.
     if !sorted_models.is_empty() {
-        printer.print("/* Forward declarations */").nl();
         for element in &sorted_models {
             let Element::Model { name, .. } = element else {
                 continue;

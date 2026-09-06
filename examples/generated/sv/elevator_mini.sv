@@ -1,9 +1,5 @@
 // Порождено компилятором Takt (taktc) — цель: SystemVerilog (IEEE 1800).
 // Не редактировать вручную: файл перезаписывается при каждой генерации.
-//
-// Такт модели Takt ≡ фронт clk (posedge). Сброс синхронный, активный низкий:
-// ветвь if (!rst_n) несёт стартовое состояние — синтетического INIT нет,
-// поэтому тело стартового состояния исполняется на такте 1 (контракт 0033).
 
 typedef enum logic [1:0] {
     COMMAND_UP = 2'd0,
@@ -12,9 +8,9 @@ typedef enum logic [1:0] {
 } command_e;
 
 module elevator_mini (
-    input  logic clk,   // служебный порт цели sv: в .takt его нет
-    input  logic rst_n, // служебный порт цели sv: сброс, активный низкий
-    input  logic en = 1'b1, // служебный порт цели sv: clock enable; НЕ обязателен (умолчание 1)
+    input  logic clk,
+    input  logic rst_n,
+    input  logic en = 1'b1,
     input  logic cabin_button_dc,
     input  logic cabin_button_f1,
     input  logic cabin_button_f2,
@@ -51,8 +47,6 @@ module elevator_mini (
     output logic elevator_motor_up,
     output logic is_done
 );
-    // Состояния модели 'Cabin (ElevatorMini:Cabin)'. Синтетического INIT нет: стартовое
-    // состояние живёт в ветви сброса (контракт ADR 0033).
     typedef enum logic [1:0] {
         ELEVATOR_MINI_CABIN_AT_FLOOR = 2'd0,
         ELEVATOR_MINI_CABIN_IDLE = 2'd1,
@@ -60,8 +54,6 @@ module elevator_mini (
         ELEVATOR_MINI_CABIN_END = 2'd3
     } elevator_mini_cabin_state_e;
 
-    // Состояния модели 'Motor (ElevatorMini:Motor)'. Синтетического INIT нет: стартовое
-    // состояние живёт в ветви сброса (контракт ADR 0033).
     typedef enum logic [2:0] {
         ELEVATOR_MINI_MOTOR_DOWN = 3'd0,
         ELEVATOR_MINI_MOTOR_IDLE = 3'd1,
@@ -70,8 +62,6 @@ module elevator_mini (
         ELEVATOR_MINI_MOTOR_END = 3'd4
     } elevator_mini_motor_state_e;
 
-    // Состояния модели 'elevator_mini (ElevatorMini)'. Синтетического INIT нет: стартовое
-    // состояние живёт в ветви сброса (контракт ADR 0033).
     typedef enum logic [0:0] {
         ELEVATOR_MINI_MAIN = 1'd0,
         ELEVATOR_MINI_END = 1'd1
@@ -94,11 +84,7 @@ module elevator_mini (
     logic elevator_motor_stop_next;
     logic elevator_motor_up_next;
 
-    // Комбинационная часть: БЛОКИРУЮЩИЕ присваивания, поэтому порядок
-    // операторов и видимость записей внутри такта — в точности как в C.
     always_comb begin
-        // Умолчание «остаться как есть». Без него неполное присваивание
-        // даёт защёлку (verilator: LATCH).
         elevator_mini_cabin_state_next = elevator_mini_cabin_state;
         elevator_mini_motor_state_next = elevator_mini_motor_state;
         state_next = state;
@@ -112,7 +98,6 @@ module elevator_mini (
 
         unique case (state)
             ELEVATOR_MINI_MAIN: begin
-                // Под-модель 'Cabin (ElevatorMini:Cabin)' — инлайн её такта.
                 unique case (elevator_mini_cabin_state)
                     ELEVATOR_MINI_CABIN_AT_FLOOR: begin
                         door_open_next = 1'b1;
@@ -250,7 +235,6 @@ module elevator_mini (
                     end
                     ELEVATOR_MINI_CABIN_END: begin end
                 endcase
-                // Под-модель 'Motor (ElevatorMini:Motor)' — инлайн её такта.
                 unique case (elevator_mini_motor_state)
                     ELEVATOR_MINI_MOTOR_DOWN: begin
                         elevator_motor_down_next = 1'b1;
@@ -292,9 +276,6 @@ module elevator_mini (
         endcase
     end
 
-    // Регистровая часть: НЕБЛОКИРУЮЩИЕ присваивания. Ветвь сброса несёт
-    // стартовые состояния ВСЕХ уровней — они сбрасываются одним фронтом,
-    // поэтому сдвиг такта равен нулю на любой глубине (контракт 0033).
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             elevator_mini_cabin_state <= ELEVATOR_MINI_CABIN_IDLE;
@@ -323,6 +304,5 @@ module elevator_mini (
         end
     end
 
-    // Терминальность модели наблюдаема снаружи — аналог _is_done() цели c.
     assign is_done = (state == ELEVATOR_MINI_END);
 endmodule

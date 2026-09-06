@@ -1,14 +1,10 @@
 // Порождено компилятором Takt (taktc) — цель: SystemVerilog (IEEE 1800).
 // Не редактировать вручную: файл перезаписывается при каждой генерации.
-//
-// Такт модели Takt ≡ фронт clk (posedge). Сброс синхронный, активный низкий:
-// ветвь if (!rst_n) несёт стартовое состояние — синтетического INIT нет,
-// поэтому тело стартового состояния исполняется на такте 1 (контракт 0033).
 
 module lift (
-    input  logic clk,   // служебный порт цели sv: в .takt его нет
-    input  logic rst_n, // служебный порт цели sv: сброс, активный низкий
-    input  logic en = 1'b1, // служебный порт цели sv: clock enable; НЕ обязателен (умолчание 1)
+    input  logic clk,
+    input  logic rst_n,
+    input  logic en = 1'b1,
     input  logic [7:0] at_floor,
     input  logic [7:0] call,
     output logic brake,
@@ -20,8 +16,6 @@ module lift (
 );
     localparam logic [7:0] lift_DWELL_TICKS = 3;
 
-    // Состояния модели 'lift (Lift)'. Синтетического INIT нет: стартовое
-    // состояние живёт в ветви сброса (контракт ADR 0033).
     typedef enum logic [2:0] {
         LIFT_BOARDING = 3'd0,
         LIFT_GOING_DOWN = 3'd1,
@@ -46,11 +40,7 @@ module lift (
     logic motor_down_next;
     logic motor_up_next;
 
-    // Комбинационная часть: БЛОКИРУЮЩИЕ присваивания, поэтому порядок
-    // операторов и видимость записей внутри такта — в точности как в C.
     always_comb begin
-        // Умолчание «остаться как есть». Без него неполное присваивание
-        // даёт защёлку (verilator: LATCH).
         state_next = state;
         lift_doors_next = lift_doors;
         lift_dwell_next = lift_dwell;
@@ -135,9 +125,6 @@ module lift (
         endcase
     end
 
-    // Регистровая часть: НЕБЛОКИРУЮЩИЕ присваивания. Ветвь сброса несёт
-    // стартовые состояния ВСЕХ уровней — они сбрасываются одним фронтом,
-    // поэтому сдвиг такта равен нулю на любой глубине (контракт 0033).
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             state <= LIFT_WAITING;
@@ -168,6 +155,5 @@ module lift (
         end
     end
 
-    // Терминальность модели наблюдаема снаружи — аналог _is_done() цели c.
     assign is_done = (state == LIFT_END);
 endmodule

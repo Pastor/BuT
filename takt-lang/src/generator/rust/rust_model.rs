@@ -135,14 +135,11 @@ pub(crate) fn emit_state_enum(p: &mut Printer, table: &StateTable) -> Result<(),
     p.ident("#[derive(Debug, Clone, Copy, PartialEq, Eq)]").nl();
     p.ident(&format!("enum {} {{", table.enum_name)).nl();
     p.up();
-    p.ident("/// Модель создана, но стартовое состояние ещё не занято.")
-        .nl();
     p.ident("Init,").nl();
     for (_, variant) in &table.variants {
         p.ident(&format!("{},", variant)).nl();
     }
     if table.emit_end {
-        p.ident("/// Автомат завершён (`is_done`).").nl();
         p.ident("End,").nl();
     }
     p.down();
@@ -161,11 +158,6 @@ pub(crate) fn emit_state_enum(p: &mut Printer, table: &StateTable) -> Result<(),
 /// это молча, в Rust `dead_code` поймал бы (решение R9, вариант (а)).
 fn emit_seq_enums(p: &mut Printer, model: &Name, concats: &[Chain]) -> Result<(), Diagnostic> {
     for chain in concats {
-        p.ident(&format!(
-            "/// Шаг последовательной композиции состояния '{}'.",
-            chain.state.local()
-        ))
-        .nl();
         p.ident("#[derive(Debug, Clone, Copy, PartialEq, Eq)]").nl();
         p.ident(&format!(
             "enum {} {{",
@@ -303,7 +295,7 @@ pub(crate) fn emit_model(
     // Эмиссия — в `rust_shared` (приватная структура, правило 3 ADR); у корня и
     // только если под-моделям есть что разделять (правило 1).
     if is_root {
-        emit_shared_struct(p, map, name.local(), &shared)?;
+        emit_shared_struct(p, map, &shared)?;
     }
 
     // ── struct ───────────────────────────────────────────────────────────────
@@ -312,7 +304,6 @@ pub(crate) fn emit_model(
     // (`ElevatorMini<H>`). Повторить границу в аргументах — ошибка E0229.
     let generics = if is_root && uses_hal { "<H: Hal>" } else { "" };
     let type_args = if is_root && uses_hal { "<H>" } else { "" };
-    p.ident(&format!("/// Модель '{}'.", name.local())).nl();
     p.ident(&format!("pub struct {}{} {{", struct_name, generics))
         .nl();
     let _ = &type_args;
@@ -356,8 +347,6 @@ pub(crate) fn emit_model(
         .nl();
     }
     if is_root && !shared.is_empty() {
-        p.ident("/// Общие с под-моделями переменные (фича 0059).")
-            .nl();
         p.ident(&format!("shared: {},", shared_type_name(map))).nl();
     }
     p.ident(&format!("state: {},", table.enum_name)).nl();
@@ -367,11 +356,6 @@ pub(crate) fn emit_model(
     rust_time::emit_struct_fields(p, map, model, &table.enum_name)?;
     crate::generator::rust::rust_every::emit_struct_fields(p, map, model)?;
     for chain in &concats {
-        p.ident(&format!(
-            "/// Текущий шаг последовательной композиции состояния '{}'.",
-            chain.state.local()
-        ))
-        .nl();
         p.ident(&format!(
             "{}: {},",
             seq_field_name(&chain.state, &chain.path)?,
@@ -386,8 +370,6 @@ pub(crate) fn emit_model(
         }
     }
     if is_root && uses_hal {
-        p.ident("/// Аппаратный слой. Заменяет `void *userdata` цели `c`.")
-            .nl();
         p.ident("hal: H,").nl();
     }
     p.down();
@@ -623,17 +605,6 @@ fn emit_new(p: &mut Printer, ctx: &ModelEmit) -> Result<(), Diagnostic> {
     };
     let args = if is_root && uses_hal { "hal: H" } else { "" };
     let vis = if is_root { "pub " } else { "" };
-    if is_root && uses_hal {
-        p.ident("/// Создаёт модель поверх аппаратного слоя `hal`.")
-            .nl();
-        p.ident("///").nl();
-        p.ident("/// В отличие от цели `c`, забыть проставить доступ к железу")
-            .nl();
-        p.ident("/// невозможно: без `hal` модель не конструируется.")
-            .nl();
-    } else {
-        p.ident("/// Создаёт модель в начальном состоянии.").nl();
-    }
     // Общие переменные корня инициализируются внутри блока `shared { … }`
     // (фича 0059). Собираем их значения, прямые поля печатаем сразу.
     let union = if is_root {
@@ -774,8 +745,6 @@ fn emit_default_impl(p: &mut Printer, struct_name: &str, is_root: bool, uses_hal
     if !is_root || uses_hal {
         return;
     }
-    p.ident("/// Модель в начальном состоянии — синоним [`new`](Self::new).")
-        .nl();
     p.ident(&format!("impl Default for {struct_name} {{")).nl();
     p.up();
     p.ident("fn default() -> Self {").nl();
@@ -821,12 +790,6 @@ fn emit_init(p: &mut Printer, ctx: &ModelEmit) -> Result<(), Diagnostic> {
         guard_enable: map.guard_enable(),
     };
     let vis = if is_root { "pub " } else { "" };
-    p.ident("/// Возвращает модель в начальное состояние.").nl();
-    p.ident("///").nl();
-    p.ident("/// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход")
-        .nl();
-    p.ident("/// в стартовое состояние — это поведение, и оно живёт в `tick`.")
-        .nl();
     let union_names = shared_union_names(map, is_root);
     p.ident(&format!("{}fn init(&mut self) {{", vis)).nl();
     p.up();
@@ -961,11 +924,6 @@ fn emit_reset(p: &mut Printer, is_root: bool) -> Result<(), Diagnostic> {
     if !is_root {
         return Ok(());
     }
-    p.ident("/// Сбрасывает модель. Паритет с `_reset` цели `c`.")
-        .nl();
-    p.ident("///").nl();
-    p.ident("/// Сброс доходит до вложенных моделей через `init`.")
-        .nl();
     p.ident("pub fn reset(&mut self) {").nl();
     p.up();
     p.ident("self.init();").nl();
@@ -983,7 +941,6 @@ fn emit_reset(p: &mut Printer, is_root: bool) -> Result<(), Diagnostic> {
 /// специально «оживлять» его не требуется.
 fn emit_is_done(p: &mut Printer, table: &StateTable, is_root: bool) -> Result<(), Diagnostic> {
     let vis = if is_root { "pub " } else { "" };
-    p.ident("/// Завершён ли автомат модели.").nl();
     p.ident(&format!("{}fn is_done(&self) -> bool {{", vis))
         .nl();
     p.up();

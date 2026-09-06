@@ -39,13 +39,6 @@ pub(crate) fn emit_state_enums(
             .map(|(i, v)| (v.clone(), i as i128))
             .collect();
         let (width, _) = enum_width(&numbered, &format!("состояния модели '{}'", name))?;
-        p.ident(&format!(
-            "// Состояния модели '{}'. Синтетического INIT нет: стартовое",
-            name
-        ))
-        .nl();
-        p.ident("// состояние живёт в ветви сброса (контракт ADR 0033).")
-            .nl();
         p.ident(&format!("typedef enum logic [{}:0] {{", width - 1))
             .nl();
         p.up();
@@ -80,11 +73,6 @@ pub(crate) fn emit_step_enums(p: &mut Printer, fsm: &Fsm) -> Result<(), Diagnost
             ));
         }
         let (width, _) = enum_width(&numbered, &format!("шаг цепочки '{}'", state))?;
-        p.ident(&format!(
-            "// Шаг последовательной композиции '{}' (`+`).",
-            state
-        ))
-        .nl();
         p.ident(&format!("typedef enum logic [{}:0] {{", width - 1))
             .nl();
         p.up();

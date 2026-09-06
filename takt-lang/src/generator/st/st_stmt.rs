@@ -274,8 +274,6 @@ pub(crate) fn print_statement(
             // обязана нести оператор, и условие печатается отрицанием.
             if then_text.trim().is_empty() {
                 p.up();
-                p.ident("(* тело ветви не транслируется в ST — см. ST-022 *)")
-                    .nl();
                 p.down();
             } else {
                 p.print(&then_text);

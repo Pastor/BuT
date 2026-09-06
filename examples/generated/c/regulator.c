@@ -8,12 +8,10 @@ static int64_t takt_q_floordiv(int64_t x, int64_t d) {
 static int64_t takt_q_mul(int64_t a, int64_t b, unsigned n) {
     return takt_q_floordiv(a * b, (int64_t)1 << n);
 }
-/// Model functions 'Regulator (Regulator:Regulator)'
 static void RegulatorRegulator_init(RegulatorRegulator *model);
 static void RegulatorRegulator_tick(RegulatorRegulator *model, Regulator *main);
 static bool RegulatorRegulator_is_done(const RegulatorRegulator *model);
 
-/// Функция инициализации модели Regulator (Regulator:Regulator)
 void RegulatorRegulator_init(RegulatorRegulator *model) {
     assert(0 != model);
     model->state = REGULATOR_REGULATOR_INIT;
@@ -23,7 +21,6 @@ void RegulatorRegulator_init(RegulatorRegulator *model) {
     model->value = 0;
 }
 
-/// Функция обработки модели Regulator (Regulator:Regulator)
 void RegulatorRegulator_tick(RegulatorRegulator *model, Regulator *main) {
     assert(0 != model);
     assert(0 != main);
@@ -55,24 +52,20 @@ void RegulatorRegulator_tick(RegulatorRegulator *model, Regulator *main) {
     }
 }
 
-/// Функция сброса модели Regulator (Regulator:Regulator)
 void RegulatorRegulator_reset(RegulatorRegulator *model) {
     RegulatorRegulator_init(model);
 }
 
-/// Функция проверки терминального состояния модели Regulator (Regulator:Regulator)
 bool RegulatorRegulator_is_done(const RegulatorRegulator *model) {
     return model->state == REGULATOR_REGULATOR_END;
 }
 
-/// Функция инициализации модели regulator (Regulator)
 void Regulator_init(Regulator *model) {
     assert(0 != model);
     model->state = REGULATOR_INIT;
     RegulatorRegulator_init(&model->main);
 }
 
-/// Функция обработки модели regulator (Regulator)
 void Regulator_tick(Regulator *model) {
     assert(0 != model);
     if (model->state == REGULATOR_INIT) {
@@ -94,12 +87,10 @@ void Regulator_tick(Regulator *model) {
     }
 }
 
-/// Функция сброса модели regulator (Regulator)
 void Regulator_reset(Regulator *model) {
     Regulator_init(model);
 }
 
-/// Функция проверки терминального состояния модели regulator (Regulator)
 bool Regulator_is_done(const Regulator *model) {
     return model->state == REGULATOR_END;
 }

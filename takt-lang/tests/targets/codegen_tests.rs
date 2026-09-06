@@ -554,11 +554,10 @@ state Done;
 "#;
     let header = generate_h_content(src, "System");
 
-    // Секция forward declarations должна присутствовать
-    assert!(
-        header.contains("/* Forward declarations */"),
-        "заголовок должен содержать секцию forward declarations:\n{header}"
-    );
+    // ⚠️ Прежде тест проверял КОММЕНТАРИЙ `/* Forward declarations */` — то
+    // есть подпись секции, а не саму секцию. Комментарий убран задачей
+    // 0535-01, и предмет проверки остался прежним: опережающие объявления
+    // структур ниже. Проверять надо обещание, а не его подпись (класс 0288).
     // Корневая структура должна быть forward-declared
     assert!(
         header.contains("typedef struct System System;"),

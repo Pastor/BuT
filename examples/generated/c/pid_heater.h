@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* Forward declarations */
 typedef struct PidHeaterHeater PidHeaterHeater;
 typedef struct PidHeater PidHeater;
 
@@ -23,10 +22,7 @@ typedef enum {
     PID_HEATER_HEATER_PORT_TEMPERATURE = 0,
 } PidHeater_Out_RationalPort;
 
-// NOTICE: Определение констант для модели Heater (PidHeater:Heater)
-/* Model Heater (PidHeater:Heater) */
 struct PidHeaterHeater {
-    // NOTICE: Определение переменных модели
     double err;
     PidState loop_pid;
     double release;
@@ -40,10 +36,7 @@ struct PidHeaterHeater {
     } state;
 };
 
-// NOTICE: Определение констант для модели pid_heater (PidHeater)
-/* Model pid_heater (PidHeater) */
 struct PidHeater {
-    // NOTICE: Определение переменных модели
     double ambient;
     double ctrl;
     double gain;
@@ -56,7 +49,6 @@ struct PidHeater {
         PID_HEATER_PID_HEATER,
         PID_HEATER_END
     } state;
-    // NOTICE: Определение extend
     PidHeaterHeater pid_heater_heater0;
     PidHeaterHeater pid_heater_heater1;
     enum {
@@ -65,7 +57,6 @@ struct PidHeater {
         PID_HEATER_PID_HEATER_HEATER1,
         PID_HEATER_PID_HEATER_END
     } pid_heater_state;
-    /// NOTICE: Функции портов ввода вывода
     void  *userdata;
     void  (*write_float)(PidHeater_Out_RationalPort port, uint8_t index, float val, void *userdata);
 };

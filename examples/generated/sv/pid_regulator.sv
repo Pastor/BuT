@@ -1,19 +1,13 @@
 // Порождено компилятором Takt (taktc) — цель: SystemVerilog (IEEE 1800).
 // Не редактировать вручную: файл перезаписывается при каждой генерации.
-//
-// Такт модели Takt ≡ фронт clk (posedge). Сброс синхронный, активный низкий:
-// ветвь if (!rst_n) несёт стартовое состояние — синтетического INIT нет,
-// поэтому тело стартового состояния исполняется на такте 1 (контракт 0033).
 
 module pid_regulator (
-    input  logic clk,   // служебный порт цели sv: в .takt его нет
-    input  logic rst_n, // служебный порт цели sv: сброс, активный низкий
-    input  logic en = 1'b1, // служебный порт цели sv: clock enable; НЕ обязателен (умолчание 1)
+    input  logic clk,
+    input  logic rst_n,
+    input  logic en = 1'b1,
     output logic ready,
     output logic is_done
 );
-    // Состояния модели 'Pid (PidRegulator:Pid)'. Синтетического INIT нет: стартовое
-    // состояние живёт в ветви сброса (контракт ADR 0033).
     typedef enum logic [1:0] {
         PID_REGULATOR_PID_CONTROL = 2'd0,
         PID_REGULATOR_PID_DONE = 2'd1,
@@ -21,8 +15,6 @@ module pid_regulator (
         PID_REGULATOR_PID_END = 2'd3
     } pid_regulator_pid_state_e;
 
-    // Состояния модели 'pid_regulator (PidRegulator)'. Синтетического INIT нет: стартовое
-    // состояние живёт в ветви сброса (контракт ADR 0033).
     typedef enum logic [0:0] {
         PID_REGULATOR_MAIN = 1'd0,
         PID_REGULATOR_END = 1'd1
@@ -62,11 +54,7 @@ module pid_regulator (
     pid_regulator_state_e state_next;
     logic ready_next;
 
-    // Комбинационная часть: БЛОКИРУЮЩИЕ присваивания, поэтому порядок
-    // операторов и видимость записей внутри такта — в точности как в C.
     always_comb begin
-        // Умолчание «остаться как есть». Без него неполное присваивание
-        // даёт защёлку (verilator: LATCH).
         pid_regulator_pid_state_next = pid_regulator_pid_state;
         pid_regulator_pid_ctrl_next = pid_regulator_pid_ctrl;
         pid_regulator_pid_deriv_next = pid_regulator_pid_deriv;
@@ -87,7 +75,6 @@ module pid_regulator (
 
         unique case (state)
             PID_REGULATOR_MAIN: begin
-                // Под-модель 'Pid (PidRegulator:Pid)' — инлайн её такта.
                 unique case (pid_regulator_pid_state)
                     PID_REGULATOR_PID_CONTROL: begin
                         pid_regulator_pid_err_next = (16'($signed(pid_regulator_pid_target_next) - $signed(pid_regulator_pid_meas_next)));
@@ -125,9 +112,6 @@ module pid_regulator (
         endcase
     end
 
-    // Регистровая часть: НЕБЛОКИРУЮЩИЕ присваивания. Ветвь сброса несёт
-    // стартовые состояния ВСЕХ уровней — они сбрасываются одним фронтом,
-    // поэтому сдвиг такта равен нулю на любой глубине (контракт 0033).
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             pid_regulator_pid_state <= PID_REGULATOR_PID_CONTROL;
@@ -168,6 +152,5 @@ module pid_regulator (
         end
     end
 
-    // Терминальность модели наблюдаема снаружи — аналог _is_done() цели c.
     assign is_done = (state == PID_REGULATOR_END);
 endmodule

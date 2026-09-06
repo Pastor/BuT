@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# Сторож гейта комментариев порождённого кода (правило 0315, фича 0535).
+#
+# Гейт судит вывод компилятора, поэтому мутация ставится не в файл, а в
+# **компилятор**: между `taktc` и гейтом встаёт обёртка, которая дописывает в
+# порождённые файлы строку нужного класса. Так проверяется именно то, ради чего
+# гейт заведён, — что сочинённый комментарий будет замечен в выводе.
+#
+#   C1 — адрес решения проекта (`фича NNNN`) в комментарии;
+#   C2 — служебный маркер `NOTICE:`;
+#   C3 — пустая строка комментария;
+#   C4 — doc-строка `///` в выводе цели `rust`;
+#   C5 — нетронутый вывод ПРИНИМАЕТСЯ (иначе гейт красен всегда);
+#   C6 — вывод без шапки «Порождено компилятором» отвергается: запрет без
+#        положительного контроля доказывал бы лишь, что файл пуст.
+set -u
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+GATE="$ROOT/scripts/check-generated-comments.py"
+TAKTC="${TAKTC:-$ROOT/target/precheck/debug/taktc}"
+FAILED=0
+
+if [ ! -x "$TAKTC" ]; then
+  if [ -n "${PRECHECK_STRICT:-}" ]; then
+    echo "  ОШИБКА: компилятор не собран ($TAKTC) — под PRECHECK_STRICT это отказ"
+    exit 1
+  fi
+  echo "  пропуск: компилятор не собран ($TAKTC)"
+  exit 0
+fi
+
+# Обёртка над `taktc`: зовёт настоящий компилятор, затем портит вывод.
+# `$1` — sed-выражение, добавляющее строку нужного класса.
+make_wrapper() {
+  local dir="$1" injection="$2"
+  cat > "$dir/taktc" <<WRAP
+#!/usr/bin/env bash
+"$TAKTC" "\$@" || exit \$?
+out=""
+prev=""
+for arg in "\$@"; do
+  if [ "\$prev" = "-o" ]; then out="\$arg"; fi
+  prev="\$arg"
+done
+[ -n "\$out" ] || exit 0
+find "\$out" -type f | while read -r f; do
+  $injection
+done
+exit 0
+WRAP
+  chmod +x "$dir/taktc"
+}
+
+expect() {
+  local name="$1" want="$2" injection="$3"
+  local dir
+  dir=$(mktemp -d)
+  make_wrapper "$dir" "$injection"
+  TAKTC="$dir/taktc" python3 "$GATE" >/dev/null 2>&1
+  local got=$?
+  if [ "$want" = "fail" ] && [ "$got" -eq 0 ]; then
+    echo "  ✗ $name: гейт ПРОПУСТИЛ мутацию"
+    FAILED=1
+  elif [ "$want" = "pass" ] && [ "$got" -ne 0 ]; then
+    echo "  ✗ $name: гейт отверг корректный вывод"
+    FAILED=1
+  else
+    echo "  ✓ $name"
+  fi
+  rm -rf "$dir"
+}
+
+echo "Сторож гейта комментариев порождённого кода (0535)..."
+
+# C5 идёт первым: гейт, краснеющий на нетронутом выводе, делает бессмысленными
+# все остальные пробы.
+expect "C5 нетронутый вывод принимается" pass ':'
+expect "C1 адрес решения проекта" fail 'printf "// пояснение (фича 0059).\n" >> "$f"'
+expect "C2 служебный маркер NOTICE" fail 'printf "// NOTICE: определение\n" >> "$f"'
+expect "C3 пустой комментарий" fail 'printf "//\n" >> "$f"'
+expect "C4 doc-строка у цели rust" fail 'case "$f" in *.rs) printf "/// Один такт автомата.\n" >> "$f";; esac'
+expect "C6 вывод без шапки отвергается" fail 'grep -v "Порождено компилятором" "$f" > "$f.tmp" && mv "$f.tmp" "$f"'
+
+if [ "$FAILED" -ne 0 ]; then
+  echo "Сторож гейта комментариев порождённого кода: ПРОВАЛ"
+  exit 1
+fi
+echo "Сторож гейта комментариев порождённого кода: все пробы пройдены"

@@ -51,9 +51,6 @@ pub(super) fn generate_function_prototypes(
             let init_param = param_for(crate::generator::c::c_needs::ModelFn::Init);
             let tick_param = param_for(crate::generator::c::c_needs::ModelFn::Tick);
             printer
-                .print(&format!("/// Model functions '{}'", name))
-                .nl();
-            printer
                 .print(&format!(
                     "static void {0}_init({0} *model{1});",
                     s, init_param
@@ -817,12 +814,6 @@ pub(super) fn generate_model_functions(
         c::c_table::emit_transition_table(printer, model, map, wants_tick)?;
     }
     printer
-        .print(&format!(
-            "/// Функция инициализации модели {}",
-            model.name()
-        ))
-        .nl();
-    printer
         .print("void ")
         .print(&struct_name)
         .print("_init(")
@@ -845,9 +836,6 @@ pub(super) fn generate_model_functions(
     printer.print(&init_body);
     printer.down();
     printer.print("}").nl().nl();
-    printer
-        .print(&format!("/// Функция обработки модели {}", model.name()))
-        .nl();
     printer
         .print("void ")
         .print(&struct_name)
@@ -874,9 +862,6 @@ pub(super) fn generate_model_functions(
     printer.down();
     printer.print("}").nl().nl();
     printer
-        .print(&format!("/// Функция сброса модели {}", model.name()))
-        .nl();
-    printer
         .print("void ")
         .print(&struct_name)
         .print("_reset(")
@@ -893,12 +878,6 @@ pub(super) fn generate_model_functions(
         .down()
         .nl();
     printer.print("}").nl().nl();
-    printer
-        .print(&format!(
-            "/// Функция проверки терминального состояния модели {}",
-            model.name()
-        ))
-        .nl();
     printer
         .print("bool ")
         .print(&struct_name)

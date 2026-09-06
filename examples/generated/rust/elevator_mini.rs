@@ -1,18 +1,8 @@
 // Порождено компилятором Takt (taktc) — цель: Rust (профиль no_std).
 // Не редактировать вручную: файл перезаписывается при каждой генерации.
-//
-// Модуль не обращается к std и подключается как `mod`:
-//
-//     #[path = "elevator_mini.rs"]
-//     pub mod elevator_mini;
-//
-// Атрибута #![no_std] здесь нет намеренно: он допустим только в корне
-// крейта, а no_std — свойство крейта, не модуля. Совместимость с no_std
-// проверяется гейтом (scripts/precheck.sh).
 
 #![forbid(unsafe_code)]
 
-/// Перечисление 'Command' модели.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Command {
@@ -21,7 +11,6 @@ pub enum Command {
     Stop = 2,
 }
 
-/// Порт ввода-вывода модели. Реализация — за трейтом [`Hal`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InBitPort {
     CabinButtonDc,
@@ -56,7 +45,6 @@ pub enum InBitPort {
     ElevatorMotorSensorU,
 }
 
-/// Порт ввода-вывода модели. Реализация — за трейтом [`Hal`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutBitPort {
     DoorOpen,
@@ -65,51 +53,35 @@ pub enum OutBitPort {
     ElevatorMotorUp,
 }
 
-/// Аппаратный слой модели.
-///
-/// Заменяет пару указателей на функции и `void *userdata` цели `c`:
-/// состояние слоя живёт в самом типе-реализации, поэтому привести
-/// его не к тому типу или забыть проставить колбэк невозможно.
 pub trait Hal {
-    /// Читает входной порт `port`.
     fn read_bit(&mut self, port: InBitPort) -> bool;
-    /// Пишет `value` в выходной порт `port`.
     fn write_bit(&mut self, port: OutBitPort, value: bool);
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ElevatorMiniCabinState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     AtFloor,
     Idle,
     Moving,
-    /// Автомат завершён (`is_done`).
     End,
 }
 
-/// Модель 'Cabin'.
 pub struct ElevatorMiniCabin {
     state: ElevatorMiniCabinState,
 }
 
 impl ElevatorMiniCabin {
-    /// Создаёт модель в начальном состоянии.
     fn new() -> Self {
         Self {
             state: ElevatorMiniCabinState::Init,
         }
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     fn init(&mut self) {
         self.state = ElevatorMiniCabinState::Init;
     }
 
-    /// Один такт автомата.
     fn tick<H: Hal>(&mut self, shared: &mut ElevatorMiniShared, hal: &mut H) {
         if self.state == ElevatorMiniCabinState::Init {
             shared.command = Command::Stop;
@@ -255,7 +227,6 @@ impl ElevatorMiniCabin {
         }
     }
 
-    /// Завершён ли автомат модели.
     fn is_done(&self) -> bool {
         self.state == ElevatorMiniCabinState::End
     }
@@ -264,38 +235,29 @@ impl ElevatorMiniCabin {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ElevatorMiniMotorState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     Down,
     Idle,
     Stop,
     Up,
-    /// Автомат завершён (`is_done`).
     End,
 }
 
-/// Модель 'Motor'.
 pub struct ElevatorMiniMotor {
     state: ElevatorMiniMotorState,
 }
 
 impl ElevatorMiniMotor {
-    /// Создаёт модель в начальном состоянии.
     fn new() -> Self {
         Self {
             state: ElevatorMiniMotorState::Init,
         }
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     fn init(&mut self) {
         self.state = ElevatorMiniMotorState::Init;
     }
 
-    /// Один такт автомата.
     fn tick<H: Hal>(&mut self, shared: &mut ElevatorMiniShared, hal: &mut H) {
         if self.state == ElevatorMiniMotorState::Init {
             hal.write_bit(OutBitPort::ElevatorMotorStop, true);
@@ -333,7 +295,6 @@ impl ElevatorMiniMotor {
         }
     }
 
-    /// Завершён ли автомат модели.
     fn is_done(&self) -> bool {
         self.state == ElevatorMiniMotorState::End
     }
@@ -342,36 +303,26 @@ impl ElevatorMiniMotor {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ElevatorMiniState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     Main,
-    /// Автомат завершён (`is_done`).
     End,
 }
 
-/// Общие переменные модели 'elevator_mini', разделяемые под-моделями.
 struct ElevatorMiniShared {
     command: Command,
     current_floor: u8,
     target_floor: u8,
 }
 
-/// Модель 'elevator_mini'.
 pub struct ElevatorMini<H: Hal> {
-    /// Общие с под-моделями переменные (фича 0059).
     shared: ElevatorMiniShared,
     state: ElevatorMiniState,
     main_cabin0: ElevatorMiniCabin,
     main_motor1: ElevatorMiniMotor,
-    /// Аппаратный слой. Заменяет `void *userdata` цели `c`.
     hal: H,
 }
 
 impl<H: Hal> ElevatorMini<H> {
-    /// Создаёт модель поверх аппаратного слоя `hal`.
-    ///
-    /// В отличие от цели `c`, забыть проставить доступ к железу
-    /// невозможно: без `hal` модель не конструируется.
     pub fn new(hal: H) -> Self {
         Self {
             shared: ElevatorMiniShared {
@@ -386,10 +337,6 @@ impl<H: Hal> ElevatorMini<H> {
         }
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     pub fn init(&mut self) {
         self.shared.command = Command::Stop;
         self.shared.current_floor = 1;
@@ -399,10 +346,6 @@ impl<H: Hal> ElevatorMini<H> {
         self.main_motor1.init();
     }
 
-    /// Один такт автомата.
-    ///
-    /// Вход в стартовое состояние такта **не расходует** (контракт
-    /// ADR 0033): его тело исполняется в этом же вызове.
     pub fn tick(&mut self) {
         if self.state == ElevatorMiniState::Init {
             self.state = ElevatorMiniState::Main;
@@ -420,14 +363,10 @@ impl<H: Hal> ElevatorMini<H> {
         }
     }
 
-    /// Сбрасывает модель. Паритет с `_reset` цели `c`.
-    ///
-    /// Сброс доходит до вложенных моделей через `init`.
     pub fn reset(&mut self) {
         self.init();
     }
 
-    /// Завершён ли автомат модели.
     pub fn is_done(&self) -> bool {
         self.state == ElevatorMiniState::End
     }

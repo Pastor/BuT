@@ -112,9 +112,6 @@ pub(super) fn generate_hal(
 
     printer.nl();
     printer
-        .print("/* 0020: карта адресов портов и дефолтный HAL */")
-        .nl();
-    printer
         .print(&format!(
             "typedef struct {{ uintptr_t addr; int8_t bit; uint8_t width; }} {}_PortBinding;",
             root
@@ -211,7 +208,6 @@ pub(super) fn generate_hal(
                 r#"static bool {root}_default_{f}({e} p, uint8_t bit, void *userdata) {{
     (void)userdata;
     {root}_PortBinding b = {e}__ADDR[p];
-    /* Разряд порта смещает позицию в регистре: у скалярного порта bit = 0. */
     int s = b.bit + (int)bit;
     switch (b.width) {{
         case 2: return ((*(volatile uint16_t*)b.addr) >> s) & 1u;
@@ -231,7 +227,6 @@ pub(super) fn generate_hal(
                 r#"static void {root}_default_{f}({e} p, uint8_t bit, bool val, void *userdata) {{
     (void)userdata;
     {root}_PortBinding b = {e}__ADDR[p];
-    /* Разряд порта смещает позицию в регистре: у скалярного порта bit = 0. */
     int s = b.bit + (int)bit;
     switch (b.width) {{
         case 2: {{
@@ -267,7 +262,6 @@ pub(super) fn generate_hal(
                 r#"static float {root}_default_{f}({e} p, uint8_t index, void *userdata) {{
     (void)userdata;
     {root}_PortBinding b = {e}__ADDR[p];
-    /* Элемент лежит через шаг в ширину значения: у скалярного порта index = 0. */
     return *(volatile float*)(b.addr + (uintptr_t)index * b.width);
 }}"#,
                 f = FUNCTION_PORT_READ_FLOAT,
@@ -281,7 +275,6 @@ pub(super) fn generate_hal(
                 r#"static void {root}_default_{f}({e} p, uint8_t index, float val, void *userdata) {{
     (void)userdata;
     {root}_PortBinding b = {e}__ADDR[p];
-    /* Элемент лежит через шаг в ширину значения: у скалярного порта index = 0. */
     *(volatile float*)(b.addr + (uintptr_t)index * b.width) = val;
 }}"#,
                 f = FUNCTION_PORT_WRITE_FLOAT,
@@ -295,7 +288,6 @@ pub(super) fn generate_hal(
                 r#"static int64_t {root}_default_{f}({e} p, uint8_t index, void *userdata) {{
     (void)userdata;
     {root}_PortBinding b = {e}__ADDR[p];
-    /* Элемент лежит через шаг в ширину значения: у скалярного порта index = 0. */
     uintptr_t at = b.addr + (uintptr_t)index * b.width;
     switch (b.width) {{
         case 1: return (int64_t)*(volatile uint8_t*)at;
@@ -315,7 +307,6 @@ pub(super) fn generate_hal(
                 r#"static void {root}_default_{f}({e} p, uint8_t index, int64_t val, void *userdata) {{
     (void)userdata;
     {root}_PortBinding b = {e}__ADDR[p];
-    /* Элемент лежит через шаг в ширину значения: у скалярного порта index = 0. */
     uintptr_t at = b.addr + (uintptr_t)index * b.width;
     switch (b.width) {{
         case 1: *(volatile uint8_t*)at = (uint8_t)val; break;

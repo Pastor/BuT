@@ -7,7 +7,6 @@ FUNCTION door_close : USINT
 VAR_INPUT
     unused : USINT;
 END_VAR
-    (* extern fn door_close — заглушка (ST-009) *)
     door_close := 0;
 END_FUNCTION
 
@@ -15,7 +14,6 @@ FUNCTION door_open : USINT
 VAR_INPUT
     unused : USINT;
 END_VAR
-    (* extern fn door_open — заглушка (ST-009) *)
     door_open := 0;
 END_FUNCTION
 
@@ -23,7 +21,6 @@ FUNCTION motor_down : USINT
 VAR_INPUT
     unused : USINT;
 END_VAR
-    (* extern fn motor_down — заглушка (ST-009) *)
     motor_down := 0;
 END_FUNCTION
 
@@ -31,7 +28,6 @@ FUNCTION motor_stop : USINT
 VAR_INPUT
     unused : USINT;
 END_VAR
-    (* extern fn motor_stop — заглушка (ST-009) *)
     motor_stop := 0;
 END_FUNCTION
 
@@ -39,7 +35,6 @@ FUNCTION motor_up : USINT
 VAR_INPUT
     unused : USINT;
 END_VAR
-    (* extern fn motor_up — заглушка (ST-009) *)
     motor_up := 0;
 END_FUNCTION
 
@@ -47,7 +42,6 @@ FUNCTION read_floor_sensors : USINT
 VAR_INPUT
     unused : USINT;
 END_VAR
-    (* extern fn read_floor_sensors — заглушка (ST-009) *)
     read_floor_sensors := 0;
 END_FUNCTION
 
@@ -55,7 +49,6 @@ FUNCTION scan_cabin_buttons : USINT
 VAR_INPUT
     unused : USINT;
 END_VAR
-    (* extern fn scan_cabin_buttons — заглушка (ST-009) *)
     scan_cabin_buttons := 0;
 END_FUNCTION
 
@@ -63,7 +56,6 @@ FUNCTION scan_floor_buttons : USINT
 VAR_INPUT
     unused : USINT;
 END_VAR
-    (* extern fn scan_floor_buttons — заглушка (ST-009) *)
     scan_floor_buttons := 0;
 END_FUNCTION
 

@@ -21,10 +21,7 @@ typedef enum {
     LIFT_PORT_DISPLAY = 0,
 } Lift_Out_NumericPort;
 
-// NOTICE: Определение констант для модели lift (Lift)
-/* Model lift (Lift) */
 struct Lift {
-    // NOTICE: Определение переменных модели
     uint8_t doors;
     uint8_t dwell;
     uint8_t moving;
@@ -38,7 +35,6 @@ struct Lift {
         LIFT_WAITING,
         LIFT_END
     } state;
-    /// NOTICE: Функции портов ввода вывода
     void  *userdata;
     void  (*write_bit)(Lift_Out_BitPort port, uint8_t bit, bool val, void *userdata);
     void    (*write_numeric)(Lift_Out_NumericPort port, uint8_t index, int64_t val, void *userdata);
@@ -50,7 +46,6 @@ void Lift_tick(Lift *main);
 void Lift_reset(Lift *main);
 bool Lift_is_done(const Lift *main);
 
-/* 0020: карта адресов портов и дефолтный HAL */
 typedef struct { uintptr_t addr; int8_t bit; uint8_t width; } Lift_PortBinding;
 
 static const Lift_PortBinding Lift_Out_BitPort__ADDR[] = {
@@ -70,7 +65,6 @@ static const Lift_PortBinding Lift_Out_NumericPort__ADDR[] = {
 static void Lift_default_write_bit(Lift_Out_BitPort p, uint8_t bit, bool val, void *userdata) {
     (void)userdata;
     Lift_PortBinding b = Lift_Out_BitPort__ADDR[p];
-    /* Разряд порта смещает позицию в регистре: у скалярного порта bit = 0. */
     int s = b.bit + (int)bit;
     switch (b.width) {
         case 2: {
@@ -98,7 +92,6 @@ static void Lift_default_write_bit(Lift_Out_BitPort p, uint8_t bit, bool val, vo
 static int64_t Lift_default_read_numeric(Lift_In_NumericPort p, uint8_t index, void *userdata) {
     (void)userdata;
     Lift_PortBinding b = Lift_In_NumericPort__ADDR[p];
-    /* Элемент лежит через шаг в ширину значения: у скалярного порта index = 0. */
     uintptr_t at = b.addr + (uintptr_t)index * b.width;
     switch (b.width) {
         case 1: return (int64_t)*(volatile uint8_t*)at;
@@ -110,7 +103,6 @@ static int64_t Lift_default_read_numeric(Lift_In_NumericPort p, uint8_t index, v
 static void Lift_default_write_numeric(Lift_Out_NumericPort p, uint8_t index, int64_t val, void *userdata) {
     (void)userdata;
     Lift_PortBinding b = Lift_Out_NumericPort__ADDR[p];
-    /* Элемент лежит через шаг в ширину значения: у скалярного порта index = 0. */
     uintptr_t at = b.addr + (uintptr_t)index * b.width;
     switch (b.width) {
         case 1: *(volatile uint8_t*)at = (uint8_t)val; break;

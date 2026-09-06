@@ -431,13 +431,6 @@ pub(crate) fn emit_port_sinks(
         } else {
             port.name.clone()
         };
-        p.ident(&format!(
-            "// Непрочитанные поля порта '{}' гасит поглотитель: структурный порт",
-            port.name
-        ))
-        .nl();
-        p.ident("// остаётся одним сигналом, и verilator считает их ошибкой.")
-            .nl();
         p.ident(&format!("logic _unused_{signal};")).nl();
         p.ident(&format!("assign _unused_{signal} = &{{1'b0, {signal}}};"))
             .nl();
@@ -462,19 +455,16 @@ pub(crate) fn emit_module_header(
 ) {
     p.ident(&format!("module {} (", module)).nl();
     p.up();
-    p.ident("input  logic clk,   // служебный порт цели sv: в .takt его нет")
-        .nl();
-    p.ident("input  logic rst_n, // служебный порт цели sv: сброс, активный низкий")
-        .nl();
+    p.ident("input  logic clk,").nl();
+    p.ident("input  logic rst_n,").nl();
     // Умолчание `1'b1` (IEEE 1800 §23.2.2.4): неподключённый `en` тождествен `en=1`,
     // поэтому существующие потребители не обязаны его подключать (фича 0063).
-    p.ident("input  logic en = 1'b1, // служебный порт цели sv: clock enable; НЕ обязателен (умолчание 1)")
-        .nl();
+    p.ident("input  logic en = 1'b1,").nl();
     // Источник времени (профиль «часы», фича 0134): внешний вход, как `clk`. Без
     // умолчания — миллисекунду подаёт тот, кто подал такт. Эмитится при использовании.
     if let Some(bits) = time_ms_bits {
         p.ident(&format!(
-            "input  logic [{}:0] {}, // служебный порт цели sv: источник времени, мс (фича 0134)",
+            "input  logic [{}:0] {},",
             bits.saturating_sub(1),
             crate::generator::sv::sv_time::TIME_MS_PORT
         ))

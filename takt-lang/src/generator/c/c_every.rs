@@ -84,14 +84,7 @@ pub(super) fn emit_fields(
     }
     let b = bits(map, model)?;
     for e in &blocks {
-        printer
-            .ident(&format!(
-                "// NOTICE: Поглощённое срабатываниями `every` время (период {} нс)",
-                e.period_nanos
-            ))
-            .nl()
-            .ident(&format!("uint{b}_t {};", field(e.idx)))
-            .nl();
+        printer.ident(&format!("uint{b}_t {};", field(e.idx))).nl();
     }
     Ok(())
 }

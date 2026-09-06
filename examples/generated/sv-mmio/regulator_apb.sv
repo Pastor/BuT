@@ -1,12 +1,5 @@
 // Порождено компилятором Takt (taktc) — адаптер шины APB для 'regulator'.
 // Не редактировать вручную: файл перезаписывается при каждой генерации.
-//
-// AMBA APB3, сторона slave. Трансфер: setup-фаза (psel, !penable) →
-// access-фаза (psel, penable). pready = 1 — состояний ожидания нет,
-// поэтому access длится один такт и запись регистра происходит однажды.
-//
-// Адрес шины равен адресу из 'at': декодирование старших разрядов —
-// обязанность внешнего декодера, который и формирует psel.
 
 module regulator_apb (
     input  logic        pclk,     // тактовый сигнал шины (= clk ядра)
@@ -26,7 +19,6 @@ module regulator_apb (
     logic [0:0]  reg_rdata;
 
     assign reg_addr  = paddr;
-    // Ядро только для чтения: записывать нечего (фича 0214).
     wire _unused_write = &{1'b0, pwdata, pwrite, psel, penable};
     assign prdata    = reg_rdata;
     assign pready    = 1'b1;

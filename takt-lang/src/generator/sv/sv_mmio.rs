@@ -512,27 +512,18 @@ pub(crate) fn emit_reg_iface_lines(p: &mut Printer, mmio: &Mmio) {
     }
     let aw = mmio.addr_width;
     let dw = mmio.data_width;
-    p.ident(&format!(
-        "input  logic [{}:0] reg_addr,   // регистровый интерфейс цели sv-mmio (фича 0062): адрес",
-        aw - 1
-    ))
-    .nl();
+    p.ident(&format!("input  logic [{}:0] reg_addr,", aw - 1))
+        .nl();
     // Фича 0214: сигналы записи — только при наличии записываемого регистра.
     // Модуль без входных портов доступен шине лишь на чтение, и объявлять ей
     // вход данных значило бы обещать запись, которой нет.
     if mmio.has_writable() {
-        p.ident(&format!(
-            "input  logic [{}:0] reg_wdata,  // данные записи (бит out игнорирует запись)",
-            dw - 1
-        ))
-        .nl();
-        p.ident("input  logic reg_wen,        // строб записи").nl();
+        p.ident(&format!("input  logic [{}:0] reg_wdata,", dw - 1))
+            .nl();
+        p.ident("input  logic reg_wen,").nl();
     }
-    p.ident(&format!(
-        "output logic [{}:0] reg_rdata,  // данные чтения (комбинационные)",
-        dw - 1
-    ))
-    .nl();
+    p.ident(&format!("output logic [{}:0] reg_rdata,", dw - 1))
+        .nl();
 }
 
 /// Печатает поглотитель битов `reg_wdata`, которых не занимает ни один вход.
@@ -564,10 +555,6 @@ fn emit_wdata_guard(p: &mut Printer, mmio: &Mmio) {
             }
         })
         .collect();
-    p.ident("// Биты слова данных, которых не занимает ни один входной порт:")
-        .nl();
-    p.ident("// шина их приносит, а читать некому — поглощаем редукцией (0486).")
-        .nl();
     p.ident(&format!(
         "wire _unused_wdata = &{{1'b0, {}}};",
         slices.join(", ")
@@ -597,10 +584,6 @@ pub(crate) fn emit_register_file(p: &mut Printer, mmio: &Mmio) {
     // нет комбинационной пары `_next` (автомат читает их как значение регистра,
     // ровно как раньше читал входной порт модуля).
     if !inputs.is_empty() {
-        p.ident("// Входные регистры sv-mmio: их значение приходит от шины (reg_wen),")
-            .nl();
-        p.ident("// а не от автомата, поэтому пары _next у них нет.")
-            .nl();
         for port in &inputs {
             let ty = sv_type(&port.ty, "").unwrap_or(SvType {
                 prefix: "logic".to_string(),
@@ -612,10 +595,6 @@ pub(crate) fn emit_register_file(p: &mut Printer, mmio: &Mmio) {
 
         // Защёлкивание входов шиной. Отдельный always_ff: каждый входной регистр
         // имеет ровно один драйвер (эту шину); регистры автомата — свой always_ff.
-        p.ident("// Запись входных регистров шиной. Сброс — в 0; при reg_wen адрес")
-            .nl();
-        p.ident("// декодируется в регистр (запись в бит out сюда не попадает — R5).")
-            .nl();
         p.ident("always_ff @(posedge clk) begin").nl();
         p.up();
         p.ident("if (!rst_n) begin").nl();
@@ -662,8 +641,7 @@ pub(crate) fn emit_register_file(p: &mut Printer, mmio: &Mmio) {
             p.down();
             p.ident("end").nl();
         }
-        p.ident("default: ; // адрес без in-порта — запись игнорируется")
-            .nl();
+        p.ident("default: ;").nl();
         p.down();
         p.ident("endcase").nl();
         p.down();
@@ -674,10 +652,6 @@ pub(crate) fn emit_register_file(p: &mut Printer, mmio: &Mmio) {
 
     // Чтение регистров шиной (комбинационное): собирает слово из всех портов по
     // адресу — и out (регистр автомата), и in (чтение возвращает записанное, R5).
-    p.ident("// Чтение регистров шиной (комбинационное). Слово собирается из всех")
-        .nl();
-    p.ident("// портов адреса; чтение бита in возвращает записанное шиной (R5).")
-        .nl();
     p.ident("always_comb begin").nl();
     p.up();
     p.ident("reg_rdata = '0;").nl();

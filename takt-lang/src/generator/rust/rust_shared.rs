@@ -113,17 +113,11 @@ pub(crate) fn union_names(map: &RustMap, is_root: bool) -> BTreeSet<String> {
 pub(crate) fn emit_shared_struct(
     p: &mut Printer,
     map: &RustMap,
-    model_local: &str,
     shared: &[(String, TypeNode)],
 ) -> Result<(), Diagnostic> {
     if shared.is_empty() {
         return Ok(());
     }
-    p.ident(&format!(
-        "/// Общие переменные модели '{}', разделяемые под-моделями.",
-        model_local
-    ))
-    .nl();
     p.ident(&format!("struct {} {{", shared_type_name(map)))
         .nl();
     p.up();

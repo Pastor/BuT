@@ -1,18 +1,8 @@
 // Порождено компилятором Takt (taktc) — цель: Rust (профиль no_std).
 // Не редактировать вручную: файл перезаписывается при каждой генерации.
-//
-// Модуль не обращается к std и подключается как `mod`:
-//
-//     #[path = "pid_heater.rs"]
-//     pub mod pid_heater;
-//
-// Атрибута #![no_std] здесь нет намеренно: он допустим только в корне
-// крейта, а no_std — свойство крейта, не модуля. Совместимость с no_std
-// проверяется гейтом (scripts/precheck.sh).
 
 #![forbid(unsafe_code)]
 
-/// Структура 'PidState' модели.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct PidState {
     pub kp: f64,
@@ -26,23 +16,15 @@ pub struct PidState {
     pub output: f64,
 }
 
-/// Порт ввода-вывода модели. Реализация — за трейтом [`Hal`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutF64Port {
     Temperature,
 }
 
-/// Аппаратный слой модели.
-///
-/// Заменяет пару указателей на функции и `void *userdata` цели `c`:
-/// состояние слоя живёт в самом типе-реализации, поэтому привести
-/// его не к тому типу или забыть проставить колбэк невозможно.
 pub trait Hal {
-    /// Пишет `value` в выходной порт `port`.
     fn write_f64(&mut self, port: OutF64Port, value: f64);
 }
 
-/// Функция 'pid_compute' модели.
 fn pid_compute(p: PidState, sp: f64, pv: f64) -> PidState {
     let mut r: PidState = p;
     let err: f64 = sp - pv;
@@ -72,16 +54,13 @@ fn pid_compute(p: PidState, sp: f64, pv: f64) -> PidState {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PidHeaterHeaterState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     Done,
     Heating,
     Holding,
-    /// Автомат завершён (`is_done`).
     End,
 }
 
-/// Модель 'Heater'.
 pub struct PidHeaterHeater {
     err: f64,
     loop_pid: PidState,
@@ -91,7 +70,6 @@ pub struct PidHeaterHeater {
 }
 
 impl PidHeaterHeater {
-    /// Создаёт модель в начальном состоянии.
     fn new() -> Self {
         Self {
             err: 0.0,
@@ -102,10 +80,6 @@ impl PidHeaterHeater {
         }
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     fn init(&mut self) {
         self.err = 0.0;
         self.loop_pid = PidState { kp: 0.5, ki: 0.0625, kd: 0.25, ts: 1.0, out_min: 0.0, out_max: 32.0, i_acc: 0.0, err_prev: 0.0, output: 0.0 };
@@ -114,7 +88,6 @@ impl PidHeaterHeater {
         self.state = PidHeaterHeaterState::Init;
     }
 
-    /// Один такт автомата.
     fn tick<H: Hal>(&mut self, shared: &mut PidHeaterShared, hal: &mut H) {
         if self.state == PidHeaterHeaterState::Init {
             shared.target = self.setpoint;
@@ -147,7 +120,6 @@ impl PidHeaterHeater {
         }
     }
 
-    /// Завершён ли автомат модели.
     fn is_done(&self) -> bool {
         self.state == PidHeaterHeaterState::End
     }
@@ -156,22 +128,18 @@ impl PidHeaterHeater {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PidHeaterState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     Finished,
     PidHeater,
-    /// Автомат завершён (`is_done`).
     End,
 }
 
-/// Шаг последовательной композиции состояния 'PidHeater'.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PidHeaterPidHeaterSeq {
     Heater0,
     Heater1,
 }
 
-/// Общие переменные модели 'pid_heater', разделяемые под-моделями.
 struct PidHeaterShared {
     ambient: f64,
     ctrl: f64,
@@ -181,24 +149,16 @@ struct PidHeaterShared {
     target: f64,
 }
 
-/// Модель 'pid_heater'.
 pub struct PidHeater<H: Hal> {
-    /// Общие с под-моделями переменные (фича 0059).
     shared: PidHeaterShared,
     state: PidHeaterState,
-    /// Текущий шаг последовательной композиции состояния 'PidHeater'.
     pid_heater_seq: PidHeaterPidHeaterSeq,
     pid_heater_heater0: PidHeaterHeater,
     pid_heater_heater1: PidHeaterHeater,
-    /// Аппаратный слой. Заменяет `void *userdata` цели `c`.
     hal: H,
 }
 
 impl<H: Hal> PidHeater<H> {
-    /// Создаёт модель поверх аппаратного слоя `hal`.
-    ///
-    /// В отличие от цели `c`, забыть проставить доступ к железу
-    /// невозможно: без `hal` модель не конструируется.
     pub fn new(hal: H) -> Self {
         let mut this = Self {
             shared: PidHeaterShared {
@@ -224,10 +184,6 @@ impl<H: Hal> PidHeater<H> {
         this
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     pub fn init(&mut self) {
         self.shared.ambient = 18.0;
         self.shared.ctrl = 0.0;
@@ -244,10 +200,6 @@ impl<H: Hal> PidHeater<H> {
         self.hal.write_f64(OutF64Port::Temperature, 0.0);
     }
 
-    /// Один такт автомата.
-    ///
-    /// Вход в стартовое состояние такта **не расходует** (контракт
-    /// ADR 0033): его тело исполняется в этом же вызове.
     pub fn tick(&mut self) {
         if self.state == PidHeaterState::Init {
             self.state = PidHeaterState::PidHeater;
@@ -275,14 +227,10 @@ impl<H: Hal> PidHeater<H> {
         }
     }
 
-    /// Сбрасывает модель. Паритет с `_reset` цели `c`.
-    ///
-    /// Сброс доходит до вложенных моделей через `init`.
     pub fn reset(&mut self) {
         self.init();
     }
 
-    /// Завершён ли автомат модели.
     pub fn is_done(&self) -> bool {
         self.state == PidHeaterState::End
     }

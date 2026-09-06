@@ -21,10 +21,7 @@ typedef enum {
     LIFT_PORT_DISPLAY = 0,
 } Lift_Out_NumericPort;
 
-// NOTICE: Определение констант для модели lift (Lift)
-/* Model lift (Lift) */
 struct Lift {
-    // NOTICE: Определение переменных модели
     uint8_t doors;
     uint8_t dwell;
     uint8_t moving;
@@ -38,7 +35,6 @@ struct Lift {
         LIFT_WAITING,
         LIFT_END
     } state;
-    /// NOTICE: Функции портов ввода вывода
     void  *userdata;
     void  (*write_bit)(Lift_Out_BitPort port, uint8_t bit, bool val, void *userdata);
     void    (*write_numeric)(Lift_Out_NumericPort port, uint8_t index, int64_t val, void *userdata);

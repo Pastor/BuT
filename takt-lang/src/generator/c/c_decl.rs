@@ -148,9 +148,6 @@ pub(super) fn generate_constants_and_ports_and_enums(
             }
         }
         if !lines.is_empty() {
-            printer
-                .print(format!("/// Константы и порты модели {}", model_name).as_str())
-                .nl();
             lines.sort();
             printer.print(lines.join("\n").as_str()).nl();
         }
@@ -172,9 +169,6 @@ pub(super) fn generate_constants_and_ports_and_enums(
             }
         }
         if !lines.is_empty() {
-            printer
-                .print(format!("/// Перечисления модели {}", model_name).as_str())
-                .nl();
             lines.sort();
             printer.print(lines.join("\n").as_str()).nl();
         }
@@ -356,14 +350,12 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
         }
 
         if !external_funcs.is_empty() {
-            printer.print("///Внешние функции").nl();
             external_funcs.sort();
             for func in external_funcs {
                 printer.print(func.as_str()).nl();
             }
         }
         if !local_funcs.is_empty() {
-            printer.print("///Функции моделей").nl();
             // Прототипы — до определений (0031): порядок определений не важен.
             local_protos.sort();
             for proto in &local_protos {

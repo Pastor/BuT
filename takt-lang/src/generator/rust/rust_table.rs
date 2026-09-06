@@ -66,8 +66,6 @@ pub(crate) fn emit_methods(
             buffered.ident("}").nl();
             buffered.down();
         }
-        p.ident("/// Страж строки таблицы переходов по её номеру.")
-            .nl();
         p.ident(&format!(
             "fn takt_guard{generics}(&mut self, id: u16{params}) -> bool {{"
         ))
@@ -124,8 +122,6 @@ pub(crate) fn emit_methods(
             buffered.ident("}").nl();
             buffered.down();
         }
-        p.ident("/// Действие строки таблицы: `exit` источника, затем `enter` приёмника.")
-            .nl();
         p.ident(&format!(
             "fn takt_action{generics}(&mut self, id: u16{params}) {{"
         ))
@@ -176,8 +172,6 @@ pub(crate) fn emit_methods(
         buffered.ident("}").nl();
         buffered.down();
     }
-    p.ident("/// Диспетчер: первая строка с совпавшим состоянием и истинным стражем.")
-        .nl();
     p.ident(&format!("fn takt_dispatch{generics}(&mut self{params}) {{"))
         .nl();
     p.up();
@@ -203,11 +197,6 @@ pub(crate) fn emit_data(p: &mut Printer, ctx: &ModelEmit) -> Result<(), Diagnost
     let state_enum = &ctx.table.enum_name;
     let row_type = row_type_name(ctx);
 
-    p.ident(&format!(
-        "/// Строка таблицы переходов модели '{}' (форма --fsm=table).",
-        ctx.name.local()
-    ))
-    .nl();
     p.ident(&format!("struct {row_type} {{")).nl();
     p.up();
     p.ident(&format!("from: {state_enum},")).nl();
@@ -221,11 +210,6 @@ pub(crate) fn emit_data(p: &mut Printer, ctx: &ModelEmit) -> Result<(), Diagnost
     p.down();
     p.ident("}").nl().nl();
 
-    p.ident(&format!(
-        "/// Отношение переходов модели '{}': строки просматриваются по порядку.",
-        ctx.name.local()
-    ))
-    .nl();
     p.ident(&format!(
         "static {}: [{row_type}; {}] = [",
         static_name(ctx),

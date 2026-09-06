@@ -16,7 +16,6 @@ FUNCTION has_flag : BOOL
 VAR_INPUT
     v : BOOL;
 END_VAR
-    (* extern fn has_flag — заглушка (ST-009) *)
     has_flag := FALSE;
 END_FUNCTION
 

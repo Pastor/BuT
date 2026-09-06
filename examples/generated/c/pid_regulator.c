@@ -1,12 +1,10 @@
 #include "pid_regulator.h"
 #include <assert.h>
 #include <math.h>
-/// Model functions 'Pid (PidRegulator:Pid)'
 static void PidRegulatorPid_init(PidRegulatorPid *model);
 static void PidRegulatorPid_tick(PidRegulatorPid *model, PidRegulator *main);
 static bool PidRegulatorPid_is_done(const PidRegulatorPid *model);
 
-/// Функция инициализации модели Pid (PidRegulator:Pid)
 void PidRegulatorPid_init(PidRegulatorPid *model) {
     assert(0 != model);
     model->state = PID_REGULATOR_PID_INIT;
@@ -26,7 +24,6 @@ void PidRegulatorPid_init(PidRegulatorPid *model) {
     model->target = 8.0;
 }
 
-/// Функция обработки модели Pid (PidRegulator:Pid)
 void PidRegulatorPid_tick(PidRegulatorPid *model, PidRegulator *main) {
     assert(0 != model);
     assert(0 != main);
@@ -69,24 +66,20 @@ void PidRegulatorPid_tick(PidRegulatorPid *model, PidRegulator *main) {
     }
 }
 
-/// Функция сброса модели Pid (PidRegulator:Pid)
 void PidRegulatorPid_reset(PidRegulatorPid *model) {
     PidRegulatorPid_init(model);
 }
 
-/// Функция проверки терминального состояния модели Pid (PidRegulator:Pid)
 bool PidRegulatorPid_is_done(const PidRegulatorPid *model) {
     return model->state == PID_REGULATOR_PID_END;
 }
 
-/// Функция инициализации модели pid_regulator (PidRegulator)
 void PidRegulator_init(PidRegulator *model) {
     assert(0 != model);
     model->state = PID_REGULATOR_INIT;
     PidRegulatorPid_init(&model->main);
 }
 
-/// Функция обработки модели pid_regulator (PidRegulator)
 void PidRegulator_tick(PidRegulator *model) {
     assert(0 != model);
     if (model->state == PID_REGULATOR_INIT) {
@@ -108,12 +101,10 @@ void PidRegulator_tick(PidRegulator *model) {
     }
 }
 
-/// Функция сброса модели pid_regulator (PidRegulator)
 void PidRegulator_reset(PidRegulator *model) {
     PidRegulator_init(model);
 }
 
-/// Функция проверки терминального состояния модели pid_regulator (PidRegulator)
 bool PidRegulator_is_done(const PidRegulator *model) {
     return model->state == PID_REGULATOR_END;
 }

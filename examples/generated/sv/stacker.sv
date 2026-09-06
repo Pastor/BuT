@@ -1,14 +1,10 @@
 // Порождено компилятором Takt (taktc) — цель: SystemVerilog (IEEE 1800).
 // Не редактировать вручную: файл перезаписывается при каждой генерации.
-//
-// Такт модели Takt ≡ фронт clk (posedge). Сброс синхронный, активный низкий:
-// ветвь if (!rst_n) несёт стартовое состояние — синтетического INIT нет,
-// поэтому тело стартового состояния исполняется на такте 1 (контракт 0033).
 
 module stacker (
-    input  logic clk,   // служебный порт цели sv: в .takt его нет
-    input  logic rst_n, // служебный порт цели sv: сброс, активный низкий
-    input  logic en = 1'b1, // служебный порт цели sv: clock enable; НЕ обязателен (умолчание 1)
+    input  logic clk,
+    input  logic rst_n,
+    input  logic en = 1'b1,
     input  logic [7:0] pos_row,
     input  logic [7:0] pos_section,
     input  logic [7:0] pos_stack,
@@ -38,8 +34,6 @@ module stacker (
     localparam logic [7:0] stacker_PICKUP_SECTION = 1;
     localparam logic [7:0] stacker_PICKUP_STACK = 0;
 
-    // Состояния модели 'CommandReceiver (Stacker:CommandReceiver)'. Синтетического INIT нет: стартовое
-    // состояние живёт в ветви сброса (контракт ADR 0033).
     typedef enum logic [1:0] {
         STACKER_COMMAND_RECEIVER_ACCEPTING_TASK = 2'd0,
         STACKER_COMMAND_RECEIVER_TASK_ACTIVE = 2'd1,
@@ -47,8 +41,6 @@ module stacker (
         STACKER_COMMAND_RECEIVER_END = 2'd3
     } stacker_command_receiver_state_e;
 
-    // Состояния модели 'LiftController (Stacker:LiftController)'. Синтетического INIT нет: стартовое
-    // состояние живёт в ветви сброса (контракт ADR 0033).
     typedef enum logic [1:0] {
         STACKER_LIFT_CONTROLLER_LIFT_DONE = 2'd0,
         STACKER_LIFT_CONTROLLER_LIFT_IDLE = 2'd1,
@@ -56,8 +48,6 @@ module stacker (
         STACKER_LIFT_CONTROLLER_END = 2'd3
     } stacker_lift_controller_state_e;
 
-    // Состояния модели 'MovementController (Stacker:MovementController)'. Синтетического INIT нет: стартовое
-    // состояние живёт в ветви сброса (контракт ADR 0033).
     typedef enum logic [3:0] {
         STACKER_MOVEMENT_CONTROLLER_DISPATCH_MOVE = 4'd0,
         STACKER_MOVEMENT_CONTROLLER_EMERGENCY_CHARGE = 4'd1,
@@ -74,8 +64,6 @@ module stacker (
         STACKER_MOVEMENT_CONTROLLER_END = 4'd12
     } stacker_movement_controller_state_e;
 
-    // Состояния модели 'stacker (Stacker)'. Синтетического INIT нет: стартовое
-    // состояние живёт в ветви сброса (контракт ADR 0033).
     typedef enum logic [0:0] {
         STACKER_STACKER = 1'd0,
         STACKER_END = 1'd1
@@ -148,11 +136,7 @@ module stacker (
         travel_time = t;
     endfunction
 
-    // Комбинационная часть: БЛОКИРУЮЩИЕ присваивания, поэтому порядок
-    // операторов и видимость записей внутри такта — в точности как в C.
     always_comb begin
-        // Умолчание «остаться как есть». Без него неполное присваивание
-        // даёт защёлку (verilator: LATCH).
         stacker_command_receiver_state_next = stacker_command_receiver_state;
         stacker_lift_controller_state_next = stacker_lift_controller_state;
         stacker_movement_controller_state_next = stacker_movement_controller_state;
@@ -175,7 +159,6 @@ module stacker (
 
         unique case (state)
             STACKER_STACKER: begin
-                // Под-модель 'CommandReceiver (Stacker:CommandReceiver)' — инлайн её такта.
                 unique case (stacker_command_receiver_state)
                     STACKER_COMMAND_RECEIVER_ACCEPTING_TASK: begin
                         begin
@@ -203,7 +186,6 @@ module stacker (
                     end
                     STACKER_COMMAND_RECEIVER_END: begin end
                 endcase
-                // Под-модель 'MovementController (Stacker:MovementController)' — инлайн её такта.
                 unique case (stacker_movement_controller_state)
                     STACKER_MOVEMENT_CONTROLLER_DISPATCH_MOVE: begin
                         if ((!stacker_tgt_type_next)) begin
@@ -357,7 +339,6 @@ module stacker (
                     end
                     STACKER_MOVEMENT_CONTROLLER_END: begin end
                 endcase
-                // Под-модель 'LiftController (Stacker:LiftController)' — инлайн её такта.
                 unique case (stacker_lift_controller_state)
                     STACKER_LIFT_CONTROLLER_LIFT_DONE: begin
                         if ((!stacker_lift_request_next)) begin
@@ -397,9 +378,6 @@ module stacker (
         endcase
     end
 
-    // Регистровая часть: НЕБЛОКИРУЮЩИЕ присваивания. Ветвь сброса несёт
-    // стартовые состояния ВСЕХ уровней — они сбрасываются одним фронтом,
-    // поэтому сдвиг такта равен нулю на любой глубине (контракт 0033).
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             stacker_command_receiver_state <= STACKER_COMMAND_RECEIVER_WAITING_FOR_TASK;
@@ -450,6 +428,5 @@ module stacker (
         end
     end
 
-    // Терминальность модели наблюдаема снаружи — аналог _is_done() цели c.
     assign is_done = (state == STACKER_END);
 endmodule

@@ -182,7 +182,6 @@ pub(crate) fn emit_functions(
                 guard_enable: map.guard_enable(),
             };
 
-            p.ident(&format!("/// Функция '{}' модели.", name)).nl();
             p.ident(&format!(
                 "fn {}{}({}){} {{",
                 ident,

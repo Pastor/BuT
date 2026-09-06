@@ -1,12 +1,10 @@
 #include "pid_heater.h"
 #include <assert.h>
 #include <math.h>
-/// Model functions 'Heater (PidHeater:Heater)'
 static void PidHeaterHeater_init(PidHeaterHeater *model, PidHeater *main);
 static void PidHeaterHeater_tick(PidHeaterHeater *model, PidHeater *main);
 static bool PidHeaterHeater_is_done(const PidHeaterHeater *model);
 
-///Функции моделей
 static PidState PidHeater_pid_compute(PidState p, double sp, double pv);
 static PidState PidHeater_pid_compute(PidState p, double sp, double pv) {
     PidState r = p;
@@ -33,7 +31,6 @@ static PidState PidHeater_pid_compute(PidState p, double sp, double pv) {
     return r;
 }
 
-/// Функция инициализации модели Heater (PidHeater:Heater)
 void PidHeaterHeater_init(PidHeaterHeater *model, PidHeater *main) {
     assert(0 != model);
     model->state = PID_HEATER_HEATER_INIT;
@@ -44,7 +41,6 @@ void PidHeaterHeater_init(PidHeaterHeater *model, PidHeater *main) {
     (*main->write_float)(PID_HEATER_HEATER_PORT_TEMPERATURE, 0, 0.0, main->userdata);
 }
 
-/// Функция обработки модели Heater (PidHeater:Heater)
 void PidHeaterHeater_tick(PidHeaterHeater *model, PidHeater *main) {
     assert(0 != model);
     assert(0 != main);
@@ -86,17 +82,14 @@ void PidHeaterHeater_tick(PidHeaterHeater *model, PidHeater *main) {
     }
 }
 
-/// Функция сброса модели Heater (PidHeater:Heater)
 void PidHeaterHeater_reset(PidHeaterHeater *model, PidHeater *main) {
     PidHeaterHeater_init(model, main);
 }
 
-/// Функция проверки терминального состояния модели Heater (PidHeater:Heater)
 bool PidHeaterHeater_is_done(const PidHeaterHeater *model) {
     return model->state == PID_HEATER_HEATER_END;
 }
 
-/// Функция инициализации модели pid_heater (PidHeater)
 void PidHeater_init(PidHeater *model) {
     assert(0 != model);
     model->state = PID_HEATER_INIT;
@@ -110,7 +103,6 @@ void PidHeater_init(PidHeater *model) {
     model->target = 80.0;
 }
 
-/// Функция обработки модели pid_heater (PidHeater)
 void PidHeater_tick(PidHeater *model) {
     assert(0 != model);
     if (model->state == PID_HEATER_INIT) {
@@ -147,12 +139,10 @@ void PidHeater_tick(PidHeater *model) {
     }
 }
 
-/// Функция сброса модели pid_heater (PidHeater)
 void PidHeater_reset(PidHeater *model) {
     PidHeater_init(model);
 }
 
-/// Функция проверки терминального состояния модели pid_heater (PidHeater)
 bool PidHeater_is_done(const PidHeater *model) {
     return model->state == PID_HEATER_END;
 }

@@ -62,17 +62,11 @@ pub(super) fn emit_state_time_fields(
     if needs_dwell {
         let bits =
             crate::semantic::duration::counter_bits(counter_ticks(map, model)?).unwrap_or(64);
-        printer
-            .ident("// NOTICE: Счётчик тактов, прошедших с входа в состояние (выдержка `after`)")
-            .nl()
-            .ident(&format!("uint{bits}_t {DWELL_FIELD};"))
-            .nl();
+        printer.ident(&format!("uint{bits}_t {DWELL_FIELD};")).nl();
     }
     if needs_entry_ms {
         let bits = clock_marker_bits(map)?;
         printer
-            .ident("// NOTICE: Метка времени входа в состояние — внешний источник (профиль «часы»)")
-            .nl()
             .ident(&format!("uint{bits}_t {ENTRY_MS_FIELD};"))
             .nl();
     }

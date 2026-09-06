@@ -1,18 +1,8 @@
 // Порождено компилятором Takt (taktc) — цель: Rust (профиль no_std).
 // Не редактировать вручную: файл перезаписывается при каждой генерации.
-//
-// Модуль не обращается к std и подключается как `mod`:
-//
-//     #[path = "elevator.rs"]
-//     pub mod elevator;
-//
-// Атрибута #![no_std] здесь нет намеренно: он допустим только в корне
-// крейта, а no_std — свойство крейта, не модуля. Совместимость с no_std
-// проверяется гейтом (scripts/precheck.sh).
 
 #![forbid(unsafe_code)]
 
-/// Перечисление 'Action' модели.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u16)]
 pub enum Action {
@@ -20,7 +10,6 @@ pub enum Action {
     Closing = 671,
 }
 
-/// Перечисление 'Floor' модели.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Floor {
@@ -28,7 +17,6 @@ pub enum Floor {
     Top = 81,
 }
 
-/// Порт ввода-вывода модели. Реализация — за трейтом [`Hal`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InU8Port {
     Sensors1,
@@ -43,67 +31,44 @@ pub enum InU8Port {
     SensorsCab,
 }
 
-/// Аппаратный слой модели.
-///
-/// Заменяет пару указателей на функции и `void *userdata` цели `c`:
-/// состояние слоя живёт в самом типе-реализации, поэтому привести
-/// его не к тому типу или забыть проставить колбэк невозможно.
 pub trait Hal {
-    /// Читает входной порт `port`.
     fn read_u8(&mut self, port: InU8Port) -> u8;
-    /// Внешняя функция модели (`extern fn` в исходнике .takt).
     fn door_close(&mut self);
-    /// Внешняя функция модели (`extern fn` в исходнике .takt).
     fn door_open(&mut self);
-    /// Внешняя функция модели (`extern fn` в исходнике .takt).
     fn motor_down(&mut self);
-    /// Внешняя функция модели (`extern fn` в исходнике .takt).
     fn motor_stop(&mut self);
-    /// Внешняя функция модели (`extern fn` в исходнике .takt).
     fn motor_up(&mut self);
-    /// Внешняя функция модели (`extern fn` в исходнике .takt).
     fn read_floor_sensors(&mut self);
-    /// Внешняя функция модели (`extern fn` в исходнике .takt).
     fn scan_cabin_buttons(&mut self);
-    /// Внешняя функция модели (`extern fn` в исходнике .takt).
     fn scan_floor_buttons(&mut self);
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ElevatorEngineState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     DoorClosing,
     DoorOpening,
     Idle,
     MovingDown,
     MovingUp,
-    /// Автомат завершён (`is_done`).
     End,
 }
 
-/// Модель 'Engine'.
 pub struct ElevatorEngine {
     state: ElevatorEngineState,
 }
 
 impl ElevatorEngine {
-    /// Создаёт модель в начальном состоянии.
     fn new() -> Self {
         Self {
             state: ElevatorEngineState::Init,
         }
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     fn init(&mut self) {
         self.state = ElevatorEngineState::Init;
     }
 
-    /// Один такт автомата.
     fn tick<H: Hal>(&mut self, shared: &mut ElevatorShared, hal: &mut H) {
         if self.state == ElevatorEngineState::Init {
             hal.door_open();
@@ -167,7 +132,6 @@ impl ElevatorEngine {
         }
     }
 
-    /// Завершён ли автомат модели.
     fn is_done(&self) -> bool {
         self.state == ElevatorEngineState::End
     }
@@ -176,14 +140,12 @@ impl ElevatorEngine {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ElevatorState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     End,
     Main,
     Middle,
 }
 
-/// Шаг последовательной композиции состояния 'Middle'.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ElevatorMiddleSeq {
     Engine0,
@@ -193,19 +155,15 @@ enum ElevatorMiddleSeq {
     Engine4,
 }
 
-/// Общие переменные модели 'elevator', разделяемые под-моделями.
 struct ElevatorShared {
     current_floor: u8,
     has_call: u8,
     target_floor: u8,
 }
 
-/// Модель 'elevator'.
 pub struct Elevator<H: Hal> {
-    /// Общие с под-моделями переменные (фича 0059).
     shared: ElevatorShared,
     state: ElevatorState,
-    /// Текущий шаг последовательной композиции состояния 'Middle'.
     middle_seq: ElevatorMiddleSeq,
     main: ElevatorEngine,
     middle_engine0: ElevatorEngine,
@@ -214,15 +172,10 @@ pub struct Elevator<H: Hal> {
     middle_engine2: ElevatorEngine,
     middle_engine3: ElevatorEngine,
     middle_engine4: ElevatorEngine,
-    /// Аппаратный слой. Заменяет `void *userdata` цели `c`.
     hal: H,
 }
 
 impl<H: Hal> Elevator<H> {
-    /// Создаёт модель поверх аппаратного слоя `hal`.
-    ///
-    /// В отличие от цели `c`, забыть проставить доступ к железу
-    /// невозможно: без `hal` модель не конструируется.
     pub fn new(hal: H) -> Self {
         Self {
             shared: ElevatorShared {
@@ -243,10 +196,6 @@ impl<H: Hal> Elevator<H> {
         }
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     pub fn init(&mut self) {
         self.shared.current_floor = 1;
         self.shared.has_call = 0;
@@ -262,10 +211,6 @@ impl<H: Hal> Elevator<H> {
         self.middle_engine4.init();
     }
 
-    /// Один такт автомата.
-    ///
-    /// Вход в стартовое состояние такта **не расходует** (контракт
-    /// ADR 0033): его тело исполняется в этом же вызове.
     pub fn tick(&mut self) {
         if self.state == ElevatorState::Init {
             self.state = ElevatorState::Main;
@@ -317,14 +262,10 @@ impl<H: Hal> Elevator<H> {
         }
     }
 
-    /// Сбрасывает модель. Паритет с `_reset` цели `c`.
-    ///
-    /// Сброс доходит до вложенных моделей через `init`.
     pub fn reset(&mut self) {
         self.init();
     }
 
-    /// Завершён ли автомат модели.
     pub fn is_done(&self) -> bool {
         self.state == ElevatorState::End
     }

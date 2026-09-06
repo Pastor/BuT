@@ -1,18 +1,8 @@
 // Порождено компилятором Takt (taktc) — цель: Rust (профиль no_std).
 // Не редактировать вручную: файл перезаписывается при каждой генерации.
-//
-// Модуль не обращается к std и подключается как `mod`:
-//
-//     #[path = "comprehensive.rs"]
-//     pub mod comprehensive;
-//
-// Атрибута #![no_std] здесь нет намеренно: он допустим только в корне
-// крейта, а no_std — свойство крейта, не модуля. Совместимость с no_std
-// проверяется гейтом (scripts/precheck.sh).
 
 #![forbid(unsafe_code)]
 
-/// Перечисление 'Mode' модели.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Mode {
@@ -27,19 +17,11 @@ const COMPREHENSIVE_CONTROLLER_MAX_COUNT: u8 = 3;
 const COMPREHENSIVE_CONTROLLER_MAX_TEMP: u8 = 100;
 const COMPREHENSIVE_CONTROLLER_WARMUP_TEMP: u8 = 10;
 
-/// Аппаратный слой модели.
-///
-/// Заменяет пару указателей на функции и `void *userdata` цели `c`:
-/// состояние слоя живёт в самом типе-реализации, поэтому привести
-/// его не к тому типу или забыть проставить колбэк невозможно.
 pub trait Hal {
-    /// Внешняя функция модели (`extern fn` в исходнике .takt).
     fn log_count(&mut self, n: u8);
-    /// Внешняя функция модели (`extern fn` в исходнике .takt).
     fn log_temp(&mut self, value: u8);
 }
 
-/// Функция 'clamp_temp' модели.
 fn clamp_temp(value: u8) -> u8 {
     if value > COMPREHENSIVE_CONTROLLER_MAX_TEMP {
         return COMPREHENSIVE_CONTROLLER_MAX_TEMP;
@@ -47,12 +29,10 @@ fn clamp_temp(value: u8) -> u8 {
     value
 }
 
-/// Функция 'increment' модели.
 fn increment(n: u8) -> u8 {
     n.wrapping_add(1)
 }
 
-/// Функция 'steps_to_limit' модели.
 fn steps_to_limit(value: u8) -> u8 {
     let mut remaining: u8 = 0;
     let mut v: u8 = value;
@@ -63,7 +43,6 @@ fn steps_to_limit(value: u8) -> u8 {
     remaining
 }
 
-/// Функция 'steps_to_zero' модели.
 fn steps_to_zero(value: u8) -> u8 {
     let mut remaining: u8 = 0;
     let mut v: u8 = value;
@@ -80,17 +59,14 @@ fn steps_to_zero(value: u8) -> u8 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ComprehensiveControllerState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     Cooling,
     Done,
     Heating,
     Idle,
-    /// Автомат завершён (`is_done`).
     End,
 }
 
-/// Модель 'Controller'.
 pub struct ComprehensiveController {
     count: u8,
     mode: Mode,
@@ -99,7 +75,6 @@ pub struct ComprehensiveController {
 }
 
 impl ComprehensiveController {
-    /// Создаёт модель в начальном состоянии.
     fn new() -> Self {
         Self {
             count: 0,
@@ -109,10 +84,6 @@ impl ComprehensiveController {
         }
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     fn init(&mut self) {
         self.count = 0;
         self.mode = Mode::Auto;
@@ -120,7 +91,6 @@ impl ComprehensiveController {
         self.state = ComprehensiveControllerState::Init;
     }
 
-    /// Один такт автомата.
     fn tick<H: Hal>(&mut self, hal: &mut H) {
         if self.state == ComprehensiveControllerState::Init {
             self.temperature = 0;
@@ -177,7 +147,6 @@ impl ComprehensiveController {
         }
     }
 
-    /// Завершён ли автомат модели.
     fn is_done(&self) -> bool {
         self.state == ComprehensiveControllerState::End
     }
@@ -186,26 +155,18 @@ impl ComprehensiveController {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ComprehensiveState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     Entry,
-    /// Автомат завершён (`is_done`).
     End,
 }
 
-/// Модель 'comprehensive'.
 pub struct Comprehensive<H: Hal> {
     state: ComprehensiveState,
     entry: ComprehensiveController,
-    /// Аппаратный слой. Заменяет `void *userdata` цели `c`.
     hal: H,
 }
 
 impl<H: Hal> Comprehensive<H> {
-    /// Создаёт модель поверх аппаратного слоя `hal`.
-    ///
-    /// В отличие от цели `c`, забыть проставить доступ к железу
-    /// невозможно: без `hal` модель не конструируется.
     pub fn new(hal: H) -> Self {
         Self {
             state: ComprehensiveState::Init,
@@ -214,19 +175,11 @@ impl<H: Hal> Comprehensive<H> {
         }
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     pub fn init(&mut self) {
         self.state = ComprehensiveState::Init;
         self.entry.init();
     }
 
-    /// Один такт автомата.
-    ///
-    /// Вход в стартовое состояние такта **не расходует** (контракт
-    /// ADR 0033): его тело исполняется в этом же вызове.
     pub fn tick(&mut self) {
         if self.state == ComprehensiveState::Init {
             self.state = ComprehensiveState::Entry;
@@ -243,14 +196,10 @@ impl<H: Hal> Comprehensive<H> {
         }
     }
 
-    /// Сбрасывает модель. Паритет с `_reset` цели `c`.
-    ///
-    /// Сброс доходит до вложенных моделей через `init`.
     pub fn reset(&mut self) {
         self.init();
     }
 
-    /// Завершён ли автомат модели.
     pub fn is_done(&self) -> bool {
         self.state == ComprehensiveState::End
     }

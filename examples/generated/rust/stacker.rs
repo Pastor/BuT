@@ -1,14 +1,5 @@
 // Порождено компилятором Takt (taktc) — цель: Rust (профиль no_std).
 // Не редактировать вручную: файл перезаписывается при каждой генерации.
-//
-// Модуль не обращается к std и подключается как `mod`:
-//
-//     #[path = "stacker.rs"]
-//     pub mod stacker;
-//
-// Атрибута #![no_std] здесь нет намеренно: он допустим только в корне
-// крейта, а no_std — свойство крейта, не модуля. Совместимость с no_std
-// проверяется гейтом (scripts/precheck.sh).
 
 #![forbid(unsafe_code)]
 
@@ -22,7 +13,6 @@ const STACKER_PICKUP_ROW: u8 = 1;
 const STACKER_PICKUP_SECTION: u8 = 1;
 const STACKER_PICKUP_STACK: u8 = 0;
 
-/// Порт ввода-вывода модели. Реализация — за трейтом [`Hal`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InBitPort {
     SenseAtCharge,
@@ -32,7 +22,6 @@ pub enum InBitPort {
     TaskValid,
 }
 
-/// Порт ввода-вывода модели. Реализация — за трейтом [`Hal`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InU8Port {
     PosRow,
@@ -43,7 +32,6 @@ pub enum InU8Port {
     TaskStackNo,
 }
 
-/// Порт ввода-вывода модели. Реализация — за трейтом [`Hal`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutBitPort {
     CmdAck,
@@ -51,7 +39,6 @@ pub enum OutBitPort {
     CmdFork,
 }
 
-/// Порт ввода-вывода модели. Реализация — за трейтом [`Hal`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutU8Port {
     CmdTargetRow,
@@ -59,23 +46,13 @@ pub enum OutU8Port {
     CmdTargetStack,
 }
 
-/// Аппаратный слой модели.
-///
-/// Заменяет пару указателей на функции и `void *userdata` цели `c`:
-/// состояние слоя живёт в самом типе-реализации, поэтому привести
-/// его не к тому типу или забыть проставить колбэк невозможно.
 pub trait Hal {
-    /// Читает входной порт `port`.
     fn read_bit(&mut self, port: InBitPort) -> bool;
-    /// Читает входной порт `port`.
     fn read_u8(&mut self, port: InU8Port) -> u8;
-    /// Пишет `value` в выходной порт `port`.
     fn write_bit(&mut self, port: OutBitPort, value: bool);
-    /// Пишет `value` в выходной порт `port`.
     fn write_u8(&mut self, port: OutU8Port, value: u8);
 }
 
-/// Функция 'travel_time' модели.
 fn travel_time<H: Hal>(to_stack: u8, to_row: u8, to_section: u8, hal: &mut H) -> u8 {
     let ds: u8 = if hal.read_u8(InU8Port::PosStack) > to_stack { hal.read_u8(InU8Port::PosStack).wrapping_sub(to_stack) } else { to_stack.wrapping_sub(hal.read_u8(InU8Port::PosStack)) };
     let dr: u8 = if hal.read_u8(InU8Port::PosRow) > to_row { hal.read_u8(InU8Port::PosRow).wrapping_sub(to_row) } else { to_row.wrapping_sub(hal.read_u8(InU8Port::PosRow)) };
@@ -92,37 +69,28 @@ fn travel_time<H: Hal>(to_stack: u8, to_row: u8, to_section: u8, hal: &mut H) ->
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum StackerCommandReceiverState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     AcceptingTask,
     TaskActive,
     WaitingForTask,
-    /// Автомат завершён (`is_done`).
     End,
 }
 
-/// Модель 'CommandReceiver'.
 pub struct StackerCommandReceiver {
     state: StackerCommandReceiverState,
 }
 
 impl StackerCommandReceiver {
-    /// Создаёт модель в начальном состоянии.
     fn new() -> Self {
         Self {
             state: StackerCommandReceiverState::Init,
         }
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     fn init(&mut self) {
         self.state = StackerCommandReceiverState::Init;
     }
 
-    /// Один такт автомата.
     fn tick<H: Hal>(&mut self, shared: &mut StackerShared, hal: &mut H) {
         if self.state == StackerCommandReceiverState::Init {
             hal.write_bit(OutBitPort::CmdAck, false);
@@ -156,7 +124,6 @@ impl StackerCommandReceiver {
         }
     }
 
-    /// Завершён ли автомат модели.
     fn is_done(&self) -> bool {
         self.state == StackerCommandReceiverState::End
     }
@@ -165,37 +132,28 @@ impl StackerCommandReceiver {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum StackerLiftControllerState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     LiftDone,
     LiftIdle,
     LiftOperating,
-    /// Автомат завершён (`is_done`).
     End,
 }
 
-/// Модель 'LiftController'.
 pub struct StackerLiftController {
     state: StackerLiftControllerState,
 }
 
 impl StackerLiftController {
-    /// Создаёт модель в начальном состоянии.
     fn new() -> Self {
         Self {
             state: StackerLiftControllerState::Init,
         }
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     fn init(&mut self) {
         self.state = StackerLiftControllerState::Init;
     }
 
-    /// Один такт автомата.
     fn tick<H: Hal>(&mut self, shared: &mut StackerShared, hal: &mut H) {
         if self.state == StackerLiftControllerState::Init {
             hal.write_bit(OutBitPort::CmdFork, false);
@@ -229,7 +187,6 @@ impl StackerLiftController {
         }
     }
 
-    /// Завершён ли автомат модели.
     fn is_done(&self) -> bool {
         self.state == StackerLiftControllerState::End
     }
@@ -238,7 +195,6 @@ impl StackerLiftController {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum StackerMovementControllerState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     DispatchMove,
     EmergencyCharge,
@@ -252,32 +208,24 @@ enum StackerMovementControllerState {
     WaitingForkAtDropoff,
     WaitingForkAtPickup,
     WaitingForkAtStorage,
-    /// Автомат завершён (`is_done`).
     End,
 }
 
-/// Модель 'MovementController'.
 pub struct StackerMovementController {
     state: StackerMovementControllerState,
 }
 
 impl StackerMovementController {
-    /// Создаёт модель в начальном состоянии.
     fn new() -> Self {
         Self {
             state: StackerMovementControllerState::Init,
         }
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     fn init(&mut self) {
         self.state = StackerMovementControllerState::Init;
     }
 
-    /// Один такт автомата.
     fn tick<H: Hal>(&mut self, shared: &mut StackerShared, hal: &mut H) {
         if self.state == StackerMovementControllerState::Init {
             hal.write_u8(OutU8Port::CmdTargetStack, STACKER_CHARGE_STACK);
@@ -435,7 +383,6 @@ impl StackerMovementController {
         }
     }
 
-    /// Завершён ли автомат модели.
     fn is_done(&self) -> bool {
         self.state == StackerMovementControllerState::End
     }
@@ -444,14 +391,11 @@ impl StackerMovementController {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum StackerState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     Stacker,
-    /// Автомат завершён (`is_done`).
     End,
 }
 
-/// Общие переменные модели 'stacker', разделяемые под-моделями.
 struct StackerShared {
     busy: bool,
     eta: u8,
@@ -464,23 +408,16 @@ struct StackerShared {
     tgt_type: bool,
 }
 
-/// Модель 'stacker'.
 pub struct Stacker<H: Hal> {
-    /// Общие с под-моделями переменные (фича 0059).
     shared: StackerShared,
     state: StackerState,
     stacker_command_receiver0: StackerCommandReceiver,
     stacker_movement_controller1: StackerMovementController,
     stacker_lift_controller2: StackerLiftController,
-    /// Аппаратный слой. Заменяет `void *userdata` цели `c`.
     hal: H,
 }
 
 impl<H: Hal> Stacker<H> {
-    /// Создаёт модель поверх аппаратного слоя `hal`.
-    ///
-    /// В отличие от цели `c`, забыть проставить доступ к железу
-    /// невозможно: без `hal` модель не конструируется.
     pub fn new(hal: H) -> Self {
         Self {
             shared: StackerShared {
@@ -502,10 +439,6 @@ impl<H: Hal> Stacker<H> {
         }
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     pub fn init(&mut self) {
         self.shared.busy = false;
         self.shared.eta = 0;
@@ -522,10 +455,6 @@ impl<H: Hal> Stacker<H> {
         self.stacker_lift_controller2.init();
     }
 
-    /// Один такт автомата.
-    ///
-    /// Вход в стартовое состояние такта **не расходует** (контракт
-    /// ADR 0033): его тело исполняется в этом же вызове.
     pub fn tick(&mut self) {
         if self.state == StackerState::Init {
             self.state = StackerState::Stacker;
@@ -544,14 +473,10 @@ impl<H: Hal> Stacker<H> {
         }
     }
 
-    /// Сбрасывает модель. Паритет с `_reset` цели `c`.
-    ///
-    /// Сброс доходит до вложенных моделей через `init`.
     pub fn reset(&mut self) {
         self.init();
     }
 
-    /// Завершён ли автомат модели.
     pub fn is_done(&self) -> bool {
         self.state == StackerState::End
     }

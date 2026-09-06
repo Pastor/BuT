@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* Forward declarations */
 typedef struct StackerCommandReceiver StackerCommandReceiver;
 typedef struct StackerLiftController StackerLiftController;
 typedef struct StackerMovementController StackerMovementController;
@@ -38,10 +37,7 @@ typedef enum {
     STACKER_PORT_CMD_TARGET_STACK = 2,
 } Stacker_Out_NumericPort;
 
-// NOTICE: Определение констант для модели CommandReceiver (Stacker:CommandReceiver)
-/* Model CommandReceiver (Stacker:CommandReceiver) */
 struct StackerCommandReceiver {
-    // NOTICE: Определение переменных модели
     enum {
         STACKER_COMMAND_RECEIVER_INIT,
         STACKER_COMMAND_RECEIVER_ACCEPTING_TASK,
@@ -51,10 +47,7 @@ struct StackerCommandReceiver {
     } state;
 };
 
-// NOTICE: Определение констант для модели LiftController (Stacker:LiftController)
-/* Model LiftController (Stacker:LiftController) */
 struct StackerLiftController {
-    // NOTICE: Определение переменных модели
     enum {
         STACKER_LIFT_CONTROLLER_INIT,
         STACKER_LIFT_CONTROLLER_LIFT_DONE,
@@ -64,10 +57,7 @@ struct StackerLiftController {
     } state;
 };
 
-// NOTICE: Определение констант для модели MovementController (Stacker:MovementController)
-/* Model MovementController (Stacker:MovementController) */
 struct StackerMovementController {
-    // NOTICE: Определение переменных модели
     enum {
         STACKER_MOVEMENT_CONTROLLER_INIT,
         STACKER_MOVEMENT_CONTROLLER_DISPATCH_MOVE,
@@ -86,10 +76,7 @@ struct StackerMovementController {
     } state;
 };
 
-// NOTICE: Определение констант для модели stacker (Stacker)
-/* Model stacker (Stacker) */
 struct Stacker {
-    // NOTICE: Определение переменных модели
     uint8_t busy;
     uint8_t eta;
     uint8_t lift_done;
@@ -104,7 +91,6 @@ struct Stacker {
         STACKER_STACKER,
         STACKER_END
     } state;
-    // NOTICE: Определение extend
     struct {
         StackerCommandReceiver command_receiver0;
         StackerMovementController movement_controller1;
@@ -115,7 +101,6 @@ struct Stacker {
             STACKER_STACKER_END
         } state;
     } stacker;
-    /// NOTICE: Функции портов ввода вывода
     void  *userdata;
     void  (*write_bit)(Stacker_Out_BitPort port, uint8_t bit, bool val, void *userdata);
     bool  (*read_bit )(Stacker_In_BitPort port, uint8_t bit, void *userdata);

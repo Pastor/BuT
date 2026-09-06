@@ -1,9 +1,7 @@
 #include "lift.h"
 #include <assert.h>
 #include <math.h>
-/// Константы и порты модели lift (Lift)
 #define CONST_LIFT_DWELL_TICKS 3
-/// Функция инициализации модели lift (Lift)
 void Lift_init(Lift *model) {
     assert(0 != model);
     model->state = LIFT_INIT;
@@ -12,7 +10,6 @@ void Lift_init(Lift *model) {
     model->moving = 0;
 }
 
-/// Функция обработки модели lift (Lift)
 void Lift_tick(Lift *model) {
     assert(0 != model);
     assert(model->moving == 0 || model->doors == 0);
@@ -109,12 +106,10 @@ void Lift_tick(Lift *model) {
     }
 }
 
-/// Функция сброса модели lift (Lift)
 void Lift_reset(Lift *model) {
     Lift_init(model);
 }
 
-/// Функция проверки терминального состояния модели lift (Lift)
 bool Lift_is_done(const Lift *model) {
     return model->state == LIFT_END;
 }

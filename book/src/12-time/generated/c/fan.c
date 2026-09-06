@@ -1,12 +1,10 @@
 #include "fan.h"
 #include <assert.h>
 #include <math.h>
-/// Model functions 'Fan (Fan:Fan)'
 static void FanFan_init(FanFan *model);
 static void FanFan_tick(FanFan *model, Fan *main);
 static bool FanFan_is_done(const FanFan *model);
 
-/// Функция инициализации модели Fan (Fan:Fan)
 void FanFan_init(FanFan *model) {
     assert(0 != model);
     model->state = FAN_FAN_INIT;
@@ -14,7 +12,6 @@ void FanFan_init(FanFan *model) {
     model->takt_prev_state = (unsigned)FAN_FAN_INIT;
 }
 
-/// Функция обработки модели Fan (Fan:Fan)
 void FanFan_tick(FanFan *model, Fan *main) {
     assert(0 != model);
     assert(0 != main);
@@ -64,24 +61,20 @@ void FanFan_tick(FanFan *model, Fan *main) {
     }
 }
 
-/// Функция сброса модели Fan (Fan:Fan)
 void FanFan_reset(FanFan *model) {
     FanFan_init(model);
 }
 
-/// Функция проверки терминального состояния модели Fan (Fan:Fan)
 bool FanFan_is_done(const FanFan *model) {
     return model->state == FAN_FAN_END;
 }
 
-/// Функция инициализации модели fan (Fan)
 void Fan_init(Fan *model) {
     assert(0 != model);
     model->state = FAN_INIT;
     FanFan_init(&model->main);
 }
 
-/// Функция обработки модели fan (Fan)
 void Fan_tick(Fan *model) {
     assert(0 != model);
     if (model->state == FAN_INIT) {
@@ -103,12 +96,10 @@ void Fan_tick(Fan *model) {
     }
 }
 
-/// Функция сброса модели fan (Fan)
 void Fan_reset(Fan *model) {
     Fan_init(model);
 }
 
-/// Функция проверки терминального состояния модели fan (Fan)
 bool Fan_is_done(const Fan *model) {
     return model->state == FAN_END;
 }

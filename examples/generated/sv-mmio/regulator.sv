@@ -1,20 +1,14 @@
 // Порождено компилятором Takt (taktc) — цель: SystemVerilog (IEEE 1800).
 // Не редактировать вручную: файл перезаписывается при каждой генерации.
-//
-// Такт модели Takt ≡ фронт clk (posedge). Сброс синхронный, активный низкий:
-// ветвь if (!rst_n) несёт стартовое состояние — синтетического INIT нет,
-// поэтому тело стартового состояния исполняется на такте 1 (контракт 0033).
 
 module regulator (
-    input  logic clk,   // служебный порт цели sv: в .takt его нет
-    input  logic rst_n, // служебный порт цели sv: сброс, активный низкий
-    input  logic en = 1'b1, // служебный порт цели sv: clock enable; НЕ обязателен (умолчание 1)
-    input  logic [10:0] reg_addr,   // регистровый интерфейс цели sv-mmio (фича 0062): адрес
-    output logic [0:0] reg_rdata,  // данные чтения (комбинационные)
+    input  logic clk,
+    input  logic rst_n,
+    input  logic en = 1'b1,
+    input  logic [10:0] reg_addr,
+    output logic [0:0] reg_rdata,
     output logic is_done
 );
-    // Состояния модели 'Regulator (Regulator:Regulator)'. Синтетического INIT нет: стартовое
-    // состояние живёт в ветви сброса (контракт ADR 0033).
     typedef enum logic [1:0] {
         REGULATOR_REGULATOR_ADJUST = 2'd0,
         REGULATOR_REGULATOR_DONE = 2'd1,
@@ -22,8 +16,6 @@ module regulator (
         REGULATOR_REGULATOR_END = 2'd3
     } regulator_regulator_state_e;
 
-    // Состояния модели 'regulator (Regulator)'. Синтетического INIT нет: стартовое
-    // состояние живёт в ветви сброса (контракт ADR 0033).
     typedef enum logic [0:0] {
         REGULATOR_MAIN = 1'd0,
         REGULATOR_END = 1'd1
@@ -44,11 +36,7 @@ module regulator (
     logic ready;
     logic ready_next;
 
-    // Комбинационная часть: БЛОКИРУЮЩИЕ присваивания, поэтому порядок
-    // операторов и видимость записей внутри такта — в точности как в C.
     always_comb begin
-        // Умолчание «остаться как есть». Без него неполное присваивание
-        // даёт защёлку (verilator: LATCH).
         regulator_regulator_state_next = regulator_regulator_state;
         regulator_regulator_half_next = regulator_regulator_half;
         regulator_regulator_near_next = regulator_regulator_near;
@@ -59,7 +47,6 @@ module regulator (
 
         unique case (state)
             REGULATOR_MAIN: begin
-                // Под-модель 'Regulator (Regulator:Regulator)' — инлайн её такта.
                 unique case (regulator_regulator_state)
                     REGULATOR_REGULATOR_ADJUST: begin
                         regulator_regulator_value_next = (16'($signed(regulator_regulator_value_next) + $signed((16'(((32'($signed(((16'($signed(regulator_regulator_setpoint_next) - $signed(regulator_regulator_value_next)))))) * 32'($signed(regulator_regulator_half_next))) >>> 8))))));
@@ -86,9 +73,6 @@ module regulator (
         endcase
     end
 
-    // Регистровая часть: НЕБЛОКИРУЮЩИЕ присваивания. Ветвь сброса несёт
-    // стартовые состояния ВСЕХ уровней — они сбрасываются одним фронтом,
-    // поэтому сдвиг такта равен нулю на любой глубине (контракт 0033).
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             regulator_regulator_state <= REGULATOR_REGULATOR_ADJUST;
@@ -109,8 +93,6 @@ module regulator (
         end
     end
 
-    // Чтение регистров шиной (комбинационное). Слово собирается из всех
-    // портов адреса; чтение бита in возвращает записанное шиной (R5).
     always_comb begin
         reg_rdata = '0;
         unique case (reg_addr)
@@ -121,6 +103,5 @@ module regulator (
         endcase
     end
 
-    // Терминальность модели наблюдаема снаружи — аналог _is_done() цели c.
     assign is_done = (state == REGULATOR_END);
 endmodule

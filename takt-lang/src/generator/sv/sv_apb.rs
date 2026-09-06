@@ -123,18 +123,6 @@ pub(crate) fn generate_apb(core: &str, mmio: &Mmio) -> Result<String, Diagnostic
     .nl();
     p.ident("// Не редактировать вручную: файл перезаписывается при каждой генерации.")
         .nl();
-    p.ident("//").nl();
-    p.ident("// AMBA APB3, сторона slave. Трансфер: setup-фаза (psel, !penable) →")
-        .nl();
-    p.ident("// access-фаза (psel, penable). pready = 1 — состояний ожидания нет,")
-        .nl();
-    p.ident("// поэтому access длится один такт и запись регистра происходит однажды.")
-        .nl();
-    p.ident("//").nl();
-    p.ident("// Адрес шины равен адресу из 'at': декодирование старших разрядов —")
-        .nl();
-    p.ident("// обязанность внешнего декодера, который и формирует psel.")
-        .nl();
     p.nl();
 
     // Колонки: диапазон — по самой широкой шине, комментарий — по самому
@@ -228,8 +216,6 @@ pub(crate) fn generate_apb(core: &str, mmio: &Mmio) -> Result<String, Diagnostic
         // остаются в интерфейсе — их состав задан протоколом, а не моделью, —
         // и здесь честно поглощаются, чтобы `verilator -Wall` не сообщал о
         // висящем входе (глушить его `lint_off` правило проекта запрещает).
-        p.ident("// Ядро только для чтения: записывать нечего (фича 0214).")
-            .nl();
         p.ident("wire _unused_write = &{1'b0, pwdata, pwrite, psel, penable};")
             .nl();
     }

@@ -219,8 +219,6 @@ fn inline_composed(
 ) -> Result<Vec<String>, Diagnostic> {
     match item {
         StateExtend::Model(sub, _) => {
-            p.ident(&format!("// Под-модель '{}' — инлайн её такта.", sub))
-                .nl();
             emit_model_body(p, map, fsm, sub)?;
             let sub_reg = fsm
                 .state_reg

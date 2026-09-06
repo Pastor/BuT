@@ -1,18 +1,8 @@
 // Порождено компилятором Takt (taktc) — цель: Rust (профиль no_std).
 // Не редактировать вручную: файл перезаписывается при каждой генерации.
-//
-// Модуль не обращается к std и подключается как `mod`:
-//
-//     #[path = "pid_law.rs"]
-//     pub mod pid_law;
-//
-// Атрибута #![no_std] здесь нет намеренно: он допустим только в корне
-// крейта, а no_std — свойство крейта, не модуля. Совместимость с no_std
-// проверяется гейтом (scripts/precheck.sh).
 
 #![forbid(unsafe_code)]
 
-/// Структура 'PidState' модели.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct PidState {
     pub kp: f64,
@@ -26,7 +16,6 @@ pub struct PidState {
     pub output: f64,
 }
 
-/// Функция 'pid_compute' модели.
 fn pid_compute(p: PidState, sp: f64, pv: f64) -> PidState {
     let mut r: PidState = p;
     let err: f64 = sp - pv;
@@ -54,7 +43,6 @@ fn pid_compute(p: PidState, sp: f64, pv: f64) -> PidState {
     r
 }
 
-/// Функция 'pid_init' модели.
 fn pid_init(kp: f64, ki: f64, kd: f64, ts: f64, lo: f64, hi: f64) -> PidState {
     let mut p: PidState = PidState { kp: 0.0, ki: 0.0, kd: 0.0, ts: 1.0, out_min: 0.0, out_max: 0.0, i_acc: 0.0, err_prev: 0.0, output: 0.0 };
     p.kp = kp;
@@ -66,7 +54,6 @@ fn pid_init(kp: f64, ki: f64, kd: f64, ts: f64, lo: f64, hi: f64) -> PidState {
     p
 }
 
-/// Функция 'pid_reset' модели.
 fn pid_reset(p: PidState) -> PidState {
     let mut r: PidState = p;
     r.i_acc = 0.0;
@@ -77,14 +64,11 @@ fn pid_reset(p: PidState) -> PidState {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PidLawState {
-    /// Модель создана, но стартовое состояние ещё не занято.
     Init,
     Run,
-    /// Автомат завершён (`is_done`).
     End,
 }
 
-/// Модель 'pid_law'.
 pub struct PidLaw {
     ctrl: f64,
     hold: bool,
@@ -95,7 +79,6 @@ pub struct PidLaw {
 }
 
 impl PidLaw {
-    /// Создаёт модель в начальном состоянии.
     pub fn new() -> Self {
         Self {
             ctrl: 0.0,
@@ -107,10 +90,6 @@ impl PidLaw {
         }
     }
 
-    /// Возвращает модель в начальное состояние.
-    ///
-    /// Блоки `enter` здесь не исполняются: по контракту ADR 0033 вход
-    /// в стартовое состояние — это поведение, и оно живёт в `tick`.
     pub fn init(&mut self) {
         self.ctrl = 0.0;
         self.hold = false;
@@ -120,10 +99,6 @@ impl PidLaw {
         self.state = PidLawState::Init;
     }
 
-    /// Один такт автомата.
-    ///
-    /// Вход в стартовое состояние такта **не расходует** (контракт
-    /// ADR 0033): его тело исполняется в этом же вызове.
     pub fn tick(&mut self) {
         if self.state == PidLawState::Init {
             self.loop_pid = pid_init(3.0, 0.75, 1.5, 0.1, 0.0, 100.0);
@@ -143,21 +118,16 @@ impl PidLaw {
         }
     }
 
-    /// Сбрасывает модель. Паритет с `_reset` цели `c`.
-    ///
-    /// Сброс доходит до вложенных моделей через `init`.
     pub fn reset(&mut self) {
         self.init();
     }
 
-    /// Завершён ли автомат модели.
     pub fn is_done(&self) -> bool {
         self.state == PidLawState::End
     }
 
 }
 
-/// Модель в начальном состоянии — синоним [`new`](Self::new).
 impl Default for PidLaw {
     fn default() -> Self {
         Self::new()

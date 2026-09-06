@@ -77,7 +77,6 @@ FUNCTION log_count : USINT
 VAR_INPUT
     n : USINT;
 END_VAR
-    (* extern fn log_count — заглушка (ST-009) *)
     log_count := 0;
 END_FUNCTION
 
@@ -85,7 +84,6 @@ FUNCTION log_temp : USINT
 VAR_INPUT
     value : USINT;
 END_VAR
-    (* extern fn log_temp — заглушка (ST-009) *)
     log_temp := 0;
 END_FUNCTION
 

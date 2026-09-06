@@ -63,12 +63,6 @@ pub(super) fn emit_transition_table(
     let args = if wants_root { "model, main" } else { "model" };
 
     printer
-        .print(&format!(
-            "/// Таблица переходов модели {} (форма --fsm=table)",
-            model.name()
-        ))
-        .nl();
-    printer
         .print(&format!("typedef bool (*{struct_name}_Guard)({params});"))
         .nl();
     printer
@@ -131,9 +125,6 @@ pub(super) fn emit_transition_table(
     printer.down();
     printer.print("};").nl().nl();
 
-    printer
-        .print("/// Диспетчер: первая строка с совпавшим состоянием и истинным стражем")
-        .nl();
     printer
         .print(&format!("static void {struct_name}_dispatch({params}) {{"))
         .nl();

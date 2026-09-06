@@ -427,8 +427,6 @@ fn emit_function(
             );
             p.up();
             let neutral = neutral_value(&return_type_of(def), model)?;
-            p.ident(&format!("(* extern fn {} — заглушка (ST-009) *)", name))
-                .nl();
             p.ident(&format!("{} := {};", name, neutral)).nl();
             p.down();
         }

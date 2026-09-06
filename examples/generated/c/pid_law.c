@@ -1,7 +1,6 @@
 #include "pid_law.h"
 #include <assert.h>
 #include <math.h>
-///Функции моделей
 static PidState PidLaw_pid_compute(PidState p, double sp, double pv);
 static PidState PidLaw_pid_init(double kp, double ki, double kd, double ts, double lo, double hi);
 static PidState PidLaw_pid_reset(PidState p);
@@ -49,7 +48,6 @@ static PidState PidLaw_pid_reset(PidState p) {
     return r;
 }
 
-/// Функция инициализации модели pid_law (PidLaw)
 void PidLaw_init(PidLaw *model) {
     assert(0 != model);
     model->state = PID_LAW_INIT;
@@ -60,7 +58,6 @@ void PidLaw_init(PidLaw *model) {
     model->target = 80.0;
 }
 
-/// Функция обработки модели pid_law (PidLaw)
 void PidLaw_tick(PidLaw *model) {
     assert(0 != model);
     if (model->state == PID_LAW_INIT) {
@@ -84,12 +81,10 @@ void PidLaw_tick(PidLaw *model) {
     }
 }
 
-/// Функция сброса модели pid_law (PidLaw)
 void PidLaw_reset(PidLaw *model) {
     PidLaw_init(model);
 }
 
-/// Функция проверки терминального состояния модели pid_law (PidLaw)
 bool PidLaw_is_done(const PidLaw *model) {
     return model->state == PID_LAW_END;
 }

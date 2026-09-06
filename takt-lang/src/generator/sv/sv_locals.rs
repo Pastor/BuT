@@ -112,10 +112,6 @@ pub(crate) fn emit_declarations(p: &mut Printer, hoisted: &HoistedLocals) {
     if hoisted.is_empty() {
         return;
     }
-    p.ident("// Временные тел, содержащие структуру: объявление — в начале")
-        .nl();
-    p.ident("// процесса, иначе синтезатор объявляет их защёлкой.")
-        .nl();
     for local in hoisted.iter() {
         p.ident(&format!("automatic {};", local.decl)).nl();
         // Объявление поглотителя (фича 0375) — здесь же: объявления обязаны

@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-/* Forward declarations */
 typedef struct RegulatorRegulator RegulatorRegulator;
 typedef struct Regulator Regulator;
 
@@ -11,10 +10,7 @@ typedef enum {
     REGULATOR_REGULATOR_PORT_READY = 0,
 } Regulator_Out_BitPort;
 
-// NOTICE: Определение констант для модели Regulator (Regulator:Regulator)
-/* Model Regulator (Regulator:Regulator) */
 struct RegulatorRegulator {
-    // NOTICE: Определение переменных модели
     int16_t half;
     int16_t near;
     int16_t setpoint;
@@ -28,18 +24,13 @@ struct RegulatorRegulator {
     } state;
 };
 
-// NOTICE: Определение констант для модели regulator (Regulator)
-/* Model regulator (Regulator) */
 struct Regulator {
-    // NOTICE: Определение переменных модели
     enum {
         REGULATOR_INIT,
         REGULATOR_MAIN,
         REGULATOR_END
     } state;
-    // NOTICE: Определение extend
     RegulatorRegulator main;
-    /// NOTICE: Функции портов ввода вывода
     void  *userdata;
     void  (*write_bit)(Regulator_Out_BitPort port, uint8_t bit, bool val, void *userdata);
 };

@@ -190,20 +190,6 @@ fn generate_program(map: &RustMap) -> Result<(String, Vec<Diagnostic>), Diagnost
         .nl();
     p.ident("// Не редактировать вручную: файл перезаписывается при каждой генерации.")
         .nl();
-    p.ident("//").nl();
-    p.ident("// Модуль не обращается к std и подключается как `mod`:")
-        .nl();
-    p.ident("//").nl();
-    p.ident(&format!("//     #[path = \"{}.rs\"]", map.get_filename()))
-        .nl();
-    p.ident(&format!("//     pub mod {};", map.get_filename()))
-        .nl();
-    p.ident("//").nl();
-    p.ident("// Атрибута #![no_std] здесь нет намеренно: он допустим только в корне")
-        .nl();
-    p.ident("// крейта, а no_std — свойство крейта, не модуля. Совместимость с no_std")
-        .nl();
-    p.ident("// проверяется гейтом (scripts/precheck.sh).").nl();
     p.nl();
     // Не декорация: делает «в порождённом коде нет unsafe» свойством,
     // проверяемым КОМПИЛЯТОРОМ, а не grep'ом (R10, A12).

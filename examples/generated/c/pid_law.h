@@ -17,10 +17,7 @@ typedef struct PidState {
     double output;
 } PidState;
 
-// NOTICE: Определение констант для модели pid_law (PidLaw)
-/* Model pid_law (PidLaw) */
 struct PidLaw {
-    // NOTICE: Определение переменных модели
     double ctrl;
     uint8_t hold;
     PidState loop_pid;

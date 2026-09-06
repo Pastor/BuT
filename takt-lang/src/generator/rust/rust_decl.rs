@@ -173,8 +173,6 @@ pub(crate) fn emit_hal(p: &mut Printer, set: &PortSet) -> Result<(), Diagnostic>
             Location::Codegen,
         )?;
 
-        p.ident("/// Порт ввода-вывода модели. Реализация — за трейтом [`Hal`].")
-            .nl();
         p.ident("#[derive(Debug, Clone, Copy, PartialEq, Eq)]").nl();
         p.ident(&format!("pub enum {} {{", enum_name)).nl();
         p.up();
@@ -185,19 +183,10 @@ pub(crate) fn emit_hal(p: &mut Printer, set: &PortSet) -> Result<(), Diagnostic>
         p.ident("}").nl().nl();
     }
 
-    p.ident("/// Аппаратный слой модели.").nl();
-    p.ident("///").nl();
-    p.ident("/// Заменяет пару указателей на функции и `void *userdata` цели `c`:")
-        .nl();
-    p.ident("/// состояние слоя живёт в самом типе-реализации, поэтому привести")
-        .nl();
-    p.ident("/// его не к тому типу или забыть проставить колбэк невозможно.")
-        .nl();
     p.ident("pub trait Hal {").nl();
     p.up();
     for enum_name in set.inputs.keys() {
         let class = &set.classes[enum_name];
-        p.ident("/// Читает входной порт `port`.").nl();
         p.ident(&format!(
             "fn {}(&mut self, port: {}) -> {};",
             class.read_fn(),
@@ -218,7 +207,6 @@ pub(crate) fn emit_hal(p: &mut Printer, set: &PortSet) -> Result<(), Diagnostic>
                 )
                 .with_code("RS-012")
             })?;
-        p.ident("/// Пишет `value` в выходной порт `port`.").nl();
         p.ident(&format!(
             "fn {}(&mut self, port: {}, value: {});",
             class.write_fn(),
@@ -228,27 +216,12 @@ pub(crate) fn emit_hal(p: &mut Printer, set: &PortSet) -> Result<(), Diagnostic>
         .nl();
     }
     if set.needs_debug {
-        p.ident("/// Принимает отладочное сообщение встроенной функции `debug`.")
-            .nl();
-        p.ident("///").nl();
-        p.ident("/// В профиле `no_std` printf нет, но `no_std` не означает «без")
-            .nl();
-        p.ident("/// вывода» — он означает «вывод решает пользователь».")
-            .nl();
         p.ident("fn debug(&mut self, message: &str);").nl();
     }
     if set.needs_now_ms {
-        p.ident("/// Внешний источник времени: миллисекунды монотонных часов")
-            .nl();
-        p.ident("/// (профиль «часы», фича 0134). В `no_std` часов нет — реализует")
-            .nl();
-        p.ident("/// пользователь (образец на `std::time::Instant` — в документации).")
-            .nl();
         p.ident("fn now_ms(&mut self) -> u64;").nl();
     }
     for (name, signature) in &set.externals {
-        p.ident("/// Внешняя функция модели (`extern fn` в исходнике .takt).")
-            .nl();
         p.ident(&format!("fn {}{};", name, signature)).nl();
     }
     p.down();
@@ -328,8 +301,6 @@ pub(crate) fn emit_enums(
 
             // Разрядность — ПО ДИАПАЗОНУ вариантов. `#[repr(u8)]` по умолчанию
             // отверг бы `Idle = 670` из `elevator.takt:121` (проба 2026-07-16).
-            p.ident(&format!("/// Перечисление '{}' модели.", def.name))
-                .nl();
             p.ident("#[derive(Debug, Clone, Copy, PartialEq, Eq)]").nl();
             p.ident(&format!("#[repr({})]", enum_repr(&def.variants)))
                 .nl();
@@ -366,13 +337,6 @@ fn emit_from_repr(
     })?;
     p.ident(&format!("impl {name} {{")).nl();
     p.up();
-    p.ident("/// Значение со входного порта — в вариант перечисления.")
-        .nl();
-    p.ident("///").nl();
-    p.ident("/// Значение вне набора даёт первый по тексту вариант: число")
-        .nl();
-    p.ident("/// приходит от железа, и останавливать модель из-за него нельзя.")
-        .nl();
     p.ident(&format!("fn {FROM_REPR}(value: {repr}) -> Self {{"))
         .nl();
     p.up();
@@ -412,8 +376,6 @@ pub(crate) fn emit_structs(
             if !seen.insert(name.clone()) {
                 continue;
             }
-            p.ident(&format!("/// Структура '{}' модели.", def.name))
-                .nl();
             // ⚠️ `Eq` НЕ выводится: у поля `float` (`f64`) его нет, и вывод
             // корпуса перестал бы компилироваться (`the trait Eq is not
             // implemented for f64`). Сравнение структур язык и так запрещает

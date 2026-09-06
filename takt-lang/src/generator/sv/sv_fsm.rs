@@ -593,10 +593,6 @@ pub(crate) fn emit_comb(
     root: &Name,
     models: &[Name],
 ) -> Result<(), Diagnostic> {
-    p.ident("// Комбинационная часть: БЛОКИРУЮЩИЕ присваивания, поэтому порядок")
-        .nl();
-    p.ident("// операторов и видимость записей внутри такта — в точности как в C.")
-        .nl();
     p.ident("always_comb begin").nl();
     p.up();
     // Тело печатается в БУФЕР (фича 0373): пока оно печатается, печатник тел
@@ -617,9 +613,6 @@ pub(crate) fn emit_comb(
     crate::generator::sv::sv_locals::emit_declarations(p, &fsm.hoisted_locals);
     // Умолчания обязательны: неполное присваивание даёт защёлку, а
     // `verilator -Wall` — LATCH. Это условие гейта, а не стиль.
-    p.ident("// Умолчание «остаться как есть». Без него неполное присваивание")
-        .nl();
-    p.ident("// даёт защёлку (verilator: LATCH).").nl();
     for reg in &fsm.regs {
         // Массив со структурой внутри — по полям (фича 0367): whole-array
         // умолчание синтезатор считает защёлкой, когда тело пишет поле
@@ -883,12 +876,6 @@ pub(crate) fn emit_ff(
         }
     }
 
-    p.ident("// Регистровая часть: НЕБЛОКИРУЮЩИЕ присваивания. Ветвь сброса несёт")
-        .nl();
-    p.ident("// стартовые состояния ВСЕХ уровней — они сбрасываются одним фронтом,")
-        .nl();
-    p.ident("// поэтому сдвиг такта равен нулю на любой глубине (контракт 0033).")
-        .nl();
     p.ident("always_ff @(posedge clk) begin").nl();
     p.up();
     p.ident("if (!rst_n) begin").nl();
@@ -931,8 +918,6 @@ pub(crate) fn emit_ff(
 
 /// Печатает выход терминальности корневой модели.
 pub(crate) fn emit_is_done(p: &mut Printer, root: &Name) {
-    p.ident("// Терминальность модели наблюдаема снаружи — аналог _is_done() цели c.")
-        .nl();
     p.ident(&format!(
         "assign is_done = (state == {});",
         end_variant(root)
