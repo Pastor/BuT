@@ -6,6 +6,7 @@ use crate::generator::c::{
     FUNCTION_PORT_WRITE_BIT, FUNCTION_PORT_WRITE_FLOAT, FUNCTION_PORT_WRITE_NUMERIC, PortClass,
     typed_variable_or_diagnostic,
 };
+use crate::generator::header::{CommentStyle, file_header};
 use crate::generator::indent::Printer;
 use crate::semantic::minimap::{Element, Name, StateExtend};
 use crate::semantic::naming::normalize_lowercase_snakecase;
@@ -439,6 +440,11 @@ fn generate_model_header(
     Ok(num)
 }
 
+/// Как цель называет себя в шапке: профиль HAL — часть имени.
+pub(super) fn c_target_name(hal: bool) -> &'static str {
+    if hal { "C (HAL profile)" } else { "C" }
+}
+
 pub fn generate_header(
     filename: &str,
     map: &CMap,
@@ -446,6 +452,9 @@ pub fn generate_header(
 ) -> Result<String, Diagnostic> {
     let mut header = String::new();
     let mut printer = Printer::new(4, &mut header);
+    for line in file_header(c_target_name(options.hal), CommentStyle::Slashes) {
+        printer.print(&line).nl();
+    }
     // Дефолтный `now_ms` цели `c-hal` (0134-04b) зовёт `clock_gettime(CLOCK_MONOTONIC)`,
     // а на строгом glibc под `-std=c11` этот символ скрыт без `_POSIX_C_SOURCE`.
     // Объявляем у самого верха — ДО любого системного заголовка, иначе feature-тест

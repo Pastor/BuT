@@ -34,6 +34,7 @@
 //! правило придётся менять вместе с ними.
 
 use crate::diagnostics::{Diagnostic, Location};
+use crate::generator::header::{CommentStyle, file_header};
 use crate::generator::indent::Printer;
 use crate::generator::sv::sv_mmio::Mmio;
 
@@ -117,12 +118,12 @@ pub(crate) fn generate_apb(core: &str, mmio: &Mmio) -> Result<String, Diagnostic
     let mut out = String::new();
     let mut p = Printer::new(4, &mut out);
 
-    p.ident(&format!(
-        "// Порождено компилятором Takt (taktc) — адаптер шины APB для '{core}'."
-    ))
-    .nl();
-    p.ident("// Не редактировать вручную: файл перезаписывается при каждой генерации.")
-        .nl();
+    for line in file_header(
+        &format!("SystemVerilog (IEEE 1800), APB bus adapter for '{core}'"),
+        CommentStyle::Slashes,
+    ) {
+        p.ident(&line).nl();
+    }
     p.nl();
 
     // Колонки: диапазон — по самой широкой шине, комментарий — по самому

@@ -14,6 +14,7 @@ mod puml_map;
 
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::Generator as AsGenerator;
+use crate::generator::header::{CommentStyle, file_header};
 use crate::generator::{GenerateOptions, GeneratedFile, Output};
 use crate::semantic::ModelNode;
 use crate::semantic::minimap::{Element, StateExtend};
@@ -118,7 +119,21 @@ fn write_state_transitions(element: &Element, out: &mut String, indent: &str) {
 fn generate_diagram(map: &PumlMap) -> Result<String, Diagnostic> {
     let mut out = String::new();
 
+    // ⚠️ Шапка стоит ПОСЛЕ `@startuml`, а не перед ним. PlantUML читает только
+    // то, что лежит между `@startuml` и `@enduml`, — текст снаружи он
+    // игнорирует, и шапка перед открывающей строкой не была бы частью
+    // диаграммы: вставив её вместе с блоком в другой файл, читатель потерял бы
+    // предупреждение. Внутри блока `'` в начале строки — комментарий языка.
+    //
+    // ⚠️ Выбор сделан по правилу языка, а не прогоном: арбитра `plantuml` в
+    // проекте нет (гейт цели проверяет генерацию, но не рендер). Граница
+    // названа в карточке 0535.
     out.push_str("@startuml\n");
+    for line in file_header("PlantUML state diagram", CommentStyle::Quote) {
+        out.push_str(&line);
+        out.push('\n');
+    }
+    out.push('\n');
     out.push_str(&format!("title {}\n\n", map.root_name().unique_camelcase()));
 
     let Element::Model { start, .. } = map.model() else {

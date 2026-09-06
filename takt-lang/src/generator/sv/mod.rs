@@ -64,6 +64,7 @@ mod sv_unused;
 
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::Generator as AsGenerator;
+use crate::generator::header::{CommentStyle, file_header};
 use crate::generator::indent::Printer;
 use crate::generator::{GenerateOptions, GeneratedFile, Output};
 use crate::semantic::ModelNode;
@@ -238,10 +239,14 @@ fn generate_program(
     let mut out = String::new();
     let mut p = Printer::new(INDENT, &mut out);
 
-    p.ident("// Порождено компилятором Takt (taktc) — цель: SystemVerilog (IEEE 1800).")
-        .nl();
-    p.ident("// Не редактировать вручную: файл перезаписывается при каждой генерации.")
-        .nl();
+    let target = if mmio {
+        "SystemVerilog (IEEE 1800, MMIO register file)"
+    } else {
+        "SystemVerilog (IEEE 1800)"
+    };
+    for line in file_header(target, CommentStyle::Slashes) {
+        p.ident(&line).nl();
+    }
     p.nl();
 
     // Служебный вход времени (профиль «часы» + длительностная выдержка в дереве,

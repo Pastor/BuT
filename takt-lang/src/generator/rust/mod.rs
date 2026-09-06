@@ -78,6 +78,7 @@ mod rust_unused;
 
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::Generator as AsGenerator;
+use crate::generator::header::{CommentStyle, file_header};
 use crate::generator::indent::Printer;
 use crate::generator::{GenerateOptions, GeneratedFile, Output};
 use crate::semantic::ModelNode;
@@ -186,10 +187,9 @@ fn generate_program(map: &RustMap) -> Result<(String, Vec<Diagnostic>), Diagnost
     let mut p = Printer::new(INDENT, &mut out);
     let mut warnings: Vec<Diagnostic> = Vec::new();
 
-    p.ident("// Порождено компилятором Takt (taktc) — цель: Rust (профиль no_std).")
-        .nl();
-    p.ident("// Не редактировать вручную: файл перезаписывается при каждой генерации.")
-        .nl();
+    for line in file_header("Rust (no_std profile)", CommentStyle::Slashes) {
+        p.ident(&line).nl();
+    }
     p.nl();
     // Не декорация: делает «в порождённом коде нет unsafe» свойством,
     // проверяемым КОМПИЛЯТОРОМ, а не grep'ом (R10, A12).

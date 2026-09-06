@@ -7,12 +7,19 @@ use super::c_decl::{generate_constants_and_ports_and_enums, generate_functions};
 use super::c_model::{generate_function_prototypes, generate_model_functions};
 use crate::diagnostics::Diagnostic;
 use crate::generator::c::c_map::CMap;
+use crate::generator::header::{CommentStyle, file_header};
 use crate::generator::indent::Printer;
 
 /// Генерирует содержимое `.c`-файла для модели.
 pub(super) fn generate_source(filename: &str, map: &CMap) -> Result<String, Diagnostic> {
     let mut source = String::new();
     let mut printer = Printer::new(4, &mut source);
+    for line in file_header(
+        crate::generator::c::c_header::c_target_name(map.hal()),
+        CommentStyle::Slashes,
+    ) {
+        printer.print(&line).nl();
+    }
     printer
         .print(format!("#include \"{}.h\"", filename).as_str())
         .nl();

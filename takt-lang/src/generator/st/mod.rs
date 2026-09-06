@@ -65,6 +65,7 @@ mod st_type;
 use crate::address_map::{AddressSource, ResolvedAddress};
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::Generator as AsGenerator;
+use crate::generator::header::{CommentStyle, file_header};
 use crate::generator::indent::Printer;
 use crate::generator::{GenerateOptions, GeneratedFile, Output};
 use crate::semantic::minimap::{Element, Name};
@@ -163,12 +164,15 @@ fn generate_program(map: &StMap) -> Result<(String, Vec<Diagnostic>), Diagnostic
     let mut out = String::new();
     let mut p = Printer::new(INDENT, &mut out);
 
-    p.ident("(*").nl();
-    p.ident(" * Порождено компилятором Takt (taktc) — цель: Structured Text (IEC 61131-3).")
-        .nl();
-    p.ident(" * Не редактировать вручную: файл перезаписывается при каждой генерации.")
-        .nl();
-    p.ident(" *)").nl().nl();
+    let target = if map.at_addresses() {
+        "Structured Text (IEC 61131-3, AT profile)"
+    } else {
+        "Structured Text (IEC 61131-3)"
+    };
+    for line in file_header(target, CommentStyle::IecBlock) {
+        p.ident(&line).nl();
+    }
+    p.nl();
 
     // Подмодели объявляются раньше корня: FUNCTION_BLOCK, используемый как тип
     // экземпляра, должен быть известен к моменту объявления экземпляра.

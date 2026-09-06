@@ -3,6 +3,9 @@ mod c;
 mod call_order;
 mod chain_site;
 pub(crate) mod enum_compare;
+// Шапка порождённого файла (фича 0535): текст один на все цели, обрамление
+// накладывает целевой язык.
+pub(crate) mod header;
 mod indent;
 pub mod keywords;
 pub(crate) mod local_stub;
