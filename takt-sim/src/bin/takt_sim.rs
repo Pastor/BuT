@@ -26,6 +26,15 @@ struct Args {
     #[arg(short = 'I', long = "include", value_name = "DIR")]
     include_paths: Vec<PathBuf>,
 
+    /// Язык сообщений (фича 0532): `ru`, `en`, … — по каталогам в дереве.
+    ///
+    /// Умолчание — русский; переменная `TAKT_LANG` действует, если ключа нет.
+    /// ⚠️ Системная локаль (`LANG`/`LC_MESSAGES`) **не читается**: вывод
+    /// инструмента не должен зависеть от машины — на этом стоят потактовые
+    /// сверки. Ключ тот же, что у `taktc`, и разбирает его общий носитель.
+    #[arg(long = "lang", value_name = "КОД")]
+    lang: Option<String>,
+
     /// Количество шагов (по умолчанию — до терминального состояния)
     #[arg(short = 'n', long = "steps", value_name = "N")]
     steps: Option<usize>,
@@ -81,6 +90,18 @@ struct Args {
 fn main() -> ExitCode {
     env_logger::init();
     let args = Args::parse();
+
+    // Язык — до первого сообщения: диагностика прогона обязана прийти уже на
+    // выбранном языке. Разбор общий с `taktc` (фича 0532).
+    if let Some(code) = args.lang.as_deref() {
+        match takt_lang::diagnostics::lang::parse(code) {
+            Ok(lang) => takt_lang::diagnostics::lang::activate(lang),
+            Err(e) => {
+                eprintln!("Ошибка: {e}");
+                return ExitCode::FAILURE;
+            }
+        }
+    }
 
     match run(args) {
         Ok(result) => {

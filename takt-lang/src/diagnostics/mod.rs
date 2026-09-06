@@ -29,6 +29,9 @@
 // Пачка диагностик (фича 0130): порядок, уникальность, печать. Вынесено
 // подмодулем — `mod.rs` упирается в лимит размера.
 mod batch;
+// Язык сообщений (фича 0532): носитель, каталоги `messages/*.txt` и подстановка.
+// Модуль публичный — язык выбирают CLI, мост и LSP, каждый своим входом.
+pub mod lang;
 mod position;
 pub use batch::{format_compile_error, format_notes, format_warning, normalize};
 pub use position::{note_position_prefix, position_prefix};

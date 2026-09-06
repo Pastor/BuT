@@ -9,6 +9,8 @@
 //! [`FunctionDefinitionNode::Builtin`]) возвращаются без изменений.
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::parser::ast;
 use crate::semantic::internal::internal;
 use crate::semantic::statement::resolve_statement;
@@ -131,9 +133,9 @@ pub fn construct_function(
                             let fixed = fixed_from_call(loc, &ctor, &args).ok_or_else(|| {
                                 Diagnostic::error(
                                     param.loc,
-                                    format!(
-                                        "тип параметра '{}' не распознан: ожидались имя типа,                                          '[тип; N]' или 'q(m, n)'",
-                                        param
+                                    msg!(
+                                        keys::SE_034_PARAMETER_TYPE_UNRECOGNISED,
+                                        name = param
                                             .name
                                             .as_ref()
                                             .map(|t| t.name.as_str())

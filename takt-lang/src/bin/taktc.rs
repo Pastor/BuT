@@ -553,7 +553,16 @@ fn print_usage() {
 }
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let mut args: Vec<String> = env::args().collect();
+
+    // Язык сообщений (фича 0532) выбирается ПЕРВЫМ: ключ действует на все
+    // подкоманды разом, и отказ разбора самих аргументов обязан прийти уже на
+    // выбранном языке. Разбор — в библиотеке: ключ общий с `takt-sim`, и
+    // вторая копия разошлась бы с первой молча (прецедент 0043).
+    if let Err(e) = takt_lang::diagnostics::lang::take_flag(&mut args) {
+        eprintln!("Ошибка разбора аргументов: {e}");
+        process::exit(1);
+    }
 
     if args.len() < 2 || args.iter().any(|a| a == "--help" || a == "-h") {
         print_usage();

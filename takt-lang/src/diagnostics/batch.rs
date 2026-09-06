@@ -13,7 +13,9 @@
 //! Часть модуля `diagnostics` (деление по логике: `mod.rs` упирается в лимит
 //! размера).
 
+use super::lang::keys;
 use super::{Diagnostic, Location, position_prefix};
+use crate::msg;
 
 /// Упорядочивает диагностики по позиции в тексте и убирает точные повторы.
 ///
@@ -62,10 +64,13 @@ fn identity(diagnostic: &Diagnostic) -> (Location, Option<&str>, &str) {
 /// предупреждениям цели `sv`, фича 0064).
 pub fn format_compile_error(diagnostic: &Diagnostic) -> String {
     let mut text = format!(
-        "{}Ошибка компиляции [{}]: {}",
+        "{}{}",
         position_prefix(diagnostic),
-        diagnostic.code.as_deref().unwrap_or("?"),
-        diagnostic.message
+        msg!(
+            keys::DIAG_COMPILE_ERROR,
+            code = diagnostic.code.as_deref().unwrap_or("?"),
+            message = diagnostic.message,
+        )
     );
     text.push_str(&format_notes(diagnostic));
     text
@@ -87,7 +92,8 @@ pub fn format_notes(diagnostic: &Diagnostic) -> String {
     let mut text = String::new();
     for note in &diagnostic.notes {
         text.push_str(&format!(
-            "\n  примечание: {}{}",
+            "\n  {}: {}{}",
+            msg!(keys::DIAG_NOTE_LABEL),
             super::note_position_prefix(diagnostic, note),
             note.message
         ));
@@ -104,10 +110,13 @@ pub fn format_notes(diagnostic: &Diagnostic) -> String {
 /// (задача 0028-01).
 pub fn format_warning(diagnostic: &Diagnostic) -> String {
     format!(
-        "{}Предупреждение [{}]: {}",
+        "{}{}",
         position_prefix(diagnostic),
-        diagnostic.code.as_deref().unwrap_or("?"),
-        diagnostic.message
+        msg!(
+            keys::DIAG_WARNING,
+            code = diagnostic.code.as_deref().unwrap_or("?"),
+            message = diagnostic.message,
+        )
     )
 }
 

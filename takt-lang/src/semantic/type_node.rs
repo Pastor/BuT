@@ -34,6 +34,8 @@ pub(crate) mod fixed_body;
 pub mod type_fixed;
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::parser::ast::Type;
 use crate::semantic::ModelNode;
 use std::cell::RefCell;
@@ -116,7 +118,7 @@ pub(crate) fn construct_type(
             builtin_type_by_name(&def.name).ok_or_else(|| {
                 Diagnostic::declaration_error(
                     def.loc,
-                    format!("Локальный тип '{}' не найден", def.name),
+                    msg!(keys::SE_034_LOCAL_TYPE_NOT_FOUND, name = def.name),
                 )
                 .with_code("SE-034")
             })

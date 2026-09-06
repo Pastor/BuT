@@ -1,0 +1,18 @@
+# Message catalogue: English (feature 0532).
+#
+# Format and substitutions — see `ru.txt`, the base catalogue. The set of keys
+# and the set of `{placeholders}` in every key must match the base exactly;
+# `scripts/check-messages.py` fails with a list otherwise.
+
+# ─── Diagnostic printer captions (`diagnostics::batch`) ──────────────────────
+diag.compile-error = Compilation error [{code}]: {message}
+diag.note-label = note
+diag.warning = Warning [{code}]: {message}
+
+# ─── Message language selection failure (`diagnostics::lang`) ────────────────
+lang.missing-value = the --lang key requires a language code
+lang.unknown = unknown message language '{name}'; known: {known}
+
+# ─── Trial codes of task 0532-01 ─────────────────────────────────────────────
+se-034.local-type-not-found = local type '{name}' not found
+se-034.parameter-type-unrecognised = parameter type '{name}' is not recognised: expected a type name, '[type; N]' or 'q(m, n)'
