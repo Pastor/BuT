@@ -1,13 +1,13 @@
-//! Периодические блоки `every` цели `rust` (фича 0134-09).
+//! Периодические блоки `every` цели `rust`.
 //!
-//! Зеркало `c/c_every.rs` в rust-идиомах. Скрытое состояние — поле
-//! `takt_every<N>` (поглощённое срабатываниями `elapsed`-время); срабатывание:
-//! `elapsed.wrapping_sub(consumed) >= период` → тело, `consumed += период`.
-//! `elapsed` берётся из инфраструктуры длительностного `after`: метка
-//! `takt_entry_ms` (профиль «часы») либо счётчик `takt_dwell` (профиль «такты»).
+//! Зеркало `c/c_every.rs` в rust-идиомах. Скрытое состояние - поле `takt_every<N>`
+//! (поглощённое срабатываниями `elapsed`-время); срабатывание:
+//! `elapsed.wrapping_sub(consumed) >= период` -> тело, `consumed += период`. `elapsed`
+//! берётся из инфраструктуры длительностного `after`: метка `takt_entry_ms` (профиль
+//! "часы") либо счётчик `takt_dwell` (профиль "такты").
 //!
-//! ⚠️ `-D warnings`: поле `takt_every<N>` эмитится **только** при наличии `every`
-//! и всегда читается в теле — иначе неиспользуемое приватное поле завалит сборку.
+//! `-D warnings`: поле `takt_every<N>` эмитится **только** при наличии `every` и всегда
+//! читается в теле - иначе неиспользуемое приватное поле завалит сборку.
 
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::indent::Printer;
@@ -52,8 +52,8 @@ fn field(idx: usize) -> String {
     format!("takt_every{idx}")
 }
 
-/// Тип поля-аккумулятора: `u64` (профиль «часы», как `takt_entry_ms`) либо
-/// `u{dwell_bits}` (профиль «такты», как `takt_dwell`).
+/// Тип поля-аккумулятора: `u64` (профиль "часы", как `takt_entry_ms`) либо
+/// `u{dwell_bits}` (профиль "такты", как `takt_dwell`).
 fn field_ty(map: &RustMap, model: &ModelNode) -> Result<String, Diagnostic> {
     Ok(match map.time_profile() {
         TimeProfile::Clock => "u64".to_string(),
@@ -61,10 +61,10 @@ fn field_ty(map: &RustMap, model: &ModelNode) -> Result<String, Diagnostic> {
     })
 }
 
-/// Имена аккумуляторов `every`, которые модель получит, — в порядке печати.
+/// Имена аккумуляторов `every`, которые модель получит, - в порядке печати.
 ///
-/// ⚠️ Перечень блоков берётся у того же `every_blocks`, что и печать: набор
-/// занятых имён цели (фича 0483) обязан видеть ровно те поля, что печатаются.
+/// Перечень блоков берётся у того же `every_blocks`, что и печать: набор занятых имён
+/// цели обязан видеть ровно те поля, что печатаются.
 pub(super) fn field_names(model: &ModelNode) -> Vec<String> {
     every_blocks(model)
         .into_iter()
@@ -86,14 +86,14 @@ pub(super) fn emit_struct_fields(
     Ok(())
 }
 
-/// Печатает начальные значения полей `every` в литерале `Self { … }` (`fn new`).
+/// Печатает начальные значения полей `every` в литерале `Self { ... }` (`fn new`).
 pub(super) fn emit_new_fields(p: &mut Printer, model: &ModelNode) {
     for e in every_blocks(model) {
         p.ident(&format!("{}: 0,", field(e.idx))).nl();
     }
 }
 
-/// Обнуляет аккумуляторы `every` — вход в состояние и `fn init` (0134-09).
+/// Обнуляет аккумуляторы `every` - вход в состояние и `fn init`.
 pub(super) fn emit_reset(p: &mut Printer, model: &ModelNode) {
     for e in every_blocks(model) {
         p.ident(&format!("self.{} = 0;", field(e.idx))).nl();
@@ -102,8 +102,8 @@ pub(super) fn emit_reset(p: &mut Printer, model: &ModelNode) {
 
 /// Печатает периодические блоки `every` состояния в теле `tick`, после `always`.
 ///
-/// `hal_access` — получатель HAL-вызова (`self.hal`/`hal`); нужен для `elapsed`
-/// профиля «часы».
+/// `hal_access` - получатель HAL-вызова (`self.hal`/`hal`); нужен для `elapsed` профиля
+/// "часы".
 pub(super) fn emit_state_body(
     p: &mut Printer,
     ctx: &crate::generator::rust::rust_ctx::ModelEmit,

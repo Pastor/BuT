@@ -5,7 +5,7 @@ use crate::graphics_config::GraphicsConfig;
 use crate::unit::Unit;
 use takt_lang::diagnostics::Diagnostic;
 
-// ── Данные легенды ────────────────────────────────────────────────────────────
+// -- Данные легенды ------------------------------------------------------------
 
 /// Данные для отображения легенды портов и переменных на кадре симуляции.
 pub(crate) struct LegendData {
@@ -15,15 +15,15 @@ pub(crate) struct LegendData {
     pub vars: Vec<(String, String)>,
 }
 
-// ── Общий тип позиций ─────────────────────────────────────────────────────────
+// -- Общий тип позиций ---------------------------------------------------------
 
-/// Вектор позиций узлов: каждая запись — координаты центра (x, y).
+/// Вектор позиций узлов: каждая запись - координаты центра (x, y).
 type Positions = Vec<(f64, f64)>;
 
-// ── Перечисления вывода ───────────────────────────────────────────────────────
+// -- Перечисления вывода -------------------------------------------------------
 
 /// Результат отрисовки: обёртка над конкретным документом.
-// `SVG` — устоявшийся акроним формата (как `HTML`/`PNG`); `Svg` читался бы хуже.
+// `SVG` - устоявшийся акроним формата (как `HTML`/`PNG`); `Svg` читался бы хуже.
 #[allow(clippy::upper_case_acronyms)]
 pub(crate) enum Viewport {
     SVG(Document),
@@ -39,16 +39,16 @@ impl Viewport {
     }
 }
 
-// ── Публичный API ─────────────────────────────────────────────────────────────
+// -- Публичный API -------------------------------------------------------------
 
 /// Кэшированный результат вычисления раскладки графа.
 ///
-/// Раскладка (positions) зависит только от структуры модели и не меняется
-/// в ходе симуляции, поэтому её достаточно вычислить один раз.
+/// Раскладка (positions) зависит только от структуры модели и не меняется в ходе
+/// симуляции, поэтому её достаточно вычислить один раз.
 pub(crate) struct CachedLayout {
-    /// Полные имена состояний — используются для сопоставления с active_states.
+    /// Полные имена состояний - используются для сопоставления с active_states.
     pub(crate) node_labels: Vec<String>,
-    /// Краткие псевдонимы S1/S2/... — отображаются в кружках на графе.
+    /// Краткие псевдонимы S1/S2/... - отображаются в кружках на графе.
     pub(crate) node_aliases: Vec<String>,
     /// Рёбра с полными именами предикатов.
     pub(crate) edges_vec: Vec<(usize, usize, String)>,
@@ -57,8 +57,8 @@ pub(crate) struct CachedLayout {
 
 /// Вычисляет раскладку графа для `unit`.
 ///
-/// Дорогостоящий шаг (имитация отжига): вызывать один раз перед записью GIF,
-/// затем передавать результат в [`render_from_layout`] для каждого кадра.
+/// Дорогостоящий шаг (имитация отжига): вызывать один раз перед записью GIF, затем
+/// передавать результат в [`render_from_layout`] для каждого кадра.
 pub(crate) fn compute_layout(unit: &Unit, cfg: &GraphicsConfig) -> CachedLayout {
     let g = graph::unit_to_graph(unit);
     let (node_labels, edges_vec, positions) = graph::calculate_graph(g, cfg);
@@ -73,7 +73,7 @@ pub(crate) fn compute_layout(unit: &Unit, cfg: &GraphicsConfig) -> CachedLayout 
 
 /// Отрисовывает кадр из заранее вычисленной раскладки.
 ///
-/// `highlighted_edge` — индексы рёбра `(from_idx, to_idx)`, которое нужно подсветить;
+/// `highlighted_edge` - индексы рёбра `(from_idx, to_idx)`, которое нужно подсветить;
 /// `None` означает обычный кадр без подсветки.
 pub(crate) fn render_from_layout(
     layout: &CachedLayout,
@@ -101,9 +101,9 @@ pub(crate) fn render_from_layout(
 
 /// Создаёт [`Viewport`] из симуляционного [`Unit`].
 ///
-/// `active_states` — срез имён состояний, которые нужно подсветить.
-/// Каждый вызов пересчитывает раскладку. Для GIF-записи используйте
-/// [`compute_layout`] + [`render_from_layout`].
+/// `active_states` - срез имён состояний, которые нужно подсветить. Каждый вызов
+/// пересчитывает раскладку. Для GIF-записи используйте [`compute_layout`] +
+/// [`render_from_layout`].
 #[allow(dead_code)]
 pub(crate) fn create_viewport(
     unit: &Unit,
@@ -123,7 +123,7 @@ pub(crate) fn create_viewport(
     )
 }
 
-// ── Геометрические вспомогательные функции для SVG ───────────────────────────
+// -- Геометрические вспомогательные функции для SVG ---------------------------
 
 /// Проверяет, пересекается ли прямоугольник AABB `(rx1, ry1)-(rx2, ry2)` с кругом
 /// центром `(cx, cy)` и радиусом `r`.
@@ -138,8 +138,8 @@ fn rect_overlaps_circle(rx1: f64, ry1: f64, rx2: f64, ry2: f64, cx: f64, cy: f64
 
 /// Возвращает площадь пересечения двух выровненных прямоугольников AABB.
 ///
-/// Прямоугольники задаются парами углов: `(ax1, ay1)-(ax2, ay2)` и `(bx1, by1)-(bx2, by2)`.
-/// Если прямоугольники не перекрываются — возвращает `0.0`.
+/// Прямоугольники задаются парами углов: `(ax1, ay1)-(ax2, ay2)` и `(bx1, by1)-(bx2,
+/// by2)`. Если прямоугольники не перекрываются - возвращает `0.0`.
 #[allow(clippy::too_many_arguments)]
 fn rects_intersection_area(
     ax1: f64,
@@ -154,7 +154,7 @@ fn rects_intersection_area(
     ((ax2.min(bx2) - ax1.max(bx1)).max(0.0)) * ((ay2.min(by2) - ay1.max(by1)).max(0.0))
 }
 
-// ── Генератор SVG ─────────────────────────────────────────────────────────────
+// -- Генератор SVG -------------------------------------------------------------
 
 /// Отрисовывает граф в SVG-документ.
 ///
@@ -168,10 +168,10 @@ fn rects_intersection_area(
 /// 4. Рисует кружки узлов с подписями.
 ///
 /// # Параметры
-/// - `node_labels` — имена состояний в порядке индексации.
-/// - `edges_vec` — рёбра `(индекс_источника, индекс_цели, подпись)`.
-/// - `positions` — координаты центров узлов, соответствующие `node_labels`.
-/// - `cfg` — конфигурация с размерами холста и параметрами отрисовки.
+/// - `node_labels` - имена состояний в порядке индексации.
+/// - `edges_vec` - рёбра `(индекс_источника, индекс_цели, подпись)`.
+/// - `positions` - координаты центров узлов, соответствующие `node_labels`.
+/// - `cfg` - конфигурация с размерами холста и параметрами отрисовки.
 #[allow(clippy::too_many_arguments)]
 fn create_svg(
     node_labels: &[String],
@@ -185,7 +185,7 @@ fn create_svg(
     highlighted_edge: Option<(usize, usize)>,
     is_svg: bool,
 ) -> Document {
-    // Легенда разбивается на два независимых блока: слева — состояния, справа — порты.
+    // Легенда разбивается на два независимых блока: слева - состояния, справа - порты.
     // Граф рисуется по центру через <g transform="translate(left_w, 0)">.
     let leg_w = if legend.is_some() {
         cfg.legend.width
@@ -271,8 +271,8 @@ fn create_svg(
         );
     }
 
-    // ── Граф (рёбра + узлы + шапка) в сдвинутой группе ──────────────────────
-    // Координаты внутри группы — те же [0, canvas.width] × [0, canvas.height].
+    // -- Граф (рёбра + узлы + шапка) в сдвинутой группе ----------------------
+    // Координаты внутри группы - те же [0, canvas.width] x [0, canvas.height].
     let mut graph = Group::new();
     if leg_w > 0.0 {
         graph = graph.set("transform", format!("translate({leg_w}, 0)"));
@@ -308,7 +308,7 @@ fn create_svg(
         *count += 1;
     }
 
-    // ── Рёбра ────────────────────────────────────────────────────────────────
+    // -- Рёбра ----------------------------------------------------------------
     for (idx, (i, j, edge_label)) in edges_vec.iter().enumerate() {
         let is_highlighted = highlighted_edge.is_some_and(|(hi, hj)| *i == hi && *j == hj);
         let multiplicity = edge_multiplicities[idx];
@@ -324,7 +324,7 @@ fn create_svg(
         let ux = dx / d;
         let uy = dy / d;
 
-        // Канонический перпендикуляр: встречные рёбра (A→B и B→A) получают
+        // Канонический перпендикуляр: встречные рёбра (A->B и B->A) получают
         // противоположные смещения и не наслаиваются.
         let (cpx, cpy) = if *i <= *j { (-uy, ux) } else { (uy, -ux) };
         let perp_sign = if multiplicity % 2 == 0 { 1.0 } else { -1.0 };
@@ -341,7 +341,7 @@ fn create_svg(
         let cp_x = mid_x - uy * d * curve_factor;
         let cp_y = mid_y + ux * d * curve_factor;
 
-        // В SVG-режиме подсвеченное ребро — оранжевое, но обычной толщины.
+        // В SVG-режиме подсвеченное ребро - оранжевое, но обычной толщины.
         let (edge_stroke, edge_width, arrow_marker) = if is_highlighted {
             let width = if is_svg {
                 cfg.edge.stroke_width
@@ -466,7 +466,7 @@ fn create_svg(
         }
     }
 
-    // ── Узлы ─────────────────────────────────────────────────────────────────
+    // -- Узлы -----------------------------------------------------------------
     for (i, full_label) in node_labels.iter().enumerate() {
         let (cx, cy) = positions[i];
         let is_active = active_states.contains(&full_label.as_str());
@@ -501,7 +501,7 @@ fn create_svg(
         );
     }
 
-    // ── Шапка: имя модели (SVG) или переход (GIF) ────────────────────────────
+    // -- Шапка: имя модели (SVG) или переход (GIF) ----------------------------
     if let Some((hi, hj)) = highlighted_edge {
         if !is_svg {
             let from_alias = node_aliases.get(hi).map(String::as_str).unwrap_or("");
@@ -564,14 +564,14 @@ fn create_svg(
 
     document = document.add(graph);
 
-    // ── Левая легенда: состояния + цвета ─────────────────────────────────────
+    // -- Левая легенда: состояния + цвета -------------------------------------
     if let Some(leg) = legend {
         let pad = cfg.legend.padding;
         let line_h = cfg.legend.line_height;
         let font_size = format!("{}px", cfg.legend.font_size);
         let inner_w = cfg.legend.width - 2.0 * pad;
 
-        // Высота левого блока: СОСТОЯНИЯ + N строк + ЦВЕТА + 2 строки.
+        // Высота левого блока: Состояния + N строк + цвета + 2 строки.
         let left_lines = 1 + node_labels.len() + 1 + 2;
         let left_box_h = left_lines as f64 * line_h + 2.0 * pad;
 
@@ -591,7 +591,7 @@ fn create_svg(
         let lx = pad + pad; // отступ внутри рамки
         let mut y = pad + line_h;
 
-        // СОСТОЯНИЯ
+        // Состояния
         document = document.add(
             Text::new(cfg.legend.state_header.as_str())
                 .set("x", lx)
@@ -616,7 +616,7 @@ fn create_svg(
             y += line_h;
         }
 
-        // ЦВЕТА
+        // Цвета
         document = document.add(
             Text::new(cfg.legend.colors_header.as_str())
                 .set("x", lx)
@@ -659,7 +659,7 @@ fn create_svg(
             y += line_h;
         }
 
-        // ── Правая легенда: порты и переменные ───────────────────────────────
+        // -- Правая легенда: порты и переменные -------------------------------
         let mut port_sections: Vec<(&str, &[(String, String)])> = vec![];
         if !leg.in_ports.is_empty() {
             port_sections.push((cfg.legend.in_header.as_str(), &leg.in_ports));
@@ -725,7 +725,7 @@ fn create_svg(
     document
 }
 
-// ── Модуль: граф из Unit и оптимизация раскладки ─────────────────────────────
+// -- Модуль: граф из Unit и оптимизация раскладки -----------------------------
 
 /// Функции построения ориентированного графа из [`Unit`] и размещения узлов.
 ///
@@ -733,14 +733,14 @@ fn create_svg(
 /// Снаружи доступны только [`unit_to_graph`] и [`calculate_graph`].
 pub(super) mod graph;
 
-// ── Тесты viewport ────────────────────────────────────────────────────────────
+// -- Тесты viewport ------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::unit::{Unit, UnitKind};
 
-    // ── rect_overlaps_circle ──────────────────────────────────────────────────
+    // -- rect_overlaps_circle --------------------------------------------------
 
     #[test]
     fn test_rect_circle_overlap_center_inside() {
@@ -755,21 +755,23 @@ mod tests {
 
     #[test]
     fn test_rect_circle_touching_edge_not_overlap() {
-        // Ближайшая точка (5,2.5), расстояние = 2.0, r = 2.0 → строгое неравенство не выполняется
+        // Ближайшая точка (5,2.5), расстояние = 2.0, r = 2.0 -> строгое неравенство не
+        // выполняется
         assert!(!rect_overlaps_circle(0.0, 0.0, 5.0, 5.0, 7.0, 2.5, 2.0));
     }
 
     #[test]
     fn test_rect_circle_partially_inside() {
-        // Круг центром на краю прямоугольника: (10, 5) r=2, ближайшая точка (10,5), d=0 < r
+        // Круг центром на краю прямоугольника: (10, 5) r=2, ближайшая точка (10,5), d=0
+        // < r
         assert!(rect_overlaps_circle(0.0, 0.0, 10.0, 10.0, 10.0, 5.0, 2.0));
     }
 
-    // ── rects_intersection_area ───────────────────────────────────────────────
+    // -- rects_intersection_area -----------------------------------------------
 
     #[test]
     fn test_rects_area_overlapping() {
-        // (0,0,4,4) ∩ (2,2,6,6) = (2,2,4,4) → площадь 4
+        // (0,0,4,4) ∩ (2,2,6,6) = (2,2,4,4) -> площадь 4
         let area = rects_intersection_area(0.0, 0.0, 4.0, 4.0, 2.0, 2.0, 6.0, 6.0);
         assert!((area - 4.0).abs() < 1e-10, "ожидалось 4.0, получено {area}");
     }
@@ -789,12 +791,12 @@ mod tests {
 
     #[test]
     fn test_rects_area_one_inside_other() {
-        // (1,1,3,3) полностью внутри (0,0,4,4) → площадь = 4
+        // (1,1,3,3) полностью внутри (0,0,4,4) -> площадь = 4
         let area = rects_intersection_area(0.0, 0.0, 4.0, 4.0, 1.0, 1.0, 3.0, 3.0);
         assert!((area - 4.0).abs() < 1e-10);
     }
 
-    // ── create_viewport ───────────────────────────────────────────────────────
+    // -- create_viewport -------------------------------------------------------
 
     #[test]
     fn test_create_viewport_empty_unit_returns_ok() {
@@ -889,13 +891,13 @@ mod test_highlight {
             None,
             None,
             Some((fi, ti)),
-            false, // GIF-режим — оранжевая шапка должна быть
+            false, // GIF-режим - оранжевая шапка должна быть
         )
         .unwrap();
         let Viewport::SVG(doc) = vp;
         let svg_str = doc.to_string();
         // Усечение по границам символов (`&svg_str[..500]` паникует на короткой/
-        // многобайтовой строке). Запись в `/tmp` убрана: нет на Windows (фича 0037).
+        // многобайтовой строке). Запись в `/tmp` убрана: нет на Windows.
         let head: String = svg_str.chars().take(500).collect();
         assert!(
             svg_str.contains("FFF3DC") || svg_str.contains("FF8C00"),

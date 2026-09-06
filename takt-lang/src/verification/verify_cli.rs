@@ -1,8 +1,8 @@
-//! Разбор аргументов подкоманды `taktc verify` (фича 0049; экспорт графа — 0124).
+//! Разбор аргументов подкоманды `taktc verify`.
 //!
-//! Вынесен из бинарника `bin/taktc.rs` в библиотеку: тот пришпилен к лимиту
-//! размера (`scripts/module-size-baseline.txt`), и логику разбора держат здесь,
-//! оставляя в бинарнике тонкий диспетчер. Тесты разбора — при потребителе.
+//! Вынесен из бинарника `bin/taktc.rs` в библиотеку: тот пришпилен к лимиту размера
+//! (`scripts/module-size-baseline.txt`), и логику разбора держат здесь, оставляя в
+//! бинарнике тонкий диспетчер. Тесты разбора - при потребителе.
 
 use crate::VerifyScope;
 use crate::address_map::split_include_dirs;
@@ -17,22 +17,22 @@ pub struct VerifyOptions {
     pub include_dirs: Vec<String>,
     /// Свойство из командной строки (`--property "G (Fault -> F Idle)"`).
     ///
-    /// `None` — проверяются все формулы `: [LTL] φ;`, объявленные в файле.
+    /// `None` - проверяются все формулы `: [LTL] φ;`, объявленные в файле.
     pub property: Option<String>,
     /// Печатать трассу конвейера (Крипке, автомат `¬φ`, произведение).
     pub trace: bool,
-    /// Область проверки (фича 0051): `file` (умолчание) — модели своего файла,
-    /// `all` — включая импортированные.
+    /// Область проверки: `file` (умолчание) - модели своего файла, `all` - включая
+    /// импортированные.
     pub scope: VerifyScope,
-    /// Выгрузить граф верификации в DOT вместо проверки (фича 0124, `--emit-graph`).
+    /// Выгрузить граф верификации в DOT вместо проверки.
     pub emit_graph: Option<GraphKind>,
 }
 
 /// Разбирает значение флага `--scope`.
 ///
-/// Негодное значение — отказ, а не молчаливое умолчание: `--scope al` иначе
-/// проверял бы свой файл, отчитавшись «все держатся», и пользователь считал бы,
-/// что импорты тоже проверены.
+/// Негодное значение - отказ, а не молчаливое умолчание: `--scope al` иначе проверял бы
+/// свой файл, отчитавшись "все держатся", и пользователь считал бы, что импорты тоже
+/// проверены.
 fn parse_scope(value: &str) -> Result<VerifyScope, String> {
     match value {
         "file" => Ok(VerifyScope::File),
@@ -46,10 +46,10 @@ fn parse_scope(value: &str) -> Result<VerifyScope, String> {
 
 /// Задаёт проверяемое свойство, отвергая повтор флага.
 ///
-/// Второй `--property` молча затирал бы первый, и `taktc verify -p "F Done" -p
-/// "G Idle" m.takt` отчитался бы «проверено свойств: 1; все держатся» — про
-/// первую формулу пользователь узнал бы только из исходников. Отказ по тому же
-/// правилу, что и для второго файла.
+/// Второй `--property` молча затирал бы первый, и `taktc verify -p "F Done" -p "G Idle"
+/// m.takt` отчитался бы "проверено свойств: 1; все держатся" - про первую формулу
+/// пользователь узнал бы только из исходников. Отказ по тому же правилу, что и для
+/// второго файла.
 fn set_property(options: &mut VerifyOptions, value: &str) -> Result<(), String> {
     if let Some(first) = &options.property {
         return Err(format!(
@@ -108,7 +108,7 @@ pub fn parse_verify_args(args: &[String]) -> Result<VerifyOptions, String> {
             other if other.starts_with("--emit-graph=") => {
                 options.emit_graph = Some(parse_graph_kind(&other["--emit-graph=".len()..])?);
             }
-            // Слитная форма `-I/путь` — как в подкоманде compile.
+            // Слитная форма `-I/путь` - как в подкоманде compile.
             other if other.starts_with("-I") && other.len() > 2 => {
                 options.include_dirs.extend(split_include_dirs(&other[2..]));
             }

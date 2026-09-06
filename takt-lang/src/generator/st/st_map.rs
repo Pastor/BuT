@@ -1,9 +1,9 @@
 //! Снимок семантической карты модели для генератора Structured Text.
 //!
 //! Обёртка над [`Map`] из [`crate::semantic::minimap`] по образцу
-//! [`CMap`](crate::generator::c) — снимок дерева плюс множество используемых
-//! имён ([`UsageSet`]), чтобы не эмитить в `FUNCTION_BLOCK` объявления, которых
-//! модель не использует.
+//! [`CMap`](crate::generator::c) - снимок дерева плюс множество используемых имён
+//! ([`UsageSet`]), чтобы не эмитить в `FUNCTION_BLOCK` объявления, которых модель не
+//! использует.
 
 use crate::address_map::ResolvedAddress;
 use crate::diagnostics::{Diagnostic, Location};
@@ -21,19 +21,19 @@ pub(crate) struct StMap {
     map: Map,
     /// Множество используемых имён модели (для фильтрации неиспользуемых элементов).
     usage: UsageSet,
-    /// Режим потребления адресов (`st-at`): эмитить `AT %…` у портов.
+    /// Режим потребления адресов (`st-at`): эмитить `AT %...` у портов.
     ///
     /// Соответствует [`GenerateOptions::hal`](crate::generator::GenerateOptions::hal);
-    /// потребляется задачей 0041-05, здесь только переносится в снимок.
+    /// потребляется, здесь только переносится в снимок.
     at_addresses: bool,
     /// Разрешённые адреса портов (`resolve_addresses`, приоритет 0020).
     addresses: HashMap<String, ResolvedAddress>,
-    /// Профиль времени (фича 0134): «часы» (штатный `TON`) либо «такты» (счётчик).
-    /// Разрешается общим слоем `resolve_profile` в `generate` — по образцу `CMap`.
+    /// Профиль времени: "часы" (штатный `TON`) либо "такты" (счётчик). Разрешается
+    /// общим слоем `resolve_profile` в `generate` - по образцу `CMap`.
     time_profile: crate::semantic::duration::TimeProfile,
-    /// Форма печати автомата (фича 0440): `CASE` либо таблица переходов.
+    /// Форма печати автомата: `CASE` либо таблица переходов.
     fsm: crate::generator::FsmForm,
-    /// Комментарии автора модели для переноса в вывод (фича 0535, задача 05).
+    /// Комментарии автора модели для переноса в вывод.
     comments: Option<std::rc::Rc<crate::generator::comments::SourceComments>>,
 }
 
@@ -73,8 +73,7 @@ impl StMap {
         })
     }
 
-    /// Задаёт форму печати автомата (фича 0440); умолчание — `CASE`.
-    /// Комментарии автора модели (фича 0535, задача 05).
+    /// Задаёт форму печати автомата; умолчание - `CASE`. Комментарии автора модели.
     pub(crate) fn with_comments(
         mut self,
         comments: Option<std::rc::Rc<crate::generator::comments::SourceComments>>,
@@ -93,7 +92,7 @@ impl StMap {
         self.fsm == crate::generator::FsmForm::Table
     }
 
-    /// Узел состояния по имени — для общего носителя строк таблицы (фича 0440).
+    /// Узел состояния по имени - для общего носителя строк таблицы.
     pub(crate) fn raw_state_at(
         &self,
         name: Name,
@@ -109,7 +108,7 @@ impl StMap {
             })
     }
 
-    /// Задаёт профиль времени (фича 0134); умолчание — «часы» (аддитивно).
+    /// Задаёт профиль времени; умолчание - "часы" (аддитивно).
     pub(crate) fn with_time_profile(
         mut self,
         profile: crate::semantic::duration::TimeProfile,
@@ -169,8 +168,8 @@ impl StMap {
 
     /// Возвращает уникальные имена моделей, чьи экземпляры заводит данная модель.
     ///
-    /// Нужно для порядка объявления: в ST тип экземпляра обязан быть известен к
-    /// моменту объявления, а опережающие ссылки — нестандартное расширение.
+    /// Нужно для порядка объявления: в ST тип экземпляра обязан быть известен к моменту
+    /// объявления, а опережающие ссылки - нестандартное расширение.
     pub(crate) fn instantiated_by(&self, model: &Name) -> Vec<String> {
         let Some(Element::Model { states, .. }) = self.map.element_at(model.clone()) else {
             return Vec::new();
@@ -191,18 +190,18 @@ impl StMap {
 
     /// Возвращает переменные **корня**, которыми пользуется под-модель.
     ///
-    /// Это список для `VAR_IN_OUT` под-FB и, он же, для аргументов вызова —
+    /// Это список для `VAR_IN_OUT` под-FB и, он же, для аргументов вызова -
     /// **один источник истины**: разойдись они, порождённый ST перестал бы
     /// собираться (либо, хуже, связал бы не те переменные).
     ///
-    /// В цели `c` этой задачи нет: там под-модель получает указатель `main` и
-    /// читает `main->lift_request` (Ф7). В переносимом подмножестве ST указателей
-    /// нет, поэтому общие переменные передаются по ссылке через `VAR_IN_OUT`
-    /// (вариант О1-в; проба П7 подтвердила, что MatIEC это принимает).
+    /// В цели `c` этой задачи нет: там под-модель получает указатель `main` и читает
+    /// `main->lift_request` (Ф7). В переносимом подмножестве ST указателей нет, поэтому
+    /// общие переменные передаются по ссылке через `VAR_IN_OUT` (вариант О1-в; проба П7
+    /// подтвердила, что MatIEC это принимает).
     ///
-    /// Список считается по фактическому использованию (`compute_usage`), а не
-    /// «все переменные корня»: лишний `VAR_IN_OUT` — это лишний обязательный
-    /// аргумент у каждого вызова.
+    /// Список считается по фактическому использованию (`compute_usage`), а не "все
+    /// переменные корня": лишний `VAR_IN_OUT` - это лишний обязательный аргумент у
+    /// каждого вызова.
     pub(crate) fn shared_variables(&self, sub: &Name) -> Vec<(String, TypeNode)> {
         let Some(root) = self.map.model_at(None) else {
             return Vec::new();
@@ -210,11 +209,8 @@ impl StMap {
         let Some(sub_model) = self.map.model_at(Some(sub.unique().to_string())) else {
             return Vec::new();
         };
-        // Общий носитель: он видит и вложенные модели, и те, которыми
-        // РЕАЛИЗОВАНЫ состояния (фича 0450). Прежде промежуточный FB не
-        // получал `VAR_IN_OUT`, а его тело звало `only_first0(shared := shared)`
-        // — `iec2c` отвечал «Variable not declared in this scope» при нулевом
-        // коде возврата `taktc`.
+        // Общий носитель: он видит и вложенные модели, и те, которыми реализованы
+        // состояния.
         let usage = crate::semantic::usage_tree::usage_with_implementations(&sub_model);
         let own: Vec<String> = sub_model.borrow().variables.keys().cloned().collect();
         let root_ref = root.borrow();
@@ -223,8 +219,8 @@ impl StMap {
         let mut names: Vec<&String> = root_ref.variables.keys().collect();
         names.sort();
         for name in names {
-            // Константы не разделяются: они неизменны и объявляются в каждом FB
-            // своей секцией `VAR CONSTANT`.
+            // Константы не разделяются: они неизменны и объявляются в каждом FB своей
+            // секцией `VAR CONSTANT`.
             let (VariableNode::Simple { ty, .. } | VariableNode::Port { ty, .. }) =
                 &root_ref.variables[name]
             else {
@@ -270,8 +266,7 @@ impl StMap {
     }
 }
 
-/// Карта цели `st` — источник состояний для общего носителя строк таблицы
-/// (фича 0440).
+/// Карта цели `st` - источник состояний для общего носителя строк таблицы.
 impl crate::generator::table::StateSource for StMap {
     fn state_element(&self, name: Name) -> Option<Element> {
         self.state_at(name)

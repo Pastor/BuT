@@ -54,7 +54,7 @@ def steps(text):
             found.append(
                 (f"{match.group(1)}-{match.group(2)}.{match.group(3)}", " ".join(comment))
             )
-        # `echo` — часть шага, комментарий к нему относится тоже.
+        # `echo` - часть шага, комментарий к нему относится тоже.
         if not stripped.startswith("echo"):
             comment = []
     return found

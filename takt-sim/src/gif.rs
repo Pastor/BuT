@@ -2,7 +2,7 @@ use crate::unit::viewport::Viewport;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-// ── GIF-запись ────────────────────────────────────────────────────────────────
+// -- GIF-запись ----------------------------------------------------------------
 
 pub(crate) struct FrameTiming {
     pub serial_ms: u128,
@@ -13,14 +13,14 @@ pub(crate) struct FrameTiming {
 
 /// Записывает кадры симуляции в анимированный GIF-файл.
 ///
-/// Каждый кадр добавляется как RGB-изображение, растеризованное из SVG-документа
-/// через resvg. Для итогового GIF применяется квантизация цвета до 256 оттенков.
+/// Каждый кадр добавляется как RGB-изображение, растеризованное из SVG-документа через
+/// resvg. Для итогового GIF применяется квантизация цвета до 256 оттенков.
 pub(crate) struct GifRecorder {
     frames: Vec<RgbFrame>,
     output_path: PathBuf,
     frame_delay: u16,
-    /// База шрифтов загружается один раз при создании рекордера и переиспользуется
-    /// для всех кадров — повторный вызов load_system_fonts() занимал ~1-1.5 с/кадр.
+    /// База шрифтов загружается один раз при создании рекордера и переиспользуется для
+    /// всех кадров - повторный вызов load_system_fonts() занимал ~1-1.5 с/кадр.
     fontdb: Arc<resvg::usvg::fontdb::Database>,
 }
 
@@ -34,7 +34,7 @@ struct RgbFrame {
 impl GifRecorder {
     /// Создаёт новый рекордер и загружает системные шрифты один раз.
     ///
-    /// `frame_delay` — задержка между кадрами в единицах 1/100 секунды.
+    /// `frame_delay` - задержка между кадрами в единицах 1/100 секунды.
     pub(crate) fn new(output_path: &Path, frame_delay: u16) -> Self {
         let mut fontdb = resvg::usvg::fontdb::Database::new();
         fontdb.load_system_fonts();
@@ -48,7 +48,8 @@ impl GifRecorder {
 
     /// Добавляет кадр из SVG-документа Viewport.
     ///
-    /// `delay_override` — задержка в единицах 1/100 с; `None` → использовать `frame_delay`.
+    /// `delay_override` - задержка в единицах 1/100 с; `None` -> использовать
+    /// `frame_delay`.
     pub(crate) fn add_frame(
         &mut self,
         viewport: &Viewport,
@@ -122,7 +123,8 @@ impl GifRecorder {
             .map_err(|e| format!("Ошибка настройки GIF repeat: {e}"))?;
 
         for frame_data in self.frames {
-            // speed=10: в 5-7 раз быстрее NeuQuant чем speed=1 при незначительной потере качества.
+            // speed=10: в 5-7 раз быстрее NeuQuant чем speed=1 при незначительной
+            // потере качества.
             let mut frame = gif::Frame::from_rgb_speed(
                 frame_data.width,
                 frame_data.height,
@@ -138,7 +140,7 @@ impl GifRecorder {
     }
 }
 
-// ── Вспомогательные функции ───────────────────────────────────────────────────
+// -- Вспомогательные функции ---------------------------------------------------
 
 fn viewport_to_string(viewport: &Viewport) -> Result<String, String> {
     match viewport {
@@ -159,7 +161,7 @@ fn render_tree(tree: &resvg::usvg::Tree, width: u32, height: u32) -> Result<Vec<
     Ok(pixmap.data().to_vec())
 }
 
-// ── Тесты ─────────────────────────────────────────────────────────────────────
+// -- Тесты ---------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {

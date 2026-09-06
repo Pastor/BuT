@@ -1,8 +1,8 @@
 //! Печать выражений, условий, типов и объявлений переменных.
 //!
-//! Скобки **не пересчитываются**: `Parenthesis` — явный узел АСД, поэтому
-//! авторская расстановка сохраняется, а печать остаётся семантически нейтральной
-//! (требование R4) без анализа приоритетов.
+//! Скобки **не пересчитываются**: `Parenthesis` - явный узел АСД, поэтому авторская
+//! расстановка сохраняется, а печать остаётся семантически нейтральной (требование R4)
+//! без анализа приоритетов.
 
 use super::FormatError;
 use crate::parser::ast;
@@ -11,12 +11,12 @@ use crate::parser::ast;
 pub(crate) fn expression(expr: &ast::Expression) -> Result<String, FormatError> {
     use ast::Expression as E;
     Ok(match expr {
-        // ── Литералы и имена ─────────────────────────────────────────────────
-        // Число печатается КАК НАПИСАНО (фича 0463): `0xF0` не превращается в
-        // `240`. Тот же принцип, что у литерала длительности ниже.
+        // -- Литералы и имена ------------------------------------------------- Число
+        // печатается как написано: `0xF0` не превращается в `240`. Тот же принцип, что
+        // у литерала длительности ниже.
         E::Number(loc, n) => super::literal::number(*loc, *n),
-        // Литерал длительности печатается как написан (фича 0134): `1m30s` не
-        // канонизируется в `90s` — АСД хранит выбор автора.
+        // Литерал длительности печатается как написан: `1m30s` не канонизируется в
+        // `90s` - АСД хранит выбор автора.
         E::Duration(_, _, text) => text.clone(),
         E::Rational(_, s, negative) => {
             if *negative {
@@ -30,10 +30,10 @@ pub(crate) fn expression(expr: &ast::Expression) -> Result<String, FormatError> 
         E::Variable(id) => id.name.clone(),
         E::Type(_, t) => ty(t)?,
         E::Address(_, addr, bit) => format!("0x{addr:X}:{bit}"),
-        // Анонимное обращение (фича 0189): позиция бита печатается, только если
-        // автор её записал. `#0x100` и `#0x100:0` означают одно и то же, но
-        // канонизировать одну форму в другую нельзя — форматтер сохраняет выбор
-        // автора (то же правило, что у `while`/`loop`).
+        // Анонимное обращение: позиция бита печатается, только если автор её записал.
+        // `#0x100` и `#0x100:0` означают одно и то же, но канонизировать одну форму в
+        // другую нельзя - форматтер сохраняет выбор автора (то же правило, что у
+        // `while`/`loop`).
         E::AnonAddress(_, addr, bit) => anon_address(*addr, *bit),
         E::List(_, params) => parameter_list(params)?,
         E::Array(_, items) | E::Initializer(_, items) => {
@@ -45,9 +45,9 @@ pub(crate) fn expression(expr: &ast::Expression) -> Result<String, FormatError> 
             format!("{{{items}}}")
         }
 
-        // ── Доступ ───────────────────────────────────────────────────────────
+        // -- Доступ -----------------------------------------------------------
         E::Parenthesis(_, inner) => format!("({})", expression(inner)?),
-        // База — выражение (фича 0358): печатается тем же печатником.
+        // База - выражение: печатается тем же печатником.
         E::ArraySubscript(_, base, index) => {
             format!("{}[{}]", expression(base)?, expression(index)?)
         }
@@ -67,13 +67,13 @@ pub(crate) fn expression(expr: &ast::Expression) -> Result<String, FormatError> 
             format!("{}({args})", id.name)
         }
 
-        // ── Унарные ──────────────────────────────────────────────────────────
+        // -- Унарные ----------------------------------------------------------
         E::Not(_, e) => format!("!{}", expression(e)?),
         E::BitwiseNot(_, e) => format!("~{}", expression(e)?),
         E::UnaryPlus(_, e) => format!("+{}", expression(e)?),
         E::Negate(_, e) => format!("-{}", expression(e)?),
 
-        // ── Бинарные ─────────────────────────────────────────────────────────
+        // -- Бинарные ---------------------------------------------------------
         E::Power(_, l, r) => binary(l, "**", r)?,
         E::Multiply(_, l, r) => binary(l, "*", r)?,
         E::Divide(_, l, r) => binary(l, "/", r)?,
@@ -89,8 +89,8 @@ pub(crate) fn expression(expr: &ast::Expression) -> Result<String, FormatError> 
         E::More(_, l, r) => binary(l, ">", r)?,
         E::LessEqual(_, l, r) => binary(l, "<=", r)?,
         E::MoreEqual(_, l, r) => binary(l, ">=", r)?,
-        // Инвариант фичи 0021: `=` — сравнение, `:=` — присваивание. Подменять
-        // их печатью нельзя ни при каких обстоятельствах.
+        // Инвариант: `=` - сравнение, `:=` - присваивание. Подменять их печатью нельзя
+        // ни при каких обстоятельствах.
         E::Equal(_, l, r) => binary(l, "=", r)?,
         E::NotEqual(_, l, r) => binary(l, "!=", r)?,
         E::And(_, l, r) => binary(l, "&&", r)?,
@@ -105,7 +105,7 @@ pub(crate) fn expression(expr: &ast::Expression) -> Result<String, FormatError> 
             expression(e)?
         ),
 
-        // ── Пока не поддержаны — отказ, а не порча исходника ─────────────────
+        // -- Пока не поддержаны - отказ, а не порча исходника -----------------
         E::CodeBlock(loc, _, _) => return Err(super::unsupported(*loc, "блок кода")),
         E::NamedFunction(loc, _, _) => {
             return Err(super::unsupported(*loc, "именованная функция"));
@@ -128,11 +128,10 @@ pub(crate) fn member(m: &ast::Member) -> String {
     }
 }
 
-/// Печатает анонимное обращение к ячейке: `#0x100` либо `#0x100:3` (фича 0189).
+/// Печатает анонимное обращение к ячейке: `#0x100` либо `#0x100:3`.
 ///
-/// Одна функция на выражения и условия: форма записи у них общая, и разойтись
-/// печать не имеет права — иначе одно и то же обращение печаталось бы в ребре
-/// иначе, чем в теле.
+/// Одна функция на выражения и условия: форма записи у них общая, и разойтись печать не
+/// имеет права - иначе одно и то же обращение печаталось бы в ребре иначе, чем в теле.
 fn anon_address(addr: i128, bit: Option<i64>) -> String {
     match bit {
         Some(bit) => format!("#0x{addr:X}:{bit}"),
@@ -142,18 +141,18 @@ fn anon_address(addr: i128, bit: Option<i64>) -> String {
 
 /// Печатает условие.
 ///
-/// Отдельная функция, а не переиспользование [`expression`]: `Condition` — своя
-/// грамматика с **другой** семантикой `=` (равенство, а не присваивание).
-/// Разделение намеренное (ADR 0019) — сливать печать нельзя.
+/// Отдельная функция, а не переиспользование [`expression`]: `Condition` - своя
+/// грамматика с **другой** семантикой `=` (равенство, а не присваивание). Разделение
+/// намеренное - сливать печать нельзя.
 pub(crate) fn condition(cond: &ast::Condition) -> Result<String, FormatError> {
     use ast::Condition as C;
     Ok(match cond {
         C::Number(loc, n) => super::literal::number(*loc, *n),
         C::Duration(_, _, text) => text.clone(),
         C::After(_, _, text) | C::AfterTicks(_, _, text) => format!("after {text}"),
-        // Константная выдержка (фича 0143): печатается вложенное условие как
-        // написано — скобки живут в дереве (`Parenthesis`), поэтому
-        // `after (BASE + 30s)` восстанавливается вместе с ними.
+        // Константная выдержка: печатается вложенное условие как написано - скобки
+        // живут в дереве (`Parenthesis`), поэтому `after (BASE + 30s)`
+        // восстанавливается вместе с ними.
         C::AfterExpr(_, inner) => format!("after {}", condition(inner)?),
         C::Rational(_, s, negative) => {
             if *negative {
@@ -188,7 +187,7 @@ pub(crate) fn condition(cond: &ast::Condition) -> Result<String, FormatError> {
         C::More(_, l, r) => cond_binary(l, ">", r)?,
         C::LessEqual(_, l, r) => cond_binary(l, "<=", r)?,
         C::MoreEqual(_, l, r) => cond_binary(l, ">=", r)?,
-        // `=` в условии — РАВЕНСТВО (инвариант 0021/ADR 0019).
+        // `=` в условии - Равенство.
         C::Equal(_, l, r) => cond_binary(l, "=", r)?,
         C::NotEqual(_, l, r) => cond_binary(l, "!=", r)?,
     })
@@ -210,10 +209,10 @@ pub(crate) fn ty(t: &ast::Type) -> Result<String, FormatError> {
         T::Bool => "bool".to_string(),
         T::Rational => "float".to_string(),
         T::Duration => "duration".to_string(),
-        // Fixed-point q(m, n) (фича 0061): печатаем как объявлено, канон — с
-        // пробелом после запятой (как в аргументах). Модификатор `sat` (фича
-        // 0170) печатается через пробел — иначе форматтер потерял бы семантику
-        // переполнения, а это не оформление, а смысл программы.
+        // Fixed-point q(m, n): печатаем как объявлено, канон - с пробелом после запятой
+        // (как в аргументах). Модификатор `sat` печатается через пробел - иначе
+        // форматтер потерял бы семантику переполнения, а это не оформление, а смысл
+        // программы.
         T::Fixed(_, ctor, m, n, modifier) => match modifier {
             Some(word) => format!("{ctor}({m}, {n}) {word}"),
             None => format!("{ctor}({m}, {n})"),
@@ -230,9 +229,9 @@ pub(crate) fn ty(t: &ast::Type) -> Result<String, FormatError> {
             element_type,
             ..
         } => format!("[{}; {element_count}]", ty(element_type)?),
-        // ⚠️ Позиции у `Type::Function` в АСД нет, и взять её неоткуда: узел
-        // грамматикой **не строится** (мёртвый узел, класс фичи 0201). Появится
-        // правило — вместе с ним появится и `loc`, который сюда протянут.
+        // Позиции у `Type::Function` в АСД нет, и взять её неоткуда: узел грамматикой
+        // **не строится** (мёртвый узел, класс ). Появится правило - вместе с ним
+        // появится и `loc`, который сюда протянут.
         T::Function { .. } => {
             return Err(super::unsupported(
                 crate::diagnostics::Location::Implicit,
@@ -244,8 +243,8 @@ pub(crate) fn ty(t: &ast::Type) -> Result<String, FormatError> {
 
 /// Печатает объявление переменной/порта/константы (без завершающей `;`).
 ///
-/// Тип опционален (`typ: Option<Type>`) — выводится семантикой; форматтер
-/// печатает то, что написал автор, и ничего не додумывает.
+/// Тип опционален (`typ: Option<Type>`) - выводится семантикой; форматтер печатает то,
+/// что написал автор, и ничего не додумывает.
 pub(crate) fn variable_define(v: &ast::VariableDefine) -> Result<String, FormatError> {
     use ast::VariableDefine as V;
     Ok(match v {
@@ -261,8 +260,8 @@ pub(crate) fn variable_define(v: &ast::VariableDefine) -> Result<String, FormatE
             initializer,
             ..
         } => with_init(head("const", name, typ.as_ref())?, Some(initializer))?,
-        // Параметр модели (фича 0185): инициализатор обязателен грамматикой,
-        // печатается всегда — как у `const`.
+        // Параметр модели: инициализатор обязателен грамматикой, печатается всегда -
+        // как у `const`.
         V::Parameter {
             name,
             typ,
@@ -282,14 +281,14 @@ pub(crate) fn variable_define(v: &ast::VariableDefine) -> Result<String, FormatE
                 ast::PortDirection::Out => "out",
                 ast::PortDirection::InOut => "inout",
             };
-            // ⚠️ Размещение `at <адрес>` печатается **между** типом и
-            // инициализатором — в том же порядке, в каком стоит в исходнике
-            // (фича 0187). Поле необязательно: адрес может приходить оператором
-            // `address` или внешней картой, и тогда его здесь просто нет.
+            // Размещение `at <адрес>` печатается **между** типом и инициализатором - в
+            // том же порядке, в каком стоит в исходнике. Поле необязательно: адрес
+            // может приходить оператором `address` или внешней картой, и тогда его
+            // здесь просто нет.
             //
-            // Правило форматтера «добавил узел — добавь печать» защищает от
-            // новых **узлов**, а не полей: новое поле компилятор не потребовал
-            // бы разобрать (`..` в образце), и адрес молча пропал бы из вывода.
+            // Правило форматтера "добавил узел - добавь печать" защищает от новых
+            // **узлов**, а не полей: новое поле компилятор не потребовал бы разобрать
+            // (`..` в образце), и адрес молча пропал бы из вывода.
             let head = match address {
                 Some(addr) => format!(
                     "{} at {}",
@@ -328,9 +327,8 @@ fn string_literal(parts: &[ast::StringLiteral]) -> String {
 
 /// Один строковый литерал в кавычках.
 ///
-/// Отдельная точка нужна печати блока формул (фича 0405): там литерал стоит
-/// поодиночке — диалектом заголовка и аргументом вызова. Своя копия кавычек
-/// разошлась бы с этой (класс 0084/0193/0195).
+/// Отдельная точка нужна печати блока формул: там литерал стоит поодиночке - диалектом
+/// заголовка и аргументом вызова. Своя копия кавычек разошлась бы с этой.
 pub(crate) fn one_string(part: &ast::StringLiteral) -> String {
     format!("\"{}\"", part.string)
 }
@@ -345,7 +343,7 @@ pub(crate) fn parameter_list(params: &ast::ParameterList) -> Result<String, Form
         .iter()
         .filter_map(|(_, p)| p.as_ref())
         .map(|p| {
-            // `Parameter::ty` — это Expression (тип как выражение), а не Type.
+            // `Parameter::ty` - это Expression (тип как выражение), а не Type.
             let ty_text = expression(&p.ty)?;
             Ok(match &p.name {
                 Some(name) => format!("{}: {ty_text}", name.name),
@@ -393,10 +391,9 @@ fn import_path(p: &ast::ImportPath) -> String {
 ///
 /// # Форма автора сохраняется
 ///
-/// `: conds;` и `: [Guard] conds;` — синонимы с одной семантикой, но АСД хранит
-/// признак `explicit`, поэтому печатается **та форма, которую написал автор**.
-/// Канонизировать синонимы форматтер не вправе: он меняет раскладку, а не текст
-/// программы (решение заказчика по фиче 0024, вариант 2).
+/// `: conds;` и `: [Guard] conds;` - синонимы с одной семантикой, но АСД хранит признак
+/// `explicit`, поэтому печатается **та форма, которую написал автор**. Канонизировать
+/// синонимы форматтер не вправе: он меняет раскладку, а не текст программы.
 pub(crate) fn inline_formula(f: &ast::InlineFormulaDefine) -> Result<String, FormatError> {
     use ast::InlineFormulaDefine as F;
     Ok(match f {
@@ -410,7 +407,7 @@ pub(crate) fn inline_formula(f: &ast::InlineFormulaDefine) -> Result<String, For
                 .map(condition)
                 .collect::<Result<Vec<_>, _>>()?
                 .join(", ");
-            // Печатаем форму автора: `: [Guard] …` и `: …` — синонимы.
+            // Печатаем форму автора: `: [Guard] ...` и `: ...` - синонимы.
             if *explicit {
                 format!(": [Guard] {list};")
             } else {
@@ -428,7 +425,7 @@ pub(crate) fn inline_formula(f: &ast::InlineFormulaDefine) -> Result<String, For
     })
 }
 
-/// Позиция встроенной формулы — для привязки комментариев.
+/// Позиция встроенной формулы - для привязки комментариев.
 pub(crate) fn inline_formula_loc(f: &ast::InlineFormulaDefine) -> crate::diagnostics::Location {
     use ast::InlineFormulaDefine as F;
     match f {

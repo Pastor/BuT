@@ -4,10 +4,10 @@
 //!
 //! ## Поддерживаемые возможности
 //!
-//! - `textDocument/didOpen`, `didChange`, `didClose` — синхронизация документов
-//! - `textDocument/publishDiagnostics` — отправка ошибок и предупреждений
-//! - `textDocument/completion` — автодополнение ключевых слов и идентификаторов
-//! - `textDocument/hover` — информация о типе идентификатора под курсором
+//! - `textDocument/didOpen`, `didChange`, `didClose` - синхронизация документов
+//! - `textDocument/publishDiagnostics` - отправка ошибок и предупреждений
+//! - `textDocument/completion` - автодополнение ключевых слов и идентификаторов
+//! - `textDocument/hover` - информация о типе идентификатора под курсором
 
 use std::collections::HashMap;
 use std::error::Error;
@@ -25,13 +25,11 @@ use lsp_types::request::{
 use lsp_types::*;
 
 fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
-    // Аргументы разбираются ДО открытия stdio (фикс 0011-01): прежде их не
-    // разбирал никто, и `takt-lsp --version` уходил в протокол, отвечая
-    // `ProtocolError("disconnected channel")`. Узнать версию установленного
-    // сервера было нечем, а устаревший сервер выглядит дефектом ЯЗЫКА: замер
-    // 2026-08-23 — сборка от 2026-08-17 отвечала `SE-003` на файл, который
-    // свежий компилятор принимает (класс закрыт фиксом 0346 четырьмя днями
-    // позже).
+    // Аргументы разбираются до открытия stdio: прежде их не разбирал никто, и `takt-lsp
+    // --version` уходил в протокол, отвечая `ProtocolError("disconnected channel")`.
+    // Узнать версию установленного сервера было нечем, а устаревший сервер выглядит
+    // дефектом языка: замер 2026-08-23 - сборка от 2026-08-17 отвечала `SE-003` на
+    // файл, который свежий компилятор принимает.
     if let Some(code) =
         takt_lang::version::handle_server_args(&std::env::args().skip(1).collect::<Vec<_>>())
     {
@@ -41,20 +39,19 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     // Инициализируем соединение через stdin/stdout
     let (connection, io_threads) = Connection::stdio();
 
-    // Описываем возможности сервера. Список живёт в библиотеке (фича 0131):
-    // бинарник тестами не покрыть, а «что объявлено» — проверяемый факт.
+    // Описываем возможности сервера. Список живёт в библиотеке: бинарник тестами не
+    // покрыть, а "что объявлено" - проверяемый факт.
     let server_capabilities = serde_json::to_value(takt_lang::lsp::server_capabilities())?;
 
-    // Выполняем инициализационное рукопожатие. Параметры клиента больше НЕ
-    // игнорируются (фича 0072): из `initializationOptions.searchPaths` берутся
-    // пути поиска импортов (аналог `-I` у `taktc`), иначе импорт из общей
-    // библиотеки вне каталога документа в редакторе не находится.
+    // Выполняем инициализационное рукопожатие. Параметры клиента больше не
+    // игнорируются: из `initializationOptions.searchPaths` берутся пути поиска импортов
+    // (аналог `-I` у `taktc`), иначе импорт из общей библиотеки вне каталога документа
+    // в редакторе не находится.
     let (init_id, init_params) = connection.initialize_start()?;
     let search_paths = search_paths_from_init(&init_params);
-    // Корни рабочей области (фича 0153): по ним идут `references` и `rename`.
-    // Клиент присылает либо `workspaceFolders`, либо устаревший `root_uri`;
-    // если ни того, ни другого — область сводится к каталогу открытого
-    // документа (подставляется при запросе).
+    // Корни рабочей области: по ним идут `references` и `rename`. Клиент присылает либо
+    // `workspaceFolders`, либо устаревший `root_uri`; если ни того, ни другого -
+    // область сводится к каталогу открытого документа (подставляется при запросе).
     let workspace_roots = workspace_roots_from_init(&init_params);
     let init_result = InitializeResult {
         capabilities: serde_json::from_value(server_capabilities)?,
@@ -72,18 +69,18 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     Ok(())
 }
 
-/// Пути поиска импортов из `initializationOptions` клиента (фича 0072).
+/// Пути поиска импортов из `initializationOptions` клиента.
 ///
-/// `init_params` — сырой JSON `InitializeParams` из `initialize_start()`.
-/// Относительные пути `searchPaths` разрешаются от корня рабочей области
-/// (`root_uri`); разбор и устойчивость к плохому конфигу — в библиотеке
+/// `init_params` - сырой JSON `InitializeParams` из `initialize_start()`. Относительные
+/// пути `searchPaths` разрешаются от корня рабочей области (`root_uri`); разбор и
+/// устойчивость к плохому конфигу - в библиотеке
 /// `takt_lang::lsp::search_paths_from_options` (ради тестируемости: бинарник
 /// юнит-тестами не покрыть).
 fn search_paths_from_init(init_params: &serde_json::Value) -> Vec<String> {
     let params: InitializeParams = match serde_json::from_value(init_params.clone()) {
         Ok(p) => p,
-        // Нечитаемые параметры инициализации — работаем без путей поиска
-        // (прежнее поведение), а не падаем на старте.
+        // Нечитаемые параметры инициализации - работаем без путей поиска (прежнее
+        // поведение), а не падаем на старте.
         Err(e) => {
             eprintln!("[takt-lsp] initializationOptions не разобраны: {e}");
             return Vec::new();
@@ -97,10 +94,10 @@ fn search_paths_from_init(init_params: &serde_json::Value) -> Vec<String> {
     )
 }
 
-/// Корни рабочей области из параметров инициализации (фича 0153).
+/// Корни рабочей области из параметров инициализации.
 ///
-/// ⚠️ `root_uri` помечен устаревшим, но именно его шлют живые клиенты (Zed),
-/// поэтому берутся **оба** источника: сперва `workspaceFolders`, затем корень.
+/// `root_uri` помечен устаревшим, но именно его шлют живые клиенты (Zed), поэтому
+/// берутся **оба** источника: сперва `workspaceFolders`, затем корень.
 fn workspace_roots_from_init(init_params: &serde_json::Value) -> Vec<String> {
     let Ok(params) = serde_json::from_value::<InitializeParams>(init_params.clone()) else {
         return Vec::new();
@@ -122,12 +119,12 @@ fn workspace_roots_from_init(init_params: &serde_json::Value) -> Vec<String> {
 
 /// Состояние сервера: открытые документы + пути поиска импортов.
 struct ServerState {
-    /// Содержимое открытых документов: URI → текст.
+    /// Содержимое открытых документов: URI -> текст.
     documents: HashMap<Uri, String>,
-    /// Пути поиска импортов (аналог `-I` у `taktc`), из `initializationOptions`
-    /// (фича 0072). Пустой список = прежнее поведение (только каталог документа).
+    /// Пути поиска импортов (аналог `-I` у `taktc`), из `initializationOptions`. Пустой
+    /// список = прежнее поведение (только каталог документа).
     search_paths: Vec<String>,
-    /// Корни рабочей области (фича 0153).
+    /// Корни рабочей области.
     workspace_roots: Vec<String>,
 }
 
@@ -145,8 +142,8 @@ impl ServerState {
         self.documents.get(uri).map(String::as_str)
     }
 
-    /// Корни для запроса по документу: объявленные клиентом, иначе каталог
-    /// самого документа — иначе области не было бы вовсе.
+    /// Корни для запроса по документу: объявленные клиентом, иначе каталог самого
+    /// документа - иначе области не было бы вовсе.
     fn roots_for(&self, path: &str) -> Vec<String> {
         if !self.workspace_roots.is_empty() {
             return self.workspace_roots.clone();
@@ -159,8 +156,8 @@ impl ServerState {
 
     /// Тексты открытых документов для рабочей области.
     ///
-    /// ⚠️ У редактора текст свежее диска: правка, построенная по диску, встала
-    /// бы не туда, а вхождение из несохранённой строки не нашлось бы вовсе.
+    /// У редактора текст свежее диска: правка, построенная по диску, встала бы не туда,
+    /// а вхождение из несохранённой строки не нашлось бы вовсе.
     fn overlay(&self) -> impl Fn(&str) -> Option<String> + '_ {
         move |path: &str| {
             self.documents
@@ -220,9 +217,9 @@ fn handle_request(
             let params: DocumentFormattingParams = serde_json::from_value(req.params)?;
             let uri = &params.text_document.uri;
             let text = state.get_text(uri).unwrap_or("");
-            // `Ok(None)` — текст уже каноничен: правок нет, файл не трогаем.
-            // `Err` — форматировать нельзя: логируем и отвечаем `null`. Молча
-            // «отформатировать во что-то» хуже, чем не форматировать вовсе.
+            // `Ok(None)` - текст уже каноничен: правок нет, файл не трогаем. `Err` -
+            // форматировать нельзя: логируем и отвечаем `null`. Молча "отформатировать
+            // во что-то" хуже, чем не форматировать вовсе.
             let result = match takt_lang::lsp::formatting_edits(text) {
                 Ok(edits) => edits,
                 Err(e) => {
@@ -246,23 +243,19 @@ fn handle_request(
                 serde_json::to_value(hover)?,
             )))?;
         }
-        // ⚠️ Одна ветка на оба метода (фича 0131): в Takt объявление и
-        // определение — одно и то же, и разделять их нечего. Разные редакторы
-        // шлют по F12 разное (VS Code — `definition`, Zed — `declaration`);
-        // обслуживая их **разным** кодом, сервер рано или поздно ответил бы
-        // по-разному на один и тот же курсор. Параметры и ответ у методов
-        // совпадают по типу (`GotoDeclarationParams = GotoDefinitionParams`),
-        // поэтому объединение бесплатно.
+        // Одна ветка на оба метода: в Takt объявление и определение - одно и то же, и
+        // разделять их нечего. Разные редакторы шлют по F12 разное (VS Code -
+        // `definition`, Zed - `declaration`); обслуживая их **разным** кодом, сервер
+        // рано или поздно ответил бы по-разному на один и тот же курсор. Параметры и
+        // ответ у методов совпадают по типу (`GotoDeclarationParams =
+        // GotoDefinitionParams`), поэтому объединение бесплатно.
         GotoDeclaration::METHOD | GotoDefinition::METHOD => {
             let params: GotoDeclarationParams = serde_json::from_value(req.params)?;
             let uri = &params.text_document_position_params.text_document.uri;
             let position = params.text_document_position_params.position;
             let text = state.get_text(uri).unwrap_or("");
-            // Кросс-файловый вариант с путём документа: каталог документа —
-            // неявный путь импорта (0055), без него переходить в чужой файл
-            // некуда. Прежде звался однофайловый `goto_declaration`, и URI ответа
-            // был ВСЕГДА текущим — переход в импортированный файл не работал
-            // вовсе (фича 0056).
+            // Кросс-файловый вариант с путём документа: каталог документа - неявный
+            // путь импорта, без него переходить в чужой файл некуда.
             let result = takt_lang::lsp::goto_declaration_at(
                 &uri_to_path(uri),
                 text,
@@ -270,8 +263,8 @@ fn handle_request(
                 &state.search_paths,
             )
             .and_then(|loc| {
-                // Пустой URI — контракт «это текущий файл»: подставляет
-                // вызывающий, у которого URI документа и так на руках.
+                // Пустой URI - контракт "это текущий файл": подставляет вызывающий, у
+                // которого URI документа и так на руках.
                 let target = if loc.uri.is_empty() {
                     uri.clone()
                 } else {
@@ -291,9 +284,9 @@ fn handle_request(
             let params: ReferenceParams = serde_json::from_value(req.params)?;
             let uri = &params.text_document_position.text_document.uri;
             let position = params.text_document_position.position;
-            // Вхождения ищутся по всей рабочей области (фича 0153): она
-            // сканируется в момент запроса — 12 мс на 347 файлов, — поэтому
-            // индекса и слежения за файлами сервер не держит.
+            // Вхождения ищутся по всей рабочей области: она сканируется в момент
+            // запроса - 12 мс на 347 файлов, - поэтому индекса и слежения за файлами
+            // сервер не держит.
             let path = uri_to_path(uri);
             let result = takt_lang::lsp::references_in_workspace(
                 &path,
@@ -318,9 +311,8 @@ fn handle_request(
         }
         PrepareRenameRequest::METHOD => {
             let params: TextDocumentPositionParams = serde_json::from_value(req.params)?;
-            // Отказ приходит ДО ввода нового имени: редактор покажет причину, а
-            // пользователь не потратит время впустую (фича 0131). Охват —
-            // рабочая область (фича 0153).
+            // Отказ приходит до ввода нового имени: редактор покажет причину, а
+            // пользователь не потратит время впустую. Охват - рабочая область.
             let path = uri_to_path(&params.text_document.uri);
             let response = match takt_lang::lsp::prepare_rename_in_workspace(
                 &path,
@@ -345,10 +337,10 @@ fn handle_request(
             let params: RenameParams = serde_json::from_value(req.params)?;
             let uri = params.text_document_position.text_document.uri.clone();
             let position = params.text_document_position.position;
-            // ⚠️ Либо все вхождения, либо ни одного: частичное переименование
-            // портит исходник молча (затенение оставляет текст компилируемым,
-            // меняя смысл). С фичи 0153 «все» означает «все в рабочей
-            // области» — файл вне её сервер не видит никогда.
+            // Либо все вхождения, либо ни одного: частичное переименование портит
+            // исходник молча (затенение оставляет текст компилируемым, меняя смысл). С
+            // "все" означает "все в рабочей области" - файл вне её сервер не видит
+            // никогда.
             let path = uri_to_path(&uri);
             let response = match takt_lang::lsp::rename_in_workspace(
                 &path,
@@ -360,9 +352,9 @@ fn handle_request(
             ) {
                 Ok(per_file) => {
                     // `Uri` формально обладает интерьерной мутабельностью (кэш
-                    // разбора), из-за чего clippy ругается на ключ словаря. Тип
-                    // ключа задан протоколом (`WorkspaceEdit.changes`), и та же
-                    // пара «Uri → …» уже живёт в состоянии сервера.
+                    // разбора), из-за чего clippy ругается на ключ словаря. Тип ключа
+                    // задан протоколом (`WorkspaceEdit.changes`), и та же пара "Uri ->
+                    // ..." уже живёт в состоянии сервера.
                     #[allow(clippy::mutable_key_type)]
                     let mut changes = HashMap::new();
                     for (file, edits) in per_file {
@@ -404,7 +396,7 @@ fn handle_request(
             )))?;
         }
         _ => {
-            // Неизвестный запрос — отвечаем ошибкой «метод не найден»
+            // Неизвестный запрос - отвечаем ошибкой "метод не найден"
             connection.sender.send(Message::Response(Response::new_err(
                 req.id,
                 lsp_server::ErrorCode::MethodNotFound as i32,
@@ -463,26 +455,24 @@ fn handle_notification(
     Ok(())
 }
 
-/// Путь файла из URI документа (фича 0055).
+/// Путь файла из URI документа.
 ///
-/// Нужен, чтобы редактор разрешал `import` так же, как `taktc`: каталог документа
-/// — неявный путь поиска. Прежде диагностики собирались вообще без путей, и
-/// `import "lib.takt";` всегда давал «файл не найден».
+/// Нужен, чтобы редактор разрешал `import` так же, как `taktc`: каталог документа -
+/// неявный путь поиска.
 ///
-/// Обрабатывается только схема `file:` — иные (например, `untitled:`) пути не
-/// имеют, и импорт для них не разрешится: это честнее, чем угадывать каталог.
+/// Обрабатывается только схема `file:` - иные (например, `untitled:`) пути не имеют, и
+/// импорт для них не разрешится: это честнее, чем угадывать каталог.
 fn uri_to_path(uri: &Uri) -> String {
     let raw = uri.as_str();
     let path = raw.strip_prefix("file://").unwrap_or(raw);
     percent_decode(path)
 }
 
-/// Путь файла → URI (фича 0153: правки уходят в несколько файлов, и каждому
-/// нужен свой URI).
+/// Путь файла -> URI.
 ///
-/// ⚠️ Кодируются только пробел и `%`: остальное клиенты принимают как есть, а
-/// полное процентное кодирование пути дало бы URI, который не совпадёт с тем,
-/// что прислал сам клиент, — и редактор счёл бы это другим файлом.
+/// Кодируются только пробел и `%`: остальное клиенты принимают как есть, а полное
+/// процентное кодирование пути дало бы URI, который не совпадёт с тем, что прислал сам
+/// клиент, - и редактор счёл бы это другим файлом.
 fn path_to_uri(path: &str) -> Option<Uri> {
     let encoded = path.replace('%', "%25").replace(' ', "%20");
     format!("file://{encoded}").parse().ok()

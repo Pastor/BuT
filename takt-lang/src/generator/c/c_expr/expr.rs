@@ -1,40 +1,39 @@
 //! Печать выражений.
 //!
-//! Часть модуля `c_expr` (фича 0027: деление по логике).
+//! Часть модуля `c_expr`.
 
 use super::*;
 use crate::generator::c::c_unsupported::{self, UnsupportedNode};
 use crate::generator::shift_width::{self, Direction};
 
-/// Отказ на конструкции, которую цель `c` не переводит (фича 0212).
+/// Отказ на конструкции, которую цель `c` не переводит.
 ///
-/// Позиция берётся у **самого узла** ([`ExpressionNode::loc`]): в пачке
-/// диагностик (фича 0130) сообщение без координаты бесполезно. Там, где узел
-/// позиции не несёт (ссылка на модель, тип, литерал), ответом будет
-/// `Location::Builtin` — граница названная, а не забытая.
+/// Позиция берётся у **самого узла** ([`ExpressionNode::loc`]): в пачке диагностик
+/// сообщение без координаты бесполезно. Там, где узел позиции не несёт (ссылка на
+/// модель, тип, литерал), ответом будет `Location::Builtin` - граница названная, а не
+/// забытая.
 fn unsupported(node: UnsupportedNode, expr: &ExpressionNode) -> Diagnostic {
-    // Координата — у ОПЕРАТОРА (фича 0277): позиции употребления у выражения
-    // нет, `ExpressionNode::loc()` выводит её из объявлений операндов, и
-    // `res := mem[1:2];` в строке 7 указывал на строку 1, где объявлена `mem`.
+    // Координата - у оператора: позиции употребления у выражения нет,
+    // `ExpressionNode::loc()` выводит её из объявлений операндов, и `res := mem[1:2];`
+    // в строке 7 указывал на строку 1, где объявлена `mem`.
     c_unsupported::refuse(node, crate::generator::site::at(expr.loc()))
 }
 
 /// Печать сдвига, величина которого не помещается в **продвинутый** тип C.
 ///
-/// Возвращает `true`, если напечатала — тогда вызывающий обычный оператор не
-/// печатает.
+/// Возвращает `true`, если напечатала - тогда вызывающий обычный оператор не печатает.
 ///
 /// # Порог
 ///
-/// В C операнды сдвига **продвигаются** до `int` (C11 6.5.7p3), поэтому
-/// `u8 >> 8` определено и совпадает с эталоном, а UB начинается с ширины
-/// продвинутого типа. Отсюда порог `max(32, W)`: у типов уже `int` он равен
-/// самой ширине. Именно из-за порога вывод корпуса не меняется — сдвигов такой
-/// величины в `examples/` нет ни одного.
+/// В C операнды сдвига **продвигаются** до `int` (C11 6.5.7p3), поэтому `u8 >> 8`
+/// определено и совпадает с эталоном, а UB начинается с ширины продвинутого типа.
+/// Отсюда порог `max(32, W)`: у типов уже `int` он равен самой ширине. Именно из-за
+/// порога вывод корпуса не меняется - сдвигов такой величины в `examples/` нет ни
+/// одного.
 ///
-/// ⚠️ Порог принадлежит **целевому языку**; сам признак и значение насыщения —
-/// общему носителю `generator::shift_width`, чтобы цели `c` и `rust` не
-/// разошлись на одном входе (класс 0084/0193/0195).
+/// Порог принадлежит **целевому языку**; сам признак и значение насыщения - общему
+/// носителю `generator::shift_width`, чтобы цели `c` и `rust` не разошлись на одном
+/// входе.
 fn shift_saturated(
     printer: &mut Printer,
     map: &CMap,
@@ -49,13 +48,13 @@ fn shift_saturated(
     };
     let threshold = bits.max(32);
     match shift_width::literal_saturation(direction, value, amount, threshold) {
-        // Величина не литерал — насыщение считает ХЕЛПЕР (фича 0416): при
+        // Величина не литерал - насыщение считает хелпер: при
         // компиляции она неизвестна, а `v >> n` при `n >= ширины` в C есть UB.
         // Замер 2026-08-23 (`u32`, значение `0xFFFFFFFF`): при `n = 32`
-        // прошивка давала **4294967295**, при `n = 48` — **65535** (сдвиг по
+        // прошивка давала **4294967295**, при `n = 48` - **65535** (сдвиг по
         // модулю 32), тогда как эталон, `rust`, `st` и `sv` дают 0; `cc -Wall
         // -Wextra -Werror` при этом молчит, а результат одинаков на `-O0` и
-        // `-O2`. То есть расхождение ЗНАЧЕНИЙ, невидимое инструментам.
+        // `-O2`. То есть расхождение значений, невидимое инструментам.
         shift_width::Saturation::AsIs if shift_width::literal(amount).is_none() => {
             variable_shift(
                 printer, map, owner, params, direction, value, amount, threshold,
@@ -68,8 +67,8 @@ fn shift_saturated(
             Ok(true)
         }
         shift_width::Saturation::SignOnly(by) => {
-            // Скобки обязательны: сдвиг стоит в позиции операнда, и приоритет
-            // соседа может быть выше (`a >> 32 & 1`).
+            // Скобки обязательны: сдвиг стоит в позиции операнда, и приоритет соседа
+            // может быть выше (`a >> 32 & 1`).
             printer.print("(");
             generate_expr(printer, map, owner, params, value, 10, false)?;
             printer.print(&format!(" >> {by})"));
@@ -78,16 +77,16 @@ fn shift_saturated(
     }
 }
 
-/// Сдвиг на ПЕРЕМЕННУЮ величину — через хелпер (фича 0416).
+/// Сдвиг на переменную величину - через хелпер.
 ///
-/// ⚠️ Тернарным оператором на месте это не выразить: `(n >= 32 ? 0 : (v >> n))`
-/// печатает величину **дважды**, а вычисление операнда в языке Takt бывает с
-/// эффектом (вызов функции пишет в переменные модели). Тот же довод, по
-/// которому цель `rust` выражает знаковый сдвиг через `min` (0334).
+/// Тернарным оператором на месте это не выразить: `(n >= 32 ? 0 : (v >> n))` печатает
+/// величину **дважды**, а вычисление операнда в языке Takt бывает с эффектом (вызов
+/// функции пишет в переменные модели). Тот же довод, по которому цель `rust` выражает
+/// знаковый сдвиг через `min`.
 ///
-/// ⚠️ Порог — ширина **продвинутого** типа (`max(32, W)`, C11 6.5.7p3), как у
-/// литеральной величины (0392): на узких типах продвижение до `int` уже даёт
-/// ответ эталона, и хелпер там менял бы вывод корпуса без нужды.
+/// Порог - ширина **продвинутого** типа (`max(32, W)`, C11 6.5.7p3), как у литеральной
+/// величины: на узких типах продвижение до `int` уже даёт ответ эталона, и хелпер там
+/// менял бы вывод корпуса без нужды.
 #[allow(clippy::too_many_arguments)]
 fn variable_shift(
     printer: &mut Printer,
@@ -115,8 +114,8 @@ fn variable_shift(
 
 /// Генерирует C-выражение из семантического узла с учётом приоритета операторов.
 ///
-/// Скобки добавляются автоматически только там, где это необходимо для
-/// сохранения семантики: если `expr_precedence(expr) < min_prec`.
+/// Скобки добавляются автоматически только там, где это необходимо для сохранения
+/// семантики: если `expr_precedence(expr) < min_prec`.
 ///
 /// Используйте `min_prec = 0` для выражений верхнего уровня.
 pub(in crate::generator::c) fn generate_expr(
@@ -128,10 +127,10 @@ pub(in crate::generator::c) fn generate_expr(
     min_prec: u8,
     has_model: bool,
 ) -> Result<(), Diagnostic> {
-    // Операция над бит-вектором шире 64 бит невыразима: носитель — массив слов,
-    // и в C такое выражение означало бы арифметику указателя (фича 0262). Её не
-    // поддерживает и эталон (`SIM-005` в такте), поэтому отказ приходит СВОЙ, с
-    // причиной, а не от `cc` на порождённом файле.
+    // Операция над бит-вектором шире 64 бит невыразима: носитель - массив слов, и в C
+    // такое выражение означало бы арифметику указателя. Её не поддерживает и эталон
+    // (`SIM-005` в такте), поэтому отказ приходит свой, с причиной, а не от `cc` на
+    // порождённом файле.
     if let Some(op) = crate::generator::c::c_bits::wide_operand(expr) {
         return Err(unsupported(UnsupportedNode::WideBitVector(op), expr));
     }
@@ -141,9 +140,9 @@ pub(in crate::generator::c) fn generate_expr(
         printer.print("(");
     }
     match expr {
-        // Длительность (фича 0183) печатается **миллисекундами** — единицей
-        // представления значения в целях. Пересчёт зовёт общий слой: своей
-        // арифметики времени генератор не заводит (правило 7 ADR 0134).
+        // Длительность печатается **миллисекундами** - единицей представления значения
+        // в целях. Пересчёт зовёт общий слой: своей арифметики времени генератор не
+        // заводит.
         ExpressionNode::Duration(nanos) => {
             let millis = crate::semantic::duration::value_millis(
                 *nanos,
@@ -152,17 +151,17 @@ pub(in crate::generator::c) fn generate_expr(
             )?;
             printer.print(&millis.to_string());
         }
-        // Выражения нет вовсе: полезной нагрузки у ветви тоже нет, позицию
-        // взять негде — отказ остаётся безликим. Это предмет фичи 0212
-        // («диагностика цели `c` без кода»), а не забывчивость.
+        // Выражения нет вовсе: полезной нагрузки у ветви тоже нет, позицию взять негде -
+        // отказ остаётся безликим. Это предмет ("диагностика цели `c` без кода"), а не
+        // забывчивость.
         ExpressionNode::None => {
             return Err(crate::generator::c::c_unresolved::refuse(
                 Location::Codegen,
                 crate::generator::c::c_unresolved::UnresolvedNode::EmptyExpression,
             ));
         }
-        // ⚠️ Неразрешённое выражение отделено от отсутствующего (фича 0236):
-        // узел несёт АСД, а значит и позицию, и отказ обязан её нести.
+        // Неразрешённое выражение отделено от отсутствующего: узел несёт АСД, а значит
+        // и позицию, и отказ обязан её нести.
         ExpressionNode::Unresolved(raw) => {
             return Err(crate::generator::c::c_unresolved::refuse(
                 raw.loc(),
@@ -170,7 +169,7 @@ pub(in crate::generator::c) fn generate_expr(
             ));
         }
 
-        // ── Литералы ──────────────────────────────────────────────────────────
+        // -- Литералы ----------------------------------------------------------
         ExpressionNode::Number(n) => {
             printer.print(&crate::generator::c::c_literal::c_int_literal(*n));
         }
@@ -187,9 +186,9 @@ pub(in crate::generator::c) fn generate_expr(
             printer.print(s);
         }
 
-        // ── Унарные операторы ──────────────────────────────────────────────────
-        // min_prec=14 для операнда: бинарные выражения (prec≤13) будут обёрнуты;
-        // также исключает двусмысленные `--x` и `++x` (унарный + унарный).
+        // -- Унарные операторы --------------------------------------------------
+        // min_prec=14 для операнда: бинарные выражения (prec<=13) будут обёрнуты; также
+        // исключает двусмысленные `--x` и `++x` (унарный + унарный).
         ExpressionNode::Not(e) => {
             printer.print("!");
             generate_expr(printer, map, owner, params, e, 14, has_model)?;
@@ -203,7 +202,7 @@ pub(in crate::generator::c) fn generate_expr(
             generate_expr(printer, map, owner, params, e, 14, has_model)?;
         }
         ExpressionNode::Negate(e) => {
-            // Унарный минус над q(m, n): −repr с wraparound к W (правило 3 ADR).
+            // Унарный минус над q(m, n): −repr с wraparound к W.
             if let Some((m, n, sat)) = super::fixed::fixed_of(map, owner, expr) {
                 super::fixed::negate(printer, map, owner, params, e, m, n, sat, has_model)?;
             } else {
@@ -212,12 +211,12 @@ pub(in crate::generator::c) fn generate_expr(
             }
         }
 
-        // ── Степень → целочисленный хелпер (фича 0328) ─────────────────────────
+        // -- Степень -> целочисленный хелпер -------------------------
         //
-        // ⚠️ Прежде печаталось `pow((double)a, (double)b)`: у `double` 53
-        // разряда мантиссы, и `3 ** 40` давало 12157665459056928768 вместо
-        // 12157665459056928801 — прошивка расходилась с эталоном МОЛЧА.
-        // Заодно исчезла зависимость от `libm` ради целой арифметики.
+        // Прежде печаталось `pow((double)a, (double)b)`: у `double` 53 разряда
+        // мантиссы, и `3 ** 40` давало 12157665459056928768 вместо 12157665459056928801 -
+        // прошивка расходилась с эталоном молча. Заодно исчезла зависимость от `libm`
+        // ради целой арифметики.
         ExpressionNode::Power(l, r) => {
             printer.print("takt_ipow((int64_t)(");
             generate_expr(printer, map, owner, params.clone(), l, 0, has_model)?;
@@ -226,9 +225,9 @@ pub(in crate::generator::c) fn generate_expr(
             printer.print("))");
         }
 
-        // ── Бинарные арифметические ────────────────────────────────────────────
-        // Левый операнд: допускается тот же приоритет (левоассоциативность).
-        // Правый операнд: требует более высокого приоритета (wrap при равном).
+        // -- Бинарные арифметические -------------------------------------------- Левый
+        // операнд: допускается тот же приоритет (левоассоциативность). Правый операнд:
+        // требует более высокого приоритета (wrap при равном).
         ExpressionNode::Multiply(l, r) => {
             if let Some((m, n, sat)) = super::fixed::fixed_of(map, owner, expr) {
                 super::fixed::binary(
@@ -319,12 +318,11 @@ pub(in crate::generator::c) fn generate_expr(
             }
         }
 
-        // ── Битовые сдвиги ────────────────────────────────────────────────────
+        // -- Битовые сдвиги ----------------------------------------------------
         //
-        // Величина, не меньшая ширины **продвинутого** типа, — UB в C, и
-        // `cc -Werror` такой вывод отвергает (фича 0392). Признак и значение
-        // берутся у общего носителя `generator::shift_width` — того же, каким
-        // живёт цель `rust`.
+        // Величина, не меньшая ширины **продвинутого** типа, - UB в C, и `cc -Werror`
+        // такой вывод отвергает. Признак и значение берутся у общего носителя
+        // `generator::shift_width` - того же, каким живёт цель `rust`.
         ExpressionNode::ShiftLeft(l, r) => {
             if shift_saturated(printer, map, owner, params.clone(), Direction::Left, l, r)? {
                 return Ok(());
@@ -342,7 +340,7 @@ pub(in crate::generator::c) fn generate_expr(
             generate_expr(printer, map, owner, params, r, 11, has_model)?;
         }
 
-        // ── Побитовые операторы ────────────────────────────────────────────────
+        // -- Побитовые операторы ------------------------------------------------
         ExpressionNode::BitwiseAnd(l, r) => {
             generate_expr(printer, map, owner, params.clone(), l, 7, has_model)?;
             printer.print(" & ");
@@ -359,11 +357,11 @@ pub(in crate::generator::c) fn generate_expr(
             generate_expr(printer, map, owner, params, r, 6, has_model)?;
         }
 
-        // ── Сравнение ─────────────────────────────────────────────────────────
+        // -- Сравнение ---------------------------------------------------------
         ExpressionNode::Less(l, r) => {
-            // Смешанная знаковость (фича 0359): на 64 битах C сравнивает
-            // беззнаково, и `-1 < 200` давало ложь. Правило одно с печатником
-            // условий; здесь — путь тела (`if s < u { … }`).
+            // Смешанная знаковость: на 64 битах C сравнивает беззнаково, и `-1 < 200`
+            // давало ложь. Правило одно с печатником условий; здесь - путь тела (`if s
+            // < u { ... }`).
             if let Some(text) = mixed_sign_compare(l, "<", r, map, owner, &params, has_model)? {
                 printer.print(&text);
             } else {
@@ -373,9 +371,9 @@ pub(in crate::generator::c) fn generate_expr(
             }
         }
         ExpressionNode::More(l, r) => {
-            // Смешанная знаковость (фича 0359): на 64 битах C сравнивает
-            // беззнаково, и `-1 < 200` давало ложь. Правило одно с печатником
-            // условий; здесь — путь тела (`if s < u { … }`).
+            // Смешанная знаковость: на 64 битах C сравнивает беззнаково, и `-1 < 200`
+            // давало ложь. Правило одно с печатником условий; здесь - путь тела (`if s
+            // < u { ... }`).
             if let Some(text) = mixed_sign_compare(l, ">", r, map, owner, &params, has_model)? {
                 printer.print(&text);
             } else {
@@ -385,9 +383,9 @@ pub(in crate::generator::c) fn generate_expr(
             }
         }
         ExpressionNode::LessEqual(l, r) => {
-            // Смешанная знаковость (фича 0359): на 64 битах C сравнивает
-            // беззнаково, и `-1 < 200` давало ложь. Правило одно с печатником
-            // условий; здесь — путь тела (`if s < u { … }`).
+            // Смешанная знаковость: на 64 битах C сравнивает беззнаково, и `-1 < 200`
+            // давало ложь. Правило одно с печатником условий; здесь - путь тела (`if s
+            // < u { ... }`).
             if let Some(text) = mixed_sign_compare(l, "<=", r, map, owner, &params, has_model)? {
                 printer.print(&text);
             } else {
@@ -397,9 +395,9 @@ pub(in crate::generator::c) fn generate_expr(
             }
         }
         ExpressionNode::MoreEqual(l, r) => {
-            // Смешанная знаковость (фича 0359): на 64 битах C сравнивает
-            // беззнаково, и `-1 < 200` давало ложь. Правило одно с печатником
-            // условий; здесь — путь тела (`if s < u { … }`).
+            // Смешанная знаковость: на 64 битах C сравнивает беззнаково, и `-1 < 200`
+            // давало ложь. Правило одно с печатником условий; здесь - путь тела (`if s
+            // < u { ... }`).
             if let Some(text) = mixed_sign_compare(l, ">=", r, map, owner, &params, has_model)? {
                 printer.print(&text);
             } else {
@@ -409,8 +407,8 @@ pub(in crate::generator::c) fn generate_expr(
             }
         }
         ExpressionNode::Equal(l, r) => {
-            // Смешанная знаковость (фикс 0359-01): равенство ломается на 64
-            // битах так же, как `<` — первая редакция его не покрыла.
+            // Смешанная знаковость: равенство ломается на 64 битах так же, как `<` -
+            // первая редакция его не покрыла.
             if let Some(text) = mixed_sign_compare(l, "==", r, map, owner, &params, has_model)? {
                 printer.print(&text);
             } else {
@@ -420,8 +418,8 @@ pub(in crate::generator::c) fn generate_expr(
             }
         }
         ExpressionNode::NotEqual(l, r) => {
-            // Смешанная знаковость (фикс 0359-01): равенство ломается на 64
-            // битах так же, как `<` — первая редакция его не покрыла.
+            // Смешанная знаковость: равенство ломается на 64 битах так же, как `<` -
+            // первая редакция его не покрыла.
             if let Some(text) = mixed_sign_compare(l, "!=", r, map, owner, &params, has_model)? {
                 printer.print(&text);
             } else {
@@ -431,7 +429,7 @@ pub(in crate::generator::c) fn generate_expr(
             }
         }
 
-        // ── Логические ────────────────────────────────────────────────────────
+        // -- Логические --------------------------------------------------------
         ExpressionNode::And(l, r) => {
             generate_expr(printer, map, owner, params.clone(), l, 4, has_model)?;
             printer.print(" && ");
@@ -443,16 +441,16 @@ pub(in crate::generator::c) fn generate_expr(
             generate_expr(printer, map, owner, params, r, 4, has_model)?;
         }
 
-        // ── Специальные ───────────────────────────────────────────────────────
-        // Явные скобки из исходного кода — всегда генерируем как есть.
+        // -- Специальные ------------------------------------------------------- Явные
+        // скобки из исходного кода - всегда генерируем как есть.
         ExpressionNode::Parenthesis(e) => {
             printer.print("(");
             generate_expr(printer, map, owner, params, e, 0, has_model)?;
             printer.print(")");
         }
 
-        // Тернарный оператор: условие обёртывается при prec ≤ ||, чтобы
-        // присваивание или вложенный тернарный в условии был явно выделен.
+        // Тернарный оператор: условие обёртывается при prec <= ||, чтобы присваивание
+        // или вложенный тернарный в условии был явно выделен.
         ExpressionNode::ConditionalOperator(cond, then_, else_) => {
             generate_expr(printer, map, owner, params.clone(), cond, 4, has_model)?;
             printer.print(" ? ");
@@ -462,8 +460,8 @@ pub(in crate::generator::c) fn generate_expr(
         }
 
         ExpressionNode::Assign(l, r) => {
-            // Запись по анонимному адресу (фича 0189): поле уже слова пишется
-            // чтением-изменением-записью, целое слово — прямым присваиванием.
+            // Запись по анонимному адресу: поле уже слова пишется
+            // чтением-изменением-записью, целое слово - прямым присваиванием.
             if let ExpressionNode::AnonPort(access) = l.as_ref() {
                 if !map.hal() {
                     return Err(crate::generator::c::c_anon::refuse_plain_c());
@@ -476,9 +474,8 @@ pub(in crate::generator::c) fn generate_expr(
                 printer.print(&crate::generator::c::c_anon::write(access, &rhs_str));
                 return Ok(());
             }
-            // Запись в ЭЛЕМЕНТ порта (`bus[i] := v`) — своим носителем: порт
-            // значением не является, и место записи у него есть только в
-            // обращении к HAL (фича 0533).
+            // Запись в элемент порта (`bus[i] := v`) - своим носителем: порт значением
+            // не является, и место записи у него есть только в обращении к HAL.
             if super::port_element::emit_write(
                 printer,
                 map,
@@ -491,7 +488,7 @@ pub(in crate::generator::c) fn generate_expr(
             )? {
                 return Ok(());
             }
-            // Запись в порт → write_bit / write_float
+            // Запись в порт -> write_bit / write_float
             if let ExpressionNode::Variable(var_rc) = l.as_ref() {
                 let var = var_rc.borrow();
                 if let VariableNode::Port {
@@ -529,10 +526,9 @@ pub(in crate::generator::c) fn generate_expr(
                     } else {
                         "model"
                     };
-                    // Порт целиком — элемент нулевой: контракт один на все
-                    // порты (фича 0533), и «нет индекса» в нём не бывает.
-                    // Порт целиком — первый (и у скаляра единственный) элемент;
-                    // у bit-порта это разряд ноль.
+                    // Порт целиком - элемент нулевой: контракт один на все порты, и
+                    // "нет индекса" в нём не бывает. Порт целиком - первый (и у скаляра
+                    // единственный) элемент; у bit-порта это разряд ноль.
                     let element = if cls == PortClass::Bit {
                         crate::generator::c::c_port_call::SCALAR_BIT
                     } else {
@@ -544,8 +540,8 @@ pub(in crate::generator::c) fn generate_expr(
                     return Ok(());
                 }
             }
-            // BitAccess как lvalue: `порт.N := v` — своим носителем (0533):
-            // номер разряда несёт само обращение к HAL.
+            // BitAccess как lvalue: `порт.N := v` - своим носителем: номер разряда
+            // несёт само обращение к HAL.
             if let ExpressionNode::BitAccess(inner_expr, Member::Number(n)) = l.as_ref() {
                 if super::port_element::emit_bit_write(
                     printer,
@@ -560,8 +556,7 @@ pub(in crate::generator::c) fn generate_expr(
                 )? {
                     return Ok(());
                 }
-                // Обычная переменная.бит = val
-                // x = (x & ~(1u << N)) | ((val & 1u) << N)
+                // Обычная переменная.бит = val x = (x & ~(1u << N)) | ((val & 1u) << N)
                 let mut lhs_str = String::new();
                 {
                     let mut tmp = Printer::new(4, &mut lhs_str);
@@ -580,9 +575,9 @@ pub(in crate::generator::c) fn generate_expr(
                     let mut tmp = Printer::new(4, &mut rhs_str);
                     generate_expr(&mut tmp, map, owner, params, r, 0, has_model)?;
                 }
-                // Носитель может быть массивом слов (`[bit;N > 64]`, фича 0262):
-                // тогда пишется СВОЁ слово, а не весь вектор. Позиция берётся у
-                // `bit_vector::bit_slot` — общего носителя с эталоном.
+                // Носитель может быть массивом слов (`[bit;N > 64]`): тогда пишется
+                // Своё слово, а не весь вектор. Позиция берётся у
+                // `bit_vector::bit_slot` - общего носителя с эталоном.
                 let words = crate::generator::c::c_bits::words_of(inner_expr);
                 let Some(text) = crate::generator::c::c_bits::write_bit(
                     &lhs_str,
@@ -595,10 +590,8 @@ pub(in crate::generator::c) fn generate_expr(
                 printer.print(&text);
                 return Ok(());
             }
-            // Бит-вектор шире 64 бит — массив слов, а массив в C не является
-            // изменяемым lvalue (фича 0262): копирование и заполнение идут по
-            // словам. Прежде печаталось `model->w = …`, что `cc` отвергает
-            // («array type is not assignable») при нулевом коде возврата `taktc`.
+            // Бит-вектор шире 64 бит - массив слов, а массив в C не является изменяемым
+            // lvalue: копирование и заполнение идут по словам.
             if let Some(count) = crate::generator::c::c_bits::words_of(l) {
                 let mut lhs_str = String::new();
                 {
@@ -632,10 +625,9 @@ pub(in crate::generator::c) fn generate_expr(
             // Обычное присваивание (право-ассоциативно: тот же prec не оборачивается)
             generate_expr(printer, map, owner, params.clone(), l, 1, has_model)?;
             printer.print(" = ");
-            // Значение перечислимого типа печатается ИМЕНЕМ константы (фича
-            // 0167): здесь целевой тип известен — он у переменной слева.
-            // Прежде выводилось голое число, и объявленный `#define` оставался
-            // неиспользованным. Приём тот же, что у `st` (`coerce_to`, ADR 0066).
+            // Значение перечислимого типа печатается именем константы: здесь целевой
+            // тип известен - он у переменной слева. Приём тот же, что у `st`
+            // (`coerce_to`).
             if let Some(name) = enum_constant_for_assignment(l, r) {
                 printer.print(&name);
                 return Ok(());
@@ -643,9 +635,9 @@ pub(in crate::generator::c) fn generate_expr(
             generate_expr(printer, map, owner, params, r, 1, has_model)?;
         }
 
-        // База — ВЫРАЖЕНИЕ (фича 0358): печатается тем же печатником, что и
-        // прочие выражения, поэтому `b.data[1]` выходит как `model->b.data[1]`
-        // без второго знания о выборе базы.
+        // База - Выражение: печатается тем же печатником, что и прочие выражения,
+        // поэтому `b.data[1]` выходит как `model->b.data[1]` без второго знания о
+        // выборе базы.
         ExpressionNode::ArraySubscript(base, idx) => {
             let render = |node: &ExpressionNode| -> Result<String, Diagnostic> {
                 let mut buf = String::new();
@@ -654,9 +646,9 @@ pub(in crate::generator::c) fn generate_expr(
                 Ok(buf)
             };
             let idx_str = render(idx)?;
-            // ⚠️ У ПОРТА индекс — часть обращения к HAL, а не индексация
-            // значения (фича 0533): порт значением не является, и печать
-            // `read_numeric(PORT, ud)[i]` не собирается ни одним компилятором C.
+            // У порта индекс - часть обращения к HAL, а не индексация значения: порт
+            // значением не является, и печать `read_numeric(PORT, ud)[i]` не собирается
+            // ни одним компилятором C.
             if let Some(call) = super::port_element::read(base, &idx_str, map, owner, has_model)? {
                 printer.print(&call);
                 return Ok(());
@@ -668,8 +660,8 @@ pub(in crate::generator::c) fn generate_expr(
         ExpressionNode::Variable(var_rc) => {
             let var = var_rc.borrow();
             let var_expr = if let VariableNode::Simple { upper, loc, .. } = &*var {
-                // Локальные переменные (loc == Implicit) доступны по имени напрямую,
-                // а не через model->name, даже если они принадлежат той же модели.
+                // Локальные переменные (loc == Implicit) доступны по имени напрямую, а
+                // не через model->name, даже если они принадлежат той же модели.
                 if matches!(loc, crate::diagnostics::Location::Implicit) {
                     normalize_lowercase_snakecase(var.name().to_string())
                 } else {
@@ -685,12 +677,12 @@ pub(in crate::generator::c) fn generate_expr(
             printer.print(&var_expr);
         }
 
-        // Именованное условие ПОДСТАВЛЯЕТСЯ (фича 0331), как на ребре.
+        // Именованное условие подставляется, как на ребре.
         //
-        // ⚠️ Прежде печаталось имя макроса `COND_…`, которого цель **нигде не
-        // определяет**: порождённый C не собирался при нулевом коде возврата
-        // `taktc` (класс 0262, 0287). На ребре то же условие подставлялось
-        // выражением — то есть один и тот же `cond` печатался двумя способами.
+        // Прежде печаталось имя макроса `COND_...`, которого цель **нигде не
+        // определяет**: порождённый C не собирался при нулевом коде возврата `taktc`.
+        // На ребре то же условие подставлялось выражением - то есть один и тот же
+        // `cond` печатался двумя способами.
         ExpressionNode::Condition(cond_rc) => {
             let cond = cond_rc.borrow();
             let printed = crate::generator::c::c_expr::condition::generate_condition_expr(
@@ -731,49 +723,49 @@ pub(in crate::generator::c) fn generate_expr(
         ExpressionNode::Cast(expr, typ) => {
             let model = map.raw_model_at(owner.name())?;
             let model = &*model.borrow();
-            // 0029-01: было `unwrap_or_else(|| "int")` — невыразимый тип приведения
-            // молча превращался в `(int)`, то есть приведение к ДРУГОМУ типу,
-            // принятое C-компилятором без замечаний.
+            // было `unwrap_or_else(|| "int")` - невыразимый тип приведения молча
+            // превращался в `(int)`, то есть приведение к другому типу, принятое
+            // C-компилятором без замечаний.
             let type_c = c_type_or_diagnostic(typ, model, map.float_width(), "приведение типа")?;
-            // Fixed-point (0061): масштабирующее приведение, когда источник либо
-            // цель — q(m, n). Сдвиги не используются (ловушка C11, UB `<<`).
+            // Fixed-point: масштабирующее приведение, когда источник либо цель - q(m,
+            // n). Сдвиги не используются (ловушка C11, UB `<<`).
             if matches!(typ, TypeNode::Fixed { .. })
                 || super::fixed::fixed_of(map, owner, expr).is_some()
             {
                 super::fixed::cast(printer, map, owner, params, expr, typ, &type_c, has_model)?;
             } else if crate::generator::mixed_sign::operand_type_expr(expr).is_some_and(|from| {
-                // Сравниваются НАПЕЧАТАННЫЕ типы (фича 0374): `duration`
-                // отображается в `uint32_t` (0183), и типы Takt при этом
-                // различны — признак 0361 такую запись не ловил. В C лишнее
-                // приведение безвредно, но правило у трёх целей одно: у `rust`
-                // та же печать есть `clippy::unnecessary_cast`, то есть отказ
-                // гейта.
+                // Сравниваются напечатанные типы: `duration` отображается в `uint32_t`,
+                // и типы Takt при этом различны - признак 0361 такую запись не ловил. В
+                // C лишнее приведение безвредно, но правило у трёх целей одно: у `rust`
+                // та же печать есть `clippy::unnecessary_cast`, то есть отказ проверки.
                 c_type_or_diagnostic(&from, model, map.float_width(), "приведение типа")
                     .is_ok_and(|from_c| from_c == type_c)
             }) {
-                // Приведение к ТОМУ ЖЕ типу опускается (фичи 0361, 0374).
+                // Приведение к тому же типу опускается.
                 generate_expr(printer, map, owner, params, expr, 13, has_model)?;
             } else {
-                // Приводимое выражение оборачивается при prec < UNARY (13),
-                // то есть при наличии бинарных операторов: (int)(a + b).
+                // Приводимое выражение оборачивается при prec < UNARY (13), то есть при
+                // наличии бинарных операторов: (int)(a + b).
                 printer.print("(").print(&type_c).print(")");
                 generate_expr(printer, map, owner, params, expr, 13, has_model)?;
             }
         }
 
-        // ── Неподдерживаемые ──────────────────────────────────────────────────
+        // -- Неподдерживаемые --------------------------------------------------
         ExpressionNode::ArraySlice(_, _, _) => {
             return Err(unsupported(UnsupportedNode::ArraySlice, expr));
         }
         ExpressionNode::BitAccess(inner, member) => {
             match member {
                 Member::Identifier(id) => {
-                    // Доступ к полю структуры: inner.field — используем максимальный приоритет
+                    // Доступ к полю структуры: inner.field - используем максимальный
+                    // приоритет
                     generate_expr(printer, map, owner, params, inner, 15, has_model)?;
                     printer.print(&format!(".{}", id.name));
                 }
                 Member::Number(n) => {
-                    // Битовый доступ к порту: (*main->read_bit)(PORT_X, N, main->userdata)
+                    // Битовый доступ к порту: (*main->read_bit)(PORT_X, N,
+                    // main->userdata)
                     if let ExpressionNode::Variable(var_rc) = inner.as_ref() {
                         let var = var_rc.borrow();
                         if let VariableNode::Port {
@@ -808,9 +800,9 @@ pub(in crate::generator::c) fn generate_expr(
                                 "model"
                             };
                             match cls {
-                                // Разряд bit-порта адресуется САМИМ вызовом
-                                // (контракт 0533): прежде номер терялся, и
-                                // `src.3` читал порт целиком.
+                                // Разряд bit-порта адресуется самим вызовом (контракт
+                                // 0533): прежде номер терялся, и `src.3` читал порт
+                                // целиком.
                                 PortClass::Bit => {
                                     printer.print(&crate::generator::c::c_port_call::read_bit(
                                         ptr,
@@ -838,7 +830,7 @@ pub(in crate::generator::c) fn generate_expr(
                         }
                     }
                     // Обычная переменная/выражение: `((inner >> N) & 1ull)`, а у
-                    // массива слов (`[bit;N > 64]`, фича 0262) — сдвиг своего слова.
+                    // массива слов (`[bit;N > 64]`) - сдвиг своего слова.
                     let mut base = String::new();
                     {
                         let mut tmp = Printer::new(4, &mut base);
@@ -868,8 +860,8 @@ pub(in crate::generator::c) fn generate_expr(
         ExpressionNode::Address(_, _) => {
             return Err(unsupported(UnsupportedNode::Address, expr));
         }
-        // Анонимное обращение к ячейке (фича 0189): печатает только `c-hal` —
-        // цель `c` адресов не знает по устройству (ADR 0020).
+        // Анонимное обращение к ячейке: печатает только `c-hal` - цель `c` адресов не
+        // знает по устройству.
         ExpressionNode::AnonPort(access) => {
             if !map.hal() {
                 return Err(crate::generator::c::c_anon::refuse_plain_c());
@@ -886,15 +878,14 @@ pub(in crate::generator::c) fn generate_expr(
     Ok(())
 }
 
-/// Имя константы перечисления для присваивания `переменная := литерал`
-/// (фича 0167).
+/// Имя константы перечисления для присваивания `переменная := литерал`.
 ///
-/// `None` — печатать правую часть обычным путём: слева не переменная
-/// перечислимого типа, справа не число, значение не совпадает ни с одним
-/// вариантом либо владелец перечисления недоступен.
+/// `None` - печатать правую часть обычным путём: слева не переменная перечислимого
+/// типа, справа не число, значение не совпадает ни с одним вариантом либо владелец
+/// перечисления недоступен.
 ///
-/// ⚠️ Тип берётся у **переменной слева**, а перечисление ищется от её
-/// модели-владельца: у неё же спрашивают тип и прочие печатники цели.
+/// Тип берётся у **переменной слева**, а перечисление ищется от её модели-владельца: у
+/// неё же спрашивают тип и прочие печатники цели.
 fn enum_constant_for_assignment(left: &ExpressionNode, right: &ExpressionNode) -> Option<String> {
     let ExpressionNode::Variable(var_rc) = left else {
         return None;
@@ -913,11 +904,11 @@ fn enum_constant_for_assignment(left: &ExpressionNode, right: &ExpressionNode) -
     crate::generator::c::c_enum::constant_of(ty, *value, &scope)
 }
 
-/// Сравнение операндов разной знаковости в ВЫРАЖЕНИИ (фича 0359).
+/// Сравнение операндов разной знаковости в выражении.
 ///
-/// `None` — печать прежняя. Раскрытие нужно только там, где общего типа нет
-/// (`u64` против знакового): на 8/16/32 битах операнды продвигаются до `int`,
-/// и печать «как есть» верна, а лишнее приведение изменило бы вывод корпуса.
+/// `None` - печать прежняя. Раскрытие нужно только там, где общего типа нет (`u64`
+/// против знакового): на 8/16/32 битах операнды продвигаются до `int`, и печать "как
+/// есть" верна, а лишнее приведение изменило бы вывод корпуса.
 fn mixed_sign_compare(
     l: &ExpressionNode,
     op: &str,

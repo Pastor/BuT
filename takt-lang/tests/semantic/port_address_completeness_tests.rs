@@ -1,7 +1,7 @@
-//! Интеграционные тесты полноты адресов портов (фича 0020-04).
+//! Интеграционные тесты полноты адресов портов.
 //!
-//! Порт, достижимый кодогенерацией (используемый в логике), обязан иметь адрес;
-//! мёртвый порт без адреса — допустим. Предупреждение — `SE-052`.
+//! Порт, достижимый кодогенерацией (используемый в логике), обязан иметь адрес; мёртвый
+//! порт без адреса - допустим. Предупреждение - `SE-052`.
 
 use takt_lang::port_address_completeness_warnings;
 use takt_lang::semantic::tree::construct_model;
@@ -21,14 +21,14 @@ fn completeness_codes(src: &str, external: &[&str]) -> Vec<String> {
         .collect()
 }
 
-/// Используемый порт без адреса → SE-052.
+/// Используемый порт без адреса -> SE-052.
 #[test]
 fn used_port_without_address_warns_se052() {
     let codes = completeness_codes("in BTN: bit; start S { ref T: BTN; } state T;", &[]);
     assert_eq!(codes, vec!["SE-052"]);
 }
 
-/// Мёртвый (неиспользуемый) порт без адреса → без предупреждений.
+/// Мёртвый (неиспользуемый) порт без адреса -> без предупреждений.
 #[test]
 fn dead_port_without_address_is_silent() {
     let codes = completeness_codes("in BTN: bit; start S; state T;", &[]);
@@ -39,7 +39,7 @@ fn dead_port_without_address_is_silent() {
     );
 }
 
-/// Используемый порт с inline-адресом → без предупреждений.
+/// Используемый порт с inline-адресом -> без предупреждений.
 #[test]
 fn used_port_with_inline_address_is_silent() {
     let codes = completeness_codes(
@@ -53,7 +53,7 @@ fn used_port_with_inline_address_is_silent() {
     );
 }
 
-/// Используемый порт с адресом через оператор `address` → без предупреждений.
+/// Используемый порт с адресом через оператор `address` -> без предупреждений.
 #[test]
 fn used_port_with_operator_address_is_silent() {
     let codes = completeness_codes(
@@ -67,7 +67,7 @@ fn used_port_with_operator_address_is_silent() {
     );
 }
 
-/// Используемый порт, покрытый внешней картой → без предупреждений.
+/// Используемый порт, покрытый внешней картой -> без предупреждений.
 #[test]
 fn used_port_covered_by_external_map_is_silent() {
     let codes = completeness_codes("in BTN: bit; start S { ref T: BTN; } state T;", &["BTN"]);

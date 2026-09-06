@@ -1,14 +1,14 @@
-//! Обход АСД: сбор вхождений имён (фича 0131).
+//! Обход АСД: сбор вхождений имён.
 //!
 //! ## Правило модуля: никаких `_ =>` по узлам языка
 //!
-//! Разбор узлов АСД **исчерпывающий**. Новый узел языка обязан валить сборку
-//! этого модуля, а не молча выпадать из покрытия: пропущенное вхождение — это
-//! испорченный переименованием исходник. Тот же приём охраняет вычислитель
-//! симулятора (`takt-sim/src/eval/`, фича 0093) и печать форматтера.
+//! Разбор узлов АСД **исчерпывающий**. Новый узел языка обязан валить сборку этого
+//! модуля, а не молча выпадать из покрытия: пропущенное вхождение - это испорченный
+//! переименованием исходник. Тот же приём охраняет вычислитель симулятора
+//! (`takt-sim/src/eval/`) и печать форматтера.
 //!
 //! Ветки, дописанные ради узлов **без имён** (литералы, `break`, `continue`),
-//! перечисляются явно — так видно, что узел рассмотрен, а не забыт.
+//! перечисляются явно - так видно, что узел рассмотрен, а не забыт.
 #![deny(clippy::wildcard_enum_match_arm)]
 
 use super::scope::{Namespace, Scopes, Symbol, SymbolKind};
@@ -17,15 +17,15 @@ use crate::parser::ast;
 
 /// Порядок разрешения имени в позиции значения.
 ///
-/// Переменная имеет преимущество над именованным условием — тот же порядок, что
-/// у перехода к декларации; вариант перечисления живёт в том же пространстве.
+/// Переменная имеет преимущество над именованным условием - тот же порядок, что у
+/// перехода к декларации; вариант перечисления живёт в том же пространстве.
 const VALUE_SPACES: &[Namespace] = &[Namespace::Value, Namespace::Condition];
 
 /// Обходит корневую модель файла.
 pub(super) fn walk_root(root: &ast::Model, table: &mut UsageTable) {
     let mut scopes = Scopes::default();
-    // Предпроход: члены каждой модели — для формы `S(Ping) = End`, которая
-    // адресует состояние соседней модели (в стеке областей её нет).
+    // Предпроход: члены каждой модели - для формы `S(Ping) = End`, которая адресует
+    // состояние соседней модели (в стеке областей её нет).
     register_members(root, &mut scopes);
     walk_model(root, &mut scopes, table);
 }
@@ -58,8 +58,8 @@ fn register_members(model: &ast::Model, scopes: &mut Scopes) {
 
 /// Обходит модель: сперва объявляет её элементы, затем разбирает тела.
 ///
-/// Два прохода нужны потому, что внутри модели порядок объявлений значения не
-/// имеет: `always { speed := 1; }` может стоять выше `var speed`.
+/// Два прохода нужны потому, что внутри модели порядок объявлений значения не имеет:
+/// `always { speed := 1; }` может стоять выше `var speed`.
 fn walk_model(model: &ast::Model, scopes: &mut Scopes, table: &mut UsageTable) {
     scopes.push_model();
     declare_elements(model, scopes, table);
@@ -67,7 +67,7 @@ fn walk_model(model: &ast::Model, scopes: &mut Scopes, table: &mut UsageTable) {
         walk_element(element, scopes, table);
     }
     if let Some(implements) = &model.implements {
-        // `model M = A | B;` — имена под-моделей.
+        // `model M = A | B;` - имена под-моделей.
         walk_expression(implements, scopes, table);
     }
     scopes.pop_model();
@@ -78,16 +78,16 @@ fn declare_elements(model: &ast::Model, scopes: &mut Scopes, table: &mut UsageTa
     if let Some(name) = &model.name {
         declare(name, SymbolKind::Model, scopes, table, DeclareIn::Model);
     }
-    // Типы объявлений перечисляются в ОДНОМ месте (`each_declaration`): тот же
-    // перечень нужен предпроходу членов модели, и разъехавшись, они дали бы
-    // разный ответ на «что объявлено в модели».
+    // Типы объявлений перечисляются в одном месте (`each_declaration`): тот же перечень
+    // нужен предпроходу членов модели, и разъехавшись, они дали бы разный ответ на "что
+    // объявлено в модели".
     let mut declared: Vec<(&ast::Identifier, SymbolKind)> = Vec::new();
     each_declaration(model, &mut |name, kind| declared.push((name, kind)));
     for (name, kind) in declared {
         declare(name, kind, scopes, table, DeclareIn::Model);
     }
-    // Типы объявлений переменных обходятся отдельно: у них есть ещё и ссылка на
-    // тип (`var x: MyAlias`), а это использование имени.
+    // Типы объявлений переменных обходятся отдельно: у них есть ещё и ссылка на тип
+    // (`var x: MyAlias`), а это использование имени.
     for element in &model.elements {
         if let ast::ModelElement::Variable(def) = element {
             walk_variable_type(def, scopes, table);
@@ -97,9 +97,9 @@ fn declare_elements(model: &ast::Model, scopes: &mut Scopes, table: &mut UsageTa
 
 /// Перечисляет объявления модели (без вложенных моделей).
 ///
-/// Единый источник ответа на вопрос «какие имена объявляет эта модель»:
-/// используется и при построении области видимости, и при регистрации членов
-/// для формы `S(Модель) = Состояние`.
+/// Единый источник ответа на вопрос "какие имена объявляет эта модель": используется и
+/// при построении области видимости, и при регистрации членов для формы `S(Модель) =
+/// Состояние`.
 fn each_declaration<'a>(
     model: &'a ast::Model,
     f: &mut impl FnMut(&'a ast::Identifier, SymbolKind),
@@ -144,8 +144,8 @@ fn each_declaration<'a>(
                 if let Some(name) = &def.name {
                     f(name, SymbolKind::State);
                 }
-                // Инвариант состояния объявляет имя на уровне модели
-                // (десахаризация `invariant` в пару `cond` + `Guard`).
+                // Инвариант состояния объявляет имя на уровне модели (десахаризация
+                // `invariant` в пару `cond` + `Guard`).
                 for state_element in &def.elements {
                     if let ast::StateElement::Invariant(inv) = state_element
                         && let Some(name) = &inv.name
@@ -160,7 +160,7 @@ fn each_declaration<'a>(
                 }
             }
             ast::ModelElement::Import(def) => each_import_binding(def, f),
-            // Объявлений не вводят — разбираются вторым проходом.
+            // Объявлений не вводят - разбираются вторым проходом.
             ast::ModelElement::Assembly(_)
             | ast::ModelElement::Formula(_)
             | ast::ModelElement::NamedBlockCode(_)
@@ -181,8 +181,8 @@ fn walk_element(element: &ast::ModelElement, scopes: &mut Scopes, table: &mut Us
             }
         }
         ast::ModelElement::Function(def) => walk_function(def, scopes, table),
-        // Вставка уровня модели (0518): её операторы — обычные тела, и имена в
-        // них обязаны попасть в слой использований (иначе поедет `rename`).
+        // Вставка уровня модели: её операторы - обычные тела, и имена в них обязаны
+        // попасть в слой использований (иначе поедет `rename`).
         ast::ModelElement::Assembly(block) => walk_statement(block, scopes, table),
         ast::ModelElement::Condition(def) => walk_condition(&def.value, scopes, table),
         ast::ModelElement::Invariant(def) => walk_condition(&def.value, scopes, table),
@@ -194,7 +194,7 @@ fn walk_element(element: &ast::ModelElement, scopes: &mut Scopes, table: &mut Us
             scopes.pop_local();
         }
         ast::ModelElement::Address(def) => {
-            // `address PORT = 0x…;` — ссылка на порт по имени.
+            // `address PORT = 0x...;` - ссылка на порт по имени.
             if let Some(name) = &def.name {
                 reference(name, &[Namespace::Value], scopes, table);
             }
@@ -202,10 +202,9 @@ fn walk_element(element: &ast::ModelElement, scopes: &mut Scopes, table: &mut Us
         }
         ast::ModelElement::Formula(def) => walk_formula_block(&def.formula, scopes, table),
         ast::ModelElement::InlineFormula(def) => walk_inline_formula(def, scopes, table),
-        // Типы и перечисления ссылок на имена не содержат, кроме псевдонима на
-        // другой тип — он разбирается ниже. Само ОБЪЯВЛЯЕМОЕ имя тоже стоит в
-        // позиции типа (0196): иначе `type Celsius = u8;` красил бы тип только
-        // справа от `=`.
+        // Типы и перечисления ссылок на имена не содержат, кроме псевдонима на другой
+        // тип - он разбирается ниже. Само объявляемое имя тоже стоит в позиции типа:
+        // иначе `type Celsius = u8;` красил бы тип только справа от `=`.
         ast::ModelElement::Type(def) => {
             mark_declared_type_name(Some(&def.name), table);
             walk_type(&def.ty, scopes, table);
@@ -217,10 +216,10 @@ fn walk_element(element: &ast::ModelElement, scopes: &mut Scopes, table: &mut Us
             }
         }
         ast::ModelElement::Import(def) => note_import_originals(def, table),
-        // Имя перечисления — тоже имя типа (0196); варианты именами типов не
-        // являются и остаются `enumMember`.
+        // Имя перечисления - тоже имя типа; варианты именами типов не являются и
+        // остаются `enumMember`.
         ast::ModelElement::Enum(def) => mark_declared_type_name(def.name.as_ref(), table),
-        // `clock 1kHz;` — литерал частоты, имён не содержит.
+        // `clock 1kHz;` - литерал частоты, имён не содержит.
         ast::ModelElement::Clock(_) | ast::ModelElement::StraySemicolon(_) => {}
     }
 }
@@ -253,23 +252,23 @@ fn walk_state(state: &ast::StateDefine, scopes: &mut Scopes, table: &mut UsageTa
                 }
                 walk_condition(&def.value, scopes, table);
             }
-            // `every 100ms { … }` — тело обходится как у именованного блока:
+            // `every 100ms { ... }` - тело обходится как у именованного блока:
             // пропустить его значило бы потерять использования имён внутри.
             ast::StateElement::Every(def) => {
                 scopes.push_local();
                 walk_statement(&def.body, scopes, table);
                 scopes.pop_local();
             }
-            // Вставка уровня состояния (0518) — тело со своей областью, как
-            // у именованного блока: имена в ней обязаны попасть в слой
-            // использований, иначе `rename` их не увидит.
+            // Вставка уровня состояния - тело со своей областью, как у именованного
+            // блока: имена в ней обязаны попасть в слой использований, иначе `rename`
+            // их не увидит.
             ast::StateElement::Assembly(block) => {
                 scopes.push_local();
                 walk_statement(block, scopes, table);
                 scopes.pop_local();
             }
-            // Формула — обязательство внешнему анализатору (0484): её текст
-            // компилятор не разбирает и имён в нём не связывает.
+            // Формула - обязательство внешнему анализатору: её текст компилятор не
+            // разбирает и имён в нём не связывает.
             ast::StateElement::Formula(_) | ast::StateElement::StraySemicolon(_) => {}
         }
     }
@@ -283,10 +282,10 @@ fn walk_function(def: &ast::FunctionDefine, scopes: &mut Scopes, table: &mut Usa
         if let Some(name) = &param.name {
             declare(name, SymbolKind::Parameter, scopes, table, DeclareIn::Local);
         }
-        // Тип параметра грамматика разбирает как ВЫРАЖЕНИЕ (`ParameterTypeExpr`),
-        // а не как `Type`, поэтому обход типов сюда не доходит. Позицию типа
-        // отмечаем здесь (0196); вхождением имя не делаем — это изменило бы
-        // поведение `rename`/`references`, а предмет фичи только подсветка.
+        // Тип параметра грамматика разбирает как выражение (`ParameterTypeExpr`), а не
+        // как `Type`, поэтому обход типов сюда не доходит. Позицию типа отмечаем здесь;
+        // вхождением имя не делаем - это изменило бы поведение `rename`/`references`, а
+        // предмет фичи только подсветка.
         mark_type_expression(&param.ty, table);
     }
     if let Some(ty) = &def.return_type {
@@ -339,8 +338,8 @@ fn walk_statement(stmt: &ast::Statement, scopes: &mut Scopes, table: &mut UsageT
         }
         ast::Statement::Expression(_, expr) => walk_expression(expr, scopes, table),
         ast::Statement::Variable(_, def, init) => {
-            // Инициализатор разбирается ДО объявления: `var x := x;` справа —
-            // ещё внешнее `x` (объявление начинает действовать после оператора).
+            // Инициализатор разбирается до объявления: `var x := x;` справа - ещё
+            // внешнее `x` (объявление начинает действовать после оператора).
             for expr in variable_value_expressions(def) {
                 walk_expression(expr, scopes, table);
             }
@@ -393,8 +392,8 @@ fn walk_expression(expr: &ast::Expression, scopes: &mut Scopes, table: &mut Usag
                 walk_expression(arg, scopes, table);
             }
         }
-        // База — выражение (фича 0358): вхождения в ней ищет тот же обход, а
-        // не `reference` по имени.
+        // База - выражение: вхождения в ней ищет тот же обход, а не `reference` по
+        // имени.
         ast::Expression::ArraySubscript(_, base, index) => {
             walk_expression(base, scopes, table);
             walk_expression(index, scopes, table);
@@ -402,8 +401,8 @@ fn walk_expression(expr: &ast::Expression, scopes: &mut Scopes, table: &mut Usag
         ast::Expression::ArraySlice(_, base, _, _) => walk_expression(base, scopes, table),
         ast::Expression::BitAccess(_, base, member) => {
             walk_expression(base, scopes, table);
-            // Член — это поле структуры или номер бита, а не самостоятельное
-            // имя области видимости: разрешать его нечем и не нужно.
+            // Член - это поле структуры или номер бита, а не самостоятельное имя
+            // области видимости: разрешать его нечем и не нужно.
             match member {
                 ast::Member::Identifier(_) | ast::Member::Number(_) => {}
             }
@@ -474,8 +473,8 @@ fn walk_expression(expr: &ast::Expression, scopes: &mut Scopes, table: &mut Usag
         | ast::Expression::Rational(_, _, _)
         | ast::Expression::String(_)
         | ast::Expression::Address(_, _, _)
-        // Анонимное обращение (фича 0189) имён не содержит: у ячейки их нет —
-        // ни объявления, ни ссылки, поэтому переименовывать в нём нечего.
+        // Анонимное обращение имён не содержит: у ячейки их нет - ни объявления, ни
+        // ссылки, поэтому переименовывать в нём нечего.
         | ast::Expression::AnonAddress(_, _, _)
         | ast::Expression::Bool(_, _) => {}
     }
@@ -483,8 +482,8 @@ fn walk_expression(expr: &ast::Expression, scopes: &mut Scopes, table: &mut Usag
 
 /// Условие перехода.
 ///
-/// Отличается от выражения одним местом: `S(Модель) = Состояние` — встроенная
-/// форма, в которой аргумент `S` есть **модель**, а правая часть равенства —
+/// Отличается от выражения одним местом: `S(Модель) = Состояние` - встроенная
+/// форма, в которой аргумент `S` есть **модель**, а правая часть равенства -
 /// **состояние**. Разрешать их как значения бессмысленно (их там нет), а молча
 /// пропускать нельзя: это настоящие использования имён.
 fn walk_condition(cond: &ast::Condition, scopes: &mut Scopes, table: &mut UsageTable) {
@@ -492,9 +491,9 @@ fn walk_condition(cond: &ast::Condition, scopes: &mut Scopes, table: &mut UsageT
         ast::Condition::Equal(_, lhs, rhs) | ast::Condition::NotEqual(_, lhs, rhs)
             if state_of_model_arg(lhs).is_some() =>
         {
-            // Левая часть — `S(Модель)`; правая — состояние ЭТОЙ модели, а не
-            // текущей. Искать его в стеке областей бессмысленно: модель
-            // соседняя, поэтому спрашиваем реестр её членов.
+            // Левая часть - `S(Модель)`; правая - состояние этой модели, а не текущей.
+            // Искать его в стеке областей бессмысленно: модель соседняя, поэтому
+            // спрашиваем реестр её членов.
             let model_arg = state_of_model_arg(lhs).expect("проверено охраной ветки");
             walk_condition(lhs, scopes, table);
             match (
@@ -510,7 +509,7 @@ fn walk_condition(cond: &ast::Condition, scopes: &mut Scopes, table: &mut UsageT
         ast::Condition::Variable(name) => reference(name, VALUE_SPACES, scopes, table),
         ast::Condition::Function(_, name, args) => {
             if name.name == STATE_OF_MODEL {
-                // `S(Ping)` — аргумент есть имя модели; сама `S` встроена.
+                // `S(Ping)` - аргумент есть имя модели; сама `S` встроена.
                 for arg in args {
                     if let ast::Condition::Variable(model) = arg {
                         reference(model, &[Namespace::Model], scopes, table);
@@ -551,9 +550,9 @@ fn walk_condition(cond: &ast::Condition, scopes: &mut Scopes, table: &mut UsageT
             walk_condition(lhs, scopes, table);
             walk_condition(rhs, scopes, table);
         }
-        // Константная выдержка (фича 0143): внутри — имена констант, то есть
-        // настоящие **использования**. Обходятся тем же рекурсивным путём, что и
-        // прочие условия: пропуск испортил бы исходник переименованием константы.
+        // Константная выдержка: внутри - имена констант, то есть настоящие
+        // **использования**. Обходятся тем же рекурсивным путём, что и прочие условия:
+        // пропуск испортил бы исходник переименованием константы.
         ast::Condition::AfterExpr(_, inner) => walk_condition(inner, scopes, table),
         ast::Condition::Number(_, _)
         | ast::Condition::Duration(_, _, _)
@@ -566,14 +565,14 @@ fn walk_condition(cond: &ast::Condition, scopes: &mut Scopes, table: &mut UsageT
     }
 }
 
-/// Имя встроенной формы «состояние модели».
+/// Имя встроенной формы "состояние модели".
 const STATE_OF_MODEL: &str = "S";
 
-/// Имя модели из формы `S(Модель)` — с учётом прозрачных скобок (фича 0074).
+/// Имя модели из формы `S(Модель)` - с учётом прозрачных скобок.
 ///
-/// Написано на `if let`, а не на `match`: здесь распознаётся **одна** форма, и
-/// ветка «всё остальное» — не пропуск узла, а её отсутствие. `match` с `_` тут
-/// правило модуля нарушил бы по букве, ничего не охраняя по сути.
+/// Написано на `if let`, а не на `match`: здесь распознаётся **одна** форма, и ветка
+/// "всё остальное" - не пропуск узла, а её отсутствие. `match` с `_` тут правило модуля
+/// нарушил бы по букве, ничего не охраняя по сути.
 fn state_of_model_arg(cond: &ast::Condition) -> Option<&ast::Identifier> {
     let cond = unwrap_parens(cond);
     let ast::Condition::Function(_, name, args) = cond else {
@@ -588,7 +587,7 @@ fn state_of_model_arg(cond: &ast::Condition) -> Option<&ast::Identifier> {
     Some(model)
 }
 
-/// Снимает обёртки `Parenthesis` — скобки паттерна `S(…)` прозрачны (фича 0074).
+/// Снимает обёртки `Parenthesis` - скобки паттерна `S(...)` прозрачны.
 fn unwrap_parens(cond: &ast::Condition) -> &ast::Condition {
     let mut current = cond;
     while let ast::Condition::Parenthesis(_, inner) = current {
@@ -597,11 +596,10 @@ fn unwrap_parens(cond: &ast::Condition) -> &ast::Condition {
     current
 }
 
-/// Формула LTL/Guard: атом — использование переменной или имени состояния.
+/// Формула LTL/Guard: атом - использование переменной или имени состояния.
 ///
-/// Фича 0082 уже установила, что имя в формуле есть **использование** (иначе
-/// `SE-036` даёт ложное предупреждение). Пропустив формулы, переименование
-/// оставило бы их со старым именем.
+/// уже установила, что имя в формуле есть **использование** (иначе `SE-036` даёт ложное
+/// предупреждение). Пропустив формулы, переименование оставило бы их со старым именем.
 fn walk_ltl(expr: &ast::LtlExpr, scopes: &mut Scopes, table: &mut UsageTable) {
     match expr {
         ast::LtlExpr::Atom(name) => reference(
@@ -634,7 +632,7 @@ fn walk_inline_formula(
     table: &mut UsageTable,
 ) {
     match def {
-        // `: условия;` и `: [Guard] условия;` — обычные условия перехода.
+        // `: условия;` и `: [Guard] условия;` - обычные условия перехода.
         ast::InlineFormulaDefine::Guard { conditions, .. } => {
             for cond in conditions {
                 walk_condition(cond, scopes, table);
@@ -648,7 +646,7 @@ fn walk_inline_formula(
     }
 }
 
-/// Блок `formula { … }`.
+/// Блок `formula { ... }`.
 fn walk_formula_block(block: &ast::FormulaBlock, scopes: &mut Scopes, table: &mut UsageTable) {
     for stmt in &block.statements {
         match stmt {
@@ -681,9 +679,9 @@ fn walk_formula_expr(expr: &ast::FormulaExpression, scopes: &mut Scopes, table: 
     }
 }
 
-/// Тип: ссылка на псевдоним/структуру/перечисление — тоже использование имени.
-/// Отмечает позицией типа **объявляемое** имя типа (`type X = …`,
-/// `struct X { … }`, `enum X { … }`) — фича 0196.
+/// Тип: ссылка на псевдоним/структуру/перечисление - тоже использование имени. Отмечает
+/// позицией типа **объявляемое** имя типа (`type X = ...`, `struct X { ... }`, `enum X
+/// { ... }`) -.
 fn mark_declared_type_name(name: Option<&ast::Identifier>, table: &mut UsageTable) {
     if let Some(name) = name
         && let Some((_, start, end)) = name_range(name.loc)
@@ -693,13 +691,13 @@ fn mark_declared_type_name(name: Option<&ast::Identifier>, table: &mut UsageTabl
 }
 
 /// Отмечает позицией типа имя, стоящее в позиции типа, но пришедшее
-/// **выражением** (тип параметра функции — `ParameterTypeExpr` грамматики).
+/// **выражением** (тип параметра функции - `ParameterTypeExpr` грамматики).
 ///
-/// Разбирается только идентификатор: прочие формы выражения в позиции типа
-/// (вызов, скобки) типом не являются либо не несут одного имени, и красить их
-/// нечем. ⚠️ Исчерпаемостью эта ветвь **не** защищена — узел `Expression`
-/// разбирается частично намеренно, поэтому новая форма типа-выражения потребует
-/// правки здесь и покрыта тестом фичи 0196.
+/// Разбирается только идентификатор: прочие формы выражения в позиции типа (вызов,
+/// скобки) типом не являются либо не несут одного имени, и красить их нечем.
+/// Исчерпаемостью эта ветвь **не** защищена - узел `Expression` разбирается частично
+/// намеренно, поэтому новая форма типа-выражения потребует правки здесь и покрыта
+/// тестом.
 fn mark_type_expression(expr: &ast::Expression, table: &mut UsageTable) {
     if let ast::Expression::Variable(name) = expr
         && let Some((_, start, end)) = name_range(name.loc)
@@ -711,9 +709,9 @@ fn mark_type_expression(expr: &ast::Expression, table: &mut UsageTable) {
 fn walk_type(ty: &ast::Type, scopes: &mut Scopes, table: &mut UsageTable) {
     match ty {
         ast::Type::Alias(name) => {
-            // Позиция типа (0196) отмечается ДО разрешения: `u8`, `bit`,
-            // `duration` символов этого файла не имеют и в `usages` не попадут,
-            // но типами быть не перестают.
+            // Позиция типа отмечается до разрешения: `u8`, `bit`, `duration` символов
+            // этого файла не имеют и в `usages` не попадут, но типами быть не
+            // перестают.
             if let Some((_, start, end)) = name_range(name.loc) {
                 table.push_type_ref(start, end);
             }
@@ -727,10 +725,10 @@ fn walk_type(ty: &ast::Type, scopes: &mut Scopes, table: &mut UsageTable) {
                 }
             }
         }
-        // Fixed-point `q(m, n)` (0061): имя конструктора — обычный идентификатор
-        // (ключевым словом `q` намеренно не сделан), позиции отдельной у него
-        // нет. Диапазон имени — начало `Location` плюс длина имени: конструктор
-        // стоит первым в записи `q(m, n)`, что задано грамматикой.
+        // Fixed-point `q(m, n)`: имя конструктора - обычный идентификатор (ключевым
+        // словом `q` намеренно не сделан), позиции отдельной у него нет. Диапазон имени -
+        // начало `Location` плюс длина имени: конструктор стоит первым в записи `q(m,
+        // n)`, что задано грамматикой.
         ast::Type::Fixed(loc, ctor, _, _, _) => {
             if let Some((_, start, end)) = name_range(*loc) {
                 let name_end = start.saturating_add(ctor.chars().count() as u32);
@@ -739,10 +737,10 @@ fn walk_type(ty: &ast::Type, scopes: &mut Scopes, table: &mut UsageTable) {
                 }
             }
         }
-        // `Enum`/`Struct` в АСД несут имя строкой без позиции — ни вхождением,
-        // ни позицией типа их не сделать; сами объявления обходятся отдельно.
-        // Остальные варианты грамматикой не порождаются (тип приходит
-        // псевдонимом) и позиции не несут.
+        // `Enum`/`Struct` в АСД несут имя строкой без позиции - ни вхождением, ни
+        // позицией типа их не сделать; сами объявления обходятся отдельно. Остальные
+        // варианты грамматикой не порождаются (тип приходит псевдонимом) и позиции не
+        // несут.
         ast::Type::Enum(_)
         | ast::Type::Struct(_)
         | ast::Type::Address { .. }
@@ -794,7 +792,7 @@ fn walk_variable_type(def: &ast::VariableDefine, scopes: &mut Scopes, table: &mu
     }
 }
 
-/// Объявление переменной/константы/порта — в модели или локально.
+/// Объявление переменной/константы/порта - в модели или локально.
 fn declare_variable(
     def: &ast::VariableDefine,
     scopes: &mut Scopes,
@@ -810,10 +808,9 @@ fn declare_variable(
 
 /// Выражения объявления, в которых могут стоять имена.
 ///
-/// У порта их **два** (фича 0187): размещение `at <адрес>` и инициализатор.
-/// Адрес — не обязательно литерал: `at BASE + 4` ссылается на константу, и
-/// пропустив это выражение, переименование испортило бы исходник (ради чего
-/// слой использований и заведён).
+/// У порта их **два**: размещение `at <адрес>` и инициализатор. Адрес - не обязательно
+/// литерал: `at BASE + 4` ссылается на константу, и пропустив это выражение,
+/// переименование испортило бы исходник (ради чего слой использований и заведён).
 fn variable_value_expressions(def: &ast::VariableDefine) -> Vec<&ast::Expression> {
     match def {
         ast::VariableDefine::Variable { initializer, .. } => initializer.iter().collect(),
@@ -829,37 +826,35 @@ fn variable_value_expressions(def: &ast::VariableDefine) -> Vec<&ast::Expression
 
 /// Имена, вводимые директивой `import`.
 ///
-/// Целевой символ живёт в **другом** файле, поэтому объявлением здесь считается
-/// само вводимое имя (алиас либо исходное имя при `import { A }`). Так `rename`
-/// имени модели получит отказ по виду `Model`, а `references` всё же покажет
-/// вхождения в этом файле.
+/// Целевой символ живёт в **другом** файле, поэтому объявлением здесь считается само
+/// вводимое имя (алиас либо исходное имя при `import { A }`). Так `rename` имени модели
+/// получит отказ по виду `Model`, а `references` всё же покажет вхождения в этом файле.
 fn each_import_binding<'a>(
     def: &'a ast::ImportDefine,
     f: &mut impl FnMut(&'a ast::Identifier, SymbolKind),
 ) {
     match def {
-        // `import "путь" as Имя;` — имя действительно называет МОДЕЛЬ файла.
+        // `import "путь" as Имя;` - имя действительно называет модель файла.
         ast::ImportDefine::GlobalSymbol(_, alias, _) => f(alias, SymbolKind::Model),
-        // `import { a, b as c } from "путь";` — переносится ОБЪЯВЛЕНИЕ соседнего
-        // файла, и вид у него тот же, что там: переменная, порт, функция, тип.
-        // Здесь он неизвестен (слой однофайловый), поэтому вид `Imported` —
-        // он отвечает на ссылку в любом пространстве. Прежде ставился `Model`,
-        // и вхождения имени в теле с объявлением не связывались (фича 0256).
+        // `import { a, b as c } from "путь";` - переносится объявление соседнего файла,
+        // и вид у него тот же, что там: переменная, порт, функция, тип. Здесь он
+        // неизвестен (слой однофайловый), поэтому вид `Imported` - он отвечает на
+        // ссылку в любом пространстве.
         ast::ImportDefine::Rename(_, names, _) => {
             for (original, alias) in names {
                 f(alias.as_ref().unwrap_or(original), SymbolKind::Imported);
             }
         }
-        // `import "путь";` вводит имя по имени файла — идентификатора в тексте
-        // нет, вхождением он быть не может.
+        // `import "путь";` вводит имя по имени файла - идентификатора в тексте нет,
+        // вхождением он быть не может.
         ast::ImportDefine::Plain(_, _) => {}
     }
 }
 
-/// Исходные имена в `import { A as B }` — ссылки на символы **чужого** файла.
+/// Исходные имена в `import { A as B }` - ссылки на символы **чужого** файла.
 ///
-/// Связать их не с чем, но и потерять нельзя: сторож полноты должен знать, что
-/// имя `A` в файле встречается.
+/// Связать их не с чем, но и потерять нельзя: тест полноты должен знать, что имя `A`
+/// в файле встречается.
 fn note_import_originals(def: &ast::ImportDefine, table: &mut UsageTable) {
     if let ast::ImportDefine::Rename(_, names, _) = def {
         for (original, alias) in names {
@@ -879,7 +874,7 @@ fn declare(
     where_: DeclareIn,
 ) {
     let Some((file_no, start, end)) = name_range(name.loc) else {
-        // Объявление без позиции в тексте (порождённое) — вхождением не является.
+        // Объявление без позиции в тексте (порождённое) - вхождением не является.
         return;
     };
     let symbol = Symbol {

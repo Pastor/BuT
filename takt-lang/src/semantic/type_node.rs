@@ -1,29 +1,29 @@
 //! Построение семантических узлов типов языка Takt.
 //!
-//! Основная функция [`construct_type`] преобразует АСД-тип [`Type`]
-//! в семантический [`TypeNode`].
+//! Основная функция [`construct_type`] преобразует АСД-тип [`Type`] в семантический
+//! [`TypeNode`].
 //!
-//! Вместо `&BTreeMap<String, TypeNode>` функция принимает `Rc<RefCell<ModelNode>>`,
-//! что позволяет искать типы через цепочку родительских моделей.
+//! Вместо `&BTreeMap<String, TypeNode>` функция принимает `Rc<RefCell<ModelNode>>`, что
+//! позволяет искать типы через цепочку родительских моделей.
 //!
 //! ## Поддерживаемые типы
 //!
-//! | АСД (`ast::Type`)              | Семантический узел             |
+//! | АСД (`ast::Type`) | Семантический узел |
 //! |-------------------------------|--------------------------------|
-//! | `Type::Bit`                   | `TypeNode::Bit`                |
-//! | `Type::Bool`                  | `TypeNode::Bool`               |
-//! | `Type::Rational`              | `TypeNode::Rational`           |
-//! | `Type::Unit`                  | `TypeNode::Unit`               |
-//! | `Type::Array { N, T }`        | `TypeNode::Array(N, T)`        |
+//! | `Type::Bit` | `TypeNode::Bit` |
+//! | `Type::Bool` | `TypeNode::Bool` |
+//! | `Type::Rational` | `TypeNode::Rational` |
+//! | `Type::Unit` | `TypeNode::Unit` |
+//! | `Type::Array { N, T }` | `TypeNode::Array(N, T)` |
 //! | `Type::Address { addr, bit }` | `TypeNode::Address(addr, bit)` |
-//! | `Type::Enum("Color")`         | `TypeNode::Enum("Color")`      |
-//! | `Type::Alias("bit")`          | `TypeNode::Bit`                |
-//! | `Type::Alias("bool")`         | `TypeNode::Bool`               |
-//! | `Type::Alias("float")`        | `TypeNode::Rational`           |
-//! | `Type::Alias("unit")`         | `TypeNode::Unit`               |
-//! | `Type::Alias(local)`          | значение из таблицы типов модели |
-//! | `Type::Function { .. }`       | `TypeNode::Unsupported`        |
-//! | `None`                        | `TypeNode::Inference`          |
+//! | `Type::Enum("Color")` | `TypeNode::Enum("Color")` |
+//! | `Type::Alias("bit")` | `TypeNode::Bit` |
+//! | `Type::Alias("bool")` | `TypeNode::Bool` |
+//! | `Type::Alias("float")` | `TypeNode::Rational` |
+//! | `Type::Alias("unit")` | `TypeNode::Unit` |
+//! | `Type::Alias(local)` | значение из таблицы типов модели |
+//! | `Type::Function { .. }` | `TypeNode::Unsupported` |
+//! | `None` | `TypeNode::Inference` |
 //!
 //! **Примечание о `Type::Enum`:** `construct_type` не проверяет, объявлено ли
 //! перечисление; эта проверка выполняется в `validate_model` через
@@ -43,19 +43,19 @@ use std::fmt;
 use std::rc::Rc;
 use type_fixed::construct_fixed;
 
-/// Встроенный тип по его имени в исходнике (`u8`, `bit`, `duration`, …).
+/// Встроенный тип по его имени в исходнике (`u8`, `bit`, `duration`, ...).
 ///
 /// **Единственное место**, где имя встроенного типа превращается в
-/// [`TypeNode`]. Заведено фиксом 0134-01: знание было продублировано —
-/// [`construct_type`] знало целочисленные псевдонимы (`u8`…`i64`), а
+/// [`TypeNode`]. Заведено исправлением: знание было продублировано -
+/// [`construct_type`] знало целочисленные псевдонимы (`u8`...`i64`), а
 /// context-free [`ast_type_to_node`](crate::semantic::type_inference::ast_type_to_node)
 /// (через который идёт **приведение** `x as T`) знало только
 /// `bit`/`bool`/`float`/`unit`. Из-за расхождения `5 as u8` давало
-/// `TypeNode::Unsupported`, и симулятор падал с `SIM-007` — на совершенно
+/// `TypeNode::Unsupported`, и симулятор падал с `SIM-007` - на совершенно
 /// законном коде.
 ///
-/// `None` — имя не встроенное (пользовательский псевдоним либо опечатка);
-/// решение, что с этим делать, принимает вызывающий.
+/// `None` - имя не встроенное (пользовательский псевдоним либо опечатка); решение, что
+/// с этим делать, принимает вызывающий.
 pub fn builtin_type_by_name(name: &str) -> Option<TypeNode> {
     let integer = |bits, signed| Some(TypeNode::Integer { bits, signed });
     match name {
@@ -63,7 +63,7 @@ pub fn builtin_type_by_name(name: &str) -> Option<TypeNode> {
         "bool" => Some(TypeNode::Bool),
         "float" => Some(TypeNode::Rational),
         "unit" => Some(TypeNode::Unit),
-        // Длительность (фича 0134): грамматика отдаёт примитивы псевдонимом.
+        // Длительность: грамматика отдаёт примитивы псевдонимом.
         "duration" => Some(TypeNode::Duration),
         "u8" => integer(8, false),
         "u16" => integer(16, false),
@@ -79,13 +79,13 @@ pub fn builtin_type_by_name(name: &str) -> Option<TypeNode> {
 
 /// Строит [`TypeNode`] из опционального АСД-типа [`Type`].
 ///
-/// Если тип не задан (`None`), возвращает [`TypeNode::Inference`] —
-/// заглушку для последующего вывода типа.
+/// Если тип не задан (`None`), возвращает [`TypeNode::Inference`] - заглушку для
+/// последующего вывода типа.
 ///
 /// # Ошибки
 ///
-/// Возвращает [`Diagnostic`], если тип является псевдонимом, которого
-/// нет в таблице типов `map`.
+/// Возвращает [`Diagnostic`], если тип является псевдонимом, которого нет в таблице
+/// типов `map`.
 pub(crate) fn construct_type(
     typ: Option<Type>,
     model: Rc<RefCell<ModelNode>>,
@@ -98,23 +98,23 @@ pub(crate) fn construct_type(
         Type::Bit => Ok(TypeNode::Bit),
         Type::Bool => Ok(TypeNode::Bool),
         Type::Rational => Ok(TypeNode::Rational),
-        // ⚠️ Вариант `Type::Duration` грамматикой НЕ порождается — как и
-        // `Bit`/`Bool`/`Rational`: примитивные типы приходят из грамматики
-        // псевдонимом (`Type::Alias`) и связываются по имени ниже. Ветка
-        // оставлена для полноты разбора узла.
+        // Вариант `Type::Duration` грамматикой не порождается - как и
+        // `Bit`/`Bool`/`Rational`: примитивные типы приходят из грамматики псевдонимом
+        // (`Type::Alias`) и связываются по имени ниже. Ветка оставлена для полноты
+        // разбора узла.
         Type::Duration => Ok(TypeNode::Duration),
         Type::Fixed(loc, ctor, m, n, modifier) => {
             construct_fixed(loc, &ctor, m, n, modifier.as_deref())
         }
         Type::Alias(def) => {
-            // Пользовательский псевдоним в таблице типов модели берёт приоритет
-            // над встроенными именами (u8, i32 и пр.), что позволяет переопределять
+            // Пользовательский псевдоним в таблице типов модели берёт приоритет над
+            // встроенными именами (u8, i32 и пр.), что позволяет переопределять
             // встроенные типы на уровне модели для обратной совместимости.
             if let Some(rc) = model.borrow().search_type(&def.name) {
                 return Ok(rc.borrow().clone());
             }
-            // Встроенные имена — через единый разбор (фикс 0134-01): второй
-            // экземпляр этого знания уже разъезжался с первым.
+            // Встроенные имена - через единый разбор: второй экземпляр этого знания уже
+            // разъезжался с первым.
             builtin_type_by_name(&def.name).ok_or_else(|| {
                 Diagnostic::declaration_error(
                     def.loc,
@@ -133,10 +133,10 @@ pub(crate) fn construct_type(
         )),
         Type::Function { .. } => Ok(TypeNode::Unsupported),
         Type::Unit => Ok(TypeNode::Unit),
-        // Type::Enum используется только в парсере как узел грамматики;
-        // в качестве типа переменной не поддерживается на уровне семантики.
+        // Type::Enum используется только в парсере как узел грамматики; в качестве типа
+        // переменной не поддерживается на уровне семантики.
         Type::Enum(name) => Ok(TypeNode::Enum(name.clone())),
-        // Type::Struct — ссылка на объявленный структурный тип.
+        // Type::Struct - ссылка на объявленный структурный тип.
         Type::Struct(name) => Ok(TypeNode::Struct(name.clone())),
     }
 }
@@ -144,8 +144,8 @@ pub(crate) fn construct_type(
 #[cfg(test)]
 mod tests {
     use super::*;
-    // Функции fixed-point живут в подмодуле `type_fixed` (рефакторинг 0170):
-    // тесты зовут их оттуда, а не через `super::*`.
+    // Функции fixed-point живут в подмодуле `type_fixed` (рефакторинг 0170): тесты
+    // зовут их оттуда, а не через `super::*`.
     use super::type_fixed::{fixed_repr_range, fixed_storage_bits, lower_fixed_literal};
     use crate::diagnostics::Location;
     use crate::parser::ast::{Identifier, Type};
@@ -160,9 +160,9 @@ mod tests {
         Rc::new(RefCell::new(ModelNode::default()))
     }
 
-    // ── Примитивные типы ──────────────────────────────────────────────────────
+    // -- Примитивные типы ------------------------------------------------------
 
-    /// `None` → `TypeNode::Inference`.
+    /// `None` -> `TypeNode::Inference`.
     #[test]
     fn none_gives_inference() {
         assert_eq!(
@@ -171,7 +171,7 @@ mod tests {
         );
     }
 
-    /// `Type::Bit` → `TypeNode::Bit`.
+    /// `Type::Bit` -> `TypeNode::Bit`.
     #[test]
     fn bit_gives_bit() {
         assert_eq!(
@@ -180,7 +180,7 @@ mod tests {
         );
     }
 
-    /// `Type::Bool` → `TypeNode::Bool`.
+    /// `Type::Bool` -> `TypeNode::Bool`.
     #[test]
     fn bool_gives_bool() {
         assert_eq!(
@@ -189,7 +189,7 @@ mod tests {
         );
     }
 
-    /// `Type::Rational` → `TypeNode::Rational`.
+    /// `Type::Rational` -> `TypeNode::Rational`.
     #[test]
     fn rational_gives_rational() {
         assert_eq!(
@@ -198,7 +198,7 @@ mod tests {
         );
     }
 
-    /// `Type::Unit` → `TypeNode::Unit`.
+    /// `Type::Unit` -> `TypeNode::Unit`.
     #[test]
     fn unit_gives_unit() {
         assert_eq!(
@@ -207,7 +207,7 @@ mod tests {
         );
     }
 
-    /// `Type::Address { addr, bit }` → `TypeNode::Address(addr, bit)`.
+    /// `Type::Address { addr, bit }` -> `TypeNode::Address(addr, bit)`.
     #[test]
     fn address_gives_address() {
         let ty = Type::Address {
@@ -220,7 +220,7 @@ mod tests {
         );
     }
 
-    /// `Type::Address` без бита → `TypeNode::Address(addr, None)`.
+    /// `Type::Address` без бита -> `TypeNode::Address(addr, None)`.
     #[test]
     fn address_without_bit() {
         let ty = Type::Address {
@@ -233,13 +233,13 @@ mod tests {
         );
     }
 
-    // ── Псевдонимы встроенных типов ───────────────────────────────────────────
+    // -- Псевдонимы встроенных типов -------------------------------------------
 
     fn alias(name: &str) -> Type {
         Type::Alias(Identifier::new(name))
     }
 
-    /// `Alias("bit")` → `TypeNode::Bit`.
+    /// `Alias("bit")` -> `TypeNode::Bit`.
     #[test]
     fn alias_bit_gives_bit() {
         assert_eq!(
@@ -248,7 +248,7 @@ mod tests {
         );
     }
 
-    /// `Alias("bool")` → `TypeNode::Bool`.
+    /// `Alias("bool")` -> `TypeNode::Bool`.
     #[test]
     fn alias_bool_gives_bool() {
         assert_eq!(
@@ -257,7 +257,7 @@ mod tests {
         );
     }
 
-    /// `Alias("float")` → `TypeNode::Rational`.
+    /// `Alias("float")` -> `TypeNode::Rational`.
     #[test]
     fn alias_float_gives_rational() {
         assert_eq!(
@@ -266,7 +266,7 @@ mod tests {
         );
     }
 
-    /// `Alias("unit")` → `TypeNode::Unit`.
+    /// `Alias("unit")` -> `TypeNode::Unit`.
     #[test]
     fn alias_unit_gives_unit() {
         assert_eq!(
@@ -275,14 +275,14 @@ mod tests {
         );
     }
 
-    // ── Пользовательские псевдонимы ───────────────────────────────────────────
+    // -- Пользовательские псевдонимы -------------------------------------------
 
     /// Псевдоним из таблицы типов модели разрешается в соответствующий `TypeNode`.
     ///
     /// # Пример (Takt)
     /// ```but
     /// type byte8 = [bit;8];
-    /// var x: byte8 = 0;   // alias "byte8" → Array(8, Bit)
+    /// var x: byte8 = 0;   // alias "byte8" -> Array(8, Bit)
     /// ```
     #[test]
     fn local_alias_resolves_from_map() {
@@ -327,7 +327,7 @@ mod tests {
         );
     }
 
-    /// Контрпример: псевдоним, отсутствующий в таблице, — ошибка.
+    /// Контрпример: псевдоним, отсутствующий в таблице, - ошибка.
     ///
     /// # Контрпример (Takt)
     /// ```but
@@ -348,9 +348,9 @@ mod tests {
         );
     }
 
-    // ── Массивы ───────────────────────────────────────────────────────────────
+    // -- Массивы ---------------------------------------------------------------
 
-    /// `Type::Array { N=8, T=Bit }` → `TypeNode::Array(8, Bit)`.
+    /// `Type::Array { N=8, T=Bit }` -> `TypeNode::Array(8, Bit)`.
     #[test]
     fn array_bit_8() {
         let ty = Type::Array {
@@ -364,7 +364,7 @@ mod tests {
         );
     }
 
-    /// Вложенный массив: `[[bit;4];2]` → `Array(2, Array(4, Bit))`.
+    /// Вложенный массив: `[[bit;4];2]` -> `Array(2, Array(4, Bit))`.
     #[test]
     fn nested_array() {
         let inner = Type::Array {
@@ -383,7 +383,7 @@ mod tests {
         );
     }
 
-    /// `Type::Function { .. }` → `TypeNode::Unsupported`.
+    /// `Type::Function { .. }` -> `TypeNode::Unsupported`.
     #[test]
     fn function_type_is_unsupported() {
         use crate::parser::ast::ParameterList;
@@ -397,9 +397,9 @@ mod tests {
         );
     }
 
-    // ── Ce4: перечисления ─────────────────────────────────────────────────────
+    // -- Ce4: перечисления -----------------------------------------------------
 
-    /// `Type::Enum("Color")` → `TypeNode::Enum("Color")`.
+    /// `Type::Enum("Color")` -> `TypeNode::Enum("Color")`.
     ///
     /// # Пример (Takt)
     /// ```text
@@ -407,7 +407,7 @@ mod tests {
     ///     Red = 0,
     ///     Green = 1
     /// }
-    /// var c: Color = 0;   // тип аннотации → TypeNode::Enum("Color")
+    /// var c: Color = 0;   // тип аннотации -> TypeNode::Enum("Color")
     /// ```
     #[test]
     fn enum_type_gives_enum_node() {
@@ -417,9 +417,9 @@ mod tests {
         );
     }
 
-    /// `Type::Enum` с пустым именем → `TypeNode::Enum("")`.
+    /// `Type::Enum` с пустым именем -> `TypeNode::Enum("")`.
     ///
-    /// Имя не проверяется в `construct_type` — валидация в `validate_model`.
+    /// Имя не проверяется в `construct_type` - валидация в `validate_model`.
     #[test]
     fn enum_type_empty_name() {
         assert_eq!(
@@ -431,12 +431,12 @@ mod tests {
     /// `Type::Enum` не зависит от таблицы типов (псевдонимов).
     ///
     /// # Контр-пример
-    /// Наличие псевдонима "Color" в таблице не влияет на `Type::Enum("Color")` —
+    /// Наличие псевдонима "Color" в таблице не влияет на `Type::Enum("Color")` -
     /// они обрабатываются независимо.
     #[test]
     fn enum_type_ignores_type_alias_table() {
         let mut map = BTreeMap::new();
-        // В таблице типов есть "Color" как псевдоним — но Type::Enum идёт своим путём
+        // В таблице типов есть "Color" как псевдоним - но Type::Enum идёт своим путём
         map.insert(
             "Color".to_string(),
             TypeNode::Array(8, Box::new(TypeNode::Bit)),
@@ -445,7 +445,7 @@ mod tests {
             types: map,
             ..Default::default()
         }));
-        // Type::Enum("Color") всё равно → TypeNode::Enum("Color"), не Array
+        // Type::Enum("Color") всё равно -> TypeNode::Enum("Color"), не Array
         assert_eq!(
             construct_type(Some(Type::Enum("Color".to_string())), model).unwrap(),
             TypeNode::Enum("Color".to_string())
@@ -501,7 +501,7 @@ mod tests {
         );
     }
 
-    // ── Fixed-point q(m, n) (фича 0061, задача 01) ────────────────────────────
+    // -- Fixed-point q(m, n) ----------------------------
 
     fn fixed(ctor: &str, m: i128, n: i128) -> Result<TypeNode, Diagnostic> {
         construct_type(
@@ -516,7 +516,7 @@ mod tests {
         )
     }
 
-    /// `q(8, 8)` → `TypeNode::Fixed { m: 8, n: 8, sat: false }` (T1).
+    /// `q(8, 8)` -> `TypeNode::Fixed { m: 8, n: 8, sat: false }` (T1).
     #[test]
     fn fixed_q_8_8_builds() {
         assert_eq!(
@@ -529,7 +529,7 @@ mod tests {
         );
     }
 
-    /// Границы `m ≥ 1`, `n ≥ 1`, `m + n ≤ 64` — ошибка `SE-057` (T2).
+    /// Границы `m >= 1`, `n >= 1`, `m + n <= 64` - ошибка `SE-057` (T2).
     #[test]
     fn fixed_bounds_are_rejected() {
         for (m, n) in [(0, 8), (8, 0), (40, 40), (-1, 8)] {
@@ -555,7 +555,7 @@ mod tests {
         );
     }
 
-    /// Конструктор не `q` → `SE-057` (иных параметрических типов нет, T17-смежно).
+    /// Конструктор не `q` -> `SE-057` (иных параметрических типов нет, T17-смежно).
     #[test]
     fn fixed_non_q_constructor_is_rejected() {
         let err = fixed("foo", 8, 8).unwrap_err();
@@ -576,22 +576,20 @@ mod tests {
         ExpressionNode::Rational(s.to_string(), neg)
     }
 
-    /// Литерал точен: `1.5` в `q(8, 8)` → представление `384` (T4).
+    /// Литерал точен: `1.5` в `q(8, 8)` -> представление `384` (T4).
     #[test]
     fn fixed_literal_1_5_is_384() {
         let v = lower_fixed_literal(&rat("1.5", false), 8, 8, Location::Implicit).unwrap();
         assert_eq!(v, Some(384));
     }
 
-    /// Показатель степени в тексте литерала учитывается (фича 0144).
+    /// Показатель степени в тексте литерала учитывается.
     ///
-    /// Текст рационального литерала хранится КАК НАПИСАН и с 0144 может нести
-    /// показатель (`2.5e2`). Прежде разбор делал `split_once('.')` по всему
-    /// тексту: цифры выходили `"25e2"`, не парсились, и автор получал SE-058
-    /// «не число» — сообщение о следствии, а не о причине.
+    /// Текст рационального литерала хранится как написан и с 0144 может нести
+    /// показатель (`2.5e2`).
     #[test]
     fn fixed_literal_with_exponent() {
-        // 2.5e2 = 250 → 250·2⁸ = 64000.
+        // 2.5e2 = 250 -> 250·2⁸ = 64000.
         let v = lower_fixed_literal(&rat("2.5e2", false), 16, 8, Location::Implicit).unwrap();
         assert_eq!(v, Some(64_000));
         // Та же величина без показателя обязана дать то же представление.
@@ -606,42 +604,42 @@ mod tests {
         assert_eq!(v, Some(15 * 256));
     }
 
-    /// Отрицательный литерал: `-1.5` → `-384`.
+    /// Отрицательный литерал: `-1.5` -> `-384`.
     #[test]
     fn fixed_literal_negative() {
         let v = lower_fixed_literal(&rat("1.5", true), 8, 8, Location::Implicit).unwrap();
         assert_eq!(v, Some(-384));
     }
 
-    /// Целочисленный литерал масштабируется: `3` в `q(8, 8)` → `768` (3·2⁸).
+    /// Целочисленный литерал масштабируется: `3` в `q(8, 8)` -> `768` (3·2⁸).
     #[test]
     fn fixed_literal_integer_scales() {
         let v = lower_fixed_literal(&ExpressionNode::Number(3), 8, 8, Location::Implicit).unwrap();
         assert_eq!(v, Some(768));
     }
 
-    /// Непредставимый литерал `0.001` → `SE-058` (T3), а не тихое округление.
+    /// Непредставимый литерал `0.001` -> `SE-058` (T3), а не тихое округление.
     #[test]
     fn fixed_literal_unrepresentable_is_se058() {
         let err = lower_fixed_literal(&rat("0.001", false), 8, 8, Location::Implicit).unwrap_err();
         assert_eq!(err.code.as_deref(), Some("SE-058"));
     }
 
-    /// Вне диапазона: `200.0` в `q(8, 8)` (max = 127.996…) → `SE-058`.
+    /// Вне диапазона: `200.0` в `q(8, 8)` (max = 127.996...) -> `SE-058`.
     #[test]
     fn fixed_literal_out_of_range_is_se058() {
         let err = lower_fixed_literal(&rat("200.0", false), 8, 8, Location::Implicit).unwrap_err();
         assert_eq!(err.code.as_deref(), Some("SE-058"));
     }
 
-    /// Не литерал (переменная и т. п.) → `None` (обрабатывается арифметикой).
+    /// Не литерал (переменная и т. п.) -> `None` (обрабатывается арифметикой).
     #[test]
     fn fixed_literal_non_literal_is_none() {
         let v = lower_fixed_literal(&ExpressionNode::None, 8, 8, Location::Implicit).unwrap();
         assert_eq!(v, None);
     }
 
-    /// Диапазон представлений `q(8, 8)` — `[-32768, 32767]` (знаковое i16).
+    /// Диапазон представлений `q(8, 8)` - `[-32768, 32767]` (знаковое i16).
     #[test]
     fn fixed_repr_range_is_signed_width() {
         assert_eq!(fixed_repr_range(8, 8), (-32768, 32767));
@@ -651,15 +649,15 @@ mod tests {
 /// Семантический узел типа данных.
 ///
 /// Варианты:
-/// - [`Detecting`](TypeNode::Inference) — тип выводится (временная заглушка).
-/// - [`Address`](TypeNode::Address) — адресный тип порта `(адрес, бит?)`.
-/// - [`Bit`](TypeNode::Bit) — 1-битный примитив (`bit`).
-/// - [`Bool`](TypeNode::Bool) — булев тип (`bool`).
-/// - [`Rational`](TypeNode::Rational) — вещественное число (`float`).
-/// - [`Array`](TypeNode::Array) — массив фиксированного размера `(N, элемент)`.
-/// - [`Enum`](TypeNode::Enum) — перечисление (Ce4).
-/// - [`Struct`](TypeNode::Struct) — структурный тип (NI3).
-/// - [`Unsupported`](TypeNode::Unsupported) — неподдерживаемый тип (например, функциональный).
+/// - [`Detecting`](TypeNode::Inference) - тип выводится (временная заглушка).
+/// - [`Address`](TypeNode::Address) - адресный тип порта `(адрес, бит?)`.
+/// - [`Bit`](TypeNode::Bit) - 1-битный примитив (`bit`).
+/// - [`Bool`](TypeNode::Bool) - булев тип (`bool`).
+/// - [`Rational`](TypeNode::Rational) - вещественное число (`float`).
+/// - [`Array`](TypeNode::Array) - массив исправлениеированного размера `(N, элемент)`.
+/// - [`Enum`](TypeNode::Enum) - перечисление (Ce4).
+/// - [`Struct`](TypeNode::Struct) - структурный тип (NI3).
+/// - [`Unsupported`](TypeNode::Unsupported) - неподдерживаемый тип (например, функциональный).
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 #[non_exhaustive]
 pub enum TypeNode {
@@ -670,40 +668,40 @@ pub enum TypeNode {
     Address(u64, Option<u64>),
     /// 1-битный примитив (`bit`).
     Bit,
-    /// Тип `bool` — булев тип (`true`/`false`).
+    /// Тип `bool` - булев тип (`true`/`false`).
     Bool,
     /// Тип с плавающей точкой (`float`).
     Rational,
-    /// Длительность (`duration`, фича 0134): целое число **наносекунд**.
+    /// Длительность (`duration`): целое число **наносекунд**.
     ///
-    /// Отдельный тип, а не целое: единица обязана быть частью типа, иначе она
-    /// теряется в первом же присваивании (довод тот же, что у `Fixed`).
-    /// Пересчёт в единицы профиля — [`semantic::duration`](crate::semantic::duration).
+    /// Отдельный тип, а не целое: единица обязана быть частью типа, иначе она теряется
+    /// в первом же присваивании (довод тот же, что у `Fixed`). Пересчёт в единицы
+    /// профиля - [`semantic::duration`](crate::semantic::duration).
     Duration,
-    /// Fixed-point `q(m, n)` (фича 0061): знаковый, дополнительный код; `m`
-    /// целых бит **включая знак**, `n` дробных, полная ширина `W = m + n ≤ 64`.
-    /// Представимое значение — `v · 2⁻ⁿ`, где `v : intW`. Границы гарантированы
-    /// построением ([`construct_type`]); арифметика — нормативная (ADR 0061).
+    /// Fixed-point `q(m, n)`: знаковый, дополнительный код; `m` целых бит **включая
+    /// знак**, `n` дробных, полная ширина `W = m + n <= 64`. Представимое значение - `v
+    /// · 2⁻ⁿ`, где `v : intW`. Границы гарантированы построением ([`construct_type`]);
+    /// арифметика - нормативная.
     Fixed {
-        /// Целые биты, включая знаковый (`m ≥ 1`).
+        /// Целые биты, включая знаковый (`m >= 1`).
         m: u8,
-        /// Дробные биты (`n ≥ 1`).
+        /// Дробные биты (`n >= 1`).
         n: u8,
-        /// Насыщение вместо переноса при переполнении (фича 0170, `q(m, n) sat`).
+        /// Насыщение вместо переноса при переполнении.
         ///
-        /// ⚠️ Признак — часть **формата**, а не свойство переменной: арифметика
-        /// получает операнды выражениями, и у промежуточного результата взять
-        /// его больше неоткуда. Отсюда же следует, что смешение `sat` и не-`sat`
-        /// в одной операции — ошибка (`SE-103`), как и смешение разных `q`.
+        /// Признак - часть **формата**, а не свойство переменной: арифметика получает
+        /// операнды выражениями, и у промежуточного результата взять его больше
+        /// неоткуда. Отсюда же следует, что смешение `sat` и не-`sat` в одной операции -
+        /// ошибка (`SE-103`), как и смешение разных `q`.
         ///
-        /// ⚠️ Поле участвует в равенстве типов. Места, сравнивающие формат ради
+        /// Поле участвует в равенстве типов. Места, сравнивающие формат ради
         /// **ширины** (выбор `int{S}_t`, `logic signed [W-1:0]`), обязаны
         /// сравнивать `m`/`n`, а не тип целиком.
         sat: bool,
     },
-    /// Массив фиксированного размера: `(количество_элементов, тип_элемента)`.
+    /// Массив исправлениеированного размера: `(количество_элементов, тип_элемента)`.
     Array(u16, Box<TypeNode>),
-    /// Перечисление (Ce4): именованный тип с фиксированным набором значений.
+    /// Перечисление (Ce4): именованный тип с исправлениеированным набором значений.
     ///
     /// Хранит имя перечисления.
     Enum(String),
@@ -719,21 +717,21 @@ pub enum TypeNode {
     BuiltinState,
     /// Встроенный числовой тип (внутренний, для встроенных функций).
     ///
-    /// Обозначает «любой числовой тип»: `Bit`, `Rational`, `Array(_, Bit)`.
-    /// Используется для параметров и возвращаемых значений математических
-    /// встроенных функций (`min`, `max`, `abs`).
+    /// Обозначает "любой числовой тип": `Bit`, `Rational`, `Array(_, Bit)`.
+    /// Используется для параметров и возвращаемых значений математических встроенных
+    /// функций (`min`, `max`, `abs`).
     BuiltinNumeric,
     /// Структурный тип (NI3): именованная структура с полями.
     ///
     /// Хранит имя структуры.
     Struct(String),
-    /// Встроенный целочисленный тип: `u8`/`i8`…`u64`/`i64`.
+    /// Встроенный целочисленный тип: `u8`/`i8`...`u64`/`i64`.
     ///
-    /// `bits` — разрядность (8, 16, 32, 64); `signed` — знаковость.
+    /// `bits` - разрядность (8, 16, 32, 64); `signed` - знаковость.
     Integer {
         /// Ширина в битах: 8, 16, 32 или 64.
         bits: u8,
-        /// `true` → знаковый (`int{bits}_t`), `false` → беззнаковый (`uint{bits}_t`).
+        /// `true` -> знаковый (`int{bits}_t`), `false` -> беззнаковый (`uint{bits}_t`).
         signed: bool,
     },
 }
@@ -745,9 +743,9 @@ impl fmt::Display for TypeNode {
             TypeNode::Bool => write!(f, "bool"),
             TypeNode::Rational => write!(f, "float"),
             TypeNode::Duration => write!(f, "duration"),
-            // ⚠️ Модификатор печатается: имя типа попадает в ТЕКСТ диагностик
-            // (`SE-059`/`SE-103` о смешении), и без него сообщение «нельзя
-            // смешивать q(8, 8) и q(8, 8)» было бы бессмысленным.
+            // Модификатор печатается: имя типа попадает в текст диагностик
+            // (`SE-059`/`SE-103` о смешении), и без него сообщение "нельзя смешивать
+            // q(8, 8) и q(8, 8)" было бы бессмысленным.
             TypeNode::Fixed { m, n, sat } => {
                 write!(f, "q({}, {})", m, n)?;
                 if *sat {

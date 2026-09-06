@@ -41,8 +41,8 @@ export function spans(text) {
       const ch = row[at];
       if (ch === '"') {
         const end = closing(row, at);
-        // Имя поля от значения отличает двоеточие следом — не разбор, а тот же
-        // признак, по которому его читает человек.
+        // Имя поля от значения отличает двоеточие следом - не разбор, а тот же признак,
+        // по которому его читает человек.
         const after = row.slice(end + 1).match(/^\s*:/);
         marks.push({ line, column: at, length: end - at + 1, type: after ? KEY : STRING });
         at = end + 1;

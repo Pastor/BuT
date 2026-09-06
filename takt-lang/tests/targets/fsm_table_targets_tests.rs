@@ -1,22 +1,22 @@
-//! Табличная форма автомата у целей `rust` и `st` (фича 0440).
+//! Табличная форма автомата у целей `rust` и `st`.
 //!
 //! # Что доказывает набор
 //!
-//! 1. **Форма печатается идиомой целевого языка**: у `rust` — `static` со
-//!    строками и методы-разборщики номера, у `st` — константные массивы и
+//! 1. **Форма печатается идиомой целевого языка**: у `rust` - `static` со
+//!    строками и методы-разборщики номера, у `st` - константные массивы и
 //!    диспетчер `WHILE`. Указателей на функции нет ни там, ни там, и это не
 //!    вкус: в IEC их не существует вовсе, а в Rust тип стража зависит от
 //!    параметра метода (`tick<H: Hal>`).
 //! 2. **Переходы уходят из тел состояний**: в ветви остаётся только тело такта.
-//! 3. **Умолчание не изменилось** — контроль, без которого пункт 1 ничего не
+//! 3. **Умолчание не изменилось** - контроль, без которого пункт 1 ничего не
 //!    значит.
 //! 4. **Вывод принимают инструменты целей** (`clippy -D warnings`, `iec2c`).
-//! 5. **Флаг у цели, которая формы не печатает, — ошибка CLI** с перечислением
+//! 5. **Флаг у цели, которая формы не печатает, - ошибка CLI** с перечислением
 //!    поддерживающих.
 //!
-//! ⚠️ Тождественность поведения этим набором **не** доказывается: её предмет —
-//! потактовые сверки `conformance_fsm_table_rust_tests` и
-//! `conformance_fsm_table_st_tests` (крейт `takt-sim`).
+//! Тождественность поведения этим набором **не** доказывается: её предмет - потактовые
+//! сверки `conformance_fsm_table_rust_tests` и `conformance_fsm_table_st_tests` (крейт
+//! `takt-sim`).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -56,7 +56,7 @@ fn taktc() -> Command {
     Command::new(env!("CARGO_BIN_EXE_taktc"))
 }
 
-/// Уникальный по тесту каталог (инвариант 0190/0429).
+/// Уникальный по тесту каталог.
 fn work_dir(tag: &str) -> PathBuf {
     let thread = std::thread::current()
         .name()
@@ -92,8 +92,8 @@ fn compile(dir: &Path, target: &str, extension: &str, extra: &[&str]) -> (bool, 
     )
 }
 
-/// Тело диспетчеризации состояний: от `match self.state` / `CASE state OF` до
-/// строки, с которой начинается диспетчер таблицы.
+/// Тело диспетчеризации состояний: от `match self.state` / `CASE state OF` до строки, с
+/// которой начинается диспетчер таблицы.
 fn state_bodies(source: &str, head: &str, tail: &str) -> String {
     let mut inside = false;
     let mut collected = String::new();
@@ -131,8 +131,8 @@ fn rust_table_form_prints_transitions_as_data() {
         text.contains("fn takt_dispatch") && text.contains("self.takt_dispatch("),
         "нет диспетчера либо его вызова:\n{text}"
     );
-    // Переходы ушли из ветвей `match`: тело состояния на месте, присваивания
-    // состояния — нет.
+    // Переходы ушли из ветвей `match`: тело состояния на месте, присваивания состояния -
+    // нет.
     let bodies = state_bodies(&text, "match self.state {", "self.takt_dispatch(");
     assert!(
         bodies.contains("self.n = self.n.wrapping_add(1);"),
@@ -207,8 +207,8 @@ fn st_table_form_prints_transitions_as_data() {
         text.contains("WHILE (takt_trans_row <= 1) AND (NOT takt_trans_fired) DO"),
         "нет диспетчера:\n{text}"
     );
-    // Переходы ушли из ветвей `CASE`: тело состояния на месте, а переход в
-    // другое состояние печатает только диспетчер.
+    // Переходы ушли из ветвей `CASE`: тело состояния на месте, а переход в другое
+    // состояние печатает только диспетчер.
     let bodies = state_bodies(&text, "CASE state OF", "takt_trans_row := 0;");
     assert!(
         bodies.contains("n := n + 1;"),
@@ -270,8 +270,8 @@ fn st_table_form_is_accepted_by_iec2c() {
 #[test]
 fn table_flag_names_supporting_targets() {
     let dir = work_dir("targets");
-    // `plantuml` — единственная цель без табличной формы: диаграмма переходов и
-    // есть отношение переходов, второй его формы у неё быть не может.
+    // `plantuml` - единственная цель без табличной формы: диаграмма переходов и есть
+    // отношение переходов, второй его формы у неё быть не может.
     let (ok, stderr, _) = compile(&dir, "plantuml", "puml", &["--fsm=table"]);
     assert!(
         !ok,

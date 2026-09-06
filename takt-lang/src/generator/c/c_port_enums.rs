@@ -1,13 +1,12 @@
-//! Перечисления портов цели `c` — сбор и печать.
+//! Перечисления портов цели `c` - сбор и печать.
 //!
-//! Выделено из `c_header` фичей 0421 по границе **ответственности**: заголовок
-//! отвечает за объявления модели, а этот модуль — за один вопрос, «какие порты
-//! есть и как называются их перечислители».
+//! Выделено из `c_header` по границе **ответственности**: заголовок отвечает за
+//! объявления модели, а этот модуль - за один вопрос, "какие порты есть и как
+//! называются их перечислители".
 //!
-//! ⚠️ Двунаправленный порт попадает в ОБА перечисления, и объявленное
-//! направление едет вместе с ним (`PortEntry`): перечислители в C делят одну
-//! область видимости, и без сегмента стороны `cc` отвечает
-//! `redefinition of enumerator`.
+//! Двунаправленный порт попадает в оба перечисления, и объявленное направление едет
+//! вместе с ним (`PortEntry`): перечислители в C делят одну область видимости, и без
+//! сегмента стороны `cc` отвечает `redefinition of enumerator`.
 
 use crate::diagnostics::Diagnostic;
 use crate::generator::c::PortClass;
@@ -16,17 +15,18 @@ use crate::generator::indent::Printer;
 use crate::semantic::minimap::{Element, Name};
 use crate::semantic::{PortDirection, VariableNode};
 
-/// Порт в карте: модель, имя и ОБЪЯВЛЕННОЕ направление (фича 0421).
+/// Порт в карте: модель, имя и объявленное направление.
 pub(in crate::generator::c) type PortEntry = (Name, String, PortDirection);
 /// Карта портов по классу и стороне перечисления.
 pub(in crate::generator::c) type PortMap =
     std::collections::HashMap<(PortClass, PortDirection), Vec<PortEntry>>;
 
-/// Собирает все порты из всех моделей, сгруппированные по [`PortClass`] и [`PortDirection`].
+/// Собирает все порты из всех моделей, сгруппированные по [`PortClass`] и
+/// [`PortDirection`].
 ///
-/// Возвращает словарь `(PortClass, PortDirection) → Vec<(модель, порт, объявленное
-/// направление)>`; последнее нужно двунаправленному порту (фича 0421).
-/// Порты отсортированы для детерминированной генерации.
+/// Возвращает словарь `(PortClass, PortDirection) -> Vec<(модель, порт, объявленное
+/// направление)>`; последнее нужно двунаправленному порту. Порты отсортированы для
+/// детерминированной генерации.
 pub(in crate::generator::c) fn collect_ports_by_class(map: &CMap) -> Result<PortMap, Diagnostic> {
     use std::collections::HashMap;
     let mut all_models = map.using_models();
@@ -70,9 +70,9 @@ pub(in crate::generator::c) fn collect_ports_by_class(map: &CMap) -> Result<Port
         for (mname, pname, cls, dir) in ports {
             match dir {
                 PortDirection::InOut => {
-                    // Двунаправленный порт появляется в ОБОИХ перечислениях, и
-                    // объявленное направление едет вместе с ним: по нему имя
-                    // получает сегмент стороны (фича 0421).
+                    // Двунаправленный порт появляется в обоих перечислениях, и
+                    // объявленное направление едет вместе с ним: по нему имя получает
+                    // сегмент стороны.
                     result.entry((cls, PortDirection::In)).or_default().push((
                         mname.clone(),
                         pname.clone(),
@@ -97,8 +97,8 @@ pub(in crate::generator::c) fn collect_ports_by_class(map: &CMap) -> Result<Port
 
 /// Генерирует тип-зависимые перечисления портов с разделением по направлению.
 ///
-/// Для каждой комбинации `(PortClass, PortDirection)` генерируется отдельный `typedef enum`:
-/// `{Root}_In_BitPort`, `{Root}_Out_BitPort`, `{Root}_In_NumericPort` и т. п.
+/// Для каждой комбинации `(PortClass, PortDirection)` генерируется отдельный `typedef
+/// enum`: `{Root}_In_BitPort`, `{Root}_Out_BitPort`, `{Root}_In_NumericPort` и т.
 /// Варианты именуются `{MODEL_UPPER}_{PORT_UPPER}` с последовательными значениями.
 /// Определения помещаются в заголовочный файл до struct-определений.
 pub(in crate::generator::c) fn generate_port_enums(

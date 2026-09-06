@@ -1,18 +1,18 @@
-//! Механизм времени цели `sv` (синтезируемый SystemVerilog, фича 0134).
+//! Механизм времени цели `sv` (синтезируемый SystemVerilog).
 //!
-//! Два профиля (решение заказчика, анализ 0134-07):
-//! - **«часы»** — служебный ВХОД `time_ms` (внешний источник, как `clk`/`en`);
-//!   метка входа `<lvl>_takt_entry` латчит `time_ms`, условие — разностью.
-//! - **«такты»** — счётчик тактов `<lvl>_takt_dwell` (как цель `c`), условие `>= D`.
+//! Два профиля:
+//! - **"часы"** - служебный вход `time_ms` (внешний источник, как `clk`/`en`);
+//!   метка входа `<lvl>_takt_entry` латчит `time_ms`, условие - разностью.
+//! - **"такты"** - счётчик тактов `<lvl>_takt_dwell` (как цель `c`), условие `>= D`.
 //!
-//! ⚠️ **Капкан цели:** `always_comb` вычисляет `_next` счётчика/метки из
-//! **РЕГИСТРОВ** `state`/`prev_state` (не из `state_next` — иначе комбинационная
+//! **Капкан цели:** `always_comb` вычисляет `_next` счётчика/метки из
+//! **Регистров** `state`/`prev_state` (не из `state_next` - иначе комбинационная
 //! петля `UNOPTFLAT`), а условие выдержки читает **`_next`** (оно уже учитывает
 //! текущий такт; чтение регистра сдвинуло бы выдержку на такт молча). Роль
-//! `prev_state` — та же, что `takt_prev_state` в `c`: разорвать зависимость
+//! `prev_state` - та же, что `takt_prev_state` в `c`: разорвать зависимость
 //! детекции входа от `state_next`.
 //!
-//! ⚠️ `#`-задержки и `$time` не эмитируются НИКОГДА (сторож A7 — греп по выводу).
+//! `#`-задержки и `$time` не эмитируются никогда (тест A7 - греп по выводу).
 
 use crate::diagnostics::Diagnostic;
 use crate::generator::indent::Printer;
@@ -26,29 +26,29 @@ use crate::semantic::time_ast::{
     model_uses_every, model_uses_tick_after,
 };
 
-/// Профиль модели — «часы»?
+/// Профиль модели - "часы"?
 pub(crate) fn is_clock(map: &SvMap) -> bool {
     matches!(map.time_profile(), TimeProfile::Clock)
 }
 
-/// Длительностный `after Nms` **или** периодический `every Nms` (фича 0134-09):
-/// обе величины — длительности, требуют одну инфраструктуру времени уровня.
+/// Длительностный `after Nms` **или** периодический `every Nms`: обе величины -
+/// длительности, требуют одну инфраструктуру времени уровня.
 fn uses_duration_time(model: &ModelNode) -> bool {
     model_uses_duration_after(model) || model_uses_every(model)
 }
 
-/// Нужен ли счётчик тактов у уровня: тактовая выдержка `after Nt` (любой профиль)
-/// либо длительностная `after Nms`/`every Nms` в профиле «такты».
+/// Нужен ли счётчик тактов у уровня: тактовая выдержка `after Nt` (любой профиль) либо
+/// длительностная `after Nms`/`every Nms` в профиле "такты".
 pub(crate) fn needs_dwell(map: &SvMap, model: &ModelNode) -> bool {
     model_uses_tick_after(model) || (!is_clock(map) && uses_duration_time(model))
 }
 
-/// Нужна ли метка времени у уровня: профиль «часы» + `after Nms`/`every Nms`.
+/// Нужна ли метка времени у уровня: профиль "часы" + `after Nms`/`every Nms`.
 pub(crate) fn needs_entry(map: &SvMap, model: &ModelNode) -> bool {
     is_clock(map) && uses_duration_time(model)
 }
 
-/// Нужен ли служебный вход `time_ms` модулю: профиль «часы» + длительностная
+/// Нужен ли служебный вход `time_ms` модулю: профиль "часы" + длительностная
 /// выдержка/период где-либо в дереве (вход один на модуль после уплощения).
 pub(crate) fn needs_time_port(map: &SvMap, root: &ModelNode) -> bool {
     is_clock(map) && (model_tree_uses_duration_after(root) || model_tree_uses_every(root))
@@ -56,8 +56,8 @@ pub(crate) fn needs_time_port(map: &SvMap, root: &ModelNode) -> bool {
 
 /// Разрядность метки/счётчика по максимуму `after` **дерева** модели (R8).
 ///
-/// Один источник для объявления регистра, входа `time_ms` и сравнения: разойдись
-/// они, поле оказалось бы уже сравнения — и выдержка молча переполнилась бы.
+/// Один источник для объявления регистра, входа `time_ms` и сравнения: разойдись они,
+/// поле оказалось бы уже сравнения - и выдержка молча переполнилась бы.
 pub(crate) fn time_bits(map: &SvMap) -> Result<u8, Diagnostic> {
     let max = match map.root_model_node() {
         Some(model) => max_units_in_tree(map, &model.borrow())?,
@@ -71,10 +71,9 @@ fn max_units_in_tree(map: &SvMap, model: &ModelNode) -> Result<u64, Diagnostic> 
     let mut max = 0u64;
     for state in model.states.values() {
         for reference in state.references() {
-            // Вычисляемая выдержка (фича 0183): порог появляется лишь в такте,
-            // поэтому регистр обязан вмещать любое представимое значение — иначе
-            // сравнение усекло бы старшие биты **молча** (в RTL шире/уже — не
-            // ошибка, а тихое обрезание).
+            // Вычисляемая выдержка: порог появляется лишь в такте, поэтому регистр
+            // обязан вмещать любое представимое значение - иначе сравнение усекло бы
+            // старшие биты **молча** (в RTL шире/уже - не ошибка, а тихое обрезание).
             if matches!(reference.cond, crate::semantic::ConditionNode::AfterExpr(_)) {
                 max = max.max(u64::from(u32::MAX));
             }
@@ -87,7 +86,7 @@ fn max_units_in_tree(map: &SvMap, model: &ModelNode) -> Result<u64, Diagnostic> 
                 )?);
             }
         }
-        // Периоды `every` (0134-09) делят ширину регистров времени — учитываем.
+        // Периоды `every` делят ширину регистров времени - учитываем.
         for block in state.named_blocks() {
             if let Some((period_nanos, _)) = block.every_period() {
                 max = max.max(units_or_diagnostic(
@@ -110,12 +109,12 @@ pub(crate) fn dwell_reg(model: &Name) -> String {
     format!("{}_takt_dwell", model.unique_lowercase_snakecase())
 }
 
-/// Имя регистра метки времени входа уровня (профиль «часы»).
+/// Имя регистра метки времени входа уровня (профиль "часы").
 pub(crate) fn entry_reg(model: &Name) -> String {
     format!("{}_takt_entry", model.unique_lowercase_snakecase())
 }
 
-/// Имя регистра «состояние предыдущего такта» уровня.
+/// Имя регистра "состояние предыдущего такта" уровня.
 pub(crate) fn prev_state_reg(model: &Name) -> String {
     format!("{}_takt_prev_state", model.unique_lowercase_snakecase())
 }
@@ -123,13 +122,13 @@ pub(crate) fn prev_state_reg(model: &Name) -> String {
 /// Служебный вход времени модуля.
 pub(crate) const TIME_MS_PORT: &str = "time_ms";
 
-/// Имя регистра-аккумулятора `every`-блока уровня (фича 0134-09).
+/// Имя регистра-аккумулятора `every`-блока уровня.
 pub(crate) fn every_reg(model: &Name, idx: usize) -> String {
     format!("{}_takt_every{idx}", model.unique_lowercase_snakecase())
 }
 
-/// Периодический блок `every` модели: глобальный (по модели) индекс, состояние,
-/// период, тело (фича 0134-09).
+/// Периодический блок `every` модели: глобальный (по модели) индекс, состояние, период,
+/// тело.
 pub(crate) struct EveryBlock<'a> {
     pub(crate) idx: usize,
     pub(crate) state: String,
@@ -137,8 +136,8 @@ pub(crate) struct EveryBlock<'a> {
     pub(crate) body: &'a crate::semantic::StatementNode,
 }
 
-/// Перечисляет `every`-блоки модели с индексом (детерминированно — `states` в
-/// `BTreeMap`-порядке, блоки в порядке объявления). Индекс — сквозной по модели.
+/// Перечисляет `every`-блоки модели с индексом (детерминированно - `states` в
+/// `BTreeMap`-порядке, блоки в порядке объявления). Индекс - сквозной по модели.
 pub(crate) fn model_every(model: &ModelNode) -> Vec<EveryBlock<'_>> {
     let mut out = Vec::new();
     let mut idx = 0usize;
@@ -160,25 +159,25 @@ pub(crate) fn model_every(model: &ModelNode) -> Vec<EveryBlock<'_>> {
     out
 }
 
-/// Уровень (модель) с механизмом времени (фича 0134): имена регистров и профиль.
+/// Уровень (модель) с механизмом времени: имена регистров и профиль.
 pub(crate) struct TimeLevel {
-    /// Модель-уровень (для префикса имён регистров).
+    /// Модель-уровень (для преисправления имён регистров).
     model: Name,
     /// Имя регистра состояния этого уровня.
     state_reg: String,
     /// Нужен ли счётчик тактов (`<lvl>_takt_dwell`).
     dwell: bool,
-    /// Нужна ли метка времени входа (`<lvl>_takt_entry`, профиль «часы»).
+    /// Нужна ли метка времени входа (`<lvl>_takt_entry`, профиль "часы").
     entry: bool,
     /// Разрядность метки/счётчика.
     bits: u8,
-    /// Регистры-аккумуляторы `every` уровня (фича 0134-09) — для сброса при входе.
+    /// Регистры-аккумуляторы `every` уровня - для сброса при входе.
     every_regs: Vec<String>,
 }
 
-/// Заводит регистры времени уровня (фича 0134): счётчик/метка + метка предыдущего
-/// состояния (детекция входа). Получают объявление, `_next`, сброс и защёлкивание
-/// генериком `Reg` — как `<state>_step` (0057). Имена уровня передаются готовыми
+/// Заводит регистры времени уровня: счётчик/метка + метка предыдущего состояния
+/// (детекция входа). Получают объявление, `_next`, сброс и защёлкивание генериком `Reg` -
+/// как `<state>_step`. Имена уровня передаются готовыми
 /// (`enum_name`/`end_var`/`state_reg`), чтобы не тянуть в `sv_time` их построители.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn push_time_regs(
@@ -218,7 +217,7 @@ pub(crate) fn push_time_regs(
     if entry {
         push(entry_reg(name), word.clone(), "'0".to_string());
     }
-    // Аккумуляторы `every` (0134-09): регистр на блок, сброс '0.
+    // Аккумуляторы `every`: регистр на блок, сброс '0.
     let mut every_regs = Vec::new();
     for e in &every {
         let reg = every_reg(name, e.idx);
@@ -226,7 +225,7 @@ pub(crate) fn push_time_regs(
         every_regs.push(reg);
     }
     // `prev_state` сбрасывается в END-сентинел (не в стартовое): sv без INIT, и на
-    // ПЕРВОМ такте `state(start) != prev(END)` даёт вход.
+    // Первом такте `state(start) != prev(END)` даёт вход.
     push(
         prev_state_reg(name),
         enum_name.to_string(),
@@ -243,9 +242,9 @@ pub(crate) fn push_time_regs(
     Ok(())
 }
 
-/// Перекрывает умолчание `_next` регистров времени явной комбинационной формулой
-/// (фича 0134). Вход в состояние — `state != prev_state` (оба РЕГИСТРЫ): счётчик
-/// сбрасывается в 1 и растёт, метка латчит `time_ms`. `prev_state_next = state`.
+/// Перекрывает умолчание `_next` регистров времени явной комбинационной формулой. Вход
+/// в состояние - `state != prev_state` (оба регистры): счётчик сбрасывается в 1 и
+/// растёт, метка латчит `time_ms`.
 pub(crate) fn emit_time_updates(p: &mut Printer, levels: &[TimeLevel]) -> Result<(), Diagnostic> {
     for lvl in levels {
         let state = &lvl.state_reg;
@@ -267,8 +266,8 @@ pub(crate) fn emit_time_updates(p: &mut Printer, levels: &[TimeLevel]) -> Result
             ))
             .nl();
         }
-        // Аккумуляторы `every` (0134-09): умолчание `_next` — сброс '0 при входе,
-        // иначе удержание. Срабатывание переопределит его в ветви состояния.
+        // Аккумуляторы `every`: умолчание `_next` - сброс '0 при входе, иначе
+        // удержание. Срабатывание переопределит его в ветви состояния.
         for reg in &lvl.every_regs {
             p.ident(&format!("{reg}_next = ({entered}) ? '0 : {reg};"))
                 .nl();
@@ -280,9 +279,9 @@ pub(crate) fn emit_time_updates(p: &mut Printer, levels: &[TimeLevel]) -> Result
     Ok(())
 }
 
-/// Выражение `elapsed` уровня, читающее `_next` (как `after_guard`): «часы» —
-/// `time_ms - <entry>_next`, «такты» — `<dwell>_next`. `None`, если у уровня нет
-/// инфраструктуры времени (не должно случаться при наличии `every`).
+/// Выражение `elapsed` уровня, читающее `_next` (как `after_guard`): "часы" - `time_ms -
+/// <entry>_next`, "такты" - `<dwell>_next`. `None`, если у уровня нет инфраструктуры
+/// времени (не должно случаться при наличии `every`).
 pub(crate) fn elapsed_next_expr(levels: &[TimeLevel], map: &SvMap, model: &Name) -> Option<String> {
     let level = levels.iter().find(|l| l.model.unique() == model.unique())?;
     if is_clock(map) {
@@ -295,9 +294,9 @@ pub(crate) fn elapsed_next_expr(levels: &[TimeLevel], map: &SvMap, model: &Name)
     }
 }
 
-/// Печатает гейт срабатывания `every`-блока в ветви состояния `always_comb`
-/// (фича 0134-09): `if ((elapsed - reg_next) >= period) begin … reg_next += period; end`.
-/// Тело печатает `emit_body` (замыкание вызывающего — у него доступ к `Scope`).
+/// Печатает проверка срабатывания `every`-блока в ветви состояния `always_comb`: `if
+/// ((elapsed - reg_next) >= period) begin ... reg_next += period; end`. Тело печатает
+/// `emit_body` (замыкание вызывающего - у него доступ к `Scope`).
 pub(crate) fn emit_every_gate(
     p: &mut Printer,
     levels: &[TimeLevel],
@@ -329,11 +328,11 @@ pub(crate) fn emit_every_gate(
     Ok(())
 }
 
-/// Строит guard выдержки `after` уровня, читая `_next` счётчика/метки (фича 0134).
+/// Строит guard выдержки `after` уровня, читая `_next` счётчика/метки.
 ///
-/// `Some(guard)` для `After`/`AfterTicks`; `None` для прочих условий (их печатает
-/// общий `print_condition`). Читается именно `_next`: оно уже учло текущий такт —
-/// чтение регистра сдвинуло бы выдержку молча.
+/// `Some(guard)` для `After`/`AfterTicks`; `None` для прочих условий (их печатает общий
+/// `print_condition`). Читается именно `_next`: оно уже учло текущий такт - чтение
+/// регистра сдвинуло бы выдержку молча.
 pub(crate) fn after_guard(
     levels: &[TimeLevel],
     map: &SvMap,
@@ -370,9 +369,9 @@ pub(crate) fn after_guard(
             "{dwell}_next >= {ticks}",
             dwell = dwell_reg(&level.model)
         ))),
-        // Вычисляемая выдержка (фича 0183): справа — выражение в миллисекундах.
-        // Читается `_next`, как и у константной формы: чтение регистра сдвинуло
-        // бы выдержку на такт **молча** (главный капкан цели, ADR 0045).
+        // Вычисляемая выдержка: справа - выражение в миллисекундах. Читается `_next`,
+        // как и у константной формы: чтение регистра сдвинуло бы выдержку на такт
+        // **молча** (главный капкан цели).
         ConditionNode::AfterExpr(inner) => {
             let expr = match super::sv_expr::print_condition(inner, scope) {
                 Ok(e) => e,

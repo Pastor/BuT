@@ -1,7 +1,7 @@
 //! Снимок семантической карты модели для генератора PlantUML.
 //!
-//! Обёртка над [`Map`] из [`crate::semantic::minimap`], предоставляющая
-//! только те методы, которые нужны для построения диаграммы состояний.
+//! Обёртка над [`Map`] из [`crate::semantic::minimap`], предоставляющая только те
+//! методы, которые нужны для построения диаграммы состояний.
 
 use crate::diagnostics::Diagnostic;
 use crate::semantic::ModelNode;
@@ -48,7 +48,8 @@ impl PumlMap {
         self.map.states()
     }
 
-    /// Возвращает элемент состояния по имени, или `None` если не найден / не является состоянием.
+    /// Возвращает элемент состояния по имени, или `None` если не найден / не является
+    /// состоянием.
     pub fn state_at(&self, name: Name) -> Option<Element> {
         if let Some(element) = self.map.element_at(name)
             && element.is_state()

@@ -1,18 +1,18 @@
 //! Состояния и переходы: единственный `start`, достижимость, полнота.
 //!
-//! Часть модуля `validate` (фича 0027: деление по логике).
+//! Часть модуля `validate`.
 
 use super::*;
 
 /// Проверяет, что модель содержит ровно одно начальное состояние.
 ///
-/// Если в модели нет состояний вообще (например, модуль с только
-/// объявлениями типов или переменных), проверка пропускается.
+/// Если в модели нет состояний вообще (например, модуль с только объявлениями типов или
+/// переменных), проверка пропускается.
 ///
 /// # Ошибки
 ///
-/// Возвращает [`Diagnostic`], если модель содержит состояния, но
-/// начальных состояний не ровно одно (0 или ≥ 2).
+/// Возвращает [`Diagnostic`], если модель содержит состояния, но начальных состояний не
+/// ровно одно (0 или >= 2).
 pub(super) fn model_only_one_start_state(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> {
     let borrowed = model.borrow();
 
@@ -60,8 +60,8 @@ pub(super) fn validate_state_references(model: Rc<RefCell<ModelNode>>) -> Vec<Di
     for state in borrowed.states.values() {
         match state {
             StateNode::Simple { references, .. } | StateNode::Implement { references, .. } => {
-                // Накопление по РЁБРАМ (фича 0151): каждое ребро — своё
-                // нарушение, и второе не является следствием первого.
+                // Накопление по рёбрам: каждое ребро - своё нарушение, и второе не
+                // является следствием первого.
                 for reference in references {
                     out.extend(validate_reference(reference, model.clone()).err());
                 }
@@ -88,8 +88,8 @@ pub(super) fn validate_state_references(model: Rc<RefCell<ModelNode>>) -> Vec<Di
 ///
 /// # Возвращаемое значение
 ///
-/// Вектор [`Diagnostic`] (предупреждения и ошибки).
-/// Пустой вектор означает отсутствие нарушений.
+/// Вектор [`Diagnostic`] (предупреждения и ошибки). Пустой вектор означает отсутствие
+/// нарушений.
 pub fn check_transition_completeness(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
     collect_transition_completeness(&model, &mut diags);
@@ -100,7 +100,7 @@ pub fn check_transition_completeness(model: Rc<RefCell<ModelNode>>) -> Vec<Diagn
 fn collect_transition_completeness(model: &Rc<RefCell<ModelNode>>, out: &mut Vec<Diagnostic>) {
     let borrowed = model.borrow();
 
-    // Если состояний нет — модуль без автомата, пропускаем
+    // Если состояний нет - модуль без автомата, пропускаем
     if borrowed.states.is_empty() {
         // Рекурсивный спуск во вложенные модели
         let nested: Vec<Rc<RefCell<ModelNode>>> = borrowed.models.values().map(Rc::clone).collect();
@@ -114,7 +114,7 @@ fn collect_transition_completeness(model: &Rc<RefCell<ModelNode>>, out: &mut Vec
     let model_name = borrowed.name.clone().unwrap_or_default();
     let model_loc = borrowed.loc;
 
-    // Строит префикс для сообщений: "модель 'M'" или пустую строку для корня
+    // Строит преисправление для сообщений: "модель 'M'" или пустую строку для корня
     let model_prefix = if model_name.is_empty() {
         String::new()
     } else {
@@ -126,9 +126,8 @@ fn collect_transition_completeness(model: &Rc<RefCell<ModelNode>>, out: &mut Vec
         .states
         .iter()
         .filter_map(|(name, state)| {
-            // Правило одно на проект (`semantic::terminal`, фича 0534): тело
-            // считается наравне с рёбрами, и `always` без переходов автомат не
-            // завершает.
+            // Правило одно на проект (`semantic::terminal`): тело считается наравне с
+            // рёбрами, и `always` без переходов автомат не завершает.
             let is_terminal = state.is_terminated();
             if is_terminal {
                 Some(name.clone())
@@ -175,8 +174,8 @@ fn collect_transition_completeness(model: &Rc<RefCell<ModelNode>>, out: &mut Vec
         graph.insert(name.clone(), targets);
     }
 
-    // Правило Ce5.1: из состояния нет пути к терминальному
-    // Используем BFS/DFS от каждого нетерминального состояния
+    // Правило Ce5.1: из состояния нет пути к терминальному Используем BFS/DFS от
+    // каждого нетерминального состояния
     if !terminal_states.is_empty() {
         for (state_name, state) in borrowed.states.iter() {
             // Терминальные состояния сами по себе достижимы
@@ -230,7 +229,7 @@ fn collect_transition_completeness(model: &Rc<RefCell<ModelNode>>, out: &mut Vec
             ..
         } = state
         {
-            // Правило Ce5.3: ref + next одновременно → предупреждение
+            // Правило Ce5.3: ref + next одновременно -> предупреждение
             if next.is_some() && !references.is_empty() {
                 out.push(
                     Diagnostic::warning(
@@ -258,9 +257,9 @@ fn collect_transition_completeness(model: &Rc<RefCell<ModelNode>>, out: &mut Vec
 
 /// Предупреждает о состояниях, недостижимых из начального состояния.
 ///
-/// Обходит граф переходов (BFS) начиная со стартового состояния.
-/// Состояние считается недостижимым, если на него нет ни одного перехода
-/// `ref` или `next` из любого достижимого состояния.
+/// Обходит граф переходов (BFS) начиная со стартового состояния. Состояние считается
+/// недостижимым, если на него нет ни одного перехода `ref` или `next` из любого
+/// достижимого состояния.
 ///
 /// Функция рекурсивно обходит все вложенные модели.
 pub fn check_unreachable_states(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> {

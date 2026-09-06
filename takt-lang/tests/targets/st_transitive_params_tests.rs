@@ -1,27 +1,10 @@
-//! Разделяемые переменные передаются ТРАНЗИТИВНО у цели `st` (фича 0505).
+//! Разделяемые переменные передаются транзитивно у цели `st`.
 //!
-//! # Что было
-//!
-//! В IEC 61131-3 `FUNCTION` **чистая**: переменных вызывающего блока она не
-//! видит, и цель передаёт нужные через `VAR_IN_OUT` (0030). Список считался по
-//! **собственному** телу функции и обрывался на первом вложенном вызове.
-//!
-//! Замер 2026-09-02 (`fn hot() { return ticks + 1; }`,
-//! `fn outer(k) { return k + hot(); }`): `iec2c` отвечает «Data type
-//! incompatibility … invoking function» и «Variable not declared in this
-//! scope» при **нулевом** коде возврата `taktc`; эталон и остальные семь
-//! потребителей вход исполняют и переводят.
-//!
-//! ⚠️ Контроль, отделивший класс от соседа: первая редакция пробы держала
-//! досрочный возврат, и `sv` отказывала `SV-002` — по своей задокументированной
-//! причине. С одним возвратом `sv` вход принимает: класс принадлежит **только**
-//! цели `st`.
-//!
-//! # Что сторожится
+//! # Что тестытся
 //!
 //! - вложенный вызов: `VAR_IN_OUT` вызывающей функции включает нужды вызываемой;
-//! - цепочка длиной три — признак транзитивен, а не «на один шаг»;
-//! - `iec2c` принимает вывод (главный сторож: класс был невалидным ST);
+//! - цепочка длиной три - признак транзитивен, а не "на один шаг";
+//! - `iec2c` принимает вывод (главный тест: класс был невалидным ST);
 //! - контроль: чистая функция параметров не получает.
 
 use std::path::PathBuf;
@@ -35,14 +18,14 @@ const NESTED: &str = "out sum: u8 at 0x2000;\nvar ticks: u8 := 0;\n\
      fn outer(k: u8) -> u8 { return k + hot(); }\n\
      start Run { always { ticks := ticks + 1; sum := outer(ticks); } ref Run; }\n";
 
-/// Цепочка длиной три: `outer` → `mid` → `hot`, и своя переменная у `outer`.
+/// Цепочка длиной три: `outer` -> `mid` -> `hot`, и своя переменная у `outer`.
 const CHAIN: &str = "out sum: u8 at 0x2000;\nvar ticks: u8 := 0;\nvar gain: u8 := 2;\n\
      fn hot() -> u8 { return ticks + 1; }\n\
      fn mid(v: u8) -> u8 { return v + hot(); }\n\
      fn outer(k: u8) -> u8 { return mid(k) * gain; }\n\
      start Run { always { ticks := ticks + 1; sum := outer(ticks); } ref Run; }\n";
 
-/// **Контроль:** обе функции чистые — параметров состояния быть не должно.
+/// **Контроль:** обе функции чистые - параметров состояния быть не должно.
 const PURE: &str = "out sum: u8 at 0x2000;\nvar ticks: u8 := 0;\n\
      fn twice(v: u8) -> u8 { return v + v; }\n\
      fn outer(k: u8) -> u8 { return twice(k) + 1; }\n\
@@ -75,7 +58,7 @@ fn generate(tag: &str, source: &str) -> (PathBuf, String) {
     (dir, text)
 }
 
-/// Тело POU по имени функции — от заголовка до `END_FUNCTION`.
+/// Тело POU по имени функции - от заголовка до `END_FUNCTION`.
 fn function_text<'a>(text: &'a str, name: &str) -> &'a str {
     let head = format!("FUNCTION {name} :");
     let start = text
@@ -86,7 +69,7 @@ fn function_text<'a>(text: &'a str, name: &str) -> &'a str {
     &rest[..end]
 }
 
-/// Арбитр IEC: путь к `iec2c` и его библиотеке (`None` — арбитра нет).
+/// Арбитр IEC: путь к `iec2c` и его библиотеке (`None` - арбитра нет).
 fn arbiter() -> Option<(PathBuf, PathBuf)> {
     let prefix = std::env::var("IEC2C_PREFIX")
         .unwrap_or_else(|_| format!("{}/.local", std::env::var("HOME").unwrap_or_default()));
@@ -114,7 +97,7 @@ fn caller_declares_callee_needs() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// Признак ТРАНЗИТИВЕН, а не «на один шаг»: цепочка из трёх функций.
+/// Признак транзитивен, а не "на один шаг": цепочка из трёх функций.
 #[test]
 fn need_is_transitive_along_the_chain() {
     let (dir, text) = generate("chain", CHAIN);
@@ -128,7 +111,7 @@ fn need_is_transitive_along_the_chain() {
             "{name} обязана объявить '{expected}':\n{body}"
         );
     }
-    // Своя переменная вызывающей — на месте рядом с унаследованной.
+    // Своя переменная вызывающей - на месте рядом с унаследованной.
     let outer = function_text(&text, "Probe_outer");
     assert!(
         outer.contains("gain : USINT;"),
@@ -137,7 +120,7 @@ fn need_is_transitive_along_the_chain() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// `iec2c` принимает вывод — главный сторож класса.
+/// `iec2c` принимает вывод - главный тест класса.
 #[test]
 fn generated_st_is_accepted_by_the_arbiter() {
     let Some((iec2c, lib)) = arbiter() else {
@@ -168,8 +151,8 @@ fn generated_st_is_accepted_by_the_arbiter() {
 
 /// **Контроль:** чистые функции параметров состояния не получают.
 ///
-/// Без него правка читалась бы как «печатать `VAR_IN_OUT` всем подряд»: лишняя
-/// секция — это лишний аргумент у каждого вызова, и вывод, который читают люди.
+/// Без него правка читалась бы как "печатать `VAR_IN_OUT` всем подряд": лишняя секция -
+/// это лишний аргумент у каждого вызова, и вывод, который читают люди.
 #[test]
 fn pure_functions_get_no_state_params() {
     let (dir, text) = generate("pure", PURE);

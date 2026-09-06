@@ -1,11 +1,11 @@
-//! Проверки прав и копирования (фича 0531, задача 09d).
+//! Проверки прав и копирования.
 //!
-//! Политика та же, что у прочих наборов: нет базы — проверки не выполняются и
-//! говорят об этом словами, а решает это гейт `check-web-server.sh`.
+//! Политика та же, что у прочих наборов: нет базы - проверки не выполняются и говорят
+//! об этом словами, а решает это проверка `check-web-server.sh`.
 //!
-//! ⚠️ Предмет — **матрица «уровень × операция»**, и она проверяется целиком, а
-//! не по одной клетке. Право, съехавшее на ступень, не проявляется отказом:
-//! сервис отвечает `200`, и чужая запись ложится в чужой проект.
+//! Предмет - **матрица "уровень x операция"**, и она проверяется целиком, а не по одной
+//! клетке. Право, съехавшее на ступень, не проявляется отказом: сервис отвечает `200`,
+//! и чужая запись ложится в чужой проект.
 
 mod common;
 
@@ -44,9 +44,9 @@ async fn project(stand: &Stand, token: &str, name: &str) -> String {
 
 /// Текущая ревизия проекта.
 ///
-/// ⚠️ Спрашивается ПЕРЕД каждой записью, а не считается в уме: удавшаяся
-/// запись поднимает ревизию, и матрица начала бы проверять конфликт вместо
-/// права — то есть краснела бы не о том.
+/// Спрашивается перед каждой записью, а не считается в уме: удавшаяся запись поднимает
+/// ревизию, и матрица начала бы проверять конфликт вместо права - то есть краснела бы
+/// не о том.
 async fn revision(stand: &Stand, token: &str, id: &str) -> i64 {
     let (status, body) = stand.get_as(&format!("/api/projects/{id}"), token).await;
     assert_eq!(status, StatusCode::OK, "{body}");
@@ -82,9 +82,9 @@ async fn the_matrix_of_level_and_operation_holds() {
     grant(&stand, &owner, &id, "fedor", "fork").await;
     grant(&stand, &owner, &id, "egor", "edit").await;
 
-    // ⚠️ Матрица собирается ЦЕЛИКОМ и падает списком: проверяй её по клетке —
-    // и первый же отказ спрятал бы остальные, а съехавшее на ступень право
-    // выглядит работающим сервисом.
+    // Матрица собирается целиком и падает списком: проверяй её по клетке - и первый же
+    // отказ спрятал бы остальные, а съехавшее на ступень право выглядит работающим
+    // сервисом.
     let mut wrong = Vec::new();
     for (who, token, level) in [
         ("никто", &nobody, "none"),
@@ -107,7 +107,7 @@ async fn the_matrix_of_level_and_operation_holds() {
             wrong.push(format!("{who}: уровень в ответе {}", body["level"]));
         }
 
-        // Чтение файла — тот же порог, что и проекта.
+        // Чтение файла - тот же порог, что и проекта.
         let (status, _) = stand
             .get_as(&format!("/api/projects/{id}/files/model.takt"), token)
             .await;
@@ -115,7 +115,7 @@ async fn the_matrix_of_level_and_operation_holds() {
             wrong.push(format!("{who}: чтение файла — {status}"));
         }
 
-        // Запись файла — от `edit`.
+        // Запись файла - от `edit`.
         let expect_write = match level {
             "none" => StatusCode::NOT_FOUND,
             "view" | "fork" => StatusCode::FORBIDDEN,
@@ -133,8 +133,8 @@ async fn the_matrix_of_level_and_operation_holds() {
             wrong.push(format!("{who}: запись — {status}, ждали {expect_write}"));
         }
 
-        // Метаданные — только владелец: `edit` правит содержимое, а видимость
-        // и права меняют, кому и чем проект открывается.
+        // Метаданные - только владелец: `edit` правит содержимое, а видимость и права
+        // меняют, кому и чем проект открывается.
         let expect_patch = match level {
             "none" => StatusCode::NOT_FOUND,
             "owner" => StatusCode::OK,
@@ -153,7 +153,7 @@ async fn the_matrix_of_level_and_operation_holds() {
             ));
         }
 
-        // Права — только владелец, и чужому проект здесь не существует.
+        // Права - только владелец, и чужому проект здесь не существует.
         let expect_grants = if level == "owner" {
             StatusCode::NO_CONTENT
         } else {
@@ -184,8 +184,8 @@ async fn a_grant_is_given_by_login_read_and_taken_back() {
     let other = person(&stand, "vera").await;
     let id = project(&stand, &owner, "Термореле").await;
 
-    // Логин ищется БЕЗ учёта регистра — как и при входе: `Vera` и `vera` один
-    // человек, иначе право досталось бы никому.
+    // Логин ищется без учёта регистра - как и при входе: `Vera` и `vera` один человек,
+    // иначе право досталось бы никому.
     grant(&stand, &owner, &id, "VERA", "view").await;
     let (status, body) = stand
         .get_as(&format!("/api/projects/{id}/grants/vera"), &owner)
@@ -194,34 +194,34 @@ async fn a_grant_is_given_by_login_read_and_taken_back() {
     assert_eq!(body["login"], "vera");
     assert_eq!(body["level"], "view");
 
-    // Право видит владелец в составе проекта, а получатель — своим уровнем.
+    // Право видит владелец в составе проекта, а получатель - своим уровнем.
     let (_, mine) = stand.get_as(&format!("/api/projects/{id}"), &owner).await;
     assert_eq!(mine["grants"][0]["login"], "vera");
     let (_, theirs) = stand.get_as(&format!("/api/projects/{id}"), &other).await;
     assert_eq!(theirs["level"], "view");
-    // ⚠️ Читателю список тех, кто ещё имеет доступ, не принадлежит.
+    // Читателю список тех, кто ещё имеет доступ, не принадлежит.
     assert!(theirs["grants"].is_null(), "чужие права видны читателю");
 
-    // Повышение — та же ручка.
+    // Повышение - та же ручка.
     grant(&stand, &owner, &id, "vera", "edit").await;
     let (_, theirs) = stand.get_as(&format!("/api/projects/{id}"), &other).await;
     assert_eq!(theirs["level"], "edit");
 
-    // Отзыв действует немедленно — до истечения токена.
+    // Отзыв действует немедленно - до истечения токена.
     let (status, _) = stand
         .delete_as(&format!("/api/projects/{id}/grants/vera"), &owner)
         .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
     let (status, _) = stand.get_as(&format!("/api/projects/{id}"), &other).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "отзыв действует сразу");
-    // Отзыв того, чего нет, — тоже успех: предмет просьбы выполнен.
+    // Отзыв того, чего нет, - тоже успех: предмет просьбы выполнен.
     let (status, _) = stand
         .delete_as(&format!("/api/projects/{id}/grants/vera"), &owner)
         .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
 
-    // Неизвестный логин при ВЫДАЧЕ — отказ: владелец обязан узнать, что
-    // ошибся в имени, иначе он уверен, что доступ выдан.
+    // Неизвестный логин при выдаче - отказ: владелец обязан узнать, что ошибся в имени,
+    // иначе он уверен, что доступ выдан.
     let (status, _) = stand
         .put_as(
             &format!("/api/projects/{id}/grants/такого-нет"),
@@ -231,7 +231,7 @@ async fn a_grant_is_given_by_login_read_and_taken_back() {
         .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 
-    // Уровень вне лестницы и право себе — отказы с причиной.
+    // Уровень вне лестницы и право себе - отказы с причиной.
     for (login, level) in [("vera", "owner"), ("vera", "всё"), ("ivan", "edit")] {
         let (status, body) = stand
             .put_as(
@@ -287,13 +287,12 @@ async fn a_fork_lives_its_own_life() {
         "файлы скопированы"
     );
 
-    // Автор исходника видит ЧИСЛО копий; открытых среди них пока нет.
+    // Автор исходника видит число копий; открытых среди них пока нет.
     let (_, mine) = stand.get_as(&format!("/api/projects/{id}"), &owner).await;
     assert_eq!(mine["forks"], 1);
     assert_eq!(mine["open_forks"].as_array().expect("список").len(), 0);
 
-    // ⚠️ Правка исходника копию НЕ трогает: связь односторонняя и без
-    // синхронизации.
+    // Правка исходника копию не трогает: связь односторонняя и без синхронизации.
     let (status, _) = stand
         .put_as(
             &format!("/api/projects/{id}/files/model.takt"),
@@ -320,7 +319,7 @@ async fn a_fork_lives_its_own_life() {
     assert_eq!(mine["open_forks"].as_array().expect("список").len(), 1);
     assert_eq!(mine["open_forks"][0]["owner"], "vera");
 
-    // ⚠️ Удаление исходника копию НЕ уносит: у неё своя жизнь.
+    // Удаление исходника копию не уносит: у неё своя жизнь.
     let (status, _) = stand
         .delete_as(&format!("/api/projects/{id}"), &owner)
         .await;
@@ -368,7 +367,7 @@ async fn forking_needs_the_right_and_is_not_for_ones_own() {
         .await;
     assert_eq!(status, StatusCode::FORBIDDEN, "{body}");
 
-    // `fork` — копирует.
+    // `fork` - копирует.
     grant(&stand, &owner, &id, "vera", "fork").await;
     let (status, body) = stand
         .post_as(
@@ -379,8 +378,8 @@ async fn forking_needs_the_right_and_is_not_for_ones_own() {
         .await;
     assert_eq!(status, StatusCode::CREATED, "{body}");
 
-    // Свой проект копировать незачем — отказ с причиной, а не молчаливый
-    // дубликат: два одинаковых проекта в списке автор заводит сам, если хочет.
+    // Свой проект копировать незачем - отказ с причиной, а не молчаливый дубликат: два
+    // одинаковых проекта в списке автор заводит сам, если хочет.
     let (status, body) = stand
         .post_as(
             &format!("/api/projects/{id}/fork"),
@@ -404,8 +403,8 @@ async fn a_granted_project_is_in_my_list_with_its_level() {
     let theirs = project(&stand, &other, "Чужое").await;
     grant(&stand, &other, &theirs, "ivan", "edit").await;
 
-    // Открытый чужой проект в «мои проекты» не попадает: он живёт в витрине,
-    // а этот список — то, за что я отвечаю.
+    // Открытый чужой проект в "мои проекты" не попадает: он живёт в витрине, а этот
+    // список - то, за что я отвечаю.
     let public = project(&stand, &other, "Открытое").await;
     let (status, _) = stand
         .patch_as(

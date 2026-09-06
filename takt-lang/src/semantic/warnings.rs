@@ -1,15 +1,15 @@
-//! Единая точка сбора предупреждений компилятора (фича 0081).
+//! Единая точка сбора предупреждений компилятора.
 //!
-//! До 0081 CLI (`taktc compile`) не звал ни `unused_variable_warnings` (`SE-036`),
-//! ни `nondeterministic_transition_warnings` (`SE-037`/`SE-042`) — предупреждения
-//! публичного API до пользователя не доезжали. Диагностика, которую никто не
-//! печатает, равносильна её отсутствию.
+//! До 0081 CLI (`taktc compile`) не звал ни `unused_variable_warnings` (`SE-036`), ни
+//! `nondeterministic_transition_warnings` (`SE-037`/`SE-042`) - предупреждения
+//! публичного API до пользователя не доезжали. Диагностика, которую никто не печатает,
+//! равносильна её отсутствию.
 //!
 //! Новое предупреждение, добавленное в [`collect_model_warnings`], доезжает до
 //! пользователя всеми целями `taktc`. Адрес-специфичные предупреждения
-//! (`address_expr_warnings`, `address_map_overlay_warnings`) сюда **не** входят:
-//! они зависят от цели (у адрес-потребляющих `c-hal`/`st-at` те же ситуации дают
-//! ошибки), и собираются у вызывающего отдельно.
+//! (`address_expr_warnings`, `address_map_overlay_warnings`) сюда **не** входят: они
+//! зависят от цели (у адрес-потребляющих `c-hal`/`st-at` те же ситуации дают ошибки), и
+//! собираются у вызывающего отдельно.
 
 use crate::diagnostics::Diagnostic;
 use crate::parser::ast;
@@ -19,30 +19,29 @@ use std::rc::Rc;
 
 /// Собирает **все** предупреждения над построенной моделью.
 ///
-/// Порядок вызова — фиксированный (детерминизм вывода); входы смешаны намеренно:
+/// Порядок вызова - исправлениеированный (детерминизм вывода); входы смешаны намеренно:
 /// большинство проверок берут семантическую модель, `stray_semicolon` и
-/// `unknown_named_block` — АСД.
+/// `unknown_named_block` - АСД.
 pub fn collect_model_warnings(ast: &ast::Model, model: &Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> {
     let mut warnings = Vec::new();
     warnings.extend(crate::unused_variable_warnings(Rc::clone(model)));
     warnings.extend(crate::nondeterministic_transition_warnings(Rc::clone(
         model,
     )));
-    // SE-037 «неявная булевость» (фича 0232). ⚠️ Проверка существовала с Ce11,
-    // была покрыта юнит-тестами — и НИКУДА не подключена: ни `taktc compile`,
-    // ни редактор её не печатали, то есть она считалась и выбрасывалась (класс
-    // фичи 0081). Включена после того, как замер снял с неё 51 ложное
-    // срабатывание на законных записях корпуса.
+    // SE-037 "неявная булевость". Проверка существовала с Ce11, была покрыта
+    // юнит-тестами - и никуда не подключена: ни `taktc compile`, ни редактор её не
+    // печатали, то есть она считалась и выбрасывалась. Включена после того, как замер
+    // снял с неё 51 ложное срабатывание на законных записях корпуса.
     warnings.extend(crate::semantic::tree::implicit_bool_warnings(model));
     warnings.extend(crate::unreachable_state_warnings(Rc::clone(model)));
-    // SE-116 (0273): ребро после безусловного недостижимо. Ce14 этот класс не
-    // видит — она ищет НЕСКОЛЬКО безусловных рёбер, а здесь безусловное одно.
+    // SE-116: ребро после безусловного недостижимо. Ce14 этот класс не видит - она ищет
+    // Несколько безусловных рёбер, а здесь безусловное одно.
     warnings.extend(crate::semantic::validate::check_unreachable_edges(
         Rc::clone(model),
     ));
-    // SE-131 (0514): ветвь `match` с повторяющимся образцом недостижима —
-    // `match` берёт первое совпадение. Целям `c` и `rust` такой вход давал
-    // невалидный вывод, автору не говорил никто.
+    // SE-131: ветвь `match` с повторяющимся образцом недостижима - `match` берёт первое
+    // совпадение. Целям `c` и `rust` такой вход давал невалидный вывод, автору не
+    // говорил никто.
     warnings.extend(crate::semantic::validate::check_duplicate_match_arms(
         Rc::clone(model),
     ));
@@ -50,8 +49,8 @@ pub fn collect_model_warnings(ast: &ast::Model, model: &Rc<RefCell<ModelNode>>) 
     warnings.extend(crate::ltl_warnings(Rc::clone(model)));
     warnings.extend(crate::stray_semicolon_warnings(ast));
     warnings.extend(crate::unknown_named_block_warnings(ast));
-    // SE-096 (0189): запись по анонимному адресу. Направление у ячейки не
-    // объявлено, поэтому законность записи компилятор проверить не может.
+    // SE-096: запись по анонимному адресу. Направление у ячейки не объявлено, поэтому
+    // законность записи компилятор проверить не может.
     warnings.extend(crate::semantic::anon_collect::anon_write_warnings(model));
     warnings
 }

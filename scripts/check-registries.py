@@ -38,10 +38,10 @@ ROOT = os.environ.get(
     "REG_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
 
-# Папки-стадии жизненного цикла (правило 17). `docs/templates/` не в списке:
-# там плейсхолдеры, а не артефакты фич; `docs/diagnostics/` — реестр кодов, а не
+# Папки-стадии жизненного цикла. `docs/templates/` не в списке:
+# там плейсхолдеры, а не артефакты фич; `docs/diagnostics/` - реестр кодов, а не
 # стадия.
-# ⚠️ Папок ДВЕ (правило 32, 2026-08-22): стадии живут разделами карточки, и
+# Папок две: стадии живут разделами карточки, и
 # каталогов `adr/analyze/development/tests/reports` больше нет.
 STAGES = ("features", "fixes")
 

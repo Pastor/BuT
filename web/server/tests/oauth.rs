@@ -1,17 +1,16 @@
-//! Проверки входа через площадки (фича 0531, задача 09f-1).
+//! Проверки входа через площадки.
 //!
 //! # Граница проводится по сокету
 //!
-//! Всё, что до него, — наш код, и его проверяет машина; сама площадка —
-//! человек по чек-листу с датой (задача 09f-4). Здесь поднимается **поддельный
-//! провайдер**: маленький роутер `axum` на `127.0.0.1:0`, адрес которого сервер
-//! получает переменными `TAKT_WEB_OAUTH_*_BASE`.
+//! Всё, что до него, - наш код, и его проверяет машина; сама площадка - человек по
+//! чек-листу с датой. Здесь поднимается **поддельный провайдер**: маленький роутер
+//! `axum` на `127.0.0.1:0`, адрес которого сервер получает переменными
+//! `TAKT_WEB_OAUTH_*_BASE`.
 //!
-//! ⚠️ Подделка **строгая**: она проверяет ровно то, что проверила бы площадка —
-//! равенство `redirect_uri`, `S256(code_verifier) == code_challenge`,
-//! одноразовость кода, вид секрета. Иначе зелёный набор доказывал бы лишь, что
-//! подделка соглашается на всё. На это стоит отдельный сторож: подделку
-//! спрашивают **прямыми** запросами, минуя сервер.
+//! Подделка **строгая**: она проверяет ровно то, что проверила бы площадка - равенство
+//! `redirect_uri`, `S256(code_verifier) == code_challenge`, одноразовость кода, вид
+//! секрета. Иначе зелёный набор доказывал бы лишь, что подделка соглашается на всё. На
+//! это стоит отдельный тест: подделку спрашивают **прямыми** запросами, минуя сервер.
 
 mod common;
 
@@ -28,9 +27,9 @@ use common::{Stand, skipped};
 /// Что подделка ждёт и что помнит.
 #[derive(Default)]
 struct Fake {
-    /// Выданные коды: код → (challenge, redirect_uri). Одноразовые.
+    /// Выданные коды: код -> (challenge, redirect_uri). Одноразовые.
     codes: Mutex<HashMap<String, (String, String)>>,
-    /// Сколько ждать перед ответом обмена — для случая «площадка молчит».
+    /// Сколько ждать перед ответом обмена - для случая "площадка молчит".
     sleep_ms: Mutex<u64>,
 }
 
@@ -79,7 +78,7 @@ async fn fake_authorize(
     axum::response::Redirect::temporary(&back).into_response()
 }
 
-/// Обмен кода — строгий: подделка проверяет то же, что и площадка.
+/// Обмен кода - строгий: подделка проверяет то же, что и площадка.
 async fn fake_token(State(fake): State<Arc<Fake>>, headers: HeaderMap, body: String) -> Response {
     let wait = *fake.sleep_ms.lock().expect("замок");
     if wait > 0 {
@@ -89,7 +88,7 @@ async fn fake_token(State(fake): State<Arc<Fake>>, headers: HeaderMap, body: Str
     let Some(code) = form.get("code") else {
         return Json(serde_json::json!({"error": "invalid_request"})).into_response();
     };
-    // ⚠️ Код одноразовый: повторный обмен обязан отказать.
+    // Код одноразовый: повторный обмен обязан отказать.
     let Some((challenge, redirect)) = fake.codes.lock().expect("замок").remove(code.as_str())
     else {
         return Json(serde_json::json!({"error": "invalid_grant"})).into_response();
@@ -114,13 +113,13 @@ async fn fake_token(State(fake): State<Arc<Fake>>, headers: HeaderMap, body: Str
     Json(serde_json::json!({"access_token": "at-1", "expires_in": 3600})).into_response()
 }
 
-/// Сведения о человеке: тело — как у настоящей площадки, с лишним.
+/// Сведения о человеке: тело - как у настоящей площадки, с лишним.
 async fn fake_userinfo(headers: HeaderMap) -> Response {
     if headers.get(header::AUTHORIZATION).is_none() {
         return (StatusCode::UNAUTHORIZED, "no token").into_response();
     }
-    // ⚠️ Нарочно с почтой, именем и телефоном: разбор обязан оставить ТОЛЬКО
-    // идентификатор — обещание «персональных данных не храним» держится этим.
+    // Нарочно с почтой, именем и телефоном: разбор обязан оставить только идентификатор -
+    // обещание "персональных данных не храним" держится этим.
     Json(serde_json::json!({
         "id": "yandex-42",
         "login": "ivan",
@@ -199,7 +198,7 @@ async fn walk_to_ticket(
         .to_str()
         .expect("строка")
         .to_string();
-    // Возврат приходит абсолютным адресом нашего сервиса — берём путь с запросом.
+    // Возврат приходит абсолютным адресом нашего сервиса - берём путь с запросом.
     let path = callback
         .split_once("/api/")
         .map(|(_, rest)| format!("/api/{rest}"))
@@ -219,15 +218,15 @@ async fn a_new_person_signs_in_and_picks_a_login() {
         .map(|(_, rest)| rest.to_string())
         .unwrap_or_else(|| panic!("во фрагменте нет ticket: {fragment}"));
 
-    // ⚠️ Без логина — отказ: имя площадки мы не читаем и не храним, и
-    // подставить его неоткуда.
+    // Без логина - отказ: имя площадки мы не читаем и не храним, и подставить его
+    // неоткуда.
     let (status, body) = stand
         .post("/api/oauth/complete", serde_json::json!({"ticket": ticket}))
         .await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
     assert_eq!(body["message"], "login_required");
 
-    // Ticket одноразовый — второй раз тем же не выйдет.
+    // Ticket одноразовый - второй раз тем же не выйдет.
     let (status, _) = stand
         .post(
             "/api/oauth/complete",
@@ -253,12 +252,12 @@ async fn a_new_person_signs_in_and_picks_a_login() {
     assert!(pair["access_token"].is_string());
     assert_eq!(pair["login"], "ivan");
 
-    // Запись заведена БЕЗ пароля, и связь с площадкой есть.
+    // Запись заведена без пароля, и связь с площадкой есть.
     let (password, identities) = stand.identity_facts("ivan").await;
     assert!(!password, "у записи площадки пароля быть не должно");
     assert_eq!(identities, 1);
 
-    // Войти паролем такой записи нельзя, и ответ — как у неверного пароля.
+    // Войти паролем такой записи нельзя, и ответ - как у неверного пароля.
     let (status, _) = stand
         .post(
             "/api/token",
@@ -305,7 +304,7 @@ async fn a_returning_person_gets_the_same_account() {
     let token = second["access_token"].as_str().expect("токен").to_string();
     let (_, me) = stand.get_as("/api/me", &token).await;
     assert_eq!(me["id"], id, "второй вход завёл вторую запись");
-    // Семейство refresh — новое: вход есть вход.
+    // Семейство refresh - новое: вход есть вход.
     assert_ne!(first["refresh_token"], second["refresh_token"]);
 
     stand.drop_schema().await;
@@ -325,8 +324,8 @@ async fn a_platform_is_linked_to_an_existing_account() {
     assert_eq!(status, StatusCode::CREATED, "{body}");
     let token = body["access_token"].as_str().expect("токен").to_string();
 
-    // ⚠️ Соединяет записи ТОЛЬКО владелец из своей сессии: поток с токеном
-    // заводится с целью «привязать», и пары токенов он не выдаёт.
+    // Соединяет записи только владелец из своей сессии: поток с токеном заводится с
+    // целью "привязать", и пары токенов он не выдаёт.
     let (status, fragment) = walk_to_ticket(&stand, "yandex", Some(&token)).await;
     assert_eq!(status, StatusCode::TEMPORARY_REDIRECT);
     assert!(fragment.contains("linked=1"), "{fragment}");
@@ -361,14 +360,14 @@ async fn a_broken_flow_is_refused_and_burned() {
         return skipped("испорченный поток");
     };
 
-    // Чужой `state` — поток не найден.
+    // Чужой `state` - поток не найден.
     let (status, fragment) = stand
         .callback("/api/oauth/yandex/callback?code=c&state=чужой", "")
         .await;
     assert_eq!(status, StatusCode::TEMPORARY_REDIRECT);
     assert!(fragment.contains("login_error=expired"), "{fragment}");
 
-    // Cookie нет — поток начал не этот браузер.
+    // Cookie нет - поток начал не этот браузер.
     let (status, location, _cookie) = stand.follow("/api/oauth/yandex/start", None).await;
     assert_eq!(status, StatusCode::TEMPORARY_REDIRECT);
     let client = reqwest::Client::builder()
@@ -389,8 +388,8 @@ async fn a_broken_flow_is_refused_and_burned() {
         .expect("путь");
     let (_, fragment) = stand.callback(&path, "").await;
     assert!(fragment.contains("login_error=csrf"), "{fragment}");
-    // ⚠️ Поток погашен первым же обращением: тот же адрес второй раз — уже
-    // «просрочен», а не «csrf».
+    // Поток погашен первым же обращением: тот же адрес второй раз - уже "просрочен", а
+    // не "csrf".
     let (_, fragment) = stand.callback(&path, "takt_oauth=что-угодно").await;
     assert!(fragment.contains("login_error=expired"), "{fragment}");
 
@@ -430,9 +429,9 @@ async fn the_configured_platforms_are_listed_in_order() {
         .iter()
         .map(|item| item["label"].as_str().expect("подпись").to_string())
         .collect();
-    // Порядок задаёт СЕРВЕР и он фиксирован: Яндекс, ВКонтакте, Mail.
+    // Порядок задаёт сервер и он исправлениеирован: Яндекс, ВКонтакте, Mail.
     assert_eq!(ids, vec!["oauth.yandex", "oauth.vk", "oauth.mail"]);
-    // ⚠️ Подпись — КЛЮЧ словаря, а не текст: текст переводится страницей.
+    // Подпись - Ключ словаря, а не текст: текст переводится страницей.
     assert!(ids.iter().all(|key| key.starts_with("oauth.")));
 
     stand.drop_schema().await;
@@ -483,8 +482,8 @@ async fn the_schema_keeps_no_personal_data_from_the_platform() {
     let Some(stand) = Stand::open("o_schema").await else {
         return skipped("схема входа через площадки");
     };
-    // ⚠️ Расширение теста 09a: площадки отдают почту, имя и фотографию, и
-    // единственная защита обещания — тому негде лечь.
+    // Расширение теста 09a: площадки отдают почту, имя и фотографию, и единственная
+    // защита обещания - тому негде лечь.
     let columns = stand.columns("external_identities").await;
     for forbidden in ["email", "name", "avatar", "token", "access_token", "phone"] {
         assert!(
@@ -505,9 +504,9 @@ async fn the_schema_keeps_no_personal_data_from_the_platform() {
 
 #[tokio::test]
 async fn the_fake_provider_catches_what_a_platform_would() {
-    // ⚠️ Сторож подделки. Без него зелёный набор доказывал бы лишь, что она
-    // соглашается на всё: подделка спрашивается ПРЯМЫМИ запросами, минуя
-    // сервер (тестовых ручек в сервере не заводится).
+    // Тест подделки. Без него зелёный набор доказывал бы лишь, что она соглашается на
+    // всё: подделка спрашивается прямыми запросами, минуя сервер (тестовых ручек в
+    // сервере не заводится).
     let fake = Arc::new(Fake::default());
     let base = fake_provider(fake.clone()).await;
     let client = reqwest::Client::builder()
@@ -561,19 +560,19 @@ async fn the_fake_provider_catches_what_a_platform_would() {
         }
     };
 
-    // Чужой верификатор — отказ.
+    // Чужой верификатор - отказ.
     let code = issue(challenge.clone()).await;
     let answer = exchange(code, "чужой".to_string()).await;
     assert!(answer.contains("invalid_grant"), "{answer}");
 
-    // Повторный обмен того же кода — отказ.
+    // Повторный обмен того же кода - отказ.
     let code = issue(challenge.clone()).await;
     let first = exchange(code.clone(), verifier.clone()).await;
     assert!(first.contains("access_token"), "{first}");
     let second = exchange(code, verifier.clone()).await;
     assert!(second.contains("invalid_grant"), "{second}");
 
-    // Другой адрес возврата — отказ.
+    // Другой адрес возврата - отказ.
     let code = issue(challenge.clone()).await;
     let body = format!(
         "grant_type=authorization_code&code={code}&redirect_uri=http%3A%2F%2Flocal%2Fдругое\
@@ -591,7 +590,7 @@ async fn the_fake_provider_catches_what_a_platform_would() {
         .expect("тело");
     assert!(answer.contains("invalid_request"), "{answer}");
 
-    // Без секрета — отказ.
+    // Без секрета - отказ.
     let code = issue(challenge).await;
     let body = format!(
         "grant_type=authorization_code&code={code}&redirect_uri=http%3A%2F%2Flocal%2Fcb\
@@ -631,8 +630,8 @@ async fn the_matrix_of_linking_and_unlinking_holds() {
     if !fragment.contains("linked=1") {
         wrong.push(format!("привязка свободной: {fragment}"));
     }
-    // ⚠️ Повторная привязка ТОЙ ЖЕ площадки тем же человеком — идемпотентна:
-    // повторное нажатие кнопки не должно быть ошибкой.
+    // Повторная привязка той же площадки тем же человеком - идемпотентна: повторное
+    // нажатие кнопки не должно быть ошибкой.
     let (_, fragment) = walk_to_ticket(&stand, "yandex", Some(&token)).await;
     if !fragment.contains("linked=1") {
         wrong.push(format!("повторная привязка своей: {fragment}"));
@@ -645,18 +644,18 @@ async fn the_matrix_of_linking_and_unlinking_holds() {
         ));
     }
 
-    // Отвязка при живом пароле — можно.
+    // Отвязка при живом пароле - можно.
     let (status, _) = stand.delete_as("/api/me/identities/yandex", &token).await;
     if status != StatusCode::NO_CONTENT {
         wrong.push(format!("отвязка при пароле: {status}"));
     }
-    // Отвязка того, чего нет, — тоже успех: предмет просьбы выполнен.
+    // Отвязка того, чего нет, - тоже успех: предмет просьбы выполнен.
     let (status, _) = stand.delete_as("/api/me/identities/yandex", &token).await;
     if status != StatusCode::NO_CONTENT {
         wrong.push(format!("отвязка отсутствующей: {status}"));
     }
 
-    // Человек ТОЛЬКО с площадкой: пароля нет.
+    // Человек только с площадкой: пароля нет.
     let (_, fragment) = walk_to_ticket(&stand, "vk", None).await;
     let ticket = fragment
         .split_once("#login=")
@@ -671,14 +670,14 @@ async fn the_matrix_of_linking_and_unlinking_holds() {
         .await;
     let hers = pair["access_token"].as_str().expect("токен").to_string();
 
-    // ⚠️ Отвязка ПОСЛЕДНЕГО способа войти отказывает: запись стала бы
-    // недостижимой, а восстановления по почте у нас нет вовсе.
+    // Отвязка последнего способа войти отказывает: запись стала бы недостижимой, а
+    // восстановления по почте у нас нет вовсе.
     let (status, body) = stand.delete_as("/api/me/identities/vk", &hers).await;
     if status != StatusCode::CONFLICT || body["message"] != "last_login_method" {
         wrong.push(format!("отвязка последнего: {status} {body}"));
     }
 
-    // Задать пароль — и тогда отвязка разрешена.
+    // Задать пароль - и тогда отвязка разрешена.
     let (status, _) = stand
         .put_as(
             "/api/me/password",
@@ -689,8 +688,8 @@ async fn the_matrix_of_linking_and_unlinking_holds() {
     if status != StatusCode::NO_CONTENT {
         wrong.push(format!("задание пароля: {status}"));
     }
-    // ⚠️ Пароль гасит живые сеансы (тот же носитель, что у сброса
-    // администратором), поэтому входим заново — уже паролем.
+    // Пароль гасит живые сеансы (тот же носитель, что у сброса администратором),
+    // поэтому входим заново - уже паролем.
     let (status, pair) = stand
         .post(
             "/api/token",
@@ -709,7 +708,7 @@ async fn the_matrix_of_linking_and_unlinking_holds() {
         wrong.push(format!("отвязка после пароля: {status}"));
     }
 
-    // Задать пароль там, где он уже есть, — отказ: смена требует старого.
+    // Задать пароль там, где он уже есть, - отказ: смена требует старого.
     let (status, body) = stand
         .put_as(
             "/api/me/password",

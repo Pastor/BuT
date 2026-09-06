@@ -1,19 +1,19 @@
-// Гейт тождественности модуля WebAssembly (фича 0531, требование R5).
+// Проверка тождественности модуля WebAssembly.
 //
 // # Что доказывает
 //
-// Модуль в браузере обязан отвечать ТО ЖЕ, что инструменты на машине:
+// Модуль в браузере обязан отвечать то же, что инструменты на машине:
 //
-//   1. компиляция — файлы каждой цели БАЙТ В БАЙТ равны файлам `taktc`,
+// 1. компиляция - файлы каждой цели байт В байт равны файлам `taktc`,
 //      а отказ равен по коду и по позиции;
-//   2. прогон — трасса равна выводу `takt-sim` строка в строку;
-//   3. редакторский слой — на корпусе матрицы (фича 0464) операция ОТВЕЧАЕТ,
+// 2. прогон - трасса равна выводу `takt-sim` строка в строку;
+// 3. редакторский слой - на корпусе матрицы операция отвечает,
 //      в том числе на недописанном файле.
 //
-// ⚠️ Гейт сверяет ВЫВОД, а не устройство. Модуль зовёт те же функции
+// Проверка сверяет вывод, а не устройство. Модуль зовёт те же функции
 // библиотек, но одного этого мало: между библиотекой и страницей лежит мост
 // (JSON, буфер, UTF-8), и потерять в нём хвост файла или строку трассы можно
-// молча — вывод останется валидным и будет другим.
+// молча - вывод останется валидным и будет другим.
 //
 // Запуск: node scripts/check-wasm-identity.mjs <модуль.wasm> <taktc> <takt-sim>
 
@@ -75,7 +75,7 @@ async function compileWithTaktc(target, file, outputDir) {
     }
     return { ok: true, files, stderr };
   } catch (error) {
-    // Отказ: `taktc` печатает диагностику в stderr — сверяем её код и позицию.
+    // Отказ: `taktc` печатает диагностику в stderr - сверяем её код и позицию.
     return { ok: false, stderr: error.stderr ?? "" };
   }
 }
@@ -130,7 +130,7 @@ async function checkCompile(target, file, source, workDir) {
 
   if (usesImport(source)) {
     // Граница A7: модель с `import` в браузере не собирается. Проверяется не
-    // совпадение с `taktc`, а то, что отказ НАЗВАН.
+    // совпадение с `taktc`, а то, что отказ назван.
     if (actual.ok) {
       fail(what, "модель с `import` принята, хотя файловой системы в модуле нет");
     } else if (!actual.error?.message) {
@@ -146,7 +146,7 @@ async function checkCompile(target, file, source, workDir) {
 
   if (!expected.ok) {
     // Отказ обязан совпасть по коду и позиции: разный код означает, что в
-    // браузере автор увидит не ту ошибку, а разная позиция — не то место.
+    // браузере автор увидит не ту ошибку, а разная позиция - не то место.
     const expectedCode = codeOf(expected.stderr);
     if (expectedCode && expectedCode !== actual.error?.code) {
       fail(what, `код отказа: taktc ${expectedCode}, модуль ${actual.error?.code}`);
@@ -266,7 +266,7 @@ async function main() {
   wasm = await loadModule(wasmPath);
   const workDir = await mkdtemp(join(tmpdir(), "takt-wasm-identity-"));
 
-  // 1. Компиляция: корпус `examples/` × восемь целей.
+  // 1. Компиляция: корпус `examples/` x восемь целей.
   const examples = (await readdir("examples"))
     .filter((name) => name.endsWith(".takt"))
     .sort();
@@ -286,7 +286,7 @@ async function main() {
     .sort();
   let traced = 0;
   for (const name of scenarios) {
-    // Имя модели — самый длинный префикс сценария, для которого есть `.takt`
+    // Имя модели - самый длинный преисправление сценария, для которого есть `.takt`
     // (то же правило, что у `scripts/run_simulations.sh`).
     let candidate = basename(name, ".json");
     let modelFile = null;
@@ -307,7 +307,7 @@ async function main() {
     traced += 1;
   }
 
-  // 3. Редакторский слой на корпусе матрицы (фича 0464), если он выгружен.
+  // 3. Редакторский слой на корпусе матрицы, если он выгружен.
   let answered = 0;
   try {
     const dirs = await readdir("target/matrix-corpus", { withFileTypes: true });
@@ -321,12 +321,12 @@ async function main() {
         continue;
       }
       checkEditorAnswers(dir.name, source);
-      // Недописанный файл: редактор видит такой чаще всего (урок 0464).
+      // Недописанный файл: редактор видит такой чаще всего.
       checkEditorAnswers(`${dir.name} (обрезан)`, source.slice(0, Math.floor(source.length / 2)));
       answered += 2;
     }
   } catch {
-    // Корпуса нет — набор матрицы не выгружался; это не отказ гейта.
+    // Корпуса нет - набор матрицы не выгружался; это не отказ проверки.
   }
 
   await rm(workDir, { recursive: true, force: true });

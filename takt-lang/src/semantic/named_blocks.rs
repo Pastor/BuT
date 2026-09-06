@@ -1,9 +1,9 @@
-//! Именованные блоки СОСТОЯНИЯ — построение (выделено фичей 0518).
+//! Именованные блоки состояния - построение (выделено ).
 //!
-//! Вынесено из `semantic/tree.rs` по границе ответственности: там строится
-//! дерево модели вообще, здесь — один его слой, блоки тела состояния
-//! (`enter`/`exit`/`always`/`every`) и вставка `assembly`, которую места-
-//! выравнивание 0518 разворачивает в блок `always` того же состояния.
+//! Вынесено из `semantic/tree.rs` по границе ответственности: там строится дерево
+//! модели вообще, здесь - один его слой, блоки тела состояния
+//! (`enter`/`exit`/`always`/`every`) и вставка `assembly`, которую места- выравнивание
+//! 0518 разворачивает в блок `always` того же состояния.
 
 use crate::diagnostics::Diagnostic;
 use crate::parser::ast::{StateDefine, StateElement};
@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use std::rc::Weak;
 
 /// Извлекает именованные блоки (`enter`/`exit`/`always`/`every`) состояния как
-/// `Statement::Unresolved`; разрешение — в стадии 4. Одноимённые блоки (напр. два
+/// `Statement::Unresolved`; разрешение - в стадии 4. Одноимённые блоки (напр. два
 /// `always`) сохраняются все и доступны через `get_named_blocks`.
 pub(crate) fn construct_named_blocks(
     state: &StateDefine,
@@ -54,11 +54,10 @@ pub(crate) fn construct_named_blocks(
             };
             named_blocks.push(block);
         } else if let StateElement::Assembly(block) = element {
-            // Вставка уровня СОСТОЯНИЯ (0518) разворачивается в блок `always`
-            // этого состояния: места `formula` и `assembly` выровнены решением
-            // заказчика, а своей семантики выравнивание не вводит — вставка
-            // исполняется там же, где исполнялась бы, будучи написанной внутри
-            // `always` (правило 12: сахар не заводит нового механизма).
+            // Вставка уровня состояния разворачивается в блок `always` этого состояния:
+            // места `formula` и `assembly` выровнены решением, а своей семантики
+            // выравнивание не вводит - вставка исполняется там же, где исполнялась бы,
+            // будучи написанной внутри `always`.
             named_blocks.push(NamedCodeBlockDefinitionNode::Always {
                 upper: upper.clone(),
                 body: StatementNode::Unresolved((**block).clone()),

@@ -71,7 +71,7 @@ def check(entries, baseline):
         elif len(desc) < MIN_LEN and code not in baseline:
             problems.append(("D2", code, desc))
     # Ратчет: запись реестра, которой в таблице больше нет либо чьё описание
-    # выросло, замораживает пустоту — храповик проворачивается назад.
+    # выросло, замораживает пустоту - храповик проворачивается назад.
     for code in sorted(baseline - seen):
         problems.append(("D3", code, "кода нет в реестре диагностик"))
     for code, desc in entries:

@@ -1,15 +1,15 @@
-//! Раскрытие узла АСД в его дочерние узлы (фича 0156).
+//! Раскрытие узла АСД в его дочерние узлы.
 //!
 //! ## Правило модуля: никаких `_ =>` по узлам языка
 //!
-//! Разбор исчерпывающий, `#![deny(clippy::wildcard_enum_match_arm)]` не даёт
-//! написать `_ =>`. Это замысел: узел, выпавший из раскрытия, **не считается**
-//! при измерении глубины — а значит, дерево произвольной глубины прошло бы
-//! проверку и уронило первого же рекурсивного потребителя (печать форматтера,
-//! `Clone`, `Drop`). Новый узел языка обязан валить сборку этого модуля.
+//! Разбор исчерпывающий, `#![deny(clippy::wildcard_enum_match_arm)]` не даёт написать
+//! `_ =>`. Это замысел: узел, выпавший из раскрытия, **не считается** при измерении
+//! глубины - а значит, дерево произвольной глубины прошло бы проверку и уронило первого
+//! же рекурсивного потребителя (печать форматтера, `Clone`, `Drop`). Новый узел языка
+//! обязан валить сборку этого модуля.
 //!
-//! Ветки листовых узлов (литералы, `break`, `continue`, имена) перечисляются
-//! явно — так видно, что узел рассмотрен, а не забыт.
+//! Ветки листовых узлов (литералы, `break`, `continue`, имена) перечисляются явно - так
+//! видно, что узел рассмотрен, а не забыт.
 #![deny(clippy::wildcard_enum_match_arm)]
 
 use super::NodeRef;
@@ -114,7 +114,7 @@ fn push_element<'a>(element: &'a ast::ModelElement, out: &mut Vec<NodeRef<'a>>) 
         }
         ast::ModelElement::InlineFormula(formula) => out.push(NodeRef::InlineFormula(formula)),
         ast::ModelElement::Address(address) => out.push(NodeRef::Expression(&address.value)),
-        // Листовые: вложенных узлов не несут — только имена, литералы и пути.
+        // Листовые: вложенных узлов не несут - только имена, литералы и пути.
         ast::ModelElement::Import(_)
         | ast::ModelElement::StraySemicolon(_)
         | ast::ModelElement::Enum(_)
@@ -131,7 +131,7 @@ fn push_state_element<'a>(element: &'a ast::StateElement, out: &mut Vec<NodeRef<
             }
         }
         ast::StateElement::NamedBlockCode(block) => out.push(NodeRef::Statement(&block.statement)),
-        // Обязательство и вставка уровня состояния (0518).
+        // Обязательство и вставка уровня состояния.
         ast::StateElement::Formula(formula) => out.push(NodeRef::FormulaBlock(&formula.formula)),
         ast::StateElement::Assembly(block) => out.push(NodeRef::Statement(block)),
         ast::StateElement::InlineFormula(formula) => out.push(NodeRef::InlineFormula(formula)),
@@ -155,9 +155,9 @@ fn push_variable<'a>(variable: &'a ast::VariableDefine, out: &mut Vec<NodeRef<'a
                 out.push(NodeRef::Expression(initializer));
             }
         }
-        // Порт несёт ДВА необязательных выражения: размещение `at <адрес>` и
-        // инициализатор (фича 0187). Пропустить размещение значит не измерить
-        // его глубину — а дерево глубже предела выпустить наружу.
+        // Порт несёт два необязательных выражения: размещение `at <адрес>` и
+        // инициализатор. Пропустить размещение значит не измерить его глубину - а
+        // дерево глубже предела выпустить наружу.
         ast::VariableDefine::Port {
             typ,
             address,
@@ -345,7 +345,7 @@ fn push_expression<'a>(expression: &'a ast::Expression, out: &mut Vec<NodeRef<'a
         }
         E::Type(_, ty) => out.push(NodeRef::Type(ty)),
 
-        // Листовые: литералы, срез (границы — числа) и ссылка на переменную.
+        // Листовые: литералы, срез (границы - числа) и ссылка на переменную.
         E::ArraySlice(..)
         | E::Number(..)
         | E::Duration(..)

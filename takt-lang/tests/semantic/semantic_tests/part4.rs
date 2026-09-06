@@ -1,6 +1,6 @@
-//! Интеграционные тесты семантики, часть 4 (вынос из `semantic_tests.rs`, фича 0088-11).
+//! Интеграционные тесты семантики, часть 4 (вынос из `semantic_tests.rs`).
 //!
-//! Хелперы и импорты — из родителя через `use super::*` (приём 0088-06/08).
+//! Хелперы и импорты - из родителя через `use super::*` (приём /08).
 
 use super::*;
 
@@ -70,7 +70,8 @@ fn ref_cond_comparison_is_resolved() {
     }
 }
 
-/// Контрпример: арифметика в ref-условии даёт предупреждение «арифметическое вычитание».
+/// Контрпример: арифметика в ref-условии даёт предупреждение "арифметическое
+/// вычитание".
 ///
 /// # Контрпример (Takt)
 /// ```but
@@ -92,7 +93,7 @@ fn se11_subtract_in_ref_gives_warning() {
     );
 }
 
-/// Контрпример: побитовое И в ref-условии даёт предупреждение «побитовое И».
+/// Контрпример: побитовое И в ref-условии даёт предупреждение "побитовое И".
 ///
 /// # Контрпример (Takt)
 /// ```but
@@ -143,7 +144,7 @@ fn se11_resolved_number_literal_in_ref_has_value_in_message() {
     );
 }
 
-/// Пример файла с разрешёнными условиями — без ошибок и предупреждений.
+/// Пример файла с разрешёнными условиями - без ошибок и предупреждений.
 #[test]
 fn ref_cond_resolved_file_is_valid() {
     let src = std::fs::read_to_string("tests/data/semantic/valid/ref_cond_resolved.takt")
@@ -158,7 +159,7 @@ fn ref_cond_resolved_file_is_valid() {
     );
 }
 
-/// Контрпример файла с арифметическим условием — одно предупреждение Се11.
+/// Контрпример файла с арифметическим условием - одно предупреждение Се11.
 #[test]
 fn ref_cond_arithmetic_file_gives_warning() {
     let src = std::fs::read_to_string("tests/data/semantic/valid/ref_cond_arithmetic.takt")
@@ -178,12 +179,12 @@ fn ref_cond_arithmetic_file_gives_warning() {
     );
 }
 
-// ─── Тесты родительских ссылок (требование 3) ────────────────────────────────
+// --- Тесты родительских ссылок (требование 3) --------------------------------
 
 /// Переменная хранит ссылку на родительскую модель (`upper`).
 ///
-/// Тест использует `Rc` напрямую (не `.take()`), чтобы родительская
-/// модель оставалась живой и Weak-ссылка могла быть разыменована.
+/// Тест использует `Rc` напрямую (не `.take()`), чтобы родительская модель оставалась
+/// живой и Weak-ссылка могла быть разыменована.
 ///
 /// # Пример (Takt)
 /// ```but
@@ -206,8 +207,8 @@ fn variable_node_has_parent_upper() {
 
 /// Константа хранит ссылку на родительскую модель.
 ///
-/// Тест использует `Rc` напрямую (не `.take()`), чтобы родительская
-/// модель оставалась живой и Weak-ссылка могла быть разыменована.
+/// Тест использует `Rc` напрямую (не `.take()`), чтобы родительская модель оставалась
+/// живой и Weak-ссылка могла быть разыменована.
 #[test]
 fn const_node_has_parent_upper() {
     let (ast, _) = parse("const C: u8 := 0;", 0).unwrap();
@@ -286,9 +287,10 @@ fn variable_node_name_and_ty_methods() {
     assert_eq!(*var.ty(), TypeNode::Bit);
 }
 
-// ─── С4: интеграционные тесты локальных переменных в блоках ──────────────────
+// --- С4: интеграционные тесты локальных переменных в блоках ------------------
 
-/// `tests/data/semantic/valid/local_var_in_block.takt` — var внутри always — без ошибок.
+/// `tests/data/semantic/valid/local_var_in_block.takt` - var внутри always - без
+/// ошибок.
 ///
 /// # Пример (Takt)
 /// ```but
@@ -306,7 +308,8 @@ fn example_local_var_in_block_is_valid() {
     build_file("tests/data/semantic/valid/local_var_in_block.takt").unwrap();
 }
 
-/// `tests/data/semantic/valid/local_var_in_for.takt` — var в инициализаторе for — без ошибок.
+/// `tests/data/semantic/valid/local_var_in_for.takt` - var в инициализаторе for - без
+/// ошибок.
 ///
 /// # Пример (Takt)
 /// ```but
@@ -322,7 +325,8 @@ fn example_local_var_in_for_is_valid() {
     build_file("tests/data/semantic/valid/local_var_in_for.takt").unwrap();
 }
 
-/// `tests/data/semantic/valid/local_var_nested.takt` — вложенные блоки с затенением — без ошибок.
+/// `tests/data/semantic/valid/local_var_nested.takt` - вложенные блоки с затенением -
+/// без ошибок.
 ///
 /// # Пример (Takt)
 /// ```but
@@ -330,7 +334,7 @@ fn example_local_var_in_for_is_valid() {
 /// start S {
 ///     always {
 ///         { var x: bit = false; x = false; }
-///         x = true;   // ← model-level x, не локальная
+///         x = true;   // <- model-level x, не локальная
 ///     }
 /// }
 /// ```
@@ -342,8 +346,8 @@ fn example_local_var_nested_is_valid() {
 /// Переменная через `upper()` позволяет найти другие переменные той же модели.
 ///
 /// Демонстрирует, что `upper` действительно предоставляет доступ к контексту.
-/// Используем `Rc<RefCell<ModelNode>>` напрямую (без `.take()`), чтобы `upper`
-/// внутри переменных ссылался на живой узел модели.
+/// Используем `Rc<RefCell<ModelNode>>` напрямую (без `.take()`), чтобы `upper` внутри
+/// переменных ссылался на живой узел модели.
 #[test]
 fn variable_upper_gives_access_to_sibling_vars() {
     let (ast, _) = parse("var a: bit := false; var b: bit := false;", 0).expect("ошибка разбора");
@@ -357,7 +361,7 @@ fn variable_upper_gives_access_to_sibling_vars() {
     );
 }
 
-// ─── SA8: тесты отсутствия циклических сильных Rc-ссылок ──────────────────
+// --- SA8: тесты отсутствия циклических сильных Rc-ссылок ------------------
 
 /// Модель с условиями не создаёт сильных циклов (SA8).
 #[test]
@@ -385,7 +389,7 @@ fn no_strong_cycle_with_named_blocks() {
     );
 }
 
-// ─── Ce5: Проверка достижимости и полноты переходов ──────────────────────────
+// --- Ce5: Проверка достижимости и полноты переходов --------------------------
 
 /// Вспомогательная функция: строит модель как Rc и возвращает корень.
 fn build_rc(src: &str) -> std::rc::Rc<std::cell::RefCell<takt_lang::semantic::ModelNode>> {
@@ -412,10 +416,10 @@ fn ce5_warnings(src: &str) -> Vec<takt_lang::diagnostics::Diagnostic> {
     transition_completeness_warnings(&root)
 }
 
-/// Модель с одним терминальным состоянием — нет предупреждений Ce5.
+/// Модель с одним терминальным состоянием - нет предупреждений Ce5.
 #[test]
 fn ce5_single_terminal_no_warning() {
-    // Finish — терминальное (нет переходов)
+    // Finish - терминальное (нет переходов)
     let warns = ce5_warnings("start Start { ref Finish: true; } state Finish;");
     assert!(
         warns.is_empty(),
@@ -424,7 +428,7 @@ fn ce5_single_terminal_no_warning() {
     );
 }
 
-/// Цепочка состояний с терминальным в конце — нет предупреждений.
+/// Цепочка состояний с терминальным в конце - нет предупреждений.
 #[test]
 fn ce5_chain_with_terminal_no_warning() {
     let warns = ce5_warnings("start A { ref B: true; } state B { ref C: true; } state C;");
@@ -434,7 +438,7 @@ fn ce5_chain_with_terminal_no_warning() {
     );
 }
 
-/// Цикл без терминального — предупреждение Ce5.2 (нет терминальных).
+/// Цикл без терминального - предупреждение Ce5.2 (нет терминальных).
 #[test]
 fn ce5_cycle_no_terminal_gives_warning() {
     let warns = ce5_warnings("start A { ref B: true; } state B { ref A: true; }");
@@ -459,10 +463,10 @@ fn ce5_no_terminal_warning_level() {
     assert_eq!(warns[0].level, Level::Warning);
 }
 
-/// Состояние без пути к терминальному — предупреждение Ce5.1.
+/// Состояние без пути к терминальному - предупреждение Ce5.1.
 #[test]
 fn ce5_state_no_path_to_terminal_warning() {
-    // C -> D -> C (цикл), A -> B -> C; B — терминальный, C/D не имеют пути
+    // C -> D -> C (цикл), A -> B -> C; B - терминальный, C/D не имеют пути
     let warns = ce5_warnings(
         "start A { ref B: true; ref C: true; } state B; \
          state C { ref D: true; } state D { ref C: true; }",
@@ -478,7 +482,7 @@ fn ce5_state_no_path_to_terminal_warning() {
     );
 }
 
-/// Модель без состояний — нет предупреждений Ce5.
+/// Модель без состояний - нет предупреждений Ce5.
 #[test]
 fn ce5_no_states_no_warning() {
     let warns = ce5_warnings("var x: bit := false;");
@@ -506,7 +510,7 @@ fn ce5_ref_and_next_together_warning() {
     );
 }
 
-/// Только next без ref — нет предупреждения Ce5.3.
+/// Только next без ref - нет предупреждения Ce5.3.
 #[test]
 fn ce5_only_next_no_ref_no_warn() {
     let warns = ce5_warnings(
@@ -524,7 +528,7 @@ fn ce5_only_next_no_ref_no_warn() {
     );
 }
 
-/// Файл ce5_terminal_states.takt — нет предупреждений.
+/// Файл ce5_terminal_states.takt - нет предупреждений.
 #[test]
 fn example_ce5_terminal_states_valid() {
     let root = build_file_rc("tests/data/semantic/valid/ce5_terminal_states.takt")
@@ -537,7 +541,7 @@ fn example_ce5_terminal_states_valid() {
     );
 }
 
-/// Файл ce5_no_warn_terminal.takt — нет предупреждений.
+/// Файл ce5_no_warn_terminal.takt - нет предупреждений.
 #[test]
 fn example_ce5_no_warn_terminal_valid() {
     let root = build_file_rc("tests/data/semantic/valid/ce5_no_warn_terminal.takt")
@@ -550,7 +554,7 @@ fn example_ce5_no_warn_terminal_valid() {
     );
 }
 
-/// Файл ce5_no_terminal.takt — предупреждение о нет терминальных.
+/// Файл ce5_no_terminal.takt - предупреждение о нет терминальных.
 #[test]
 fn example_ce5_no_terminal_warns() {
     let root = build_file_rc("tests/data/semantic/invalid/ce5_no_terminal.takt")
@@ -562,7 +566,7 @@ fn example_ce5_no_terminal_warns() {
     );
 }
 
-/// Файл ce5_double_next.takt — ошибка семантики (два next).
+/// Файл ce5_double_next.takt - ошибка семантики (два next).
 #[test]
 fn example_ce5_double_next_error() {
     let src = std::fs::read_to_string("tests/data/semantic/invalid/ce5_double_next.takt")
@@ -575,7 +579,7 @@ fn example_ce5_double_next_error() {
     );
 }
 
-/// Файл ce5_next_with_ref.takt — предупреждение Ce5.3.
+/// Файл ce5_next_with_ref.takt - предупреждение Ce5.3.
 #[test]
 fn example_ce5_next_with_ref_warns() {
     let root = build_file_rc("tests/data/semantic/invalid/ce5_next_with_ref.takt")
@@ -591,7 +595,7 @@ fn example_ce5_next_with_ref_warns() {
     );
 }
 
-// ─── Ce4: Перечисления ────────────────────────────────────────────────────────
+// --- Ce4: Перечисления --------------------------------------------------------
 
 /// EnumNode::new создаёт варианты с автоинкрементом значений.
 #[test]
@@ -702,12 +706,12 @@ fn ce4_model_eq_with_enums() {
     assert_eq!(m1, m2);
 }
 
-// ─── Ce6: Расширенный двунаправленный вывод типов ────────────────────────────
+// --- Ce6: Расширенный двунаправленный вывод типов ----------------------------
 
 /// Ce6: Тип переменной выводится из возвращаемого типа функции (bool).
 ///
-/// `fn getbool() -> bool { return true; }`
-/// `var result = getbool();` → тип `result` = `Bool`
+/// `fn getbool() -> bool { return true; }` `var result = getbool();` -> тип `result` =
+/// `Bool`
 #[test]
 fn ce6_type_inferred_from_function_return() {
     use takt_lang::semantic::type_node::TypeNode;
@@ -728,7 +732,7 @@ fn ce6_type_inferred_from_function_return() {
 
 /// Ce6: Тип переменной выводится из другой переменной (цепочка вывода).
 ///
-/// `var x: bit = false; var y = x;` → тип `y` = тип `x` = `Bit`
+/// `var x: bit = false; var y = x;` -> тип `y` = тип `x` = `Bit`
 #[test]
 fn ce6_type_chain_from_variable() {
     use takt_lang::semantic::type_node::TypeNode;
@@ -752,7 +756,7 @@ fn ce6_bool_return_type_inferred() {
     assert_eq!(ty, TypeNode::Bool, "тип flag должен быть Bool");
 }
 
-/// Ce6: Функция с типом [bit;32] — тип переменной = [bit;32].
+/// Ce6: Функция с типом [bit;32] - тип переменной = [bit;32].
 #[test]
 fn ce6_array32_return_type_inferred() {
     use takt_lang::semantic::type_node::TypeNode;
@@ -795,12 +799,12 @@ fn example_ce6_type_from_func_valid() {
         .expect("ce6_type_from_func.takt должен разбираться без ошибок");
 }
 
-/// Ce6: в `ce6_type_inference_chain.takt` тип ВЫВЕДЕН по цепочке `x → y`.
+/// Ce6: в `ce6_type_inference_chain.takt` тип выведен по цепочке `x -> y`.
 ///
-/// ⚠️ Прежде тест проверял, что файл **разбирается без ошибок**, — и проходил
-/// всё время, пока обещанный самой фикстурой вывод типа не работал: `y`
-/// оставался с типом `_`, а форму не переводила ни одна цель (фича 0204).
-/// Проверять надо то, ради чего фикстура заведена, — сам тип.
+/// Прежде тест проверял, что файл **разбирается без ошибок**, - и проходил всё время,
+/// пока обещанный самой исправлениетурой вывод типа не работал: `y` оставался с типом `_`, а
+/// форму не переводила ни одна цель. Проверять надо то, ради чего исправлениетура заведена, -
+/// сам тип.
 #[test]
 fn example_ce6_type_inference_chain_infers_type_of_second_variable() {
     let model = build_file("tests/data/semantic/valid/ce6_type_inference_chain.takt")
@@ -816,9 +820,9 @@ fn example_ce6_type_inference_chain_infers_type_of_second_variable() {
     );
 }
 
-// ─── Тесты FE6: Составные типы в параметрах функций ──────────────────────────
+// --- Тесты FE6: Составные типы в параметрах функций --------------------------
 
-/// FE6: Функция с параметром типа [bit;8] — разбирается без ошибок.
+/// FE6: Функция с параметром типа [bit;8] - разбирается без ошибок.
 #[test]
 fn test_fn_array_param() {
     let node = build_file("tests/data/semantic/valid/fn_array_param.takt")
@@ -834,7 +838,7 @@ fn test_fn_array_param() {
     );
 }
 
-/// FE6: Функция с псевдонимом типа в параметре — разбирается без ошибок.
+/// FE6: Функция с псевдонимом типа в параметре - разбирается без ошибок.
 #[test]
 fn test_fn_alias_param() {
     let node = build(
@@ -849,7 +853,7 @@ fn test_fn_alias_param() {
     );
 }
 
-// ─── Тесты FE3: Диагностика неиспользуемых переменных (Ce13) ─────────────────
+// --- Тесты FE3: Диагностика неиспользуемых переменных (Ce13) -----------------
 
 /// FE3: Переменная без использования даёт ровно одно предупреждение Ce13.
 #[test]
@@ -889,11 +893,11 @@ fn test_unused_variable_warning() {
     );
 }
 
-/// Сторож детерминизма диагностик (фича 0048, R6). Предупреждения Ce13
-/// собираются обходом словаря `variables`; до 0048 (`HashMap`) их порядок плавал
-/// между прогонами, теперь (`BTreeMap`) он лексикографический и устойчивый.
-/// Переменные объявлены `z_var`, `a_var`, `m_var` — предупреждения обязаны идти
-/// в порядке `a_var`, `m_var`, `z_var`, а не в порядке объявления или обхода.
+/// Тест детерминизма диагностик. Предупреждения Ce13 собираются обходом словаря
+/// `variables`; до 0048 (`HashMap`) их порядок плавал между прогонами, теперь
+/// (`BTreeMap`) он лексикографический и устойчивый. Переменные объявлены `z_var`,
+/// `a_var`, `m_var` - предупреждения обязаны идти в порядке `a_var`, `m_var`, `z_var`,
+/// а не в порядке объявления или обхода.
 #[test]
 fn test_unused_variable_warnings_are_deterministic_and_sorted() {
     let src = "model M { start S; var z_var: bit; var a_var: bit; var m_var: bit; }";
@@ -927,7 +931,7 @@ fn test_unused_variable_warnings_are_deterministic_and_sorted() {
     }
 }
 
-/// FE3: Если все переменные используются — предупреждений Ce13 нет.
+/// FE3: Если все переменные используются - предупреждений Ce13 нет.
 #[test]
 fn test_all_vars_used_no_warning() {
     let (ast, _) = parse(
@@ -944,4 +948,4 @@ fn test_all_vars_used_no_warning() {
     );
 }
 
-// ─── Bug #5: переменная родительской модели, используемая в подмодели ───────
+// --- Bug #5: переменная родительской модели, используемая в подмодели -------

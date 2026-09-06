@@ -1,18 +1,18 @@
 /// Нормализует имя файла или идентификатора в CamelCase.
 ///
-/// Преобразует `my_model`, `mein-leib`, `Mein_Leib` → `MyModel`, `MeinLeib`.
-/// Небуквенно-цифровые символы (`_`, `-`, `#` и т.д.) используются как разделители слов.
+/// Преобразует `my_model`, `mein-leib`, `Mein_Leib` -> `MyModel`, `MeinLeib`.
+/// Небуквенно-цифровые символы (`_`, `-`, `#` и т.д.) используются как разделители
+/// слов.
 ///
-/// ⚠️ **Регистр приводится по Unicode, а не по ASCII** (фича 0299). Прежний
-/// `to_ascii_uppercase` не-ASCII букву оставлял как есть, и `out кнопка`
-/// давало цели `rust` вариант перечисления `кнопка`, который
-/// `clippy -D warnings` отвергает: «variant should have an upper camel case
-/// name». Имена языка не-ASCII быть могут (фича 0200), то есть правило
-/// регистра обязано работать на том же алфавите, что и сам язык.
+/// **Регистр приводится по Unicode, а не по ASCII**. Прежний `to_ascii_uppercase`
+/// не-ASCII букву оставлял как есть, и `out кнопка` давало цели `rust` вариант
+/// перечисления `кнопка`, который `clippy -D warnings` отвергает: "variant should have
+/// an upper camel case name". Имена языка не-ASCII быть могут, то есть правило регистра
+/// обязано работать на том же алфавите, что и сам язык.
 ///
-/// ⚠️ Слипание имён после приведения регистра (`кнопка` и `Кнопка` → одно
-/// `Кнопка`) ловит существующая диагностика `RS-005` — тот же механизм, что
-/// для ASCII (`button`/`Button`); нового класса коллизий правка не заводит.
+/// Слипание имён после приведения регистра (`кнопка` и `Кнопка` -> одно `Кнопка`) ловит
+/// существующая диагностика `RS-005` - тот же механизм, что для ASCII
+/// (`button`/`Button`); нового класса коллизий правка не заводит.
 pub fn normalize_camelcase_name(name: &str) -> String {
     let mut result = String::new();
     let mut upper = true;
@@ -30,8 +30,8 @@ pub fn normalize_camelcase_name(name: &str) -> String {
     result
 }
 
-/// Нормализует уникальное имя (с разделителями `:`): заменяет `:` на `_`,
-/// затем применяет `normalize_lowercase_snakecase`.
+/// Нормализует уникальное имя (с разделителями `:`): заменяет `:` на `_`, затем
+/// применяет `normalize_lowercase_snakecase`.
 #[allow(dead_code)]
 pub fn normalize_unique_name(name: &str) -> String {
     normalize_lowercase_snakecase(name.replace(":", "_"))
@@ -74,7 +74,7 @@ mod tests {
         }
     }
 
-    // ── Дополнительные тесты нормализации имён ────────────────────────────────
+    // -- Дополнительные тесты нормализации имён --------------------------------
 
     /// Пустая строка остаётся пустой.
     #[test]
@@ -97,13 +97,12 @@ mod tests {
         assert_eq!(normalize_camelcase_name("hello"), "Hello");
     }
 
-    /// Не-ASCII буква тоже поднимается в верхний регистр (фича 0299).
+    /// Не-ASCII буква тоже поднимается в верхний регистр.
     ///
-    /// Прежний `to_ascii_uppercase` оставлял её как есть, и цель `rust`
-    /// печатала вариант перечисления `кнопка` — `clippy -D warnings` отвечает
-    /// «variant should have an upper camel case name». Имена языка не-ASCII
-    /// быть могут (0200), значит и правило регистра обязано работать на том же
-    /// алфавите.
+    /// Прежний `to_ascii_uppercase` оставлял её как есть, и цель `rust` печатала
+    /// вариант перечисления `кнопка` - `clippy -D warnings` отвечает "variant should
+    /// have an upper camel case name". Имена языка не-ASCII быть могут, значит и
+    /// правило регистра обязано работать на том же алфавите.
     #[test]
     fn normalize_model_name_non_ascii() {
         use super::normalize_camelcase_name;
@@ -114,9 +113,9 @@ mod tests {
         assert_eq!(normalize_camelcase_name("пуск_button"), "ПускButton");
     }
 
-    // ── Тесты normalize_lowercase_snakecase ───────────────────────────────────
+    // -- Тесты normalize_lowercase_snakecase -----------------------------------
 
-    /// CamelCase → snake_case: граница нижний→верхний регистр.
+    /// CamelCase -> snake_case: граница нижний->верхний регистр.
     #[test]
     fn snakecase_camel_case() {
         use super::normalize_lowercase_snakecase;

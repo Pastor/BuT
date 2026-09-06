@@ -1,4 +1,4 @@
-//! Тесты модуля `validate` (перенесены из `validate.rs`, фича 0027).
+//! Тесты модуля `validate` (перенесены из `validate.rs`).
 
 use super::*;
 use crate::parse;
@@ -9,41 +9,41 @@ fn build(src: &str) -> Result<ModelNode, Diagnostic> {
     construct_model(&ast, None, &[]).map(|m| m.take())
 }
 
-/// Пустая программа без состояний — валидна.
+/// Пустая программа без состояний - валидна.
 #[test]
 fn empty_model_is_valid() {
     assert!(build("").is_ok());
 }
 
-/// Модель только с типами — валидна (нет состояний).
+/// Модель только с типами - валидна (нет состояний).
 #[test]
 fn model_with_only_types_is_valid() {
     assert!(build("type Byte = [bit;8];").is_ok());
 }
 
-/// Имя встроенного типа занять нельзя — `SE-107` (фича 0243).
+/// Имя встроенного типа занять нельзя - `SE-107`.
 ///
-/// ⚠️ Прежде эта же строка (`type u8 = [bit;8];`) стояла в тесте выше как
-/// пример валидной программы: язык принимал затенение молча, и `u8` в файле
-/// начинал означать не то, что в языке.
+/// Прежде эта же строка (`type u8 = [bit;8];`) стояла в тесте выше как пример валидной
+/// программы: язык принимал затенение молча, и `u8` в файле начинал означать не то, что
+/// в языке.
 #[test]
 fn builtin_type_name_cannot_be_redeclared() {
     let err = build("type u8 = [bit;8];").expect_err("ожидался отказ SE-107");
     assert_eq!(err.code.as_deref(), Some("SE-107"), "{err:?}");
 }
 
-/// Модель с одним начальным состоянием — валидна.
+/// Модель с одним начальным состоянием - валидна.
 #[test]
 fn single_start_state_is_valid() {
     assert!(build("start S;").is_ok());
 }
 
-/// Модель с двумя начальными состояниями — ошибка.
+/// Модель с двумя начальными состояниями - ошибка.
 ///
 /// # Контрпример (Takt)
 /// ```but
 /// start A;   // первое start
-/// start B;   // второе start — запрещено
+/// start B;   // второе start - запрещено
 /// ```
 #[test]
 fn two_start_states_is_error() {
@@ -51,11 +51,11 @@ fn two_start_states_is_error() {
     assert!(result.is_err(), "два start-состояния должны давать ошибку");
 }
 
-/// Модель без начального состояния (только обычные состояния) — ошибка.
+/// Модель без начального состояния (только обычные состояния) - ошибка.
 ///
 /// # Контрпример (Takt)
 /// ```but
-/// state A;   // нет start — запрещено для модели с состояниями
+/// state A;   // нет start - запрещено для модели с состояниями
 /// state B;
 /// ```
 #[test]
@@ -67,7 +67,7 @@ fn no_start_state_is_error() {
     );
 }
 
-/// Вложенная модель с двумя начальными состояниями — ошибка.
+/// Вложенная модель с двумя начальными состояниями - ошибка.
 #[test]
 fn nested_model_two_start_states_is_error() {
     let result = build("model M { start A; start B; }");
@@ -77,15 +77,15 @@ fn nested_model_two_start_states_is_error() {
     );
 }
 
-/// Вложенная модель с одним start — валидна.
+/// Вложенная модель с одним start - валидна.
 #[test]
 fn nested_model_single_start_is_valid() {
     assert!(build("model M { start S; }").is_ok());
 }
 
-// ── Проверка значений типа bit ─────────────────────────────────────────────
+// -- Проверка значений типа bit ---------------------------------------------
 
-/// `var x: bit = 0;` — допустимо (числовое значение 0).
+/// `var x: bit = 0;` - допустимо (числовое значение 0).
 ///
 /// # Пример (Takt)
 /// ```but
@@ -96,7 +96,7 @@ fn bit_var_with_zero_is_valid() {
     assert!(build("var x: bit := 0;").is_ok());
 }
 
-/// `var x: bit = 1;` — допустимо (числовое значение 1).
+/// `var x: bit = 1;` - допустимо (числовое значение 1).
 ///
 /// # Пример (Takt)
 /// ```but
@@ -107,19 +107,19 @@ fn bit_var_with_one_is_valid() {
     assert!(build("var x: bit := 1;").is_ok());
 }
 
-/// `var x: bit = true;` — допустимо (булев литерал).
+/// `var x: bit = true;` - допустимо (булев литерал).
 #[test]
 fn bit_var_with_true_is_valid() {
     assert!(build("var x: bit := true;").is_ok());
 }
 
-/// `var x: bit = false;` — допустимо (булев литерал).
+/// `var x: bit = false;` - допустимо (булев литерал).
 #[test]
 fn bit_var_with_false_is_valid() {
     assert!(build("var x: bit := false;").is_ok());
 }
 
-/// `var x: bit = 2;` — ошибка: значение 2 не является допустимым для bit.
+/// `var x: bit = 2;` - ошибка: значение 2 не является допустимым для bit.
 ///
 /// # Контрпример (Takt)
 /// ```but
@@ -132,7 +132,7 @@ fn bit_var_with_two_is_error() {
     assert!(result.unwrap_err().message.contains("bit"));
 }
 
-/// `var x: bit = -1;` — ошибка: отрицательное значение не допускается для bit.
+/// `var x: bit = -1;` - ошибка: отрицательное значение не допускается для bit.
 ///
 /// # Контрпример (Takt)
 /// ```but
@@ -143,12 +143,12 @@ fn bit_var_with_minus_one_is_error() {
     let result = build("var x: bit := -1;");
     // -1 парсится как Negate(1) или Number(-1): в обоих случаях числовой литерал -1
     // Если парсер создаёт Number(-1), должна быть ошибка валидации.
-    // Если парсер создаёт Negate(Number(1)), это выражение — не Number, ошибки нет.
+    // Если парсер создаёт Negate(Number(1)), это выражение - не Number, ошибки нет.
     // Тест проверяет только отсутствие паники.
     let _ = result; // оба варианта допустимы для текущего парсера
 }
 
-/// `var x: bit = 255;` — ошибка: значение вне допустимого диапазона bit.
+/// `var x: bit = 255;` - ошибка: значение вне допустимого диапазона bit.
 ///
 /// # Контрпример (Takt)
 /// ```but
@@ -160,29 +160,29 @@ fn bit_var_with_255_is_error() {
     assert!(result.is_err(), "значение 255 недопустимо для типа bit");
 }
 
-/// `const C: bit = 2;` — ошибка: константа типа bit с недопустимым значением.
+/// `const C: bit = 2;` - ошибка: константа типа bit с недопустимым значением.
 #[test]
 fn bit_const_with_invalid_value_is_error() {
     let result = build("const C: bit := 2;");
     assert!(result.is_err(), "константа bit = 2 должна давать ошибку");
 }
 
-/// Переменные типа `[bit;8]` (массив) не проверяются на диапазон элементов —
-/// числовое значение инициализатора массива трактуется как целое число.
+/// Переменные типа `[bit;8]` (массив) не проверяются на диапазон элементов - числовое
+/// значение инициализатора массива трактуется как целое число.
 #[test]
 fn bit_array_initializer_is_not_range_checked() {
-    // [bit;8] = 255 — это 8-битное значение, проверка диапазона не применяется.
+    // [bit;8] = 255 - это 8-битное значение, проверка диапазона не применяется.
     assert!(build("var x: [bit;8] := 255;").is_ok());
 }
 
 /// Переменная `bit` с инициализатором-переменной не проверяется статически.
 #[test]
 fn bit_var_initialized_from_other_var_is_valid() {
-    // b: bit = a — ссылка на переменную, статическая проверка значения не применяется.
+    // b: bit = a - ссылка на переменную, статическая проверка значения не применяется.
     assert!(build("var a: bit := 0; var b: bit := a;").is_ok());
 }
 
-/// Вложенная модель с некорректным значением bit — ошибка.
+/// Вложенная модель с некорректным значением bit - ошибка.
 #[test]
 fn nested_model_with_invalid_bit_value_is_error() {
     let result = build("model M { var x: bit := 5; start S; }");
@@ -192,14 +192,14 @@ fn nested_model_with_invalid_bit_value_is_error() {
     );
 }
 
-// ── Се11: строгая проверка булевости условий переходов ─────────────────────
+// -- Се11: строгая проверка булевости условий переходов ---------------------
 
 fn build_rc(src: &str) -> Rc<RefCell<ModelNode>> {
     let (ast, _) = parse(src, 0).expect("ошибка разбора");
     construct_model(&ast, None, &[]).expect("ошибка семантики")
 }
 
-// ── NI6: типобезопасные операции с enum ────────────────────────────────────────
+// -- NI6: типобезопасные операции с enum ----------------------------------------
 
 /// Переменная с корректным значением enum не вызывает ошибок NI6.
 ///
@@ -209,7 +209,7 @@ fn build_rc(src: &str) -> Rc<RefCell<ModelNode>> {
 ///     North,
 ///     South
 /// }
-/// var d: Dir = 0;  // 0 — значение North
+/// var d: Dir = 0;  // 0 - значение North
 /// ```
 #[test]
 fn ni6_valid_enum_initializer_no_errors() {
@@ -252,7 +252,7 @@ fn ni6_valid_enum_initializer_no_errors() {
 ///     North = 0,
 ///     South = 1
 /// }
-/// var d: Dir = 99;  // 99 — не вариант Dir
+/// var d: Dir = 99;  // 99 - не вариант Dir
 /// ```
 #[test]
 fn ni6_invalid_enum_initializer_is_error() {
@@ -285,7 +285,7 @@ fn ni6_invalid_enum_initializer_is_error() {
     assert!(errors[0].message.contains("99"));
 }
 
-/// Инициализация значением варианта (по числовому значению) — без ошибок NI6.
+/// Инициализация значением варианта (по числовому значению) - без ошибок NI6.
 #[test]
 fn ni6_valid_explicit_value_no_errors() {
     let model_rc = {
@@ -314,7 +314,7 @@ fn ni6_valid_explicit_value_no_errors() {
     );
 }
 
-/// Несколько переменных — несколько ошибок NI6.
+/// Несколько переменных - несколько ошибок NI6.
 #[test]
 fn ni6_multiple_invalid_enum_vars_gives_multiple_errors() {
     let model_rc = {
@@ -358,7 +358,7 @@ fn ni6_non_enum_var_not_checked() {
     );
 }
 
-/// Переменная с неизвестным enum-типом (перечисление не найдено) — не вызывает NI6.
+/// Переменная с неизвестным enum-типом (перечисление не найдено) - не вызывает NI6.
 #[test]
 fn ni6_unknown_enum_type_no_error() {
     let model_rc = {

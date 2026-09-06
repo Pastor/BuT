@@ -1,22 +1,21 @@
-//! Объявляемые возможности сервера (`ServerCapabilities`) — фича 0131.
+//! Объявляемые возможности сервера (`ServerCapabilities`) -.
 //!
-//! Вынесено из `bin/takt_lsp.rs` не ради размера, а ради **проверяемости**:
-//! бинарник юнит-тестами не покрыть, поэтому «какие возможности объявлены»
-//! проверялось бы чтением исходника глазами. Здесь же список — обычное
-//! значение, и тест сравнивает его с ожидаемым (фича 0072 вынесла в библиотеку
-//! разбор `initializationOptions` по тому же доводу).
+//! Вынесено из `bin/takt_lsp.rs` не ради размера, а ради **проверяемости**: бинарник
+//! юнит-тестами не покрыть, поэтому "какие возможности объявлены" проверялось бы
+//! чтением исходника глазами. Здесь же список - обычное значение, и тест сравнивает его
+//! с ожидаемым.
 //!
-//! Часть модуля `lsp` (фича 0027: деление по логике).
+//! Часть модуля `lsp`.
 
 use super::*;
 
 /// Возможности, которые сервер объявляет клиенту при инициализации.
 ///
-/// ⚠️ **`definition` и `declaration` объявляются вместе** (фича 0131). В Takt
-/// объявление и определение — одно и то же (`var x := 0;` — и объявление, и
-/// определение), поэтому разделять их нечего; а редакторы расходятся в том,
-/// какой метод шлёт F12: VS Code — `definition`, Zed — `declaration`. Объявив
-/// только второе, сервер оставлял «Go to Definition» **нерабочим** у первого.
+/// **`definition` и `declaration` объявляются вместе**. В Takt объявление и определение -
+/// одно и то же (`var x := 0;` - и объявление, и определение), поэтому разделять их
+/// нечего; а редакторы расходятся в том, какой метод шлёт F12: VS Code - `definition`,
+/// Zed - `declaration`. Объявив только второе, сервер оставлял "Go to Definition"
+/// **нерабочим** у первого.
 pub fn server_capabilities() -> ServerCapabilities {
     ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Options(
@@ -35,18 +34,18 @@ pub fn server_capabilities() -> ServerCapabilities {
         hover_provider: Some(HoverProviderCapability::Simple(true)),
         declaration_provider: Some(DeclarationCapability::Simple(true)),
         definition_provider: Some(OneOf::Left(true)),
-        // Фича 0131: поиск использований идёт по слою `semantic::usages` —
-        // индекс тел блоков и функций не видит.
+        // поиск использований идёт по слою `semantic::usages` - индекс тел блоков и
+        // функций не видит.
         references_provider: Some(OneOf::Left(true)),
-        // Фича 0131: переименование с `prepareRename` — редактор обязан узнать
-        // об отказе ДО ввода нового имени, иначе пользователь введёт его зря.
+        // переименование с `prepareRename` - редактор обязан узнать об отказе до ввода
+        // нового имени, иначе пользователь введёт его зря.
         rename_provider: Some(OneOf::Right(RenameOptions {
             prepare_provider: Some(true),
             work_done_progress_options: Default::default(),
         })),
         document_symbol_provider: Some(OneOf::Left(true)),
-        // Фича 0024: канонический форматтер. То же ядро, что у `taktc fmt`, —
-        // расхождение стилей между CLI и редактором невозможно по построению.
+        // канонический форматтер. То же ядро, что у `taktc fmt`, - расхождение стилей
+        // между CLI и редактором невозможно по построению.
         document_formatting_provider: Some(OneOf::Left(true)),
         semantic_tokens_provider: Some(SemanticTokensServerCapabilities::SemanticTokensOptions(
             SemanticTokensOptions {
@@ -67,8 +66,8 @@ pub fn server_capabilities() -> ServerCapabilities {
 mod tests {
     use super::*;
 
-    /// Обе возможности перехода объявлены — иначе F12 не работает в половине
-    /// редакторов (фича 0131).
+    /// Обе возможности перехода объявлены - иначе F12 не работает в половине
+    /// редакторов.
     #[test]
     fn declaration_and_definition_are_both_advertised() {
         let caps = server_capabilities();

@@ -1,12 +1,12 @@
 //! Запись кадров симуляции в виде отдельных SVG-файлов.
 //!
-//! Каждый кадр сохраняется немедленно при вызове [`SvgRecorder::add_frame`].
-//! Имена файлов формируются как `<stem>-<XXXX>.svg`, где XXXX — порядковый
-//! номер кадра с ведущими нулями.
+//! Каждый кадр сохраняется немедленно при вызове [`SvgRecorder::add_frame`]. Имена
+//! файлов формируются как `<stem>-<XXXX>.svg`, где XXXX - порядковый номер кадра с
+//! ведущими нулями.
 //!
-//! Шрифты, указанные в конфигурации (например, GOST), встраиваются в каждый
-//! SVG-файл как base64-закодированные `@font-face`-правила — это обеспечивает
-//! корректное отображение без установки шрифтов на просматривающей системе.
+//! Шрифты, указанные в конфигурации (например, GOST), встраиваются в каждый SVG-файл
+//! как base64-закодированные `@font-face`-правила - это обеспечивает корректное
+//! отображение без установки шрифтов на просматривающей системе.
 
 use crate::gif::FrameTiming;
 use crate::graphics_config::GraphicsConfig;
@@ -15,7 +15,7 @@ use base64::Engine as _;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-// ── SVG-запись ────────────────────────────────────────────────────────────────
+// -- SVG-запись ----------------------------------------------------------------
 
 /// Записывает кадры симуляции в отдельные SVG-файлы.
 pub(crate) struct SvgRecorder {
@@ -69,18 +69,18 @@ impl SvgRecorder {
         })
     }
 
-    /// Завершает запись (ничего не делает — кадры уже записаны в `add_frame`).
+    /// Завершает запись (ничего не делает - кадры уже записаны в `add_frame`).
     pub(crate) fn save(self) -> Result<(), String> {
         Ok(())
     }
 }
 
-// ── Встраивание шрифтов ───────────────────────────────────────────────────────
+// -- Встраивание шрифтов -------------------------------------------------------
 
 /// Строит блок `@font-face` CSS из нестандартных семейств конфигурации.
 ///
-/// Шрифты ищутся через системную базу fontdb. Если шрифт не найден — пропускается
-/// без ошибки (SVG просто не будет отображать его корректно на сторонних системах).
+/// Шрифты ищутся через системную базу fontdb. Если шрифт не найден - пропускается без
+/// ошибки (SVG просто не будет отображать его корректно на сторонних системах).
 fn build_font_face_css(config: &GraphicsConfig) -> String {
     let families = collect_custom_families(config);
     if families.is_empty() {
@@ -91,7 +91,7 @@ fn build_font_face_css(config: &GraphicsConfig) -> String {
     db.load_system_fonts();
 
     let mut css = String::new();
-    // Deduplicate по пути файла — один файл может покрывать несколько семейств.
+    // Deduplicate по пути файла - один файл может покрывать несколько семейств.
     let mut embedded_paths: HashSet<PathBuf> = HashSet::new();
 
     for face in db.faces() {
@@ -118,7 +118,7 @@ fn build_font_face_css(config: &GraphicsConfig) -> String {
                         ));
                     }
                 }
-                break; // один face → один раз
+                break; // один face -> один раз
             }
         }
     }
@@ -141,7 +141,7 @@ fn font_data_from_source(
             let data = arc.as_ref().as_ref().to_vec();
             Some((data, None, "font/ttf", "truetype"))
         }
-        // SharedFile и другие варианты — пропускаем.
+        // SharedFile и другие варианты - пропускаем.
         #[allow(unreachable_patterns)]
         _ => None,
     }
@@ -152,7 +152,8 @@ fn inject_font_faces(svg: &str, font_css: &str) -> String {
     if font_css.is_empty() {
         return svg.to_string();
     }
-    // Ищем первый закрывающий `>` открывающего тега <svg ...> и вставляем <style> сразу после него.
+    // Ищем первый закрывающий `>` открывающего тега <svg ...> и вставляем <style> сразу
+    // после него.
     if let Some(pos) = svg.find("><style>").or_else(|| svg.find(">\n<style>")) {
         let offset = svg[pos..].find("<style>").unwrap() + pos;
         let insert_at = offset + "<style>".len();
@@ -162,7 +163,7 @@ fn inject_font_faces(svg: &str, font_css: &str) -> String {
         result.push_str(&svg[insert_at..]);
         result
     } else {
-        // Нет <style> — вставляем перед первым закрывающим > корня.
+        // Нет <style> - вставляем перед первым закрывающим > корня.
         if let Some(pos) = svg.find('>') {
             let mut result = svg[..=pos].to_string();
             result.push_str(&format!("\n<style>\n{font_css}</style>"));

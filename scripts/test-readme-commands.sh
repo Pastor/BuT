@@ -1,14 +1,14 @@
 #!/bin/sh
-# Сторож гейта команд README (фича 0275): мутацией доказывает, что негодная
+# Тест проверки команд README: мутацией доказывает, что негодная
 # команда ловится, а годная принимается.
 #
-# Повод: гейт, который никогда не падал, неотличим от гейта, который не
-# смотрит. Первый же прогон настоящего гейта нашёл в README команду, роняющую
-# компилятор паникой, — но это находка, а не доказательство работоспособности.
+# Повод: проверка, который никогда не падал, неотличим от проверки, который не
+# смотрит. Первый же прогон настоящего проверки нашёл в README команду, роняющую
+# компилятор паникой, - но это находка, а не доказательство работоспособности.
 #
-# Гоняется на КОПИИ дерева (RC_ROOT): рабочий README не трогается.
+# Гоняется на копии дерева (RC_ROOT): рабочий README не трогается.
 #
-# POSIX sh (образец — scripts/test-book-generated.sh).
+# POSIX sh (образец - scripts/test-book-generated.sh).
 set -eu
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -23,7 +23,7 @@ fail() { echo "  ПРОВАЛ: $1" >&2; FAILED=1; }
 
 echo "Сторож гейта команд README (фича 0275)..."
 
-# Копия дерева: README, примеры и скрипты — всё, что читает гейт.
+# Копия дерева: README, примеры и скрипты - всё, что читает проверка.
 mkdir -p "$TMP/tree/scripts" "$TMP/tree/examples"
 cp "$ROOT/README.md" "$TMP/tree/README.md"
 cp "$ROOT/examples"/*.takt "$TMP/tree/examples/" 2>/dev/null || true
@@ -32,7 +32,7 @@ cp "$ROOT/scripts"/*.sh "$TMP/tree/scripts/" 2>/dev/null || true
 cp "$ROOT/scripts"/*.py "$TMP/tree/scripts/" 2>/dev/null || true
 # Манифест порождённого Rust-проекта: README предлагает `cargo run
 # --manifest-path examples/generated/rust/Cargo.toml`, и без него копия дерева
-# была бы беднее рабочего — сторож ругался бы на настоящий README.
+# была бы беднее рабочего - тест ругался бы на настоящий README.
 mkdir -p "$TMP/tree/examples/generated/rust"
 cp "$ROOT/examples/generated/rust/Cargo.toml" "$TMP/tree/examples/generated/rust/" 2>/dev/null || true
 
@@ -66,7 +66,7 @@ fi
 cp "$ROOT/README.md" "$TMP/tree/README.md"
 
 # --- 4. Неработающая команда компилятора ловится ----------------------------
-# Файл существует, значит команда ПРОГОНЯЕТСЯ — и падает на несуществующей цели.
+# Файл существует, значит команда прогоняется - и падает на несуществующей цели.
 printf '\n```sh\ntaktc compile -t nosuchtarget examples/stacker.takt -o out/\n```\n' >> "$TMP/tree/README.md"
 if ! run_gate && grep -q 'команда README не работает' "$TMP/out"; then
     ok "неработающая команда компилятора ловится"
@@ -84,8 +84,8 @@ else
 fi
 cp "$ROOT/README.md" "$TMP/tree/README.md"
 
-# --- 6. Контроль: команда с плейсхолдером НЕ прогоняется ---------------------
-# `model.takt` в дереве нет — такую строку исполнить нечем, и гейт обязан
+# --- 6. Контроль: команда с плейсхолдером не прогоняется ---------------------
+# `model.takt` в дереве нет - такую строку исполнить нечем, и проверка обязан
 # ограничиться проверкой подкоманды, а не падать.
 printf '\n```sh\ntaktc compile -t c model.takt -o build/\n```\n' >> "$TMP/tree/README.md"
 if run_gate; then

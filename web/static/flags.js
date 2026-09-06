@@ -24,7 +24,7 @@ export const FLAGS = [
     label: "flags.fsm",
     choices: ["switch", "table"],
     fallback: "table",
-    // Цели, принимающие значение (пусто — принимают все): `target_flags.rs`.
+    // Цели, принимающие значение (пусто - принимают все): `target_flags.rs`.
     only: { table: ["c", "c-hal", "rust", "st", "st-at", "sv", "sv-mmio"] },
   },
   { key: "--inline", label: "flags.inline", choices: ["off", "auto"], fallback: "auto" },
@@ -92,8 +92,8 @@ export function parse(line) {
       continue;
     }
     if (spec.numbers) {
-      // ⚠️ Разделитель берётся, только когда чисел НЕСКОЛЬКО: `split("")` рвёт
-      // значение посимвольно, и `--tick-hz=500` стало бы `5`.
+      // Разделитель берётся, только когда чисел несколько: `split("")` рвёт значение
+      // посимвольно, и `--tick-hz=500` стало бы `5`.
       const raw = String(value ?? "");
       const parts = spec.numbers.length > 1 ? raw.split(spec.join ?? ".") : [raw];
       const state = { on: true };

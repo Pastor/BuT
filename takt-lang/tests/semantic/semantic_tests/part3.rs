@@ -1,24 +1,26 @@
-//! Интеграционные тесты семантики, часть 3 (вынос из `semantic_tests.rs`, фича 0088-11).
+//! Интеграционные тесты семантики, часть 3 (вынос из `semantic_tests.rs`).
 //!
-//! Хелперы и импорты — из родителя через `use super::*` (приём 0088-06/08).
+//! Хелперы и импорты - из родителя через `use super::*` (приём /08).
 
 use super::*;
 
-/// `tests/data/semantic/invalid/bit_value_in_const.takt` — бит-константа с недопустимым значением → ошибка.
+/// `tests/data/semantic/invalid/bit_value_in_const.takt` - бит-константа с недопустимым
+/// значением -> ошибка.
 #[test]
 fn example_bit_value_in_const_is_error() {
     let result = build_file("tests/data/semantic/invalid/bit_value_in_const.takt");
     assert!(result.is_err(), "bit = 5 должно давать ошибку");
 }
 
-/// `tests/data/semantic/invalid/no_start_state.takt` — модель без start → ошибка.
+/// `tests/data/semantic/invalid/no_start_state.takt` - модель без start -> ошибка.
 #[test]
 fn example_no_start_state_is_error() {
     let result = build_file("tests/data/semantic/invalid/no_start_state.takt");
     assert!(result.is_err(), "модель без start должна давать ошибку");
 }
 
-/// `tests/data/semantic/invalid/unknown_type_in_function.takt` — неизвестный тип параметра → ошибка.
+/// `tests/data/semantic/invalid/unknown_type_in_function.takt` - неизвестный тип
+/// параметра -> ошибка.
 #[test]
 fn example_unknown_type_in_function_is_error() {
     let result = build_file("tests/data/semantic/invalid/unknown_type_in_function.takt");
@@ -28,16 +30,16 @@ fn example_unknown_type_in_function_is_error() {
     );
 }
 
-// ─── Тесты Се1: обнаружение циклических импортов ──────────────────────────────
+// --- Тесты Се1: обнаружение циклических импортов ------------------------------
 //
-// Реализация Се1: семантический анализатор обнаруживает циклические зависимости
-// между файлами импорта. При обнаружении цикла возвращается ошибка вида:
-//   «Циклический импорт: /path/a.takt → /path/b.takt → /path/a.takt»
+// Реализация Се1: семантический анализатор обнаруживает циклические зависимости между
+// файлами импорта. При обнаружении цикла возвращается ошибка вида: "Циклический импорт:
+// /path/a.takt -> /path/b.takt -> /path/a.takt"
 //
 // Поддерживаемые сценарии:
-//   - прямой цикл между двумя файлами: a → b → a
-//   - длинная цепочка: a → b → c → a
-//   - самоссылающийся файл: a → a
+//   - прямой цикл между двумя файлами: a -> b -> a
+//   - длинная цепочка: a -> b -> c -> a
+//   - самоссылающийся файл: a -> a
 
 /// Вспомогательная функция: создаёт временный `.takt`-файл в директории `dir`.
 fn write_tmp_in_dir(dir: &tempfile::TempDir, name: &str, content: &str) -> String {
@@ -46,21 +48,21 @@ fn write_tmp_in_dir(dir: &tempfile::TempDir, name: &str, content: &str) -> Strin
     dir.path().to_string_lossy().into_owned()
 }
 
-/// Прямой цикл между двумя файлами: `a.takt` импортирует `b.takt`, `b.takt` — `a.takt`.
+/// Прямой цикл между двумя файлами: `a.takt` импортирует `b.takt`, `b.takt` - `a.takt`.
 ///
-/// Ожидается ошибка «Циклический импорт» с упоминанием обоих файлов в цепочке.
+/// Ожидается ошибка "Циклический импорт" с упоминанием обоих файлов в цепочке.
 #[test]
 fn circular_import_two_files_is_error() {
     let dir = tempfile::tempdir().unwrap();
     let dir_str = dir.path().to_string_lossy().into_owned();
 
-    // a.takt → b.takt
+    // a.takt -> b.takt
     write_tmp_in_dir(
         &dir,
         "a.takt",
         r#"import "b.takt"; start Entry = B { } state Done;"#,
     );
-    // b.takt → a.takt (замыкает цикл)
+    // b.takt -> a.takt (замыкает цикл)
     write_tmp_in_dir(&dir, "b.takt", r#"import "a.takt"; model B { start S; }"#);
 
     let src = r#"import "a.takt";"#;
@@ -86,7 +88,7 @@ fn circular_import_two_files_is_error() {
     );
 }
 
-/// Длинная цепочка циклического импорта: `a → b → c → a`.
+/// Длинная цепочка циклического импорта: `a -> b -> c -> a`.
 ///
 /// Ожидается ошибка с цепочкой из трёх файлов.
 #[test]
@@ -104,7 +106,7 @@ fn circular_import_three_files_is_error() {
         "cb.takt",
         r#"import "cc.takt"; model Cb { start S; }"#,
     );
-    // cc.takt → ca.takt (замыкает цикл длиной 3)
+    // cc.takt -> ca.takt (замыкает цикл длиной 3)
     write_tmp_in_dir(
         &dir,
         "cc.takt",
@@ -159,17 +161,16 @@ fn circular_import_self_reference_is_error() {
     );
 }
 
-/// Алмазная зависимость (diamond): `a` импортирует `b` и `c`, оба — `d`.
+/// Алмазная зависимость (diamond): `a` импортирует `b` и `c`, оба - `d`.
 ///
-/// Это НЕ цикл: `d` дважды импортируется по разным путям,
-/// но каждая ветвь не формирует петлю. Ожидается ошибка
-/// «уже объявлена» (повторный импорт), а НЕ ошибка цикла.
+/// Это не цикл: `d` дважды импортируется по разным путям, но каждая ветвь не формирует
+/// петлю. Ожидается ошибка "уже объявлена" (повторный импорт), а не ошибка цикла.
 #[test]
 fn diamond_import_is_not_cycle_error() {
     let dir = tempfile::tempdir().unwrap();
     let dir_str = dir.path().to_string_lossy().into_owned();
 
-    // d.takt — общая зависимость
+    // d.takt - общая зависимость
     write_tmp_in_dir(&dir, "d.takt", r#"model D { start S; }"#);
     // b.takt и c.takt оба импортируют d.takt
     write_tmp_in_dir(&dir, "db.takt", r#"import "d.takt"; model Db { start S; }"#);
@@ -185,7 +186,7 @@ fn diamond_import_is_not_cycle_error() {
     let (ast, _) = parse(src, 0).expect("ошибка разбора");
     let result = construct_model(&ast, None, &[dir_str]);
 
-    // Ожидаем ошибку (повторный импорт D), но НЕ «циклический»
+    // Ожидаем ошибку (повторный импорт D), но не "циклический"
     if let Err(err) = &result {
         assert!(
             !err.message.contains("циклический") && !err.message.to_lowercase().contains("цикл"),
@@ -193,11 +194,11 @@ fn diamond_import_is_not_cycle_error() {
             err.message
         );
     }
-    // Результат может быть как Ok, так и Err (в зависимости от реализации dedup),
-    // но НЕ должен быть ошибкой цикла.
+    // Результат может быть как Ok, так и Err (в зависимости от реализации dedup), но не
+    // должен быть ошибкой цикла.
 }
 
-/// Цикл через `import "..." as Alias` — GlobalSymbol вариант импорта.
+/// Цикл через `import "..." as Alias` - GlobalSymbol вариант импорта.
 ///
 /// Обнаружение цикла должно работать для всех форм импорта.
 #[test]
@@ -232,7 +233,7 @@ fn circular_import_via_global_symbol_is_error() {
     );
 }
 
-/// Цикл через `import {{ A }} from "..."` — Rename вариант импорта.
+/// Цикл через `import {{ A }} from "..."` - Rename вариант импорта.
 ///
 /// Обнаружение цикла должно работать для всех форм импорта.
 #[test]
@@ -251,7 +252,8 @@ fn circular_import_via_rename_is_error() {
         r#"import { Ra } from "ra.takt"; model Ra { start S; } model Rb { start S; }"#,
     );
 
-    // Инициируем цикл через Plain-импорт (ra.takt содержит rename-импорт rb.takt, который замкнёт цикл)
+    // Инициируем цикл через Plain-импорт (ra.takt содержит rename-импорт rb.takt,
+    // который замкнёт цикл)
     let src = r#"import "ra.takt";"#;
     let (ast, _) = parse(src, 0).expect("ошибка разбора");
     let result = construct_model(&ast, None, &[dir_str]);
@@ -268,7 +270,7 @@ fn circular_import_via_rename_is_error() {
     );
 }
 
-/// Нециклический линейный импорт `a → b → c` (без петли) — должен успешно строиться.
+/// Нециклический линейный импорт `a -> b -> c` (без петли) - должен успешно строиться.
 ///
 /// Проверяет, что детектор не ложно срабатывает на корректные цепочки.
 #[test]
@@ -299,15 +301,15 @@ fn linear_import_chain_is_valid() {
     );
 }
 
-// ─── Тесты Се12: документационные комментарии в семантическом дереве ──────────
+// --- Тесты Се12: документационные комментарии в семантическом дереве ----------
 //
 // Реализация Се12: `///`-комментарии включаются в семантическое дерево через
 // `construct_model_with_docs`. Доступ:
-//   - `model_node.own_doc()`                → документация самой модели
-//   - `model_node.element_doc("Имя")`       → документация именованного элемента
-//   - `model_node.docs["Имя"]`              → то же через HashMap
+//   - `model_node.own_doc()` -> документация самой модели
+//   - `model_node.element_doc("Имя")` -> документация именованного элемента
+//   - `model_node.docs["Имя"]` -> то же через HashMap
 
-/// `construct_model_with_docs` — состояние получает свой doc-комментарий.
+/// `construct_model_with_docs` - состояние получает свой doc-комментарий.
 #[test]
 fn doc_comment_for_state() {
     let src = "/// Начальное состояние.\nstart S;";
@@ -406,7 +408,7 @@ fn multi_line_doc_comment_for_state() {
     assert_eq!(doc[2], "Строка 3.");
 }
 
-/// Обычный `//`-комментарий НЕ попадает в документацию.
+/// Обычный `//`-комментарий не попадает в документацию.
 #[test]
 fn regular_comment_not_in_docs() {
     let src = "// Обычный комментарий.\nstart S;";
@@ -419,7 +421,7 @@ fn regular_comment_not_in_docs() {
     );
 }
 
-/// Без комментариев — `element_doc` возвращает пустой срез.
+/// Без комментариев - `element_doc` возвращает пустой срез.
 #[test]
 fn no_doc_comment_returns_empty() {
     let src = "start S; state Done;";
@@ -431,7 +433,7 @@ fn no_doc_comment_returns_empty() {
     assert!(root.borrow().own_doc().is_empty());
 }
 
-/// Каждый элемент получает свой doc-комментарий — не чужой.
+/// Каждый элемент получает свой doc-комментарий - не чужой.
 #[test]
 fn each_element_gets_its_own_doc() {
     let src = concat!(
@@ -447,7 +449,7 @@ fn each_element_gets_its_own_doc() {
     assert_eq!(root.borrow().element_doc("B"), ["Состояние B."]);
 }
 
-/// `construct_model` (без docs) → поля doc и docs остаются пустыми.
+/// `construct_model` (без docs) -> поля doc и docs остаются пустыми.
 #[test]
 fn construct_model_without_docs_leaves_fields_empty() {
     let src = "/// Документация.\nstart S;";
@@ -484,7 +486,8 @@ fn doc_comment_for_state_inside_model() {
     );
 }
 
-/// `tests/data/semantic/valid/doc_comments.takt` — файл с doc-комментариями строится корректно.
+/// `tests/data/semantic/valid/doc_comments.takt` - файл с doc-комментариями строится
+/// корректно.
 #[test]
 fn example_doc_comments_file_is_valid() {
     let src = std::fs::read_to_string("tests/data/semantic/valid/doc_comments.takt")
@@ -562,9 +565,9 @@ fn multi_line_doc_for_model() {
     );
 }
 
-// ─── Се11: строгая проверка булевости условий переходов ──────────────────────
+// --- Се11: строгая проверка булевости условий переходов ----------------------
 
-/// Явное сравнение в условии перехода — нет предупреждений.
+/// Явное сравнение в условии перехода - нет предупреждений.
 ///
 /// # Takt
 /// ```but
@@ -584,12 +587,12 @@ fn se11_explicit_comparison_no_warnings() {
     );
 }
 
-/// Числовая переменная без сравнения — предупреждение Се11.
+/// Числовая переменная без сравнения - предупреждение Се11.
 ///
 /// # Takt
 /// ```but
 /// var timer: [bit;8] = 0;
-/// start S { ref T: timer; }   // ← Предупреждение
+/// start S { ref T: timer; }   // <- Предупреждение
 /// state T;
 /// ```
 #[test]
@@ -609,7 +612,7 @@ fn se11_numeric_var_in_ref_gives_warning() {
     );
 }
 
-/// Числовой литерал в условии перехода — предупреждение Се11.
+/// Числовой литерал в условии перехода - предупреждение Се11.
 #[test]
 fn se11_number_literal_in_ref_gives_warning() {
     let src = "start S { ref T: 5; } state T;";
@@ -623,7 +626,7 @@ fn se11_number_literal_in_ref_gives_warning() {
     );
 }
 
-/// Переменная типа `bool` в условии — нет предупреждений.
+/// Переменная типа `bool` в условии - нет предупреждений.
 #[test]
 fn se11_bool_var_in_ref_no_warnings() {
     let src = "var flag: bool := false; start S { ref T: flag; } state T;";
@@ -636,7 +639,7 @@ fn se11_bool_var_in_ref_no_warnings() {
     );
 }
 
-/// Переменная типа `bit` (1 бит) в условии — нет предупреждений.
+/// Переменная типа `bit` (1 бит) в условии - нет предупреждений.
 #[test]
 fn se11_bit_var_in_ref_no_warnings() {
     let src = "var flag: bit := 0; start S { ref T: flag; } state T;";
@@ -649,7 +652,7 @@ fn se11_bit_var_in_ref_no_warnings() {
     );
 }
 
-/// Булев литерал в условии — нет предупреждений.
+/// Булев литерал в условии - нет предупреждений.
 #[test]
 fn se11_bool_literal_in_ref_no_warnings() {
     let src = "start S { ref T: true; } state T;";
@@ -662,7 +665,7 @@ fn se11_bool_literal_in_ref_no_warnings() {
     );
 }
 
-/// Безусловный переход (без условия) — нет предупреждений.
+/// Безусловный переход (без условия) - нет предупреждений.
 #[test]
 fn se11_unconditional_ref_no_warnings() {
     let src = "start S { ref T; } state T;";
@@ -675,7 +678,7 @@ fn se11_unconditional_ref_no_warnings() {
     );
 }
 
-/// Несколько переходов: один числовой, один явный — одно предупреждение.
+/// Несколько переходов: один числовой, один явный - одно предупреждение.
 #[test]
 fn se11_one_numeric_one_explicit_ref() {
     let src = concat!(
@@ -691,7 +694,7 @@ fn se11_one_numeric_one_explicit_ref() {
     assert_eq!(warnings.len(), 1, "должно быть ровно одно предупреждение");
 }
 
-/// Вложенная модель с числовым условием — предупреждение включает имя модели.
+/// Вложенная модель с числовым условием - предупреждение включает имя модели.
 #[test]
 fn se11_nested_model_numeric_ref_warning() {
     let src = concat!(
@@ -711,7 +714,7 @@ fn se11_nested_model_numeric_ref_warning() {
     );
 }
 
-/// Файл `implicit_bool_warn.takt` из тестовых данных — без предупреждений.
+/// Файл `implicit_bool_warn.takt` из тестовых данных - без предупреждений.
 ///
 /// Все переходы в файле используют явные сравнения или булевы переменные.
 #[test]
@@ -728,7 +731,7 @@ fn se11_valid_file_no_warnings() {
     );
 }
 
-/// Файл `implicit_bool_numeric.takt` — одно предупреждение о числовом условии.
+/// Файл `implicit_bool_numeric.takt` - одно предупреждение о числовом условии.
 #[test]
 fn se11_numeric_file_gives_one_warning() {
     let src = std::fs::read_to_string("tests/data/semantic/valid/implicit_bool_numeric.takt")
@@ -747,7 +750,7 @@ fn se11_numeric_file_gives_one_warning() {
     );
 }
 
-/// Условие сравнения `<` — нет предупреждений Се11.
+/// Условие сравнения `<` - нет предупреждений Се11.
 #[test]
 fn se11_less_comparison_no_warnings() {
     let src = "var timer: [bit;8] := 0; start S { ref T: timer < 100; } state T;";
@@ -760,7 +763,7 @@ fn se11_less_comparison_no_warnings() {
     );
 }
 
-/// Условия `>`, `<=`, `>=` — нет предупреждений Се11.
+/// Условия `>`, `<=`, `>=` - нет предупреждений Се11.
 #[test]
 fn se11_other_comparisons_no_warnings() {
     let src = concat!(
@@ -778,7 +781,7 @@ fn se11_other_comparisons_no_warnings() {
     );
 }
 
-/// Логическое НЕ в условии — нет предупреждений Се11.
+/// Логическое не в условии - нет предупреждений Се11.
 #[test]
 fn se11_not_condition_no_warnings() {
     let src = "var flag: bool := false; start S { ref T: !flag; } state T;";
@@ -791,7 +794,7 @@ fn se11_not_condition_no_warnings() {
     );
 }
 
-/// Именованное условие в ref — нет предупреждений Се11.
+/// Именованное условие в ref - нет предупреждений Се11.
 #[test]
 fn se11_named_cond_in_ref_no_warnings() {
     let src = concat!(
@@ -809,7 +812,7 @@ fn se11_named_cond_in_ref_no_warnings() {
     );
 }
 
-/// Арифметическое выражение в условии — предупреждение Се11.
+/// Арифметическое выражение в условии - предупреждение Се11.
 #[test]
 fn se11_arithmetic_in_ref_gives_warning() {
     let src = "var timer: [bit;8] := 0; start S { ref T: timer + 1; } state T;";
@@ -828,7 +831,7 @@ fn se11_arithmetic_in_ref_gives_warning() {
     );
 }
 
-/// Файл с арифметическим условием — одно предупреждение.
+/// Файл с арифметическим условием - одно предупреждение.
 #[test]
 fn se11_arithmetic_file_gives_one_warning() {
     let src = std::fs::read_to_string("tests/data/semantic/valid/implicit_bool_arithmetic.takt")
@@ -843,7 +846,7 @@ fn se11_arithmetic_file_gives_one_warning() {
     );
 }
 
-/// Файл с именованными условиями — нет предупреждений Се11.
+/// Файл с именованными условиями - нет предупреждений Се11.
 #[test]
 fn se11_named_cond_file_no_warnings() {
     let src = std::fs::read_to_string("tests/data/semantic/valid/implicit_bool_named_cond.takt")
@@ -873,9 +876,10 @@ fn se11_warning_contains_source_state_name() {
     );
 }
 
-// ─── Тесты разыменования condition в ref-переходах (этап 6 конвейера) ───────
+// --- Тесты разыменования condition в ref-переходах (этап 6 конвейера) -------
 
-/// Условие ref с bit-переменной разрешается в `Condition::Variable`, не в `Condition::Unresolved`.
+/// Условие ref с bit-переменной разрешается в `Condition::Variable`, не в
+/// `Condition::Unresolved`.
 ///
 /// # Пример (Takt)
 /// ```but

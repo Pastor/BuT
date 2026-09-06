@@ -1,12 +1,12 @@
-//! Тесты разбора аргументов подкоманды `compile` (перенесены из `bin/taktc.rs`
-//! вместе с логикой — правило размера модуля, фича 0043/0134).
+//! Тесты разбора аргументов подкоманды `compile` (перенесены из `bin/taktc.rs` вместе с
+//! логикой - правило размера модуля, /0134).
 
 use super::*;
 
-/// Разделитель `-I` на текущей платформе; тесты параметризуются им (фича 0037).
+/// Разделитель `-I` на текущей платформе; тесты параметризуются им.
 const SEP: &str = if cfg!(windows) { ";" } else { ":" };
 
-// ── split_include_dirs ────────────────────────────────────────────────────
+// -- split_include_dirs ----------------------------------------------------
 
 /// На Unix: разделитель `:` (POSIX-стиль аналогично PATH).
 #[cfg(not(windows))]
@@ -32,7 +32,7 @@ fn split_empty_segments_skipped() {
     assert_eq!(split_include_dirs("/a::/b"), vec!["/a", "/b"]);
 }
 
-/// Пустая строка → пустой вектор.
+/// Пустая строка -> пустой вектор.
 #[test]
 fn split_empty_string() {
     let result: Vec<String> = split_include_dirs("");
@@ -45,7 +45,7 @@ fn split_single_path() {
     assert_eq!(split_include_dirs("/only/one"), vec!["/only/one"]);
 }
 
-// ── parse_compile_args: позитивные случаи ────────────────────────────────
+// -- parse_compile_args: позитивные случаи --------------------------------
 
 /// Минимальный вызов: только входной файл.
 #[test]
@@ -61,7 +61,7 @@ fn parse_minimal() {
     assert_eq!(opts.tick_hz, None);
 }
 
-/// Флаг `-I` с разделителем платформы — два пути.
+/// Флаг `-I` с разделителем платформы - два пути.
 #[test]
 fn parse_include_dirs_separator() {
     let args = vec![
@@ -73,7 +73,7 @@ fn parse_include_dirs_separator() {
     assert_eq!(opts.include_dirs, vec!["/lib/lam", "/usr/lam"]);
 }
 
-/// Флаг `-I` повторяется дважды — пути объединяются, порядок сохранён.
+/// Флаг `-I` повторяется дважды - пути объединяются, порядок сохранён.
 #[test]
 fn parse_multiple_include_flags() {
     let args = vec![
@@ -114,23 +114,23 @@ fn parse_full_args() {
     assert_eq!(opts.include_dirs, vec!["/lib/lam", "/usr/lam"]);
 }
 
-// ── parse_compile_args: контр-примеры (ошибки) ───────────────────────────
+// -- parse_compile_args: контр-примеры (ошибки) ---------------------------
 
-/// Нет входного файла → ошибка.
+/// Нет входного файла -> ошибка.
 #[test]
 fn parse_missing_input_file_is_error() {
     let args: Vec<String> = vec![];
     assert!(parse_compile_args(&args).is_err());
 }
 
-/// Нет аргумента после `--target` → ошибка с именем флага.
+/// Нет аргумента после `--target` -> ошибка с именем флага.
 #[test]
 fn parse_target_missing_value_is_error() {
     let err = parse_compile_args(&["--target".to_string()]).unwrap_err();
     assert!(err.contains("--target"), "сообщение: {err}");
 }
 
-/// Неизвестный флаг → ошибка с его именем.
+/// Неизвестный флаг -> ошибка с его именем.
 #[test]
 fn parse_unknown_flag_is_error() {
     let args = vec!["main.takt".to_string(), "--unknown-flag".to_string()];
@@ -138,9 +138,9 @@ fn parse_unknown_flag_is_error() {
     assert!(err.contains("--unknown-flag"), "сообщение: {err}");
 }
 
-// ── флаги --verbose / --quiet ─────────────────────────────────────────────
+// -- флаги --verbose / --quiet ---------------------------------------------
 
-/// Одновременное указание `--verbose` и `--quiet` → ошибка.
+/// Одновременное указание `--verbose` и `--quiet` -> ошибка.
 #[test]
 fn parse_verbose_and_quiet_is_error() {
     let args = vec![
@@ -170,9 +170,9 @@ fn parse_verbose_with_other_flags() {
     assert_eq!(opts.include_dirs, vec!["/lib"]);
 }
 
-// ── --address-map и --define ──────────────────────────────────────────────
+// -- --address-map и --define ----------------------------------------------
 
-/// Флаг `--address-map` задаёт путь к внешней карте адресов (фича 0020-03).
+/// Флаг `--address-map` задаёт путь к внешней карте адресов.
 #[test]
 fn parse_address_map_flag() {
     let args = vec![
@@ -184,14 +184,14 @@ fn parse_address_map_flag() {
     assert_eq!(opts.address_map.as_deref(), Some("stm32.map"));
 }
 
-/// `--address-map` без аргумента — ошибка.
+/// `--address-map` без аргумента - ошибка.
 #[test]
 fn address_map_requires_argument() {
     let err = parse_compile_args(&["--address-map".to_string()]).unwrap_err();
     assert!(err.contains("--address-map"), "сообщение: {err}");
 }
 
-/// Три формы флага `--define` дают одно и то же (T6, фича 0042).
+/// Три формы флага `--define` дают одно и то же (T6).
 #[test]
 fn define_flag_forms_are_equivalent() {
     let expected = vec!["N=0x1".to_string()];
@@ -209,7 +209,7 @@ fn define_flag_forms_are_equivalent() {
     }
 }
 
-/// Флаг `--define` повторяем — символы копятся.
+/// Флаг `--define` повторяем - символы копятся.
 #[test]
 fn define_flag_is_repeatable() {
     let args = vec![
@@ -232,16 +232,16 @@ fn unknown_flag_is_still_rejected() {
     );
 }
 
-// ── float-width / float-as-q (фичи 0029, 0096) ───────────────────────────
+// -- float-width / float-as-q ---------------------------
 
-/// Без флага — `W64` (double): эталон C совпадает с точностью симулятора.
+/// Без флага - `W64` (double): эталон C совпадает с точностью симулятора.
 #[test]
 fn float_width_defaults_to_64() {
     let opts = parse_compile_args(&["main.takt".to_string()]).unwrap();
     assert_eq!(opts.float_width, crate::FloatWidth::W64);
 }
 
-/// `--float-width=32` → `float`; форма с пробелом наравне со слитной.
+/// `--float-width=32` -> `float`; форма с пробелом наравне со слитной.
 #[test]
 fn parse_float_width_both_forms() {
     let glued =
@@ -256,7 +256,7 @@ fn parse_float_width_both_forms() {
     assert_eq!(sep.float_width, crate::FloatWidth::W32);
 }
 
-/// `--float-width=16` — ошибка разбора, а не молчаливое умолчание (T16).
+/// `--float-width=16` - ошибка разбора, а не молчаливое умолчание (T16).
 #[test]
 fn float_width_rejects_unsupported_value() {
     let err =
@@ -267,7 +267,7 @@ fn float_width_rejects_unsupported_value() {
     );
 }
 
-/// `--float-as-q=10.22` → `(10, 22)`; обе формы флага (T2, фича 0096).
+/// `--float-as-q=10.22` -> `(10, 22)`; обе формы флага (T2).
 #[test]
 fn parse_float_as_q_valid() {
     let slit =
@@ -282,7 +282,7 @@ fn parse_float_as_q_valid() {
     assert_eq!(sep.float_as_q, Some((8, 8)));
 }
 
-/// Контрпримеры границ и формата `--float-as-q` — ошибка CLI (T3).
+/// Контрпримеры границ и формата `--float-as-q` - ошибка CLI (T3).
 #[test]
 fn float_as_q_rejects_out_of_bounds_and_bad_format() {
     for bad in ["40.40", "0.8", "8.0", "abc", "8", "8.x"] {
@@ -292,7 +292,7 @@ fn float_as_q_rejects_out_of_bounds_and_bad_format() {
     }
 }
 
-/// `--float-embedded` — булев флаг.
+/// `--float-embedded` - булев флаг.
 #[test]
 fn parse_float_embedded_flag() {
     let o = parse_compile_args(&[
@@ -304,9 +304,9 @@ fn parse_float_embedded_flag() {
     assert!(o.float_embedded);
 }
 
-// ── --tick-hz (фича 0134) ─────────────────────────────────────────────────
+// -- --tick-hz -------------------------------------------------
 
-/// По умолчанию частота не задана → профиль «часы».
+/// По умолчанию частота не задана -> профиль "часы".
 #[test]
 fn tick_hz_absent_by_default() {
     let o = parse_compile_args(&["m.takt".to_string()]).unwrap();
@@ -327,7 +327,7 @@ fn parse_tick_hz_both_forms() {
     assert_eq!(sep.tick_hz, Some(8_000_000));
 }
 
-/// Контрпримеры: ноль и нечисло — ошибка CLI, а не молчаливое умолчание.
+/// Контрпримеры: ноль и нечисло - ошибка CLI, а не молчаливое умолчание.
 #[test]
 fn tick_hz_rejects_zero_and_non_number() {
     for bad in ["0", "abc", "1kHz", "-5"] {
@@ -337,14 +337,14 @@ fn tick_hz_rejects_zero_and_non_number() {
     }
 }
 
-/// `--tick-hz` без аргумента — ошибка с именем флага.
+/// `--tick-hz` без аргумента - ошибка с именем флага.
 #[test]
 fn tick_hz_requires_argument() {
     let err = parse_compile_args(&["--tick-hz".to_string()]).unwrap_err();
     assert!(err.contains("--tick-hz"), "сообщение: {err}");
 }
 
-/// `--parameters=assign` — явное умолчание (фича 0185).
+/// `--parameters=assign` - явное умолчание.
 #[test]
 fn parse_parameters_assign() {
     let o =
@@ -352,14 +352,14 @@ fn parse_parameters_assign() {
     assert_eq!(o.parameters, ParametersMode::Assign);
 }
 
-/// Без флага — режим `assign` (умолчание совпадает с явной формой байт-в-байт).
+/// Без флага - режим `assign` (умолчание совпадает с явной формой байт-в-байт).
 #[test]
 fn parse_parameters_default_is_assign() {
     let o = parse_compile_args(&["in.takt".to_string()]).unwrap();
     assert_eq!(o.parameters, ParametersMode::Assign);
 }
 
-/// `--parameters=specialize` разбирается (реализация — задача 0185-05).
+/// `--parameters=specialize` разбирается (реализация - ).
 #[test]
 fn parse_parameters_specialize() {
     let o = parse_compile_args(&["in.takt".to_string(), "--parameters=specialize".to_string()])
@@ -367,8 +367,8 @@ fn parse_parameters_specialize() {
     assert_eq!(o.parameters, ParametersMode::Specialize);
 }
 
-/// Неизвестное значение — ошибка с перечислением допустимых, а не молчаливое
-/// умолчание (критерий A11 анализа 0185).
+/// Неизвестное значение - ошибка с перечислением допустимых, а не молчаливое умолчание
+/// (критерий A11 анализа 0185).
 #[test]
 fn parse_parameters_unknown_value_is_an_error() {
     let err =
@@ -379,7 +379,7 @@ fn parse_parameters_unknown_value_is_an_error() {
     );
 }
 
-/// Флаг без значения — ошибка, а не умолчание.
+/// Флаг без значения - ошибка, а не умолчание.
 #[test]
 fn parse_parameters_without_value_is_an_error() {
     let err = parse_compile_args(&["in.takt".to_string(), "--parameters".to_string()]).unwrap_err();

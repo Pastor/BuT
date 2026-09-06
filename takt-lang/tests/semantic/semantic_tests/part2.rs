@@ -1,10 +1,10 @@
-//! Интеграционные тесты семантики, часть 2 (вынос из `semantic_tests.rs`, фича 0088-11).
+//! Интеграционные тесты семантики, часть 2 (вынос из `semantic_tests.rs`).
 //!
-//! Хелперы и импорты — из родителя через `use super::*` (приём 0088-06/08).
+//! Хелперы и импорты - из родителя через `use super::*` (приём /08).
 
 use super::*;
 
-/// `tests/data/semantic/valid/type_aliases.takt` — псевдонимы типов разрешаются.
+/// `tests/data/semantic/valid/type_aliases.takt` - псевдонимы типов разрешаются.
 #[test]
 fn example_type_aliases_is_valid() {
     let node = build_file("tests/data/semantic/valid/type_aliases.takt").unwrap();
@@ -26,7 +26,7 @@ fn example_type_aliases_is_valid() {
     );
 }
 
-/// `tests/data/semantic/valid/conditions.takt` — все условия разрешаются.
+/// `tests/data/semantic/valid/conditions.takt` - все условия разрешаются.
 #[test]
 fn example_conditions_is_valid() {
     let node = build_file("tests/data/semantic/valid/conditions.takt").unwrap();
@@ -52,7 +52,7 @@ fn example_conditions_is_valid() {
     );
 }
 
-/// `tests/data/semantic/valid/composition.takt` — компоновка моделей корректна.
+/// `tests/data/semantic/valid/composition.takt` - компоновка моделей корректна.
 #[test]
 fn example_composition_is_valid() {
     let node = build_file("tests/data/semantic/valid/composition.takt").unwrap();
@@ -84,7 +84,7 @@ fn example_composition_is_valid() {
     );
 }
 
-/// `tests/data/semantic/invalid/missing_var.takt` — должна возникнуть ошибка.
+/// `tests/data/semantic/invalid/missing_var.takt` - должна возникнуть ошибка.
 #[test]
 fn example_missing_var_is_error() {
     let result = build_file("tests/data/semantic/invalid/missing_var.takt");
@@ -94,7 +94,7 @@ fn example_missing_var_is_error() {
     );
 }
 
-/// `tests/data/semantic/invalid/unknown_model.takt` — должна возникнуть ошибка.
+/// `tests/data/semantic/invalid/unknown_model.takt` - должна возникнуть ошибка.
 #[test]
 fn example_unknown_model_is_error() {
     let result = build_file("tests/data/semantic/invalid/unknown_model.takt");
@@ -104,7 +104,7 @@ fn example_unknown_model_is_error() {
     );
 }
 
-/// `tests/data/semantic/invalid/double_next.takt` — должна возникнуть ошибка.
+/// `tests/data/semantic/invalid/double_next.takt` - должна возникнуть ошибка.
 #[test]
 fn example_double_next_is_error() {
     let result = build_file("tests/data/semantic/invalid/double_next.takt");
@@ -114,7 +114,7 @@ fn example_double_next_is_error() {
     );
 }
 
-/// `tests/data/semantic/invalid/dangling_ref.takt` — должна возникнуть ошибка.
+/// `tests/data/semantic/invalid/dangling_ref.takt` - должна возникнуть ошибка.
 #[test]
 fn example_dangling_ref_is_error() {
     let result = build_file("tests/data/semantic/invalid/dangling_ref.takt");
@@ -124,7 +124,7 @@ fn example_dangling_ref_is_error() {
     );
 }
 
-// ─── Тесты импорта std.takt ────────────────────────────────────────────────────
+// --- Тесты импорта std.takt ----------------------------------------------------
 
 /// `import "std.takt"` из стандартной библиотеки подключается без ошибок.
 #[test]
@@ -137,14 +137,14 @@ fn std_but_import_works() {
         "импорт std.takt должен завершаться без ошибок"
     );
     let root = root.unwrap();
-    // Нормализованное имя файла std.takt → Std
+    // Нормализованное имя файла std.takt -> Std
     assert!(
         root.borrow().search_model("Std").is_some(),
         "модель Std должна быть зарегистрирована после импорта std.takt"
     );
 }
 
-// ─── Тесты выборочного импорта (ImportDefine::Rename) ────────────────────────
+// --- Тесты выборочного импорта (ImportDefine::Rename) ------------------------
 
 /// Вспомогательная функция: строит модель из inline-кода с путём поиска shared.takt.
 fn build_with_includes(
@@ -154,7 +154,8 @@ fn build_with_includes(
     construct_model(&ast, None, &["tests/data/include".to_string()]).map(|m| m.take())
 }
 
-/// `import { SharedModel } from "shared.takt"` — модель доступна под оригинальным именем.
+/// `import { SharedModel } from "shared.takt"` - модель доступна под оригинальным
+/// именем.
 #[test]
 fn rename_import_model_no_alias() {
     let node = build_with_includes(
@@ -167,7 +168,8 @@ fn rename_import_model_no_alias() {
     );
 }
 
-/// `import { SharedModel as M } from "shared.takt"` — модель доступна под псевдонимом M.
+/// `import { SharedModel as M } from "shared.takt"` - модель доступна под псевдонимом
+/// M.
 #[test]
 fn rename_import_model_with_alias() {
     let node =
@@ -183,7 +185,7 @@ fn rename_import_model_with_alias() {
     );
 }
 
-/// `import { SharedType } from "shared.takt"` — тип-псевдоним импортируется в контекст.
+/// `import { SharedType } from "shared.takt"` - тип-псевдоним импортируется в контекст.
 #[test]
 fn rename_import_type() {
     let node = build_with_includes(
@@ -200,7 +202,7 @@ fn rename_import_type() {
     );
 }
 
-/// `import { SharedType as ST }` — тип импортируется под псевдонимом.
+/// `import { SharedType as ST }` - тип импортируется под псевдонимом.
 #[test]
 fn rename_import_type_with_alias() {
     let node = build_with_includes(
@@ -217,7 +219,7 @@ fn rename_import_type_with_alias() {
     );
 }
 
-/// `import { shared_var }` — переменная импортируется в контекст.
+/// `import { shared_var }` - переменная импортируется в контекст.
 #[test]
 fn rename_import_variable() {
     let node =
@@ -228,7 +230,7 @@ fn rename_import_variable() {
     );
 }
 
-/// `import { shared_var as sv }` — переменная импортируется под псевдонимом.
+/// `import { shared_var as sv }` - переменная импортируется под псевдонимом.
 #[test]
 fn rename_import_variable_with_alias() {
     let node =
@@ -243,7 +245,7 @@ fn rename_import_variable_with_alias() {
     );
 }
 
-/// `import { SharedCond }` — условие импортируется в контекст.
+/// `import { SharedCond }` - условие импортируется в контекст.
 #[test]
 fn rename_import_condition() {
     let node = build_with_includes(
@@ -267,7 +269,7 @@ fn rename_import_multiple_symbols() {
     assert!(node.search_var("sv").is_some(), "sv должна быть видна");
 }
 
-/// Импорт несуществующего символа — ошибка.
+/// Импорт несуществующего символа - ошибка.
 #[test]
 fn rename_import_missing_symbol_is_error() {
     let result = build_with_includes(r#"import { NonExistent } from "shared.takt"; start S;"#);
@@ -283,7 +285,7 @@ fn rename_import_missing_symbol_is_error() {
     );
 }
 
-/// Дублирующееся имя при импорте с псевдонимом — ошибка.
+/// Дублирующееся имя при импорте с псевдонимом - ошибка.
 #[test]
 fn rename_import_duplicate_alias_is_error() {
     // Объявляем модель M локально, затем пробуем импортировать SharedModel as M
@@ -293,7 +295,7 @@ fn rename_import_duplicate_alias_is_error() {
     assert!(result.is_err(), "дублирующееся имя M должно давать ошибку");
 }
 
-/// `example_rename_import.takt` — файл-пример строится без ошибок.
+/// `example_rename_import.takt` - файл-пример строится без ошибок.
 #[test]
 fn example_rename_import_is_valid() {
     let src = std::fs::read_to_string("tests/data/semantic/valid/rename_import.takt")
@@ -302,7 +304,7 @@ fn example_rename_import_is_valid() {
     let node = construct_model(&ast, None, &["tests/data/include".to_string()])
         .map(|m| m.take())
         .unwrap();
-    // ST — псевдоним SharedType, M — псевдоним SharedModel
+    // ST - псевдоним SharedType, M - псевдоним SharedModel
     assert!(
         node.types.contains_key("ST"),
         "тип ST должен быть импортирован"
@@ -313,23 +315,23 @@ fn example_rename_import_is_valid() {
     );
 }
 
-// ─── Тесты проверки типа и границ массива ─────────────────────────────────────
+// --- Тесты проверки типа и границ массива -------------------------------------
 
-/// ArraySubscript на переменной с корректным индексом — строится без ошибок.
+/// ArraySubscript на переменной с корректным индексом - строится без ошибок.
 #[test]
 fn array_subscript_valid_index() {
     let node = build("var buf: [bit;8] := 0; var x: bit := buf[0];");
     assert!(node.search_var("x").is_some());
 }
 
-/// ArraySubscript: последний допустимый индекс (size-1) — ок.
+/// ArraySubscript: последний допустимый индекс (size-1) - ок.
 #[test]
 fn array_subscript_last_valid_index() {
     let node = build("var buf: [bit;8] := 0; var x: bit := buf[7];");
     assert!(node.search_var("x").is_some());
 }
 
-/// ArraySubscript: индекс равный размеру массива — ошибка (out of bounds).
+/// ArraySubscript: индекс равный размеру массива - ошибка (out of bounds).
 #[test]
 fn array_subscript_out_of_bounds_is_error() {
     let (ast, _) = parse("var buf: [bit;8] := 0; var x: bit := buf[8]; start S;", 0).unwrap();
@@ -340,7 +342,7 @@ fn array_subscript_out_of_bounds_is_error() {
     );
 }
 
-/// ArraySubscript: отрицательный индекс — ошибка.
+/// ArraySubscript: отрицательный индекс - ошибка.
 #[test]
 fn array_subscript_negative_index_is_error() {
     // Отрицательные индексы не поддерживаются
@@ -349,7 +351,7 @@ fn array_subscript_negative_index_is_error() {
     assert!(result.is_err(), "отрицательный индекс должен давать ошибку");
 }
 
-/// ArraySubscript на переменной с типом Bit — ошибка (не массив).
+/// ArraySubscript на переменной с типом Bit - ошибка (не массив).
 #[test]
 fn array_subscript_on_bit_is_error() {
     let (ast, _) = parse("var flag: bit := false; var x: bit := flag[0]; start S;", 0).unwrap();
@@ -366,7 +368,8 @@ fn array_subscript_on_bit_is_error() {
     );
 }
 
-/// `example_array_access.takt` — файл с корректными операциями над массивом строится без ошибок.
+/// `example_array_access.takt` - файл с корректными операциями над массивом строится
+/// без ошибок.
 #[test]
 fn example_array_access_is_valid() {
     let result = build_file("tests/data/semantic/valid/array_access.takt").unwrap();
@@ -374,7 +377,7 @@ fn example_array_access_is_valid() {
     assert!(result.search_var("bit7").is_some());
 }
 
-/// `example_array_out_of_bounds.takt` — должна возникнуть ошибка.
+/// `example_array_out_of_bounds.takt` - должна возникнуть ошибка.
 #[test]
 fn example_array_out_of_bounds_is_error() {
     let result = build_file("tests/data/semantic/invalid/array_out_of_bounds.takt");
@@ -384,7 +387,7 @@ fn example_array_out_of_bounds_is_error() {
     );
 }
 
-/// `example_non_array_subscript.takt` — должна возникнуть ошибка.
+/// `example_non_array_subscript.takt` - должна возникнуть ошибка.
 #[test]
 fn example_non_array_subscript_is_error() {
     let result = build_file("tests/data/semantic/invalid/non_array_subscript.takt");
@@ -394,14 +397,14 @@ fn example_non_array_subscript_is_error() {
     );
 }
 
-/// ArraySubscript с индексом-переменной — строится без ошибок.
+/// ArraySubscript с индексом-переменной - строится без ошибок.
 #[test]
 fn array_subscript_variable_index() {
     let node = build("var buf: [bit;8] := 0; var i: bit := 0; var x: bit := buf[i];");
     assert!(node.search_var("x").is_some());
 }
 
-/// ArraySubscript с индексом-переменной в условии cond — строится без ошибок.
+/// ArraySubscript с индексом-переменной в условии cond - строится без ошибок.
 #[test]
 fn array_subscript_variable_index_in_cond() {
     let node = build("var buf: [bit;8] := 0; var i: bit := 0; cond C = buf[i];");
@@ -415,14 +418,14 @@ fn inout_port_is_valid() {
     assert!(node.search_var("sensor").is_some());
 }
 
-/// `while cond { body }` — синоним loop, строится без ошибок.
+/// `while cond { body }` - синоним loop, строится без ошибок.
 #[test]
 fn while_loop_is_valid() {
     let node = build("var x: bit := 0; start S { always { while x { x := 0; } } }");
     assert!(node.search_var("x").is_some());
 }
 
-/// `example_rename_import_missing.takt` — должна возникнуть ошибка.
+/// `example_rename_import_missing.takt` - должна возникнуть ошибка.
 #[test]
 fn example_rename_import_missing_is_error() {
     let src = std::fs::read_to_string("tests/data/semantic/invalid/rename_import_missing.takt")
@@ -437,10 +440,10 @@ fn example_rename_import_missing_is_error() {
 
 /// После импорта `std.takt` объявленные ею типы доступны внутри импортированной модели.
 ///
-/// ⚠️ Прежде проверялись `u8` и `u16`: библиотека объявляла их псевдонимами
-/// `[bit; N]` — наследие эпохи до встроенных целых. С фичи 0243 занять имя
-/// встроенного типа нельзя (`SE-107`), объявления сняты, и осталось `u128` —
-/// встроенным он не является, поэтому объявлять его законно.
+/// Прежде проверялись `u8` и `u16`: библиотека объявляла их псевдонимами `[bit; N]` -
+/// наследие эпохи до встроенных целых. С занять имя встроенного типа нельзя (`SE-107`),
+/// объявления сняты, и осталось `u128` - встроенным он не является, поэтому объявлять
+/// его законно.
 #[test]
 fn std_takt_contains_declared_types() {
     let src = r#"import "std.takt";"#;
@@ -457,9 +460,9 @@ fn std_takt_contains_declared_types() {
     );
 }
 
-// ─── Тесты resolve_statement и named blocks ──────────────────────────────────
+// --- Тесты resolve_statement и named blocks ----------------------------------
 
-/// Model-level `always` block с известной переменной → блок разрешается.
+/// Model-level `always` block с известной переменной -> блок разрешается.
 #[test]
 fn model_always_block_with_known_var_resolves() {
     let node = build("var led: bit := false; always { led := led; } start S;");
@@ -472,7 +475,7 @@ fn model_always_block_with_known_var_resolves() {
     );
 }
 
-/// State-level `enter` block → присутствует в state.named_blocks.
+/// State-level `enter` block -> присутствует в state.named_blocks.
 #[test]
 fn state_enter_block_is_populated() {
     let node = build("var x: bit := false; start S { enter { x := x; } }");
@@ -483,7 +486,7 @@ fn state_enter_block_is_populated() {
     );
 }
 
-/// State-level `enter` с известной переменной → разрешается (не Unresolved).
+/// State-level `enter` с известной переменной -> разрешается (не Unresolved).
 #[test]
 fn state_enter_block_resolves() {
     let node = build("var x: bit := false; start S { enter { x := x; } }");
@@ -497,7 +500,7 @@ fn state_enter_block_resolves() {
     );
 }
 
-/// State-level `enter` + `exit` → оба присутствуют в named_blocks состояния.
+/// State-level `enter` + `exit` -> оба присутствуют в named_blocks состояния.
 #[test]
 fn state_enter_exit_blocks_both_present() {
     let node = build("var x: bit := false; start S { enter { x := x; } exit { x := x; } }");
@@ -516,7 +519,7 @@ fn state_named_block_if_resolves() {
     let state = node.states.get("S").unwrap();
     let always = state.get_named_block("always").expect("always не найден");
     let stmt = always.statement().expect("оператор должен быть");
-    // Блок разрешён — не остаётся как Unresolved на верхнем уровне
+    // Блок разрешён - не остаётся как Unresolved на верхнем уровне
     assert!(
         !matches!(stmt, StatementNode::Unresolved(_)),
         "always должен быть разрешён: {:?}",
@@ -558,8 +561,8 @@ fn return_statement_in_named_block_resolves() {
     );
 }
 
-/// `always { debug(\"msg\"); }` с вызовом необъявленной встроенной функции —
-/// строится без ошибок, блок разрешается (через заглушку FunctionNode).
+/// `always { debug(\"msg\"); }` с вызовом необъявленной встроенной функции - строится
+/// без ошибок, блок разрешается (через заглушку FunctionNode).
 #[test]
 fn named_block_with_builtin_func_call_does_not_error() {
     let node = build(r#"always { debug("msg"); } start S;"#);
@@ -573,11 +576,11 @@ fn named_block_with_builtin_func_call_does_not_error() {
     );
 }
 
-/// `syntax_simple` регрессионный тест: сложный SRC со всеми конструкциями
-/// строится без паники (todo!() устранён).
+/// `syntax_simple` регрессионный тест: сложный SRC со всеми конструкциями строится без
+/// паники (todo!() устранён).
 #[test]
 fn syntax_simple_does_not_panic() {
-    // Копия SRC из lib.rs — проверяем что construct_model успешен
+    // Копия SRC из lib.rs - проверяем что construct_model успешен
     let src = r#"
 const MATRIX: u8 := { 0, 0, 0, 0, 0, 0, 0, 0 };
 const NUMB: u8 := 0xFF;
@@ -656,7 +659,8 @@ fn example_nested_model_blocks_is_valid() {
     );
 }
 
-/// named_block_undeclared_var.takt (порт без адреса) → теперь корректен, адрес опционален.
+/// named_block_undeclared_var.takt (порт без адреса) -> теперь корректен, адрес
+/// опционален.
 #[test]
 fn example_named_block_port_without_address_is_valid() {
     let result = build_file("tests/data/semantic/invalid/named_block_undeclared_var.takt");
@@ -726,9 +730,10 @@ fn example_multiple_named_blocks_is_valid() {
     );
 }
 
-// ─── Тесты корректности значений типа bit ──────────────────────────────────────
+// --- Тесты корректности значений типа bit --------------------------------------
 
-/// `tests/data/semantic/valid/bit_values.takt` — допустимые значения bit строятся без ошибок.
+/// `tests/data/semantic/valid/bit_values.takt` - допустимые значения bit строятся без
+/// ошибок.
 ///
 /// Проверяет: 0, 1, true, false, ссылка на переменную, константы, массив [bit;N].
 #[test]
@@ -752,9 +757,10 @@ fn example_bit_values_valid_is_valid() {
     );
 }
 
-/// `tests/data/semantic/invalid/bit_out_of_range.takt` — недопустимое bit-значение → ошибка.
+/// `tests/data/semantic/invalid/bit_out_of_range.takt` - недопустимое bit-значение ->
+/// ошибка.
 ///
-/// Тип `bit` принимает только 0, 1, true, false. Значение 2 — ошибка.
+/// Тип `bit` принимает только 0, 1, true, false. Значение 2 - ошибка.
 #[test]
 fn example_bit_out_of_range_is_error() {
     let result = build_file("tests/data/semantic/invalid/bit_out_of_range.takt");
@@ -770,9 +776,9 @@ fn example_bit_out_of_range_is_error() {
     );
 }
 
-/// `tests/data/semantic/valid/type_inference_numbers.takt` — вывод целочисленных типов.
+/// `tests/data/semantic/valid/type_inference_numbers.takt` - вывод целочисленных типов.
 ///
-/// 0..=255 → `[bit;8]`, 256..=65535 → `[bit;16]`, 65536..= → `[bit;32]`.
+/// 0..=255 -> `[bit;8]`, 256..=65535 -> `[bit;16]`, 65536..= -> `[bit;32]`.
 #[test]
 fn example_type_inference_numbers_is_valid() {
     let node = build_file("tests/data/semantic/valid/type_inference_numbers.takt").unwrap();
@@ -816,11 +822,10 @@ fn example_type_inference_numbers_is_valid() {
     }
 }
 
-/// `tests/data/semantic/valid/type_inference_bool.takt` — вывод типа bool из литерала.
+/// `tests/data/semantic/valid/type_inference_bool.takt` - вывод типа bool из литерала.
 ///
-/// `true`/`false` без аннотации → `TypeNode::Bool`.
-/// Явная аннотация `: bool` → `TypeNode::Bool`.
-/// Явная аннотация `: bit` → `TypeNode::Bit`.
+/// `true`/`false` без аннотации -> `TypeNode::Bool`. Явная аннотация `: bool` ->
+/// `TypeNode::Bool`. Явная аннотация `: bit` -> `TypeNode::Bit`.
 #[test]
 fn example_type_inference_bool_is_valid() {
     let node = build_file("tests/data/semantic/valid/type_inference_bool.takt").unwrap();
@@ -841,9 +846,9 @@ fn example_type_inference_bool_is_valid() {
     }
 }
 
-// ─── Тесты новых файлов-примеров ─────────────────────────────────────────────
+// --- Тесты новых файлов-примеров ---------------------------------------------
 
-/// `tests/data/semantic/valid/functions.takt` — локальные и внешние функции.
+/// `tests/data/semantic/valid/functions.takt` - локальные и внешние функции.
 #[test]
 fn example_functions_is_valid() {
     let node = build_file("tests/data/semantic/valid/functions.takt").unwrap();
@@ -860,7 +865,7 @@ fn example_functions_is_valid() {
     );
 }
 
-/// `tests/data/semantic/valid/bool_type.takt` — переменные типа bool.
+/// `tests/data/semantic/valid/bool_type.takt` - переменные типа bool.
 #[test]
 fn example_bool_type_is_valid() {
     let node = build_file("tests/data/semantic/valid/bool_type.takt").unwrap();
@@ -876,7 +881,7 @@ fn example_bool_type_is_valid() {
     }
 }
 
-/// `tests/data/semantic/valid/integer_types.takt` — числовые псевдонимы типов.
+/// `tests/data/semantic/valid/integer_types.takt` - числовые псевдонимы типов.
 #[test]
 fn example_integer_types_is_valid() {
     let node = build_file("tests/data/semantic/valid/integer_types.takt").unwrap();
@@ -916,7 +921,7 @@ fn example_integer_types_is_valid() {
     }
 }
 
-/// `tests/data/semantic/valid/state_machine_full.takt` — полный автомат светофора.
+/// `tests/data/semantic/valid/state_machine_full.takt` - полный автомат светофора.
 #[test]
 fn example_state_machine_full_is_valid() {
     let node = build_file("tests/data/semantic/valid/state_machine_full.takt").unwrap();
@@ -929,7 +934,8 @@ fn example_state_machine_full_is_valid() {
     assert!(tl.states.contains_key("Yellow"), "состояние Yellow");
 }
 
-/// `tests/data/semantic/invalid/duplicate_model.takt` — дублирующееся имя модели → ошибка.
+/// `tests/data/semantic/invalid/duplicate_model.takt` - дублирующееся имя модели ->
+/// ошибка.
 #[test]
 fn example_duplicate_model_is_error() {
     let result = build_file("tests/data/semantic/invalid/duplicate_model.takt");

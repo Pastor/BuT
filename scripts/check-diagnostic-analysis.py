@@ -23,7 +23,7 @@ ROOT = os.environ.get("DA_ROOT", os.path.dirname(os.path.dirname(os.path.abspath
 REGISTRY = os.path.join(ROOT, "docs", "diagnostics", "README.md")
 APPENDIX = os.path.join(ROOT, "book", "src", "appendix-errors", "index.typ")
 
-# Слова, по которым сообщение опознаётся как «ссылающееся на устройство»,
+# Слова, по которым сообщение опознаётся как "ссылающееся на устройство",
 # и имена чужих инструментов. Список короткий намеренно: широкий признак
 # потребовал бы разбора почти для всего и был бы снят при первом неудобстве.
 MARKERS = (
@@ -52,7 +52,7 @@ def main() -> int:
     registry = read(REGISTRY)
     appendix = read(APPENDIX)
 
-    # Коды с разбором — включая составные заголовки (`SV-018` / `ST-020`).
+    # Коды с разбором - включая составные заголовки (`SV-018` / `ST-020`).
     analysed = set()
     for line in appendix.splitlines():
         if line.startswith("=== "):

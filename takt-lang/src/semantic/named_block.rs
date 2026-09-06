@@ -1,10 +1,11 @@
 //! Разрешение именованных блоков кода языка Takt.
 //!
-//! Функция [`resolve_named_blocks`] преобразует список [`NamedCodeBlockDefinitionNode`],
-//! вызывая [`resolve_statement`] для каждого блока с его [`StatementNode`].
+//! Функция [`resolve_named_blocks`] преобразует список
+//! [`NamedCodeBlockDefinitionNode`], вызывая [`resolve_statement`] для каждого блока с
+//! его [`StatementNode`].
 //!
-//! Вариант [`NamedCodeBlockDefinitionNode::Unresolved`] (имя + сырой АСД-оператор) разрешается
-//! в конкретный вариант: `Enter`, `Exit`, `Always` или `Unknown`.
+//! Вариант [`NamedCodeBlockDefinitionNode::Unresolved`] (имя + сырой АСД-оператор)
+//! разрешается в конкретный вариант: `Enter`, `Exit`, `Always` или `Unknown`.
 
 use crate::diagnostics::Diagnostic;
 use crate::semantic::statement::resolve_statement;
@@ -13,9 +14,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 /// Разрешает список именованных блоков кода, превращая каждый
-/// [`NamedCodeBlockDefinitionNode::Unresolved`] в конкретный вариант
-/// (`Enter`, `Exit`, `Always` или `Unknown`), и повторно разрешает тело
-/// уже-разрешённых блоков с помощью [`resolve_statement`].
+/// [`NamedCodeBlockDefinitionNode::Unresolved`] в конкретный вариант (`Enter`, `Exit`,
+/// `Always` или `Unknown`), и повторно разрешает тело уже-разрешённых блоков с помощью
+/// [`resolve_statement`].
 ///
 /// # Ошибки
 ///
@@ -29,8 +30,8 @@ pub fn resolve_named_blocks(
     for nb in named_blocks {
         let block = match nb {
             NamedCodeBlockDefinitionNode::None => {
-                // Внутренний инвариант: неразрешённый блок сюда не доходит —
-                // его форму проверяет разбор именованных блоков (`SE-045`).
+                // Внутренний инвариант: неразрешённый блок сюда не доходит - его форму
+                // проверяет разбор именованных блоков (`SE-045`).
                 return Err(crate::semantic::internal::internal(
                     "именованный блок без тела",
                 ));
@@ -100,7 +101,7 @@ pub fn resolve_named_blocks(
     Ok(blocks)
 }
 
-// ── Тесты ─────────────────────────────────────────────────────────────────────
+// -- Тесты ---------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
@@ -112,9 +113,9 @@ mod tests {
         Rc::new(RefCell::new(ModelNode::default()))
     }
 
-    // ── NamedCodeBlock::None → ошибка ─────────────────────────────────────────
+    // -- NamedCodeBlock::None -> ошибка -----------------------------------------
 
-    /// `NamedCodeBlock::None` в списке — ошибка (блок не определён).
+    /// `NamedCodeBlock::None` в списке - ошибка (блок не определён).
     ///
     /// # Контрпример
     /// Блок без оператора недопустим и должен производить диагностику.
@@ -124,11 +125,11 @@ mod tests {
         assert!(result.is_err(), "NamedCodeBlock::None должен давать ошибку");
     }
 
-    // ── NamedCodeBlock::Unresolved → разрешение ───────────────────────────────
+    // -- NamedCodeBlock::Unresolved -> разрешение -------------------------------
 
-    /// Безвредный оператор-заглушка: `continue` здесь не годится — вне цикла
-    /// он отвергается `SE-132` (фича 0530), а предмет этих тестов — разбор имён
-    /// блоков, а не место прерывания.
+    /// Безвредный оператор-заглушка: `continue` здесь не годится - вне цикла он
+    /// отвергается `SE-132`, а предмет этих тестов - разбор имён блоков, а не место
+    /// прерывания.
     fn noop_stmt() -> ast::Statement {
         ast::Statement::Block {
             loc: Location::default(),
@@ -137,7 +138,7 @@ mod tests {
         }
     }
 
-    /// `Unresolved("enter", ...)` → `NamedCodeBlock::Enter`.
+    /// `Unresolved("enter", ...)` -> `NamedCodeBlock::Enter`.
     ///
     /// # Пример
     /// ```text
@@ -154,7 +155,7 @@ mod tests {
         );
     }
 
-    /// `Unresolved("exit", ...)` → `NamedCodeBlock::Exit`.
+    /// `Unresolved("exit", ...)` -> `NamedCodeBlock::Exit`.
     #[test]
     fn unresolved_exit_resolves_to_exit() {
         let nb = NamedCodeBlockDefinitionNode::Unresolved("exit".into(), noop_stmt());
@@ -165,7 +166,7 @@ mod tests {
         ));
     }
 
-    /// `Unresolved("always", ...)` → `NamedCodeBlock::Always`.
+    /// `Unresolved("always", ...)` -> `NamedCodeBlock::Always`.
     #[test]
     fn unresolved_always_resolves_to_always() {
         let nb = NamedCodeBlockDefinitionNode::Unresolved("always".into(), noop_stmt());
@@ -176,7 +177,7 @@ mod tests {
         ));
     }
 
-    /// `Unresolved("custom", ...)` → `NamedCodeBlock::Unknown { name: "custom", .. }`.
+    /// `Unresolved("custom", ...)` -> `NamedCodeBlock::Unknown { name: "custom", .. }`.
     ///
     /// Пользовательские именованные блоки сохраняются как `Unknown`.
     #[test]
@@ -190,7 +191,7 @@ mod tests {
         );
     }
 
-    // ── Уже разрешённые блоки ─────────────────────────────────────────────────
+    // -- Уже разрешённые блоки -------------------------------------------------
 
     /// Уже разрешённый `Enter { body: Unresolved(..) }` ещё раз разрешается.
     #[test]

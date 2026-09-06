@@ -1,6 +1,6 @@
 //! Печать вызова функции и её аргументов.
 //!
-//! Часть модуля `c_expr` (фича 0027: деление по логике).
+//! Часть модуля `c_expr`.
 
 use super::*;
 
@@ -24,10 +24,10 @@ fn generate_args(
 
 /// Генерирует C-вызов функции.
 ///
-/// - `Local` → `{ModelCamelCase}_{name}(main, args...)`
-/// - `External` → `{name}(args...)`
-/// - `Builtin("min"|"max"|"abs"|"clamp")` → раскрывается как тернарное выражение
-/// - `Builtin("debug"|"S")` → возвращает ошибку (не транслируется в C)
+/// - `Local` -> `{ModelCamelCase}_{name}(main, args...)`
+/// - `External` -> `{name}(args...)`
+/// - `Builtin("min"|"max"|"abs"|"clamp")` -> раскрывается как тернарное выражение
+/// - `Builtin("debug"|"S")` -> возвращает ошибку (не транслируется в C)
 pub(super) fn generate_function_call(
     printer: &mut Printer,
     map: &CMap,
@@ -44,8 +44,8 @@ pub(super) fn generate_function_call(
                     .as_ref()
                     .and_then(|w| w.upgrade())
                     .ok_or_else(|| -> Diagnostic {
-                        // Воронка `CC-023` (0212); место пропущено при закрытии
-                        // той фичи — найдено замером 0276.
+                        // Воронка `CC-023`; место пропущено при закрытии той фичи -
+                        // найдено замером 0276.
                         crate::generator::c::c_unresolved::refuse(
                             crate::diagnostics::Location::Codegen,
                             crate::generator::c::c_unresolved::UnresolvedNode::Function(Some(
@@ -56,16 +56,16 @@ pub(super) fn generate_function_call(
             let model_name = Name::from(std::rc::Rc::clone(&owner_rc));
             let func_name = format!("{}_{}", model_name.unique_camelcase(), name);
             let arg_strs = generate_args(map, owner, &params, args, has_model)?;
-            // В корневой модели (или вне контекста tick/init) первый аргумент — `model`,
-            // в подмоделях — `main` (указатель на корневую модель)
+            // В корневой модели (или вне контекста tick/init) первый аргумент -
+            // `model`, в подмоделях - `main` (указатель на корневую модель)
             let first_arg = if !has_model || owner.name().eq(&map.root_name()) {
                 "model"
             } else {
                 "main"
             };
-            // Указатель передаётся ПО НУЖДЕ (фича 0396) — тем же признаком, по
-            // которому он попал (или не попал) в сигнатуру: разъехавшись, они
-            // дали бы невалидный C, и это громкий отказ `cc`, а не молчание.
+            // Указатель передаётся по нужде - тем же признаком, по которому он попал
+            // (или не попал) в сигнатуру: разъехавшись, они дали бы невалидный C, и это
+            // громкий отказ `cc`, а не молчание.
             let wants_state =
                 crate::generator::c::c_needs::needs_state(fun_def, &owner_rc.borrow())?;
             let mut all_args = if wants_state {
@@ -118,15 +118,14 @@ pub(super) fn generate_function_call(
                     ));
                 }
             }
-            // ⚠️ Отказ здесь — часть штатного пути: печатник операторов
-            // (`c_expr::stmt`) ловит его и пропускает вызов молча, потому что
-            // `debug`/`S` кода не порождают (решение фичи 0189). Код и текст
-            // всё равно обязаны быть настоящими: в позиции выражения
-            // (`v := debug(x);`) отказ доходит до автора.
+            // Отказ здесь - часть штатного пути: печатник операторов (`c_expr::stmt`)
+            // ловит его и пропускает вызов молча, потому что `debug`/`S` кода не
+            // порождают (решение ). Код и текст всё равно обязаны быть настоящими: в
+            // позиции выражения (`v := debug(x);`) отказ доходит до автора.
             "debug" | "S" => {
                 return Err(crate::generator::c::c_unsupported::refuse(
                     crate::generator::c::c_unsupported::UnsupportedNode::Builtin(builtin_name),
-                    // Координата — у оператора (фича 0277): своей у вызова нет.
+                    // Координата - у оператора: своей у вызова нет.
                     crate::generator::site::at(crate::diagnostics::Location::Codegen),
                 ));
             }

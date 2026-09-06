@@ -19,7 +19,7 @@ use takt_lang::semantic::tree::{
 };
 use takt_lang::semantic::type_node::TypeNode;
 use takt_lang::semantic::{StateNode, VariableNode};
-// ─── Вспомогательная функция ──────────────────────────────────────────────────
+// --- Вспомогательная функция --------------------------------------------------
 
 /// Разбирает Takt-программу и возвращает корневой [`ModelNode`].
 fn build(src: &str) -> takt_lang::semantic::ModelNode {
@@ -35,7 +35,7 @@ fn build_err(src: &str) -> takt_lang::diagnostics::Diagnostic {
     construct_model(&ast, None, &[]).expect_err("ожидалась ошибка")
 }
 
-// ─── Тесты search_model ───────────────────────────────────────────────────────
+// --- Тесты search_model -------------------------------------------------------
 
 /// `search_model` находит вложенную модель по имени.
 #[test]
@@ -69,14 +69,14 @@ fn search_model_walks_upper_chain() {
     .unwrap();
     let root = construct_model(&ast, None, &[]).unwrap();
     let outer = root.borrow().search_model("Outer").unwrap();
-    // Inner вложена в Outer — можно найти из Outer
+    // Inner вложена в Outer - можно найти из Outer
     assert!(
         outer.borrow().search_model("Inner").is_some(),
         "Inner должна быть найдена изнутри Outer"
     );
 }
 
-// ─── Тесты search_var ────────────────────────────────────────────────────────
+// --- Тесты search_var --------------------------------------------------------
 
 /// `search_var` находит переменную на верхнем уровне.
 #[test]
@@ -123,7 +123,7 @@ fn search_var_finds_port() {
     );
 }
 
-// ─── Тесты construct_type ────────────────────────────────────────────────────
+// --- Тесты construct_type ----------------------------------------------------
 
 /// `bit` разрешается в `TypeNode::Bit`.
 #[test]
@@ -153,8 +153,8 @@ fn type_array_resolves_correctly() {
 
 /// Псевдоним типа `Byte = [bit;8]` раскрывается в `TypeNode::Array`.
 ///
-/// ⚠️ Прежде псевдоним звался `u8` и **затенял** встроенный тип; с фичи 0243
-/// это `SE-107`, поэтому проверка идёт на законном имени.
+/// Прежде псевдоним звался `u8` и **затенял** встроенный тип; с это `SE-107`, поэтому
+/// проверка идёт на законном имени.
 #[test]
 fn type_alias_resolves_through_map() {
     let node = build("type Byte = [bit;8]; var x: Byte := 0;");
@@ -225,7 +225,7 @@ fn type_alias_float_resolves_to_rational() {
     }
 }
 
-/// Несуществующий псевдоним типа — ошибка.
+/// Несуществующий псевдоним типа - ошибка.
 #[test]
 fn unknown_type_alias_is_error() {
     let (ast, _) = parse("var x: UnknownType := 0;", 0).unwrap();
@@ -236,7 +236,7 @@ fn unknown_type_alias_is_error() {
     );
 }
 
-// ─── Тесты construct_implement ───────────────────────────────────────────────
+// --- Тесты construct_implement -----------------------------------------------
 
 /// Простая реализация (`= M`) разрешается в `Implement::Model`.
 #[test]
@@ -255,9 +255,8 @@ fn implement_single_model_resolves() {
 /// Реализация с `+` (последовательная компоновка) остаётся **плоской**:
 /// `Extend::Concatenation` со списком элементов.
 ///
-/// Упаковки в синтетическую модель со ступенями `Step0…StepN` нет: путь
-/// отвергнут решением ADR 0057 (безусловный `next` между ступенями давал бы
-/// неверный тайминг), разбор — ADR 0278.
+/// Упаковки в синтетическую модель со ступенями `Step0...StepN` нет: путь отвергнут
+/// решением (безусловный `next` между ступенями давал бы неверный тайминг), разбор -.
 #[test]
 fn implement_add_composition_resolves() {
     let node = build("start Entry = M1 + M2; model M1 { start S; } model M2 { start T; }");
@@ -286,7 +285,7 @@ fn implement_or_composition_resolves() {
     }
 }
 
-/// Неизвестная модель в `implements` — ошибка.
+/// Неизвестная модель в `implements` - ошибка.
 #[test]
 fn implement_unknown_model_is_error() {
     let (ast, _) = parse("start A = Ghost { }", 0).unwrap();
@@ -303,16 +302,16 @@ fn implement_unknown_model_is_error() {
     );
 }
 
-// ─── Тесты дублирования имён ─────────────────────────────────────────────────
+// --- Тесты дублирования имён -------------------------------------------------
 
-/// Два состояния с одинаковым именем: второе (`state S`) перезаписывает
-/// первое (`start S`) в HashMap, после чего модель остаётся без start-состояния.
-/// Это корректно обнаруживается валидатором как ошибка.
+/// Два состояния с одинаковым именем: второе (`state S`) перезаписывает первое (`start
+/// S`) в HashMap, после чего модель остаётся без start-состояния. Это корректно
+/// обнаруживается валидатором как ошибка.
 ///
 /// # Контрпример (Takt)
 /// ```but
 /// start S;   // добавляется как Start
-/// state S;   // перезаписывает — Start исчезает → ошибка валидации
+/// state S;   // перезаписывает - Start исчезает -> ошибка валидации
 /// ```
 #[test]
 fn duplicate_state_names_overwrite_causes_validation_error() {
@@ -324,7 +323,7 @@ fn duplicate_state_names_overwrite_causes_validation_error() {
     );
 }
 
-/// Два вложенных `model` с одинаковым именем — ошибка (реализация TODO).
+/// Два вложенных `model` с одинаковым именем - ошибка (реализация TODO).
 #[test]
 fn duplicate_nested_model_name_is_error() {
     let (ast, _) = parse(
@@ -345,9 +344,9 @@ fn duplicate_nested_model_name_is_error() {
     );
 }
 
-// ─── Тесты ошибок портов ──────────────────────────────────────────────────────
+// --- Тесты ошибок портов ------------------------------------------------------
 
-/// Порт без явного типа — ошибка.
+/// Порт без явного типа - ошибка.
 #[test]
 fn port_without_type_is_error() {
     let (ast, _) = parse("in P := 0x00100000;", 0).unwrap();
@@ -355,12 +354,11 @@ fn port_without_type_is_error() {
     assert!(result.is_err(), "Порт без типа должен давать ошибку");
 }
 
-/// Инициализатор **выходного** порта — начальное значение, и построение его
-/// принимает (фича 0187: адрес задаётся только `at`).
+/// Инициализатор **выходного** порта - начальное значение, и построение его принимает.
 ///
-/// ⚠️ Прежде тест назывался «порт с инициализатором не-адресом» и стоял на
+/// Прежде тест назывался "порт с инициализатором не-адресом" и стоял на
 /// **входном** порте: до 0187 инициализатор означал адрес, и не-адрес просто
-/// игнорировался. Теперь у входа начального значения быть не может (`SE-092`) —
+/// игнорировался. Теперь у входа начального значения быть не может (`SE-092`) -
 /// проба переехала на выход, где значение законно.
 #[test]
 fn output_port_initial_value_is_accepted() {
@@ -373,7 +371,7 @@ fn output_port_initial_value_is_accepted() {
     );
 }
 
-/// Начальное значение **входного** порта отвергается (`SE-092`, фича 0187).
+/// Начальное значение **входного** порта отвергается (`SE-092`).
 #[test]
 fn input_port_initial_value_is_rejected() {
     let (ast, _) = parse("in P: u8 := 1; start S;", 0).unwrap();
@@ -386,8 +384,8 @@ fn input_port_initial_value_is_rejected() {
     );
 }
 
-/// Фича 0020-02: оператор `address Имя = <адрес>;` привязывается к порту и
-/// сохраняется в `address_defs` модели.
+/// оператор `address Имя = <адрес>;` привязывается к порту и сохраняется в
+/// `address_defs` модели.
 #[test]
 fn address_operator_is_captured_in_address_defs() {
     let model = build_from_src("in BTN: u8; address BTN = 0x00200000; start Idle;")
@@ -403,7 +401,7 @@ fn address_operator_is_captured_in_address_defs() {
     );
 }
 
-/// Фича 0020-02: адрес отдельным оператором (без inline) — модель валидна.
+/// адрес отдельным оператором (без inline) - модель валидна.
 #[test]
 fn example_port_address_separate_is_valid() {
     let model = build_file("tests/data/semantic/valid/port_address_separate.takt")
@@ -415,7 +413,7 @@ fn example_port_address_separate_is_valid() {
     );
 }
 
-/// Фича 0020-02 (R4/SE-049): адрес задан и inline, и оператором `address`.
+/// (R4/SE-049): адрес задан и inline, и оператором `address`.
 #[test]
 fn port_address_conflict_inline_and_operator_is_error() {
     let err = build_file_err("tests/data/semantic/invalid/port_address_conflict.takt");
@@ -427,7 +425,7 @@ fn port_address_conflict_inline_and_operator_is_error() {
     );
 }
 
-/// Фича 0020-02 (R4/SE-049): несколько операторов `address` для одного порта.
+/// (R4/SE-049): несколько операторов `address` для одного порта.
 #[test]
 fn port_address_duplicate_operator_is_error() {
     let err = build_from_src(
@@ -442,7 +440,7 @@ fn port_address_duplicate_operator_is_error() {
     );
 }
 
-/// Фича 0020-02 (R5/SE-048): `address` для несуществующего порта.
+/// (R5/SE-048): `address` для несуществующего порта.
 #[test]
 fn port_address_dangling_reference_is_error() {
     let err = build_file_err("tests/data/semantic/invalid/port_address_dangling.takt");
@@ -454,10 +452,10 @@ fn port_address_dangling_reference_is_error() {
     );
 }
 
-// ─── Фича 0061: fixed-point q(m, n) — смешение (T6) и приведение (T7) ─────────
+// ---: fixed-point q(m, n) - смешение (T6) и приведение (T7) ---------
 
-/// T6 (правило 6 ADR 0061): неявное смешение `q(8, 8)` с `u8` в арифметике →
-/// ошибка SE-059, а не молчаливая потеря точности.
+/// T6: неявное смешение `q(8, 8)` с `u8` в арифметике -> ошибка SE-059, а не молчаливая
+/// потеря точности.
 #[test]
 fn fixed_mixing_with_integer_is_se059() {
     let err = build_file_err("tests/data/semantic/invalid/fixed_mixing.takt");
@@ -469,7 +467,7 @@ fn fixed_mixing_with_integer_is_se059() {
     );
 }
 
-/// T6: два разных формата `q` — тоже смешение (SE-059).
+/// T6: два разных формата `q` - тоже смешение (SE-059).
 #[test]
 fn fixed_mixing_different_formats_is_se059() {
     let err = build_from_src(
@@ -485,7 +483,7 @@ fn fixed_mixing_different_formats_is_se059() {
     );
 }
 
-/// T6: `q + q` одного формата — допустимо (тот же тип, не смешение).
+/// T6: `q + q` одного формата - допустимо (тот же тип, не смешение).
 #[test]
 fn fixed_same_format_addition_is_valid() {
     let node = build_from_src(
@@ -499,7 +497,7 @@ fn fixed_same_format_addition_is_valid() {
     );
 }
 
-/// T7 (правило 6 ADR): явное приведение `u8 as q(8, 8)` снимает смешение.
+/// T7: явное приведение `u8 as q(8, 8)` снимает смешение.
 #[test]
 fn fixed_cast_resolves_mixing() {
     let node = build_file("tests/data/semantic/valid/fixed_cast.takt");
@@ -510,7 +508,7 @@ fn fixed_cast_resolves_mixing() {
     );
 }
 
-// ─── Тесты корневой модели ───────────────────────────────────────────────────
+// --- Тесты корневой модели ---------------------------------------------------
 
 /// Корневая модель без объявлений пуста и не имеет имени.
 #[test]
@@ -542,9 +540,9 @@ fn multiple_global_variables_all_registered() {
     assert!(node.search_var("c").is_some());
 }
 
-// ─── Контр-примеры ───────────────────────────────────────────────────────────
+// --- Контр-примеры -----------------------------------------------------------
 
-/// `ref` к несуществующему состоянию в модели — ошибка.
+/// `ref` к несуществующему состоянию в модели - ошибка.
 #[test]
 fn ref_to_nonexistent_state_in_model_is_error() {
     let (ast, _) = parse("model M { start A { ref Z; } }", 0).unwrap();
@@ -555,7 +553,7 @@ fn ref_to_nonexistent_state_in_model_is_error() {
     );
 }
 
-/// Два оператора `next` в одном Implement-состоянии — ошибка.
+/// Два оператора `next` в одном Implement-состоянии - ошибка.
 #[test]
 fn two_next_in_same_state_is_error() {
     let (ast, _) = parse(
@@ -584,10 +582,10 @@ fn type_definition_not_in_variables() {
     );
 }
 
-// ─── Интеграционные тесты импорта ────────────────────────────────────────────
+// --- Интеграционные тесты импорта --------------------------------------------
 
-/// Вспомогательная функция: создаёт временную директорию с .takt-файлом.
-/// Возвращает (TempDir, путь_к_файлу) — TempDir нужно держать живым до конца теста.
+/// Вспомогательная функция: создаёт временную директорию с.takt-файлом. Возвращает
+/// (TempDir, путь_к_файлу) - TempDir нужно держать живым до конца теста.
 fn write_tmp_lam(name: &str, content: &str) -> (tempfile::TempDir, String) {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path().join(name);
@@ -596,8 +594,8 @@ fn write_tmp_lam(name: &str, content: &str) -> (tempfile::TempDir, String) {
     (dir, dir_str)
 }
 
-/// `import "file.takt"` — успешный импорт простой модели из файла.
-/// Импортированная модель доступна по нормализованному имени.
+/// `import "file.takt"` - успешный импорт простой модели из файла. Импортированная
+/// модель доступна по нормализованному имени.
 #[test]
 fn plain_import_registers_model() {
     let (_dir, dir_str) = write_tmp_lam("ping.takt", "model Ping { start S; }");
@@ -612,8 +610,8 @@ fn plain_import_registers_model() {
     );
 }
 
-/// Имя модели из импортированного файла нормализуется в CamelCase:
-/// `my_model.takt` → `MyModel`.
+/// Имя модели из импортированного файла нормализуется в CamelCase: `my_model.takt` ->
+/// `MyModel`.
 #[test]
 fn plain_import_normalizes_filename_to_camel_case() {
     let (_dir, dir_str) = write_tmp_lam("my_model.takt", "start S;");
@@ -632,7 +630,7 @@ fn plain_import_normalizes_filename_to_camel_case() {
     );
 }
 
-/// `import "file.takt" as Alias` — модель доступна под заданным именем.
+/// `import "file.takt" as Alias` - модель доступна под заданным именем.
 #[test]
 fn global_symbol_import_registers_under_alias() {
     let (_dir, dir_str) = write_tmp_lam("engine.takt", "start S;");
@@ -647,7 +645,7 @@ fn global_symbol_import_registers_under_alias() {
     );
 }
 
-/// Дублирующийся `import` одного и того же имени → ошибка.
+/// Дублирующийся `import` одного и того же имени -> ошибка.
 #[test]
 fn duplicate_import_plain_is_error() {
     let dir = tempfile::tempdir().unwrap();
@@ -667,7 +665,7 @@ fn duplicate_import_plain_is_error() {
     );
 }
 
-/// Файл импорта не найден → ошибка с понятным сообщением.
+/// Файл импорта не найден -> ошибка с понятным сообщением.
 #[test]
 fn import_missing_file_is_error() {
     let src = r#"import "ghost.takt";"#;
@@ -685,7 +683,7 @@ fn import_missing_file_is_error() {
     );
 }
 
-/// Файл импорта содержит синтаксическую ошибку → ошибка при построении семантики.
+/// Файл импорта содержит синтаксическую ошибку -> ошибка при построении семантики.
 #[test]
 fn import_file_with_parse_error_is_error() {
     let (_dir, dir_str) = write_tmp_lam("broken.takt", "model {"); // синтаксическая ошибка
@@ -702,10 +700,8 @@ fn import_file_with_parse_error_is_error() {
 /// Импортированная модель видна при разрешении `implements` в основном файле.
 #[test]
 fn imported_model_usable_in_implements() {
-    // ⚠️ Корень подключаемого файла обязан иметь состояние: `import` вносит
-    // модель по имени ФАЙЛА, и обёртка без состояний в реализации — `SE-106`
-    // (фича 0211). Прежде проба состояла из одной вложенной модели и до целей
-    // не доезжала вовсе.
+    // Корень подключаемого файла обязан иметь состояние: `import` вносит модель по
+    // имени файла, и обёртка без состояний в реализации - `SE-106`.
     let (_dir, dir_str) = write_tmp_lam(
         "worker.takt",
         "model Worker { start S; }\nstart Root = Worker;",
@@ -719,11 +715,11 @@ fn imported_model_usable_in_implements() {
     let (ast, _) = parse(src, 0).expect("ошибка разбора");
     let root = construct_model(&ast, None, &[dir_str]).expect("ошибка построения семантики");
 
-    // Entry реализует Worker — должно быть найдено без ошибок
+    // Entry реализует Worker - должно быть найдено без ошибок
     assert!(root.borrow().states.contains_key("Entry"));
 }
 
-/// `import "file.takt" as Name` с несуществующим файлом → ошибка.
+/// `import "file.takt" as Name` с несуществующим файлом -> ошибка.
 #[test]
 fn global_symbol_import_missing_file_is_error() {
     let src = r#"import "ghost.takt" as Ghost;"#;
@@ -735,8 +731,8 @@ fn global_symbol_import_missing_file_is_error() {
     );
 }
 
-/// Имя из импорта через `as` не совпадает с нормализованным именем файла.
-/// Проверяем, что старое имя (по имени файла) НЕ регистрируется.
+/// Имя из импорта через `as` не совпадает с нормализованным именем файла. Проверяем,
+/// что старое имя (по имени файла) не регистрируется.
 #[test]
 fn global_symbol_import_only_alias_registered() {
     let (_dir, dir_str) = write_tmp_lam("engine.takt", "start S;");
@@ -753,7 +749,7 @@ fn global_symbol_import_only_alias_registered() {
     );
 }
 
-// ─── Тесты search_func и search_cond ─────────────────────────────────────────
+// --- Тесты search_func и search_cond -----------------------------------------
 
 /// `search_cond` находит именованное условие по имени.
 #[test]
@@ -785,7 +781,7 @@ fn search_func_returns_none_when_no_functions() {
     );
 }
 
-// ─── Тесты construct_implement (исправление переполнения стека) ───────────────
+// --- Тесты construct_implement (исправление переполнения стека) ---------------
 
 /// Implement-состояние без `next` успешно строится без переполнения стека.
 ///
@@ -811,9 +807,9 @@ fn implement_without_next_no_stack_overflow() {
 
 /// Скобочная компоновка `(M1 + M2)` разрешается корректно.
 ///
-/// Проверяет ветку `ast::Expression::Parenthesis` в `construct_implement_ast`:
-/// `(M1 + M2)` раскрывается до плоской `Concatenation([M1, M2])` — скобки
-/// прозрачны, синтетической модели не возникает (ADR 0278).
+/// Проверяет ветку `ast::Expression::Parenthesis` в `construct_implement_ast`: `(M1 +
+/// M2)` раскрывается до плоской `Concatenation([M1, M2])` - скобки прозрачны,
+/// синтетической модели не возникает.
 #[test]
 fn implement_parenthesized_add_resolves() {
     let node = build("start E = (M1 + M2) { } model M1 { start S; } model M2 { start T; }");
@@ -828,7 +824,7 @@ fn implement_parenthesized_add_resolves() {
     }
 }
 
-// ─── Тесты поиска переменных в цепочке upper ─────────────────────────────────
+// --- Тесты поиска переменных в цепочке upper ---------------------------------
 
 /// Переменная из родительской области видимости видна во вложенной модели.
 #[test]
@@ -854,7 +850,7 @@ fn parent_does_not_see_nested_variable() {
     );
 }
 
-// ─── Тесты типов: вложенные массивы и массивы массивов ───────────────────────
+// --- Тесты типов: вложенные массивы и массивы массивов -----------------------
 
 /// Тип `[[bit;4];2]` разрешается в `Array(2, Array(4, Bit))`.
 #[test]
@@ -887,7 +883,7 @@ fn type_alias_inside_array_resolves() {
     }
 }
 
-// ─── Тесты сообщений об ошибках ───────────────────────────────────────────────
+// --- Тесты сообщений об ошибках -----------------------------------------------
 
 /// Сообщение об ошибке для неизвестной модели содержит её имя.
 #[test]
@@ -924,9 +920,9 @@ fn error_message_contains_missing_ref_name() {
     );
 }
 
-// ─── Тесты файлов-примеров из tests/data/semantic/ ────────────────────────────
+// --- Тесты файлов-примеров из tests/data/semantic/ ----------------------------
 
-/// Вспомогательная функция: читает .takt-файл и строит семантическое дерево.
+/// Вспомогательная функция: читает.takt-файл и строит семантическое дерево.
 fn build_file(
     path: &str,
 ) -> Result<takt_lang::semantic::ModelNode, takt_lang::diagnostics::Diagnostic> {
@@ -952,7 +948,7 @@ fn build_file_err(path: &str) -> takt_lang::diagnostics::Diagnostic {
     construct_model(&ast, None, &[]).expect_err("ожидалась ошибка семантического анализа")
 }
 
-/// `tests/data/semantic/valid/simple_fsm.takt` — строится без ошибок.
+/// `tests/data/semantic/valid/simple_fsm.takt` - строится без ошибок.
 #[test]
 fn example_simple_fsm_is_valid() {
     let node = build_file("tests/data/semantic/valid/simple_fsm.takt").unwrap();

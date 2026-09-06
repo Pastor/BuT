@@ -1,15 +1,11 @@
-//! Фича 0070: инициализатор порта — это **адрес**, а не значение.
+//! инициализатор порта - это **адрес**, а не значение.
 //!
-//! `in BTN: bit at 0x00100000;` — адрес (ADR 0020), а не начальное значение
-//! бита. Прежде проверка значения бита (`SE-035`, `check_bit_variable_value`)
-//! ошибочно применялась к портам и отвергала голый адрес на `bit`-порту, хотя
-//! `u8`-порт его принимал (асимметрия). Задача 0070-01 вывела `VariableNode::Port`
-//! из-под проверки — она остаётся только для `var`/`const` (там инициализатор —
-//! действительно значение).
+//! `in BTN: bit at 0x00100000;` - адрес, а не начальное значение бита. вывела
+//! `VariableNode::Port` из-под проверки - она остаётся только для `var`/`const` (там
+//! инициализатор - действительно значение).
 //!
-//! Примеры/контрпримеры (правило 16). Тесты живут отдельным файлом, а не в
-//! `semantic_tests.rs`: тот заморожен реестром размера модулей (фича 0027) и
-//! расти не имеет права.
+//! Примеры/контрпримеры. Тесты живут отдельным файлом, а не в `semantic_tests.rs`: тот
+//! заморожен реестром размера модулей и расти не имеет права.
 
 use takt_lang::semantic::tree::construct_model;
 use takt_lang::{diagnostics::Diagnostic, parse, semantic::ModelNode};
@@ -28,7 +24,7 @@ fn build_err(src: &str) -> Diagnostic {
     construct_model(&ast, None, &[]).expect_err("ожидалась ошибка")
 }
 
-/// R1/A1: голый адрес на `bit`-порту НЕ даёт `SE-035`.
+/// R1/A1: голый адрес на `bit`-порту не даёт `SE-035`.
 #[test]
 fn port_bit_bare_address_no_se035() {
     let node = build("in P: bit at 0x00100000; start Idle;");
@@ -45,8 +41,8 @@ fn port_bit_zero_one_valid() {
     assert!(build("in Q: bit; start Idle;").search_var("Q").is_some());
 }
 
-/// R6/A1: `bit`-порт и `u8`-порт с голым адресом принимаются одинаково
-/// (устранена асимметрия u8/bit).
+/// R6/A1: `bit`-порт и `u8`-порт с голым адресом принимаются одинаково (устранена
+/// асимметрия u8/bit).
 #[test]
 fn port_bit_and_u8_bare_address_symmetric() {
     assert!(
@@ -63,7 +59,7 @@ fn port_bit_and_u8_bare_address_symmetric() {
     );
 }
 
-/// R2/A2: контрпример — не-порт `var: bit := N` (N∉{0,1}) СОХРАНЯЕТ `SE-035`.
+/// R2/A2: контрпример - не-порт `var: bit := N` (N∉{0,1}) сохраняет `SE-035`.
 #[test]
 fn non_port_bit_bad_value_still_se035() {
     let err = build_err("var flag: bit := 5; start Idle;");
@@ -75,7 +71,7 @@ fn non_port_bit_bad_value_still_se035() {
     );
 }
 
-/// R2/A2: контрпример — `const: bit := N` (N∉{0,1}) тоже СОХРАНЯЕТ `SE-035`.
+/// R2/A2: контрпример - `const: bit := N` (N∉{0,1}) тоже сохраняет `SE-035`.
 #[test]
 fn const_bit_bad_value_still_se035() {
     let err = build_err("const C: bit := 5; start Idle;");

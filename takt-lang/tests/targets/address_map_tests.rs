@@ -1,8 +1,8 @@
-//! Интеграционные тесты внешней карты адресов (фича 0020-03).
+//! Интеграционные тесты внешней карты адресов.
 //!
 //! Проверяют наложение внешней `.ld`-подобной карты на семантическую модель:
-//! предупреждения об оверлее (SE-050) и висячих записях (SE-051). Разбор самого
-//! формата покрыт юнит-тестами модуля `takt_lang::address_map`.
+//! предупреждения об оверлее (SE-050) и висячих записях (SE-051). Разбор самого формата
+//! покрыт юнит-тестами модуля `takt_lang::address_map`.
 
 use takt_lang::semantic::tree::construct_model;
 use takt_lang::{
@@ -15,9 +15,9 @@ fn model_of(src: &str) -> std::rc::Rc<std::cell::RefCell<takt_lang::semantic::Mo
     construct_model(&ast, None, &[]).expect("ошибка построения модели")
 }
 
-/// Ищет разрешённый адрес порта по **голому** имени (фича 0084: ключ карты
-/// квалифицирован моделью, поэтому `map.get(имя)` больше не работает — адрес
-/// адресуется через `ResolvedAddress::name`).
+/// Ищет разрешённый адрес порта по **голому** имени (: ключ карты квалифицирован
+/// моделью, поэтому `map.get(имя)` больше не работает - адрес адресуется через
+/// `ResolvedAddress::name`).
 fn find_addr<'a>(
     r: &'a takt_lang::AddressResolution,
     name: &str,
@@ -25,7 +25,7 @@ fn find_addr<'a>(
     r.map.values().find(|a| a.name == name)
 }
 
-/// Коды всех предупреждений оверлея для пары (модель, карта).
+/// Коды всех предупреждений наложения для пары (модель, карта).
 fn overlay_codes(model_src: &str, map_src: &str) -> Vec<String> {
     let model = model_of(model_src);
     let entries = parse_address_map(map_src, 0).expect("карта должна разобраться");
@@ -35,14 +35,14 @@ fn overlay_codes(model_src: &str, map_src: &str) -> Vec<String> {
         .collect()
 }
 
-/// Карта переопределяет адрес, заданный inline (`:=`) → SE-050.
+/// Карта переопределяет адрес, заданный inline (`:=`) -> SE-050.
 #[test]
 fn overrides_inline_address_warns_se050() {
     let codes = overlay_codes("in BTN: u8 at 0x00100000; start Idle;", "BTN = 0x00200000;");
     assert_eq!(codes, vec!["SE-050"]);
 }
 
-/// Карта переопределяет адрес, заданный оператором `address` → SE-050.
+/// Карта переопределяет адрес, заданный оператором `address` -> SE-050.
 #[test]
 fn overrides_operator_address_warns_se050() {
     let codes = overlay_codes(
@@ -52,7 +52,7 @@ fn overrides_operator_address_warns_se050() {
     assert_eq!(codes, vec!["SE-050"]);
 }
 
-/// Порт без адреса в модели: карта — единственный источник → без предупреждений.
+/// Порт без адреса в модели: карта - единственный источник -> без предупреждений.
 #[test]
 fn fills_port_without_model_address_is_silent() {
     let codes = overlay_codes("in BTN: u8; start Idle;", "BTN = 0x00200000;");
@@ -63,14 +63,14 @@ fn fills_port_without_model_address_is_silent() {
     );
 }
 
-/// Запись карты для несуществующего порта → SE-051.
+/// Запись карты для несуществующего порта -> SE-051.
 #[test]
 fn dangling_map_entry_warns_se051() {
     let codes = overlay_codes("in BTN: u8; start Idle;", "GHOST = 0x00200000;");
     assert_eq!(codes, vec!["SE-051"]);
 }
 
-/// Смешанный случай: оверлей + висячая запись — оба предупреждения.
+/// Смешанный случай: наложение + висячая запись - оба предупреждения.
 #[test]
 fn mixed_overlay_and_dangling() {
     let mut codes = overlay_codes(
@@ -81,9 +81,9 @@ fn mixed_overlay_and_dangling() {
     assert_eq!(codes, vec!["SE-050", "SE-051"]);
 }
 
-// ───────────────────────── Резолвер AddressMap (0020-05) ─────────────────────
+// ------------------------- Резолвер AddressMap ---------------------
 
-/// Только inline-адрес → источник Inline, значение понижено.
+/// Только inline-адрес -> источник Inline, значение понижено.
 #[test]
 fn resolve_inline_only() {
     let model = model_of("in BTN: u8 at 0x00200000; start Idle;");
@@ -95,7 +95,7 @@ fn resolve_inline_only() {
     assert!(r.diagnostics.is_empty());
 }
 
-/// Только оператор `address` → источник Operator; форма `:bit` понижается.
+/// Только оператор `address` -> источник Operator; форма `:bit` понижается.
 #[test]
 fn resolve_operator_with_bit() {
     let model = model_of("out LED: bit; address LED = 0x00200004:3; start Idle;");
@@ -106,7 +106,7 @@ fn resolve_operator_with_bit() {
     assert_eq!(a.source, AddressSource::Operator);
 }
 
-/// Внешняя карта перекрывает inline → источник External + предупреждение SE-050.
+/// Внешняя карта перекрывает inline -> источник External + предупреждение SE-050.
 #[test]
 fn resolve_external_overrides_inline() {
     let model = model_of("in BTN: u8 at 0x00100000; start Idle;");
@@ -124,7 +124,7 @@ fn resolve_external_overrides_inline() {
     );
 }
 
-/// Используемый порт без адреса → ошибка полноты SE-052.
+/// Используемый порт без адреса -> ошибка полноты SE-052.
 #[test]
 fn resolve_used_port_without_address_is_se052() {
     let model = model_of("in BTN: bit; start S { ref T: BTN; } state T;");
@@ -139,7 +139,7 @@ fn resolve_used_port_without_address_is_se052() {
     );
 }
 
-/// Внешняя карта закрывает used-порт без адреса модели → нет SE-052.
+/// Внешняя карта закрывает used-порт без адреса модели -> нет SE-052.
 #[test]
 fn resolve_external_fills_used_port() {
     let model = model_of("in BTN: bit; start S { ref T: BTN; } state T;");
@@ -156,7 +156,7 @@ fn resolve_external_fills_used_port() {
     );
 }
 
-/// Висячая запись карты → SE-051.
+/// Висячая запись карты -> SE-051.
 #[test]
 fn resolve_dangling_external_is_se051() {
     let model = model_of("in BTN: u8 at 0x1; start Idle;");
@@ -171,17 +171,17 @@ fn resolve_dangling_external_is_se051() {
     );
 }
 
-// ───────────── Вычисление выражений адреса и define'ы (фича 0042) ────────────
+// ------------- Вычисление выражений адреса и define'ы ------------
 //
-// До 0042 выражение адреса понижала `lower_addr_expr`, принимавшая ТОЛЬКО
-// литералы, а ветка `_ => None` молча означала «адреса нет». Поэтому
-// `address BTN = BTN_ADDR;` и `address BTN = 0x100000 + 4;` теряли адрес, а
-// пользователь получал `SE-052` «порт не имеет адреса» — диагностику о
-// следствии вместо причины. Тесты ниже фиксируют закрытие этого тихого пропуска.
+// До 0042 выражение адреса понижала `lower_addr_expr`, принимавшая только литералы, а
+// ветка `_ => None` молча означала "адреса нет". Поэтому `address BTN = BTN_ADDR;` и
+// `address BTN = 0x100000 + 4;` теряли адрес, а пользователь получал `SE-052` "порт не
+// имеет адреса" - диагностику о следствии вместо причины. Тесты ниже исправлениеируют закрытие
+// этого тихого пропуска.
 //
-// Значения (адреса) сняты ЗОНДОМ с реального вывода, а не угаданы (`CLAUDE.md`).
+// Значения (адреса) сняты зондом с реального вывода, а не угаданы (`CLAUDE.md`).
 
-/// Среда символов из пар `имя=значение` — как их даёт `--define`.
+/// Среда символов из пар `имя=значение` - как их даёт `--define`.
 fn env_of(args: &[&str]) -> takt_lang::AddressEnv {
     let owned: Vec<String> = args.iter().map(|s| s.to_string()).collect();
     takt_lang::parse_defines(&owned).expect("аргументы define должны разбираться")
@@ -194,9 +194,7 @@ fn codes_of(r: &takt_lang::AddressResolution) -> Vec<&str> {
         .collect()
 }
 
-/// T3: символ из `const` модели — **без** `--define`.
-///
-/// Раньше падало с `SE-052` (проба B анализа): символ молча терялся.
+/// T3: символ из `const` модели - **без** `--define`.
 #[test]
 fn eval_symbol_from_model_const() {
     let model = model_of(
@@ -208,7 +206,7 @@ fn eval_symbol_from_model_const() {
     assert_eq!(a.source, AddressSource::Operator);
 }
 
-/// T2: свёртка арифметики. Раньше — `SE-052` (проба D анализа).
+/// T2: свёртка арифметики.
 #[test]
 fn eval_folds_arithmetic() {
     let model = model_of("out LED: bit; address LED = 0x00200000 + 4; start Idle;");
@@ -225,7 +223,7 @@ fn eval_symbol_from_define() {
     assert_eq!(find_addr(&r, "LED").expect("адрес").addr, 0x0020_0000);
 }
 
-/// T2: `-D BASE=…` + арифметика в модели — платформа даёт базу, модель раскладку.
+/// T2: `-D BASE=...` + арифметика в модели - платформа даёт базу, модель раскладку.
 #[test]
 fn eval_define_plus_arithmetic() {
     let model = model_of("out LED: bit; address LED = BASE + 4; start Idle;");
@@ -234,7 +232,7 @@ fn eval_define_plus_arithmetic() {
     assert_eq!(find_addr(&r, "LED").expect("адрес").addr, 0x0020_0004);
 }
 
-/// T5: форма `адрес:бит` в значении define — та же грамматика, что у карты.
+/// T5: форма `адрес:бит` в значении define - та же грамматика, что у карты.
 #[test]
 fn eval_define_carries_bit() {
     let model = model_of("out LED: bit; address LED = PIN; start Idle;");
@@ -244,7 +242,7 @@ fn eval_define_carries_bit() {
     assert_eq!((a.addr, a.bit), (0x0020_0000, Some(3)));
 }
 
-/// T8: define перекрывает одноимённую `const` → адрес define'а + `SE-053`.
+/// T8: define перекрывает одноимённую `const` -> адрес define'а + `SE-053`.
 ///
 /// Симметрия с `SE-050`: платформенный слой главнее модели, но заметен.
 #[test]
@@ -266,10 +264,10 @@ fn eval_define_overrides_const_with_warning() {
     );
 }
 
-/// T10: висячий символ → `SE-054` **с именем**, а не `SE-052` «нет адреса».
+/// T10: висячий символ -> `SE-054` **с именем**, а не `SE-052` "нет адреса".
 ///
-/// `SE-052` рядом быть не должно: причина названа, вторая диагностика о
-/// следствии только запутает — ровно от неё фича и уходит.
+/// `SE-052` рядом быть не должно: причина названа, вторая диагностика о следствии
+/// только запутает - ровно от неё фича и уходит.
 #[test]
 fn eval_dangling_symbol_names_the_cause() {
     let model =
@@ -292,7 +290,7 @@ fn eval_dangling_symbol_names_the_cause() {
     );
 }
 
-/// T11: неконстантное выражение (ссылка на `var`) → `SE-055`, не молчание.
+/// T11: неконстантное выражение (ссылка на `var`) -> `SE-055`, не молчание.
 #[test]
 fn eval_non_constant_expression_is_reported() {
     let model = model_of("var x: u32 := 5; out LED: bit; address LED = x; start Idle;");
@@ -300,7 +298,7 @@ fn eval_non_constant_expression_is_reported() {
     assert!(codes_of(&r).contains(&"SE-055"), "{:?}", codes_of(&r));
 }
 
-/// T12: цикл `const A := B; const B := A;` → `SE-055`, а не зависание.
+/// T12: цикл `const A := B; const B := A;` -> `SE-055`, а не зависание.
 #[test]
 fn eval_const_cycle_terminates_with_diagnostic() {
     let model = model_of(
@@ -310,7 +308,7 @@ fn eval_const_cycle_terminates_with_diagnostic() {
     assert!(codes_of(&r).contains(&"SE-055"), "{:?}", codes_of(&r));
 }
 
-/// T14: **инвариант 0020 не тронут** — карта бьёт `address` с define'ом.
+/// T14: ** не тронут** - карта бьёт `address` с define'ом.
 ///
 /// Define не источник адреса (решение A2) и приоритет слоя не повышает.
 #[test]
@@ -330,8 +328,8 @@ fn define_does_not_raise_layer_priority() {
 
 /// T16: define сам по себе адреса **не создаёт**.
 ///
-/// Он снабжает значением выражение, а выражения нет → `SE-052` (как в 0020)
-/// плюс `DF-004` (символ никем не спрошен).
+/// Он снабжает значением выражение, а выражения нет -> `SE-052` (как в 0020) плюс
+/// `DF-004` (символ никем не спрошен).
 #[test]
 fn define_alone_is_not_an_address_source() {
     let model = model_of("in BTN: bit; start Idle { ref Done: BTN; } state Done;");
@@ -346,7 +344,7 @@ fn define_alone_is_not_an_address_source() {
     assert!(codes.contains(&"DF-004"), "{codes:?}");
 }
 
-/// T13: неиспользованный define → `DF-004` (ловит опечатку в имени).
+/// T13: неиспользованный define -> `DF-004` (ловит опечатку в имени).
 #[test]
 fn unused_define_is_reported() {
     let model = model_of("out LED: bit; address LED = 0x00200000; start Idle;");
@@ -355,7 +353,7 @@ fn unused_define_is_reported() {
     assert!(codes_of(&r).contains(&"DF-004"), "{:?}", codes_of(&r));
 }
 
-/// Использованный define о себе не сообщает — `DF-004` не шумит.
+/// Использованный define о себе не сообщает - `DF-004` не шумит.
 #[test]
 fn used_define_is_silent() {
     let model = model_of("out LED: bit; address LED = PIN; start Idle;");
@@ -364,9 +362,9 @@ fn used_define_is_silent() {
     assert!(!codes_of(&r).contains(&"DF-004"), "{:?}", codes_of(&r));
 }
 
-// ───────────────────────── Разбор аргумента --define ─────────────────────────
+// ------------------------- Разбор аргумента --define -------------------------
 
-/// T13: `DF-001` — нет `=` либо негодное имя.
+/// T13: `DF-001` - нет `=` либо негодное имя.
 #[test]
 fn parse_defines_rejects_bad_format() {
     for bad in ["BTN_ADDR", "=0x1", "1BAD=0x1", "a-b=0x1"] {
@@ -377,17 +375,17 @@ fn parse_defines_rejects_bad_format() {
     }
 }
 
-/// T13: `DF-002` — негодный литерал значения.
+/// T13: `DF-002` - негодный литерал значения.
 #[test]
 fn parse_defines_rejects_bad_value() {
     let diags = takt_lang::parse_defines(&["N=0xZZ".to_string()]).expect_err("отказ");
     assert_eq!(diags[0].code.as_deref(), Some("DF-002"));
 }
 
-/// T13: `DF-003` — повтор имени.
+/// T13: `DF-003` - повтор имени.
 ///
-/// Ошибка, а не «побеждает последний»: молчаливое затирание сделало бы адрес
-/// зависящим от порядка флагов (симметрия с `AM-006`).
+/// Ошибка, а не "побеждает последний": молчаливое затирание сделало бы адрес зависящим
+/// от порядка флагов (симметрия с `AM-006`).
 #[test]
 fn parse_defines_rejects_duplicate() {
     let diags =
@@ -395,7 +393,7 @@ fn parse_defines_rejects_duplicate() {
     assert_eq!(diags[0].code.as_deref(), Some("DF-003"));
 }
 
-/// T7: флаг повторяем — оба символа доступны.
+/// T7: флаг повторяем - оба символа доступны.
 #[test]
 fn parse_defines_accepts_several_symbols() {
     let model = model_of("out A: bit; out B: bit; address A = X; address B = Y; start Idle;");

@@ -1,7 +1,7 @@
 //! Генерация исходного C-файла (`.c`) из семантического дерева Takt.
 //!
-//! Точка входа: [`generate_source`] — собирает все секции `.c`-файла,
-//! делегируя генерацию деклараций, функций и моделей соответствующим модулям.
+//! Точка входа: [`generate_source`] - собирает все секции `.c`-файла, делегируя
+//! генерацию деклараций, функций и моделей соответствующим модулям.
 
 use super::c_decl::{generate_constants_and_ports_and_enums, generate_functions};
 use super::c_model::{generate_function_prototypes, generate_model_functions};
@@ -32,7 +32,7 @@ pub(super) fn generate_source(filename: &str, map: &CMap) -> Result<String, Diag
         generate_model_functions(&mut printer, &model, map)?;
     }
     generate_model_functions(&mut printer, &map.model(), map)?;
-    Ok(super::c_expr::insert_fixed_helpers(source)) // Q-хелперы (0061) — по вызову
+    Ok(super::c_expr::insert_fixed_helpers(source)) // Q-хелперы - по вызову
 }
 
 #[cfg(test)]
@@ -46,7 +46,7 @@ mod tests {
     use crate::generator::indent::Printer;
     use crate::semantic::minimap::Element;
 
-    // ── Вспомогательная функция ────────────────────────────────────────────────
+    // -- Вспомогательная функция ------------------------------------------------
 
     /// Создаёт минимальный CMap для тестов генерации выражений.
     fn make_map_and_owner(src: &str) -> (CMap, Element) {
@@ -71,7 +71,7 @@ mod tests {
         s
     }
 
-    // ── Тесты литералов ────────────────────────────────────────────────────────
+    // -- Тесты литералов --------------------------------------------------------
 
     #[test]
     fn test_expr_number() {
@@ -119,12 +119,12 @@ mod tests {
         assert_eq!(expr_to_str(&map, &owner, &expr), "\"hello\"");
     }
 
-    // ── Тесты унарных операторов ───────────────────────────────────────────────
+    // -- Тесты унарных операторов -----------------------------------------------
 
     #[test]
     fn test_expr_negate() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // Атом (число) — скобки не нужны
+        // Атом (число) - скобки не нужны
         let expr = ExpressionNode::Negate(Box::new(ExpressionNode::Number(42)));
         assert_eq!(expr_to_str(&map, &owner, &expr), "-42");
     }
@@ -132,7 +132,7 @@ mod tests {
     #[test]
     fn test_expr_negate_complex() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // Бинарное выражение внутри унарного — скобки нужны
+        // Бинарное выражение внутри унарного - скобки нужны
         let inner = ExpressionNode::Add(
             Box::new(ExpressionNode::Number(1)),
             Box::new(ExpressionNode::Number(2)),
@@ -144,7 +144,7 @@ mod tests {
     #[test]
     fn test_expr_negate_negate() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // Двойное отрицание — скобки нужны чтобы избежать `--x` (декремент в C)
+        // Двойное отрицание - скобки нужны чтобы избежать `--x` (декремент в C)
         let inner = ExpressionNode::Negate(Box::new(ExpressionNode::Number(5)));
         let expr = ExpressionNode::Negate(Box::new(inner));
         assert_eq!(expr_to_str(&map, &owner, &expr), "-(-5)");
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn test_expr_not() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // Атом — без скобок
+        // Атом - без скобок
         let expr = ExpressionNode::Not(Box::new(ExpressionNode::Bool(true)));
         assert_eq!(expr_to_str(&map, &owner, &expr), "!true");
     }
@@ -161,7 +161,7 @@ mod tests {
     #[test]
     fn test_expr_not_complex() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // Логическое И внутри NOT — нужны скобки
+        // Логическое И внутри NOT - нужны скобки
         let inner = ExpressionNode::And(
             Box::new(ExpressionNode::Bool(true)),
             Box::new(ExpressionNode::Bool(false)),
@@ -173,7 +173,7 @@ mod tests {
     #[test]
     fn test_expr_bitwise_not() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // Атом — без скобок
+        // Атом - без скобок
         let expr = ExpressionNode::BitwiseNot(Box::new(ExpressionNode::Number(0xFF)));
         assert_eq!(expr_to_str(&map, &owner, &expr), "~255");
     }
@@ -181,18 +181,18 @@ mod tests {
     #[test]
     fn test_expr_parenthesis() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // Явные скобки из исходника — всегда генерируются
+        // Явные скобки из исходника - всегда генерируются
         let inner = Box::new(ExpressionNode::Number(42));
         let expr = ExpressionNode::Parenthesis(inner);
         assert_eq!(expr_to_str(&map, &owner, &expr), "(42)");
     }
 
-    // ── Тесты бинарных операторов ──────────────────────────────────────────────
+    // -- Тесты бинарных операторов ----------------------------------------------
 
     #[test]
     fn test_expr_add() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // Атомы — без скобок
+        // Атомы - без скобок
         let expr = ExpressionNode::Add(
             Box::new(ExpressionNode::Number(1)),
             Box::new(ExpressionNode::Number(2)),
@@ -353,7 +353,7 @@ mod tests {
     #[test]
     fn test_expr_conditional_operator() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // Атомы — без скобок
+        // Атомы - без скобок
         let expr = ExpressionNode::ConditionalOperator(
             Box::new(ExpressionNode::Bool(true)),
             Box::new(ExpressionNode::Number(1)),
@@ -366,9 +366,9 @@ mod tests {
     fn test_expr_cast() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
         use crate::semantic::type_node::TypeNode;
-        // Атом — без скобок после типа
+        // Атом - без скобок после типа
         let expr = ExpressionNode::Cast(Box::new(ExpressionNode::Number(42)), TypeNode::Bit);
-        // Фича 0029 (Д2): `bit` → `uint8_t`, а не `int` (32-битный знаковый).
+        // (Д2): `bit` -> `uint8_t`, а не `int` (32-битный знаковый).
         assert_eq!(expr_to_str(&map, &owner, &expr), "(uint8_t)42");
     }
 
@@ -376,22 +376,22 @@ mod tests {
     fn test_expr_cast_complex() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
         use crate::semantic::type_node::TypeNode;
-        // Бинарное выражение — нужны скобки после типа
+        // Бинарное выражение - нужны скобки после типа
         let inner = ExpressionNode::Add(
             Box::new(ExpressionNode::Number(1)),
             Box::new(ExpressionNode::Number(2)),
         );
         let expr = ExpressionNode::Cast(Box::new(inner), TypeNode::Bit);
-        // Фича 0029 (Д2): `bit` → `uint8_t`.
+        // (Д2): `bit` -> `uint8_t`.
         assert_eq!(expr_to_str(&map, &owner, &expr), "(uint8_t)(1 + 2)");
     }
 
-    // ── Тесты приоритета операторов ────────────────────────────────────────────
+    // -- Тесты приоритета операторов --------------------------------------------
 
     #[test]
     fn test_expr_precedence_mul_wins_over_add_left() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // (a*b) + c → a * b + c (умножение на левой стороне сложения — без скобок)
+        // (a*b) + c -> a * b + c (умножение на левой стороне сложения - без скобок)
         let mul = ExpressionNode::Multiply(
             Box::new(ExpressionNode::Number(2)),
             Box::new(ExpressionNode::Number(3)),
@@ -403,7 +403,7 @@ mod tests {
     #[test]
     fn test_expr_precedence_add_needs_parens_in_mul() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // (a+b) * c → (a + b) * c (сложение в левом операнде умножения — скобки)
+        // (a+b) * c -> (a + b) * c (сложение в левом операнде умножения - скобки)
         let add = ExpressionNode::Add(
             Box::new(ExpressionNode::Number(2)),
             Box::new(ExpressionNode::Number(3)),
@@ -415,7 +415,7 @@ mod tests {
     #[test]
     fn test_expr_precedence_sub_right_needs_parens() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // a - (b - c) → a - (b - c) (тот же приоритет на правой стороне вычитания)
+        // a - (b - c) -> a - (b - c) (тот же приоритет на правой стороне вычитания)
         let sub_right = ExpressionNode::Subtract(
             Box::new(ExpressionNode::Number(3)),
             Box::new(ExpressionNode::Number(1)),
@@ -428,7 +428,7 @@ mod tests {
     #[test]
     fn test_expr_precedence_or_inside_and() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // (a || b) && c → (a || b) && c (OR имеет меньший приоритет чем AND)
+        // (a || b) && c -> (a || b) && c (OR имеет меньший приоритет чем AND)
         let or_expr = ExpressionNode::Or(
             Box::new(ExpressionNode::Bool(true)),
             Box::new(ExpressionNode::Bool(false)),
@@ -440,7 +440,8 @@ mod tests {
     #[test]
     fn test_expr_precedence_and_no_parens_inside_or() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // (a && b) || c → a && b || c (AND имеет больший приоритет чем OR — без скобок)
+        // (a && b) || c -> a && b || c (AND имеет больший приоритет чем OR - без
+        // скобок)
         let and_expr = ExpressionNode::And(
             Box::new(ExpressionNode::Bool(true)),
             Box::new(ExpressionNode::Bool(false)),
@@ -452,7 +453,7 @@ mod tests {
     #[test]
     fn test_expr_precedence_compare_in_not() {
         let (map, owner) = make_map_and_owner("start Main { always { } }");
-        // !(a > b) → !(a > b)
+        // !(a > b) -> !(a > b)
         let cmp = ExpressionNode::More(
             Box::new(ExpressionNode::Number(5)),
             Box::new(ExpressionNode::Number(3)),
@@ -472,9 +473,9 @@ mod tests {
         assert_eq!(expr_to_str(&map, &owner, &expr), "{1, 2, 3}");
     }
 
-    // ── Интеграционные тесты generate_source ──────────────────────────────────
+    // -- Интеграционные тесты generate_source ----------------------------------
 
-    /// Порождает `.c` для исходника (корень — `Main`).
+    /// Порождает `.c` для исходника (корень - `Main`).
     fn source_of(src: &str) -> Result<String, crate::diagnostics::Diagnostic> {
         let (model_ast, _) = parse(src, 0).unwrap();
         let model_rc = semantic::tree::construct_model(&model_ast, None, &[]).unwrap();
@@ -484,13 +485,13 @@ mod tests {
         generate_source(map.get_filename(), &map)
     }
 
-    /// **T2 (0029-05).** Агрегатный инициализатор массива — поэлементно.
+    /// **T2.** Агрегатный инициализатор массива - поэлементно.
     ///
     /// Массив в C **не является** изменяемым lvalue: `model->arr = {0,0,0,0};`
-    /// отвергается (`error: expected expression`), и составной литерал не
-    /// спасает — присваивание массиву запрещено в принципе. Выход один:
-    /// поэлементная запись. Строки захвачены зондом (`taktc -t c`), вывод
-    /// проверен `cc -std=c11 -Wall -Werror`.
+    /// отвергается (`error: expected expression`), и составной литерал не спасает -
+    /// присваивание массиву запрещено в принципе. Выход один: поэлементная запись.
+    /// Строки захвачены зондом (`taktc -t c`), вывод проверен `cc -std=c11 -Wall
+    /// -Werror`.
     #[test]
     fn test_array_aggregate_initializer_is_element_wise() {
         let src = r#"
@@ -513,13 +514,12 @@ start Idle { always { arr[0] := 7; counter := 1; } }
         );
     }
 
-    /// **0029-05.** Скалярный инициализатор массива → `CC-017`, а не догадка.
+    /// **.** Скалярный инициализатор массива -> `CC-017`, а не догадка.
     ///
-    /// `var data: [u8;4] := 0;` язык не определяет: обнулить весь массив?
-    /// записать в первый элемент? Цель `st` инициализатор отбрасывает,
-    /// симулятор кладёт скаляр (после чего `data[0]` даёт `SIM-010`) — три
-    /// ответа расходятся. Выбор одного — вопрос семантики языка, вне полномочий
-    /// фичи 0029.
+    /// `var data: [u8;4] := 0;` язык не определяет: обнулить весь массив? записать в
+    /// первый элемент? Цель `st` инициализатор отбрасывает, симулятор кладёт скаляр
+    /// (после чего `data[0]` даёт `SIM-010`) - три ответа расходятся. Выбор одного -
+    /// вопрос семантики языка, вне полномочий.
     #[test]
     fn test_array_scalar_initializer_is_rejected_with_cc_017() {
         let src = r#"
@@ -537,7 +537,7 @@ start Idle { always { data[0] := 7; counter := 1; } }
         );
     }
 
-    /// **T4 (0029-05).** Бит-вектор — скаляр: присваивание ему законно и
+    /// **T4.** Бит-вектор - скаляр: присваивание ему законно и
     /// **не меняется**. Доминирующая идиома корпуса (45 из 46 вхождений).
     #[test]
     fn test_bit_vector_initializer_stays_scalar_assignment() {
@@ -579,8 +579,8 @@ start Idle { always { counter := b; } }
 
     #[test]
     fn test_generate_source_with_const_and_port() {
-        // LIMIT используется в блоке always (присваивание переменной),
-        // чтобы константа попала в UsageSet и не была отфильтрована.
+        // LIMIT используется в блоке always (присваивание переменной), чтобы константа
+        // попала в UsageSet и не была отфильтрована.
         let src = r#"
 const LIMIT: u8 := 100;
 in SENSOR: u8 at 0x100000;
@@ -597,8 +597,8 @@ start Main { always { v := LIMIT; } }
             source.contains("CONST_MAIN_LIMIT"),
             "CONST_MAIN_LIMIT отсутствует:\n{source}"
         );
-        // Порт теперь генерируется как вариант enum в заголовочном файле,
-        // а не как #define в .c-файле — в source больше нет PORT_MAIN_SENSOR.
+        // Порт теперь генерируется как вариант enum в заголовочном файле, а не как
+        // #define в.c-файле - в source больше нет PORT_MAIN_SENSOR.
         assert!(
             !source.contains("PORT_MAIN_SENSOR"),
             "PORT_MAIN_SENSOR не должен присутствовать в .c-файле (теперь это enum в .h):\n{source}"

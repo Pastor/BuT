@@ -1,6 +1,5 @@
-//! Продолжение `lsp_tests` (фича 0088 — лимит размера модуля, ADR 0088):
-//! группы `diagnostic_location_tests`, `formatting_tests`, `lsp_multifile`
-//! вынесены целыми mod-блоками (самодостаточны — свои `use`). Чистое
+//! Продолжение `lsp_tests`: группы `diagnostic_location_tests`, `formatting_tests`,
+//! `lsp_multifile` вынесены целыми mod-блоками (самодостаточны - свои `use`). Чистое
 //! перемещение тестов, утверждения не меняются.
 
 #[cfg(feature = "lsp")]
@@ -16,7 +15,7 @@ mod diagnostic_location_tests {
     #[cfg(feature = "lsp")]
     #[test]
     fn collect_diagnostics_syntax_error_has_location() {
-        // Пропущена точка с запятой — парсер должен вернуть ошибку с позицией
+        // Пропущена точка с запятой - парсер должен вернуть ошибку с позицией
         let src = "var x: bit = false\nstart S;";
         let diags = collect_diagnostics(src);
         assert!(!diags.is_empty(), "должна быть хотя бы одна диагностика");
@@ -30,18 +29,18 @@ mod diagnostic_location_tests {
         );
     }
 
-    /// Проверяет, что грамматическая диагностика с Location::Source содержит
-    /// правильный диапазон после конвертации в LSP-формат.
+    /// Проверяет, что грамматическая диагностика с Location::Source содержит правильный
+    /// диапазон после конвертации в LSP-формат.
     #[cfg(feature = "lsp")]
     #[test]
     fn grammar_diagnostic_to_lsp_source_location_gives_correct_range() {
         use takt_lang::diagnostics::{Diagnostic as GDiag, Location};
 
         let src = "var x: bit := false;";
-        // Создаём диагностику с конкретной позицией (байты 4..5 — символ 'x')
+        // Создаём диагностику с конкретной позицией (байты 4..5 - символ 'x')
         let diag = GDiag::error(Location::Source(0, 4, 5), "Тестовая ошибка".to_string());
         let lsp_diag = grammar_diagnostic_to_lsp(&diag, src);
-        // Позиция 4 → строка 0, столбец 4 (в ASCII 'x' = 1 байт)
+        // Позиция 4 -> строка 0, столбец 4 (в ASCII 'x' = 1 байт)
         assert_eq!(
             lsp_diag.range.start,
             Position::new(0, 4),
@@ -84,16 +83,16 @@ mod diagnostic_location_tests {
     #[cfg(feature = "lsp")]
     #[test]
     fn collect_diagnostics_semantic_error_has_location() {
-        // Два состояния с одинаковым именем — семантическая ошибка
+        // Два состояния с одинаковым именем - семантическая ошибка
         let src = "start S;\nstate S;";
         let diags = collect_diagnostics(src);
-        // Проверяем просто что нет паники и набор диагностик не пустой
-        // (конкретная ошибка зависит от реализации дублирования)
+        // Проверяем просто что нет паники и набор диагностик не пустой (конкретная
+        // ошибка зависит от реализации дублирования)
         let _ = diags; // не паникует
     }
 
-    /// Проверяет, что предупреждение Ce13 (неиспользуемая переменная)
-    /// содержит координаты объявления переменной, а не нулевую позицию.
+    /// Проверяет, что предупреждение Ce13 (неиспользуемая переменная) содержит
+    /// координаты объявления переменной, а не нулевую позицию.
     #[cfg(feature = "lsp")]
     #[test]
     fn ce13_unused_variable_warning_has_source_location() {
@@ -106,7 +105,7 @@ mod diagnostic_location_tests {
             .find(|d| d.message.contains("heading"))
             .expect("должно быть предупреждение Ce13 для 'heading'");
 
-        // Предупреждение не должно указывать на (0,0)-(0,0) — у переменной есть позиция
+        // Предупреждение не должно указывать на (0,0)-(0,0) - у переменной есть позиция
         let is_zero_range =
             ce13.range.start == Position::new(0, 0) && ce13.range.end == Position::new(0, 0);
         assert!(
@@ -116,9 +115,10 @@ mod diagnostic_location_tests {
         );
     }
 
-    // ── Тесты semantic_tokens ─────────────────────────────────────────────────
+    // -- Тесты semantic_tokens -------------------------------------------------
 
-    /// Вспомогательная функция: возвращает список (слово, тип_токена) из semantic_tokens.
+    /// Вспомогательная функция: возвращает список (слово, тип_токена) из
+    /// semantic_tokens.
     fn decode_semantic_tokens(src: &str) -> Vec<(String, u32)> {
         let tokens = semantic_tokens(src);
         let mut result = Vec::new();
@@ -183,7 +183,7 @@ mod diagnostic_location_tests {
         assert_eq!(tok.unwrap().1, 0, "'inout' должен быть TT_KEYWORD (0)");
     }
 
-    /// `address` (оператор адреса порта, фича 0020) подсвечивается как keyword.
+    /// `address` (оператор адреса порта) подсвечивается как keyword.
     #[test]
     fn semantic_tokens_address_is_keyword() {
         let src = "in BTN: bit;\naddress BTN = 0x200000;\nstart S;";
@@ -228,7 +228,7 @@ mod diagnostic_location_tests {
         assert_eq!(tok.unwrap().1, 3, "'bit' должен быть TT_TYPE (3)");
     }
 
-    // ── Тесты hover для встроенных типов ─────────────────────────────────────
+    // -- Тесты hover для встроенных типов -------------------------------------
 
     /// Hover над `u8` возвращает описание типа.
     #[test]
@@ -282,11 +282,12 @@ mod diagnostic_location_tests {
         }
     }
 
-    /// Hover над переменной с типом `u8` показывает «u8», а не Debug-строку «Integer { bits: 8, signed: false }».
+    /// Hover над переменной с типом `u8` показывает "u8", а не Debug-строку "Integer {
+    /// bits: 8, signed: false }".
     #[test]
     fn hover_var_u8_shows_u8_not_debug() {
         let src = "var speed: u8 := 0;\nstart S;";
-        // Позиция 4 — «s» в «speed»
+        // Позиция 4 - "s" в "speed"
         let h = hover_info(src, lsp_types::Position::new(0, 4));
         assert!(h.is_some(), "hover над переменной должен вернуть результат");
         if let lsp_types::HoverContents::Markup(mc) = h.unwrap().contents {
@@ -303,7 +304,8 @@ mod diagnostic_location_tests {
         }
     }
 
-    /// `collect_diagnostics` не выдаёт SE-034 для встроенных целочисленных типов `u8`…`i64`.
+    /// `collect_diagnostics` не выдаёт SE-034 для встроенных целочисленных типов
+    /// `u8`...`i64`.
     #[test]
     fn collect_diagnostics_builtin_integer_types_no_error() {
         // const-переменные не генерируют предупреждения об использовании
@@ -321,10 +323,10 @@ mod diagnostic_location_tests {
     }
 }
 
-// ── textDocument/formatting (фича 0024, задача 0024-04) ──────────────────────
+// -- textDocument/formatting ----------------------
 //
-// Гейт `cfg(feature = "lsp")` обязателен: `takt_lang::lsp` собирается только с
-// этой фичей, а `precheck.sh` гоняет `cargo test` БЕЗ `--all-features`.
+// Проверка `cfg(feature = "lsp")` обязателен: `takt_lang::lsp` собирается только с этой
+// фичей, а `precheck.sh` гоняет `cargo test` без `--all-features`.
 #[cfg(feature = "lsp")]
 #[cfg(test)]
 mod formatting_tests {
@@ -343,7 +345,7 @@ mod formatting_tests {
 
     #[test]
     fn formatting_returns_none_when_already_canonical() {
-        // Файл уже каноничен — правок нет, редактор не помечает его изменённым.
+        // Файл уже каноничен - правок нет, редактор не помечает его изменённым.
         let canonical = "var x: u8 := 0;\nstart S;\n";
         let edits = takt_lang::lsp::formatting_edits(canonical).expect("форматирование удалось");
         assert!(
@@ -354,17 +356,17 @@ mod formatting_tests {
 
     #[test]
     fn formatting_reports_error_instead_of_mangling() {
-        // Контрпример: неудача форматирования — это ОШИБКА, а не «отформатировали
-        // как смогли». Сервер её залогирует и ответит null.
+        // Контрпример: неудача форматирования - это ошибка, а не "отформатировали как
+        // смогли". Сервер её залогирует и ответит null.
         //
-        // ⚠️ Вход тут менялся дважды, и оба раза по одной причине: узел, взятый
-        // как пример непечатаемого, получал печать. Сперва это был
-        // `InlineFormula`, затем `assembly` (фича 0405). Достижимых непечатаемых
-        // узлов больше не осталось вовсе — `KNOWN_GAPS` форматтера пуст, а ветви
-        // отказа, которые ещё есть (`Expression::CodeBlock`, `Type::Function`,
-        // инициализатор `for` не-выражением), грамматика не строит (класс 0201).
-        // Поэтому вход теперь неразбираемый: проверяется само свойство — при
-        // неудаче сервер отдаёт ошибку, а не искажённый текст.
+        // Вход тут менялся дважды, и оба раза по одной причине: узел, взятый как пример
+        // непечатаемого, получал печать. Сперва это был `InlineFormula`, затем
+        // `assembly`. Достижимых непечатаемых узлов больше не осталось вовсе -
+        // `KNOWN_GAPS` форматтера пуст, а ветви отказа, которые ещё есть
+        // (`Expression::CodeBlock`, `Type::Function`, инициализатор `for`
+        // не-выражением), грамматика не строит. Поэтому вход теперь неразбираемый:
+        // проверяется само свойство - при неудаче сервер отдаёт ошибку, а не искажённый
+        // текст.
         let broken = "start S {\n    always { := ; }\n}\n";
         assert!(
             takt_lang::lsp::formatting_edits(broken).is_err(),
@@ -374,8 +376,8 @@ mod formatting_tests {
 
     #[test]
     fn a6_lsp_and_cli_share_one_core() {
-        // Критерий A6: LSP и `taktc fmt` не могут разойтись в стиле — они зовут одну
-        // и ту же функцию. Проверяем это фактом, а не договорённостью.
+        // Критерий A6: LSP и `taktc fmt` не могут разойтись в стиле - они зовут одну и
+        // ту же функцию. Проверяем это фактом, а не договорённостью.
         let source = "var   x :u8:=0;\nstart   S ;\n";
         let from_core = takt_lang::format::format_source(source).unwrap();
         let from_lsp = takt_lang::lsp::formatting_edits(source)
@@ -390,10 +392,10 @@ mod formatting_tests {
     }
 }
 
-/// Многофайловость LSP: импорты и чужие диагностики (фича 0055).
+/// Многофайловость LSP: импорты и чужие диагностики.
 #[cfg(feature = "lsp")]
 mod lsp_multifile {
-    // ─── Многофайловость: импорты и чужие диагностики (фича 0055) ────────────────
+    // --- Многофайловость: импорты и чужие диагностики ----------------
 
     const LSP55_DIR: &str = "tests/data/lsp55";
 
@@ -404,10 +406,6 @@ mod lsp_multifile {
     }
 
     /// Импорт разрешается в редакторе.
-    ///
-    /// Прежде `collect_diagnostics` звала `construct_model(&ast, None, &[])` — с
-    /// пустыми путями поиска, поэтому `import "lib_ok.takt";` **всегда** давал
-    /// «файл не найден», хотя файл лежит рядом.
     #[test]
     fn import_resolves_in_editor() {
         let diags = diagnostics_at("uses_ok.takt");
@@ -417,10 +415,7 @@ mod lsp_multifile {
         );
     }
 
-    /// Ошибка ЧУЖОГО файла привязана к строке `import`, а не к чужому смещению.
-    ///
-    /// Прежде `file_no` отбрасывался, и подсветка ложилась в текущий документ по
-    /// смещению из другого файла — то есть не туда.
+    /// Ошибка чужого файла привязана к строке `import`, а не к чужому смещению.
     #[test]
     fn foreign_error_is_anchored_at_the_import_line() {
         let diags = diagnostics_at("uses_bad.takt");
@@ -452,7 +447,7 @@ mod lsp_multifile {
         );
     }
 
-    /// Своя ошибка показывается на своём месте — сужение не задело обычный путь.
+    /// Своя ошибка показывается на своём месте - сужение не задело обычный путь.
     #[test]
     fn own_error_keeps_its_own_range() {
         let source = "start A { ref Nowhere; }";

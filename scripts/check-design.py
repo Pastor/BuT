@@ -39,18 +39,18 @@ CSS = ROOT / "web/static/app.css"
 BOOK = ROOT / "web/design/BOOK.md"
 SHOWCASE = ROOT / "web/design/controls.html"
 
-#: Цвет числом: шестнадцатеричный, `rgb()`, `hsl()` и обиходные имена.
-#: ⚠️ `transparent`, `currentColor` и `inherit` цветом числом не считаются: они
-#: не задают значения, а ссылаются на контекст.
+# Цвет числом: шестнадцатеричный, `rgb()`, `hsl()` и обиходные имена.
+# `transparent`, `currentColor` и `inherit` цветом числом не считаются: они
+# не задают значения, а ссылаются на контекст.
 COLOR = re.compile(
     r"(#[0-9a-fA-F]{3,8}\b|\brgba?\s*\(|\bhsla?\s*\(|"
     r"\b(?:red|green|blue|white|black|gray|grey|yellow|orange|purple|pink|brown)\b)"
 )
 
-#: Кегль из шкалы: `var(--text-…)`; `inherit` наследует и значения не задаёт.
+# Кегль из шкалы: `var(--text-...)`; `inherit` наследует и значения не задаёт.
 TEXT_SCALE = re.compile(r"var\(--text-[a-z]+\)|inherit")
 
-#: Высота и скругление из шкал.
+# Высота и скругление из шкал.
 SIZE_SCALE = re.compile(r"var\(--h-[a-z]+\)|var\(--radius\)|var\(--gap[a-z-]*\)")
 
 
@@ -154,12 +154,12 @@ def main():
         print("  ОШИБКА: в app.css не разобрано ни одного правила")
         return 1
 
-    # D8 — упомянутая переменная объявлена. Неизвестная переменная — не ошибка
+    # D8 - упомянутая переменная объявлена. Неизвестная переменная - не ошибка
     # для браузера: он молча отбрасывает объявление, и правило пропадает
     # целиком (`--gap-lg` оставил модальное окно без полей).
     declared = set(re.findall(r"^\s*(--[\w-]+)\s*:", css, re.M))
-    # ⚠️ Запись `var(--x, умолчание)` в счёт НЕ идёт: там отсутствие объявления
-    # предусмотрено — так страница читает величины, которые ставит `shell.js`.
+    # Запись `var(--x, умолчание)` в счёт не идёт: там отсутствие объявления
+    # предусмотрено - так страница читает величины, которые ставит `shell.js`.
     for match in re.finditer(r"var\(\s*(--[\w-]+)\s*\)", css):
         if match.group(1) not in declared:
             line = css.count("\n", 0, match.start()) + 1
@@ -174,9 +174,9 @@ def main():
     for rule in rules:
         where = f"app.css:{rule.line} ({rule.selector})"
 
-        # D1 — цвет числом вне палитры.
-        # ⚠️ Маска исключена намеренно: в `mask-image` цвет не цвет, а канал
-        # прозрачности — чёрное значит «оставить», и заменить его токеном
+        # D1 - цвет числом вне палитры.
+        # Маска исключена намеренно: в `mask-image` цвет не цвет, а канал
+        # прозрачности - чёрное значит "оставить", и заменить его токеном
         # нельзя. Исключение узкое: по имени свойства, а не по значению.
         if not rule.is_palette:
             for name, value in rule.declarations:
@@ -185,7 +185,7 @@ def main():
                 if COLOR.search(value):
                     problems.append(f"D1 {where}: цвет числом в '{name}: {value}'")
 
-        # D2 — готовый цвет в отклике.
+        # D2 - готовый цвет в отклике.
         if re.search(r":hover|:active", rule.selector):
             for name, value in rule.declarations:
                 if name in ("background", "background-color", "color") and "color-mix(" not in value:
@@ -194,7 +194,7 @@ def main():
                         f"отклик считается формулой одной плотности"
                     )
 
-        # D3 — пара из реестра.
+        # D3 - пара из реестра.
         fill = token(rule.value("background") or rule.value("background-color") or "")
         ink = token(rule.value("color") or "")
         if fill and ink and fill.startswith("--surface"):
@@ -205,13 +205,13 @@ def main():
                     f"D3 {where}: пара '{fill}' / '{ink}' не названа в реестре книги"
                 )
 
-        # D4 — кегль из шкалы.
+        # D4 - кегль из шкалы.
         if not rule.is_palette:
             for name, value in rule.declarations:
                 if name == "font-size" and not TEXT_SCALE.fullmatch(value):
                     problems.append(f"D4 {where}: кегль мимо шкалы — '{value}'")
 
-            # D5 — высота и скругление из шкал.
+            # D5 - высота и скругление из шкал.
             for name, value in rule.declarations:
                 if name in ("height", "min-height", "border-radius") and re.search(r"\d+px", value):
                     if not SIZE_SCALE.search(value):
@@ -224,7 +224,7 @@ def main():
                 f"а в app.css не применяется"
             )
 
-    # D3 (третья сторона) — образцы витрины против реестра книги.
+    # D3 (третья сторона) - образцы витрины против реестра книги.
     swatches = {
         tuple(m.group(1).split("/"))
         for m in re.finditer(r'data-pair="([^"]+)"', showcase)
@@ -238,7 +238,7 @@ def main():
             f"D3 книга: пара '{pair[0]}' / '{pair[1]}' показана в витрине и не описана"
         )
 
-    # D6 — книга и витрина не разошлись.
+    # D6 - книга и витрина не разошлись.
     shown = {
         m.group(1)
         for m in re.finditer(r'data-control="([^"]+)"', showcase)
@@ -250,7 +250,7 @@ def main():
     for control in sorted(shown - described):
         problems.append(f"D6 книга: контрол '{control}' показан в витрине и не описан")
 
-    # D7 — у витрины нет своих цветов и кеглей.
+    # D7 - у витрины нет своих цветов и кеглей.
     style = re.search(r"<style>(.*?)</style>", showcase, re.S)
     if style:
         for rule in parse(style.group(1)):

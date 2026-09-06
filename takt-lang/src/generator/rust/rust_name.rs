@@ -1,33 +1,25 @@
-//! Отображение имён Takt в идентификаторы Rust (задача 0050-04).
+//! Отображение имён Takt в идентификаторы Rust.
 //!
 //! Правила:
 //!
-//! - типы (модели, состояния, перечисления, варианты) → `CamelCase`;
-//! - значения (переменные, поля, функции, методы HAL) → `snake_case`;
+//! - типы (модели, состояния, перечисления, варианты) -> `CamelCase`;
+//! - значения (переменные, поля, функции, методы HAL) -> `snake_case`;
 //! - коллизия с ключевым словом снимается **raw-идентификатором** (`r#type`);
-//! - `Self`/`self`/`crate`/`super` — **не снимаются ничем** → диагностика
+//! - `Self`/`self`/`crate`/`super` - **не снимаются ничем** -> диагностика
 //!   [`RS-004`](rs004).
-//!
-//! ## Почему не «тихо переименовать»
-//!
-//! Соблазн подставить `Self_` вместо `Self` велик и обошёлся бы в одну строку.
-//! Он отвергнут: молчаливая правка имени — расхождение исходника и порождённого
-//! кода, которое пользователь обнаружит **на объекте**, а не при сборке
-//! (наследие [ADR 0028](../../../../../../../../docs/features/0028-c-generator-stubs.md#архитектура-adr)).
 //!
 //! ## Чего здесь нет: ловушки стандартной библиотеки
 //!
-//! У цели `st` имя модели `Concat` даёт `invalid function block name` — в
-//! IEC 61131-3 пространство имён POU плоское и общее со стандартной библиотекой
-//! (`CLAUDE.md`, фича 0041). В Rust этой ловушки **нет**: `Box`/`Option`/`String`
-//! как имена принимаются — прелюдия лишь затеняется, а не занимает имя. Проба
-//! 2026-07-16 подтвердила; отдельной задачи не заводится.
+//! У цели `st` имя модели `Concat` даёт `invalid function block name` - в IEC 61131-3
+//! пространство имён POU плоское и общее со стандартной библиотекой (`CLAUDE.md`). В
+//! Rust этой ловушки **нет**: `Box`/`Option`/`String` как имена принимаются - прелюдия
+//! лишь затеняется, а не занимает имя.
 
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::keywords;
 use crate::semantic::naming::{normalize_camelcase_name, normalize_lowercase_snakecase};
 
-/// Строит диагностику `RS-004` — имя непредставимо в Rust.
+/// Строит диагностику `RS-004` - имя непредставимо в Rust.
 fn rs004(original: &str, produced: &str, loc: Location) -> Diagnostic {
     Diagnostic::error(
         loc,
@@ -41,11 +33,11 @@ fn rs004(original: &str, produced: &str, loc: Location) -> Diagnostic {
     .with_code("RS-004")
 }
 
-/// Строит диагностику `RS-005` — два имени слиплись после приведения регистра.
+/// Строит диагностику `RS-005` - два имени слиплись после приведения регистра.
 ///
-/// ⚠️ Отдана наружу для полей структуры модели (фича 0483): там столкновение
-/// ловится **накопительно**, по одному объявлению за раз, чтобы отказ нёс
-/// координату этого объявления, — а не списком пар, как у портов и состояний.
+/// Отдана наружу для полей структуры модели: там столкновение ловится **накопительно**,
+/// по одному объявлению за раз, чтобы отказ нёс координату этого объявления, - а не
+/// списком пар, как у портов и состояний.
 pub(super) fn name_collision(
     first: &str,
     second: &str,
@@ -56,7 +48,7 @@ pub(super) fn name_collision(
     rs005(first, second, produced, kind, loc)
 }
 
-/// Строит диагностику `RS-005` — два имени слиплись после приведения регистра.
+/// Строит диагностику `RS-005` - два имени слиплись после приведения регистра.
 fn rs005(first: &str, second: &str, produced: &str, kind: &str, loc: Location) -> Diagnostic {
     Diagnostic::error(
         loc,
@@ -69,29 +61,29 @@ fn rs005(first: &str, second: &str, produced: &str, kind: &str, loc: Location) -
     .with_code("RS-005")
 }
 
-/// Приводит имя к `CamelCase` — для типов: моделей, состояний, перечислений.
+/// Приводит имя к `CamelCase` - для типов: моделей, состояний, перечислений.
 ///
 /// # Ошибки
-/// [`RS-004`], если результат — ключевое слово, не спасаемое raw-идентификатором
+/// [`RS-004`], если результат - ключевое слово, не спасаемое raw-идентификатором
 /// (практически: исходное имя `Self` или `self`, оба дают `Self`).
 pub(crate) fn rust_type_name(raw: &str, loc: Location) -> Result<String, Diagnostic> {
     let name = normalize_camelcase_name(raw);
     if keywords::RUST_NOT_RAW.contains(&name.as_str()) {
         return Err(rs004(raw, &name, loc));
     }
-    // Все ключевые слова Rust, кроме `Self`, записаны строчными, поэтому
-    // CamelCase их и так снимает (`type` → `Type`). Проверка оставлена как
-    // сторож на случай смены правил регистра в `normalize_camelcase_name`.
+    // Все ключевые слова Rust, кроме `Self`, записаны строчными, поэтому CamelCase их и
+    // так снимает (`type` -> `Type`). Проверка оставлена как тест на случай смены
+    // правил регистра в `normalize_camelcase_name`.
     if keywords::RUST.contains(&name.as_str()) {
         return Ok(format!("r#{}", name));
     }
     Ok(name)
 }
 
-/// Приводит имя к `snake_case` — для значений: переменных, полей, функций.
+/// Приводит имя к `snake_case` - для значений: переменных, полей, функций.
 ///
 /// # Ошибки
-/// [`RS-004`], если результат — `self`/`crate`/`super`.
+/// [`RS-004`], если результат - `self`/`crate`/`super`.
 pub(crate) fn rust_value_name(raw: &str, loc: Location) -> Result<String, Diagnostic> {
     let name = normalize_lowercase_snakecase(raw.to_string());
     if keywords::RUST_NOT_RAW.contains(&name.as_str()) {
@@ -105,9 +97,9 @@ pub(crate) fn rust_value_name(raw: &str, loc: Location) -> Result<String, Diagno
 
 /// Проверяет, что имена не слипаются после приведения регистра.
 ///
-/// Вход — пары `(исходное имя, порождённый идентификатор)`. Молчаливое слипание
-/// (`floor_sensor` и `FloorSensor` → одно `FloorSensor`) дало бы либо ошибку
-/// сборки в чужом месте, либо — хуже — связывание не тех элементов.
+/// Вход - пары `(исходное имя, порождённый идентификатор)`. Молчаливое слипание
+/// (`floor_sensor` и `FloorSensor` -> одно `FloorSensor`) дало бы либо ошибку сборки в
+/// чужом месте, либо - хуже - связывание не тех элементов.
 ///
 /// # Ошибки
 /// [`RS-005`] на первой же коллизии.
@@ -141,9 +133,7 @@ mod tests {
         assert_eq!(rust_type_name("Idle", loc()).unwrap(), "Idle");
     }
 
-    /// Регистр снимает коллизию с ключевым словом: `type` → `Type`.
-    ///
-    /// Проба 2026-07-16: `pub enum State { Type }` компилируется.
+    /// Регистр снимает коллизию с ключевым словом: `type` -> `Type`.
     #[test]
     fn type_name_keyword_is_saved_by_case() {
         assert_eq!(rust_type_name("type", loc()).unwrap(), "Type");
@@ -169,27 +159,24 @@ mod tests {
         assert_eq!(rust_value_name("counter", loc()).unwrap(), "counter");
     }
 
-    /// **Контрпример:** `Self` не спасается ничем → `RS-004`.
-    ///
-    /// Проба 2026-07-16: и `enum State { Self }`, и `enum State { r#Self }`
-    /// отвергнуты — второе отдельным правилом языка.
+    /// **Контрпример:** `Self` не спасается ничем -> `RS-004`.
     #[test]
     fn self_as_type_name_is_rs004() {
         let err = rust_type_name("Self", loc()).unwrap_err();
         assert_eq!(err.code.as_deref(), Some("RS-004"));
     }
 
-    /// `self` в позиции значения — тоже `RS-004`.
+    /// `self` в позиции значения - тоже `RS-004`.
     #[test]
     fn self_as_value_name_is_rs004() {
         let err = rust_value_name("self", loc()).unwrap_err();
         assert_eq!(err.code.as_deref(), Some("RS-004"));
     }
 
-    /// Строчное `self` в позиции типа даёт `Self` — та же диагностика.
+    /// Строчное `self` в позиции типа даёт `Self` - та же диагностика.
     ///
-    /// CamelCase от `self` — это и есть `Self`, поэтому регистр здесь не лечение,
-    /// а причина.
+    /// CamelCase от `self` - это и есть `Self`, поэтому регистр здесь не лечение, а
+    /// причина.
     #[test]
     fn lowercase_self_as_type_name_is_rs004() {
         let err = rust_type_name("self", loc()).unwrap_err();
@@ -214,9 +201,9 @@ mod tests {
         );
     }
 
-    /// **Сторож против переноса ловушки 0041 туда, где её нет.**
+    /// **Тест против переноса ловушки 0041 туда, где её нет.**
     ///
-    /// В IEC модель `Concat` ломает вывод; в Rust `Box`/`Option` — законные имена
+    /// В IEC модель `Concat` ломает вывод; в Rust `Box`/`Option` - законные имена
     /// (проба 2026-07-16). Диагностики быть не должно.
     #[test]
     fn prelude_names_are_not_an_error() {
@@ -235,7 +222,7 @@ mod tests {
         assert!(check_name_collisions(&names, "состояния", loc()).is_ok());
     }
 
-    /// **Контрпример:** имена, слипающиеся после приведения регистра → `RS-005`.
+    /// **Контрпример:** имена, слипающиеся после приведения регистра -> `RS-005`.
     #[test]
     fn colliding_names_are_rs005() {
         let names = vec![

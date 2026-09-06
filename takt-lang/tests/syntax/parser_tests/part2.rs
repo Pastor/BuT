@@ -1,10 +1,10 @@
-//! Интеграционные тесты парсера, часть 2 (вынос из `parser_tests.rs`, фича 0088-10).
+//! Интеграционные тесты парсера, часть 2 (вынос из `parser_tests.rs`).
 //!
-//! Хелперы и импорты — из родителя через `use super::*` (приём 0088-06/08).
+//! Хелперы и импорты - из родителя через `use super::*` (приём /08).
 
 use super::*;
 
-/// `Location` — методы работы с диапазонами.
+/// `Location` - методы работы с диапазонами.
 #[test]
 fn location_methods() {
     let loc = Location::Source(0, 10, 20);
@@ -23,7 +23,7 @@ fn location_methods() {
     assert_eq!(end.end(), 20);
 }
 
-/// `Comment` — методы `is_doc` и `is_line`.
+/// `Comment` - методы `is_doc` и `is_line`.
 #[test]
 fn comment_methods() {
     use takt_lang::parser::ast::Comment;
@@ -39,7 +39,7 @@ fn comment_methods() {
     assert_eq!(doc.value(), "/// doc");
 }
 
-// ──────────────────── Тесты extern-функций ──────────────────────────────────
+// -------------------- Тесты extern-функций ----------------------------------
 
 /// `extern fn` разбирается корректно и флаг `external` установлен.
 #[test]
@@ -90,7 +90,7 @@ fn parse_non_extern_function_has_false_external_flag() {
     assert!(!f.external, "Обычная функция не должна быть external");
 }
 
-// ────────────────── Тесты блоков assembly и formula ─────────────────────────
+// ------------------ Тесты блоков assembly и formula -------------------------
 
 /// `assembly { }` внутри `always`.
 #[test]
@@ -154,7 +154,7 @@ fn parse_formula_with_function_call() {
     );
 }
 
-// ──────────────────── Тесты управляющих конструкций ─────────────────────────
+// -------------------- Тесты управляющих конструкций -------------------------
 
 /// `continue` внутри цикла.
 #[test]
@@ -221,7 +221,7 @@ fn parse_return_with_value() {
     );
 }
 
-/// `for init; cond; step;` — цикл без тела, заголовок без скобок (С1, вариант A).
+/// `for init; cond; step;` - цикл без тела, заголовок без скобок (С1, вариант A).
 #[test]
 fn parse_for_loop_without_body() {
     must_parse(
@@ -238,7 +238,7 @@ fn parse_for_loop_without_body() {
     );
 }
 
-/// `if` внутри `for` с явными скобками тела (С1, вариант A — тело цикла в `{}`).
+/// `if` внутри `for` с явными скобками тела (С1, вариант A - тело цикла в `{}`).
 #[test]
 fn parse_if_in_for_with_braces() {
     must_parse(
@@ -258,9 +258,9 @@ fn parse_if_in_for_with_braces() {
     );
 }
 
-// ──────────────────────── Тесты импортов ─────────────────────────────────────
+// ------------------------ Тесты импортов -------------------------------------
 
-/// `import * as X from "path"` — глобальный импорт.
+/// `import * as X from "path"` - глобальный импорт.
 #[test]
 fn parse_import_global_symbol() {
     let root = must_parse(r#"import * as Lib from "lib.takt"; model M { start S; }"#);
@@ -271,7 +271,7 @@ fn parse_import_global_symbol() {
     assert!(has_import, "Ожидался импорт");
 }
 
-/// `import { a, b as c } from "path"` — импорт с переименованием.
+/// `import { a, b as c } from "path"` - импорт с переименованием.
 #[test]
 fn parse_import_rename() {
     let root = must_parse(
@@ -284,9 +284,9 @@ fn parse_import_rename() {
     assert!(has_import, "Ожидался импорт с переименованием");
 }
 
-// ───────────────────── Тесты выражений (срезы массивов) ─────────────────────
+// --------------------- Тесты выражений (срезы массивов) ---------------------
 
-/// `arr[0:3]` — срез массива.
+/// `arr[0:3]` - срез массива.
 #[test]
 fn parse_array_slice_expression() {
     must_parse(
@@ -303,7 +303,7 @@ fn parse_array_slice_expression() {
     );
 }
 
-// ────────────────────── Тесты методов Location ───────────────────────────────
+// ---------------------- Тесты методов Location -------------------------------
 
 /// Методы изменения Location: `use_start_from`, `use_end_from`.
 #[test]
@@ -365,8 +365,8 @@ fn location_range_method() {
     assert_eq!(range, 3..10);
 }
 
-/// Не-Source варианты Location: `try_file_no` возвращает `None`,
-/// `begin_range` и `end_range` возвращают тот же вариант.
+/// Не-Source варианты Location: `try_file_no` возвращает `None`, `begin_range` и
+/// `end_range` возвращают тот же вариант.
 #[test]
 fn location_non_source_variants() {
     let variants = [
@@ -388,9 +388,9 @@ fn location_non_source_variants() {
     }
 }
 
-// ──────────────────── Тесты Statement::is_empty ──────────────────────────────
+// -------------------- Тесты Statement::is_empty ------------------------------
 
-/// `Statement::is_empty` для пустого блока — `true`.
+/// `Statement::is_empty` для пустого блока - `true`.
 #[test]
 fn statement_is_empty_for_empty_block() {
     use takt_lang::parser::ast::Statement;
@@ -403,7 +403,7 @@ fn statement_is_empty_for_empty_block() {
     assert!(empty_block.is_empty(), "Пустой блок должен быть пустым");
 }
 
-/// `Statement::is_empty` для непустого блока — `false`.
+/// `Statement::is_empty` для непустого блока - `false`.
 #[test]
 fn statement_is_empty_for_nonempty_block() {
     use takt_lang::parser::ast::Statement;
@@ -417,7 +417,7 @@ fn statement_is_empty_for_nonempty_block() {
     assert!(!block.is_empty(), "Непустой блок не должен быть пустым");
 }
 
-/// `Statement::is_empty` для не-блочных операторов — `false`.
+/// `Statement::is_empty` для не-блочных операторов - `false`.
 #[test]
 fn statement_is_empty_for_non_block_statements() {
     use takt_lang::parser::ast::Statement;
@@ -437,7 +437,7 @@ fn statement_is_empty_for_non_block_statements() {
     }
 }
 
-// ──────────────────────── Тесты Diagnostic ───────────────────────────────────
+// ------------------------ Тесты Diagnostic -----------------------------------
 
 /// Конструкторы `Diagnostic` создают объекты с нужными полями.
 #[test]
@@ -531,7 +531,7 @@ fn diagnostic_constructors() {
     assert_eq!(d.notes.len(), 1);
 }
 
-/// `Level` — методы `as_str` и Display.
+/// `Level` - методы `as_str` и Display.
 #[test]
 fn level_display_and_as_str() {
     use takt_lang::diagnostics::Level;
@@ -545,7 +545,7 @@ fn level_display_and_as_str() {
     assert_eq!(Level::Error.to_string(), "error");
 }
 
-// ─────────────────── Тесты дополнительных конструкций ────────────────────────
+// ------------------- Тесты дополнительных конструкций ------------------------
 
 /// Оператор `next` с переходом к состоянию.
 #[test]
@@ -594,7 +594,7 @@ fn parse_nested_if_else() {
     );
 }
 
-/// `ref E: S(Model) = State` — ссылка с путём к состоянию другой модели.
+/// `ref E: S(Model) = State` - ссылка с путём к состоянию другой модели.
 #[test]
 fn parse_ref_with_state_function_condition() {
     must_parse(
@@ -629,13 +629,13 @@ fn expression_has_space_around() {
     let loc = Location::default();
     let inner = Expression::Number(loc.clone(), 1);
 
-    // Унарные — без пробелов
+    // Унарные - без пробелов
     assert!(!Expression::Not(loc.clone(), Box::new(inner.clone())).has_space_around());
     assert!(!Expression::BitwiseNot(loc.clone(), Box::new(inner.clone())).has_space_around());
     assert!(!Expression::UnaryPlus(loc.clone(), Box::new(inner.clone())).has_space_around());
     assert!(!Expression::Negate(loc.clone(), Box::new(inner.clone())).has_space_around());
 
-    // Бинарные — с пробелами
+    // Бинарные - с пробелами
     assert!(
         Expression::Add(
             loc.clone(),
@@ -674,7 +674,7 @@ fn expression_loc_method() {
     );
 }
 
-// ─────────────────────────────── Тернарный оператор ─────────────────────────
+// ------------------------------- Тернарный оператор -------------------------
 
 /// Простой тернарный оператор `flag ? true : false` разбирается без ошибок.
 #[test]
@@ -686,7 +686,7 @@ fn ternary_simple_parses() {
 /// Вложенный тернарный оператор (правоассоциативный) разбирается корректно.
 #[test]
 fn ternary_nested_right_associative() {
-    // a ? b ? 1 : 2 : 3  →  a ? (b ? 1 : 2) : 3
+    // 1: 2: 3 -> a ?
     let src = "var a: bit := true; var b: bit := false; var z: bit := a ? b ? true : false : false; start S;";
     must_parse(src);
 }
@@ -737,7 +737,7 @@ fn ternary_operator_file_parses() {
     must_parse(&src);
 }
 
-/// Контр-пример: незакрытый тернарный оператор (без `else`) — ошибка парсера.
+/// Контр-пример: незакрытый тернарный оператор (без `else`) - ошибка парсера.
 #[test]
 fn ternary_missing_else_branch_is_error() {
     // `flag ? true` без `: else` не является корректным тернарным выражением
@@ -749,7 +749,7 @@ fn ternary_missing_else_branch_is_error() {
     );
 }
 
-/// Контр-пример: тернарный оператор без условия — ошибка парсера.
+/// Контр-пример: тернарный оператор без условия - ошибка парсера.
 #[test]
 fn ternary_missing_condition_is_error() {
     let src = "var r: bit = ? true : false; start S;";
@@ -760,7 +760,7 @@ fn ternary_missing_condition_is_error() {
     );
 }
 
-// ─────────────────────────────── Структурные типы (NI3) ──────────────────────
+// ------------------------------- Структурные типы (NI3) ----------------------
 
 /// Простая структура с двумя полями разбирается без ошибок.
 #[test]
@@ -809,7 +809,7 @@ fn struct_types_file_parses() {
     must_parse(&src);
 }
 
-/// Контр-пример: структура без закрывающей скобки — ошибка парсера.
+/// Контр-пример: структура без закрывающей скобки - ошибка парсера.
 #[test]
 fn struct_missing_closing_brace_is_error() {
     let src = "struct Bad { x: bit start S;";
@@ -820,17 +820,17 @@ fn struct_missing_closing_brace_is_error() {
     );
 }
 
-/// Контр-пример: структура без имени — ошибка парсера.
+/// Контр-пример: структура без имени - ошибка парсера.
 #[test]
 fn struct_anonymous_parses_with_recovery() {
-    // LALRPOP использует IdentifierOrError, поэтому анонимная структура
-    // разбирается с восстановлением после ошибки
+    // LALRPOP использует IdentifierOrError, поэтому анонимная структура разбирается с
+    // восстановлением после ошибки
     let src = "struct { x: bit } start S;";
-    // Принимаем как ошибку или успех с диагностикой — не panic
+    // Принимаем как ошибку или успех с диагностикой - не panic
     let _ = takt_lang::parse(src, 0);
 }
 
-// ─── Inline formula ──────────────────────────────────────────────────────────
+// --- Inline formula ----------------------------------------------------------
 
 /// Встроенная формула в теле модели разбирается как `ModelElement::InlineFormula`.
 #[test]
@@ -879,10 +879,10 @@ fn test_inline_formula_in_always_parsed() {
     assert!(!ast.elements.is_empty());
 }
 
-// ───────────────────────── Фича 0020: оператор `address` ─────────────────────
+// -------------------------: оператор `address` ---------------------
 
-/// Оператор `address Имя = <выражение>;` парсится в `ModelElement::Address`
-/// с именем порта и выражением-адресом (фича 0020-01).
+/// Оператор `address Имя = <выражение>;` парсится в `ModelElement::Address` с именем
+/// порта и выражением-адресом.
 #[test]
 fn address_operator_parses_to_model_element_address() {
     let root = must_parse("address BTN = 0x00200000;");
@@ -899,8 +899,8 @@ fn address_operator_parses_to_model_element_address() {
         Some("BTN"),
         "имя порта в address-операторе"
     );
-    // Голый hex `0x…` без суффикса `:bit` лексируется как число; адресный
-    // литерал `Expression::Address` порождается только формой `0xADDR:bit`.
+    // Голый hex `0x...` без суфисправления `:bit` лексируется как число; адресный литерал
+    // `Expression::Address` порождается только формой `0xADDR:bit`.
     assert!(
         matches!(
             addr.value,
@@ -933,8 +933,8 @@ fn address_operator_accepts_bit_addressed_literal() {
     );
 }
 
-/// Оператор `address` соседствует с объявлением порта в одной модели
-/// и не мешает разбору остальных элементов.
+/// Оператор `address` соседствует с объявлением порта в одной модели и не мешает
+/// разбору остальных элементов.
 #[test]
 fn address_operator_coexists_with_port_declaration() {
     let root = must_parse("model Sensors { in BTN: u8; address BTN = 0x00200000; start Idle; }");

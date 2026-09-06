@@ -1,14 +1,14 @@
-//! Механизм времени цели `st` (IEC 61131-3, фича 0134).
+//! Механизм времени цели `st` (IEC 61131-3).
 //!
-//! Два профиля (решение заказчика, анализ 0134-06):
-//! - **«часы»** — штатный `TON` (IEC-таймер): экземпляр в `VAR` владельца,
+//! Два профиля:
+//! - **"часы"** - штатный `TON` (IEC-таймер): экземпляр в `VAR` владельца,
 //!   `dwell(IN := TRUE, PT := T#Nms);` каждый скан в состоянии, условие `dwell.Q`,
-//!   сброс `IN := FALSE` при **любом** выходе (иначе выдержка «прилипнет»).
-//! - **«такты»** — счётчик сканов `takt_dwell` (как цель `c`), условие `>= D`.
+//!   сброс `IN := FALSE` при **любом** выходе (иначе выдержка "прилипнет").
+//! - **"такты"** - счётчик сканов `takt_dwell` (как цель `c`), условие `>= D`.
 //!
-//! ⚠️ MatIEC: экземпляр `TON` — это `VAR` (не `VAR CONSTANT`), порядок секций
-//! сохраняется автоматически (VAR идёт раньше). Имя экземпляра уникализируется
-//! состоянием и индексом ребра — чтобы не столкнуться с `var` пользователя.
+//! MatIEC: экземпляр `TON` - это `VAR` (не `VAR CONSTANT`), порядок секций сохраняется
+//! автоматически (VAR идёт раньше). Имя экземпляра уникализируется состоянием и
+//! индексом ребра - чтобы не столкнуться с `var` пользователя.
 
 use crate::generator::st::st_map::StMap;
 use crate::semantic::duration::TimeProfile;
@@ -20,44 +20,44 @@ use crate::semantic::{ModelNode, StatementNode, type_node::TypeNode};
 
 /// Имя поля-счётчика сканов, проведённых в текущем состоянии.
 pub(super) const DWELL_FIELD: &str = "takt_dwell";
-/// Имя поля «состояние на конец предыдущего скана».
+/// Имя поля "состояние на конец предыдущего скана".
 pub(super) const PREV_STATE_FIELD: &str = "takt_prev_state";
 /// Стандартный тип IEC таймера включения.
 pub(super) const TON_TYPE: &str = "TON";
 
-/// Профиль модели — «часы»?
+/// Профиль модели - "часы"?
 pub(super) fn is_clock(map: &StMap) -> bool {
     matches!(map.time_profile(), TimeProfile::Clock)
 }
 
-/// Длительностный `after Nms` **или** периодический `every Nms` (фича 0134-09):
-/// обе величины меряются длительностью; в профиле «такты» им нужен счётчик сканов.
+/// Длительностный `after Nms` **или** периодический `every Nms`: обе величины меряются
+/// длительностью; в профиле "такты" им нужен счётчик сканов.
 fn uses_duration_time(model: &ModelNode) -> bool {
     model_uses_duration_after(model) || model_uses_every(model)
 }
 
-/// Нужен ли счётчик сканов `takt_dwell`: тактовая выдержка `after Nt` (в любом
-/// профиле) либо длительностный `after Nms`/`every Nms` в профиле «такты».
+/// Нужен ли счётчик сканов `takt_dwell`: тактовая выдержка `after Nt` (в любом профиле)
+/// либо длительностный `after Nms`/`every Nms` в профиле "такты".
 pub(super) fn needs_dwell(map: &StMap, model: &ModelNode) -> bool {
     model_uses_tick_after(model) || (!is_clock(map) && uses_duration_time(model))
 }
 
-/// Имя переменной-аккумулятора `every`-блока (профиль «такты», фича 0134-09).
+/// Имя переменной-аккумулятора `every`-блока (профиль "такты").
 pub(super) fn every_field(idx: usize) -> String {
     format!("takt_every{idx}")
 }
 
-/// Имя экземпляра самосбрасывающегося `TON` для `every`-блока (профиль «часы»).
+/// Имя экземпляра самосбрасывающегося `TON` для `every`-блока (профиль "часы").
 pub(super) fn every_timer(idx: usize) -> String {
     format!("takt_every_ton{idx}")
 }
 
-/// Тип аккумулятора `every` — как `takt_dwell` (`UDINT`).
+/// Тип аккумулятора `every` - как `takt_dwell` (`UDINT`).
 pub(super) fn every_field_type() -> TypeNode {
     dwell_type()
 }
 
-/// Периодический блок `every` модели: индекс, состояние, период, тело (0134-09).
+/// Периодический блок `every` модели: индекс, состояние, период, тело.
 pub(super) struct EveryBlock<'a> {
     pub(super) idx: usize,
     pub(super) state: String,
@@ -87,8 +87,8 @@ pub(super) fn model_every(model: &ModelNode) -> Vec<EveryBlock<'_>> {
     out
 }
 
-/// Тип счётчика `takt_dwell` — `UDINT` (32 бита): диапазон с запасом, тип IEC
-/// без риска `ST-013` (в отличие от 64-битного `LINT`).
+/// Тип счётчика `takt_dwell` - `UDINT` (32 бита): диапазон с запасом, тип IEC без риска
+/// `ST-013` (в отличие от 64-битного `LINT`).
 pub(super) fn dwell_type() -> TypeNode {
     TypeNode::Integer {
         bits: 32,
@@ -96,7 +96,7 @@ pub(super) fn dwell_type() -> TypeNode {
     }
 }
 
-/// Тип метки предыдущего состояния — `USINT` (как поле `state`).
+/// Тип метки предыдущего состояния - `USINT` (как поле `state`).
 pub(super) fn prev_state_type() -> TypeNode {
     TypeNode::Integer {
         bits: 8,
@@ -104,11 +104,11 @@ pub(super) fn prev_state_type() -> TypeNode {
     }
 }
 
-/// Имя экземпляра `TON` для выдержки состояния (профиль «часы»).
+/// Имя экземпляра `TON` для выдержки состояния (профиль "часы").
 ///
-/// Уникально по состоянию и индексу ребра: `<state>_dwell<idx>` — суффиксация,
-/// как у прочих синтетических имён st (`main_step`, `a0`). Столкнуться с `var`
-/// пользователя не может: у пользовательских имён нет суффикса `_dwellN`.
+/// Уникально по состоянию и индексу ребра: `<state>_dwell<idx>` - суфисправленияция, как у
+/// прочих синтетических имён st (`main_step`, `a0`). Столкнуться с `var` пользователя
+/// не может: у пользовательских имён нет суфисправления `_dwellN`.
 pub(super) fn timer_name(state: &Name, idx: usize) -> String {
     format!("{}_dwell{}", state.local_lowercase_snakecase(), idx)
 }

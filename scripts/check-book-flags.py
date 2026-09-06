@@ -47,7 +47,7 @@ CHAPTERS = os.path.join(ROOT, "book", "src")
 BASELINE = os.path.join(ROOT, "scripts", "book-flags-baseline.txt")
 
 # Флаг объявлен там, где разбирается: `"--flag"` в match и `"--flag="` в
-# starts_with. Комментарии отброшены — в них флаги упоминаются пояснением.
+# starts_with. Комментарии отброшены - в них флаги упоминаются пояснением.
 FLAG_RE = re.compile(r'"(--[a-z][a-z0-9-]*)=?"')
 COMMENT_RE = re.compile(r"^\s*//")
 
@@ -108,7 +108,7 @@ def main():
     named = 0
     for flag in sorted(flags):
         # Слово целиком: `--float-as-q` не должен засчитываться за `--float-as-q=m.n`
-        # соседа, а `--guard-enable` — за `--guard-enabled`.
+        # соседа, а `--guard-enable` - за `--guard-enabled`.
         found = re.search(re.escape(flag) + r"(?![a-z0-9-])", document) is not None
         if found and flag in baseline:
             stale.append(flag)

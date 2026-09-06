@@ -1,22 +1,21 @@
-//! Размещение порта ключевым словом `at` (фича 0187, задача 01).
+//! Размещение порта ключевым словом `at`.
 //!
 //! ## Что здесь ловится
 //!
-//! `at` — **необязательная** часть объявления: адрес может прийти по имени порта
-//! (оператор `address` или внешняя карта `--address-map`), поэтому объявление
-//! без `at` обязано оставаться законным, а полноту адреса проверяет слой
-//! адресов после разрешения всех источников, а не разбор.
+//! `at` - **необязательная** часть объявления: адрес может прийти по имени порта
+//! (оператор `address` или внешняя карта `--address-map`), поэтому объявление без `at`
+//! обязано оставаться законным, а полноту адреса проверяет слой адресов после
+//! разрешения всех источников, а не разбор.
 //!
-//! ⚠️ **Переходное состояние (задачи 01 → 07 → 02).** Пока адресом считается и
-//! `at <адрес>`, и старая форма `:= <адрес>`: корпус переходит на `at` задачей
-//! 07, и лишь затем `:=` меняет смысл на начальное значение. Тесты на смысл
-//! `:=` появятся там же.
+//! **Переходное состояние.** Пока адресом считается и `at <адрес>`, и старая форма `:=
+//! <адрес>`: корпус переходит на `at`, и лишь затем `:=` меняет смысл на начальное
+//! значение.
 
 use std::rc::Rc;
 use takt_lang::address_map::{AddressEnv, parse_address_map, resolve_addresses};
 use takt_lang::semantic::tree::construct_model;
 
-/// Разрешает адреса модели; `external` — текст внешней карты.
+/// Разрешает адреса модели; `external` - текст внешней карты.
 fn resolve(source: &str, external: Option<&str>) -> takt_lang::address_map::AddressResolution {
     let (ast, _) = takt_lang::parse(source, 0).expect("разбор");
     let model = construct_model(&ast, None, &[]).expect("семантика");
@@ -27,7 +26,7 @@ fn resolve(source: &str, external: Option<&str>) -> takt_lang::address_map::Addr
     resolve_addresses(Rc::clone(&model), &entries, &AddressEnv::default())
 }
 
-/// Адрес порта по имени (карта ключуется квалифицированно — ищем по значению).
+/// Адрес порта по имени (карта ключуется квалифицированно - ищем по значению).
 fn address_of(
     res: &takt_lang::address_map::AddressResolution,
     port: &str,
@@ -49,8 +48,8 @@ fn at_places_the_port() {
 
 #[test]
 fn declaration_without_at_is_legal_and_address_comes_by_name() {
-    // R1a: отсутствие `at` — не отсутствие адреса. Здесь его задаёт оператор
-    // `address` по имени порта.
+    // R1a: отсутствие `at` - не отсутствие адреса. Здесь его задаёт оператор `address`
+    // по имени порта.
     let res = resolve(
         "in temp: u8;\naddress temp = 0x40000002;\nvar t: u8 := 0;\n\
          start S { always { t := temp; } ref S: t = 9; }\n",
@@ -70,7 +69,7 @@ fn external_map_still_addresses_a_port_declared_without_at() {
 
 #[test]
 fn external_map_overrides_at() {
-    // Приоритет источников (0020) не меняется: карта бьёт объявление.
+    // Приоритет источников не меняется: карта бьёт объявление.
     let res = resolve(
         "in btn: bit at 0x40000000:0;\nvar t: u8 := 0;\n\
          start S { always { t := t + 1; } ref S: btn = 1; }\n",
@@ -99,9 +98,9 @@ fn port_without_any_address_is_still_reported_after_resolution() {
 
 #[test]
 fn formatter_keeps_the_placement() {
-    // Правило форматтера «добавил узел — добавь печать» защищает от новых
-    // УЗЛОВ, а не полей: новое поле компилятор разобрать не потребовал бы
-    // (`..` в образце), и адрес молча пропал бы из вывода.
+    // Правило форматтера "добавил узел - добавь печать" защищает от новых узлов, а не
+    // полей: новое поле компилятор разобрать не потребовал бы (`..` в образце), и адрес
+    // молча пропал бы из вывода.
     let source = "in btn: bit at 0x40000000:0;\nvar t: u8 := 0;\nstart S {\n  always { t := t + 1; }\n  ref S: btn = 1;\n}\n";
     let formatted = takt_lang::format::format_source(source).expect("форматирование");
     assert!(

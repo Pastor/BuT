@@ -1,20 +1,4 @@
-//! Q-хелперы цели `st` печатаются ПЕРЕД первым POU (фича 0380).
-//!
-//! # Что было
-//!
-//! `insert_helper` вставляла `TAKT_Q_FLOORDIV` перед первым `FUNCTION_BLOCK`,
-//! а пользовательские `FUNCTION` печатаются **до** блока. Функция, зовущая
-//! хелпер, ссылалась на него **раньше объявления**, и `iec2c` отвечал
-//!
-//! ```text
-//! error: ')' missing at the end of function invocation in ST expression.
-//! ```
-//!
-//! — диагностикой о синтаксисе в строке вызова, по которой причину не опознать
-//! (тот же класс, что фича 0344: опережающих ссылок в IEC 61131-3 нет).
-//!
-//! ⚠️ Комментарий кода при этом обещал «перед первым POU» — проза называла
-//! роль, которой у кода не было (класс 0292).
+//! Q-хелперы цели `st` печатаются перед первым POU.
 
 use std::process::Command;
 use takt_lang::generator::GenerateOptions;
@@ -49,7 +33,7 @@ fn generate() -> (std::path::PathBuf, String) {
     (dir, text)
 }
 
-/// Объявление хелпера стоит РАНЬШЕ функции, которая его зовёт.
+/// Объявление хелпера стоит раньше функции, которая его зовёт.
 #[test]
 fn helper_precedes_the_function_that_calls_it() {
     let (_d, st) = generate();
@@ -65,7 +49,7 @@ fn helper_precedes_the_function_that_calls_it() {
     );
 }
 
-/// Тот же вывод принимает `iec2c` — арбитр, который и отвергал прежний.
+/// Тот же вывод принимает `iec2c` - арбитр, который и отвергал прежний.
 #[test]
 fn generated_st_is_accepted_by_iec2c() {
     let prefix = std::env::var("IEC2C_PREFIX")

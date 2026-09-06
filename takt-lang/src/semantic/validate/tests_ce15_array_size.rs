@@ -1,10 +1,10 @@
-//! Тесты модуля `validate` (перенесены из `validate.rs`, фича 0027).
+//! Тесты модуля `validate` (перенесены из `validate.rs`).
 
 use super::types::{MAX_ARRAY_SIZE, check_type_array_size};
 use crate::diagnostics::Location;
 use crate::semantic::type_node::TypeNode;
 
-/// Ce15: допустимый размер массива 8 — ошибок нет.
+/// Ce15: допустимый размер массива 8 - ошибок нет.
 #[test]
 fn array_size_8_is_ok() {
     let ty = TypeNode::Array(8, Box::new(TypeNode::Bit));
@@ -14,7 +14,7 @@ fn array_size_8_is_ok() {
     );
 }
 
-/// Ce15: размер равный MAX_ARRAY_SIZE — допустим (граничное значение).
+/// Ce15: размер равный MAX_ARRAY_SIZE - допустим (граничное значение).
 #[test]
 fn array_size_max_is_ok() {
     let ty = TypeNode::Array(MAX_ARRAY_SIZE, Box::new(TypeNode::Bit));
@@ -24,7 +24,7 @@ fn array_size_max_is_ok() {
     );
 }
 
-/// Ce15: размер MAX_ARRAY_SIZE + 1 — ошибка.
+/// Ce15: размер MAX_ARRAY_SIZE + 1 - ошибка.
 #[test]
 fn array_size_exceeding_max_is_error() {
     let ty = TypeNode::Array(MAX_ARRAY_SIZE + 1, Box::new(TypeNode::Bit));
@@ -42,7 +42,7 @@ fn array_size_exceeding_max_is_error() {
     );
 }
 
-/// Ce15: максимальный u16 (65535) — ошибка, превышает MAX_ARRAY_SIZE.
+/// Ce15: максимальный u16 (65535) - ошибка, превышает MAX_ARRAY_SIZE.
 #[test]
 fn array_size_u16_max_is_error() {
     let ty = TypeNode::Array(u16::MAX, Box::new(TypeNode::Bit));
@@ -53,7 +53,7 @@ fn array_size_u16_max_is_error() {
     );
 }
 
-/// Ce15: вложенный массив с превышением размера — также ошибка.
+/// Ce15: вложенный массив с превышением размера - также ошибка.
 #[test]
 fn nested_array_size_exceeding_max_is_error() {
     // Внешний массив допустим, но вложенный нет

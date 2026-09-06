@@ -1,10 +1,10 @@
-//! Фича 0082: Ce13 (`SE-036`) обходит формулы — переменная только в LTL/Guard-
-//! формуле не считается мёртвой.
+//! Ce13 (`SE-036`) обходит формулы - переменная только в LTL/Guard- формуле не
+//! считается мёртвой.
 //!
 //! До 0082 `semantic/unused.rs` не обходил `ModelNode::formulas`/
 //! `StateNode::formulas`, поэтому переменная, используемая **только** в свойстве
-//! верификации, давала **ложное** `SE-036`. Дефект обострён фичей 0081 (Ce13
-//! теперь печатается пользователю).
+//! верификации, давала **ложное** `SE-036`. Дефект обострён (Ce13 теперь печатается
+//! пользователю).
 
 use takt_lang::semantic::tree::construct_model;
 
@@ -18,7 +18,7 @@ fn se036_names(src: &str) -> Vec<String> {
         .collect()
 }
 
-/// A1: переменная только в LTL-формуле состояния (`: [LTL] G flag;`) — не мёртвая.
+/// A1: переменная только в LTL-формуле состояния (`: [LTL] G flag;`) - не мёртвая.
 #[test]
 fn var_used_only_in_ltl_formula_no_unused_warning() {
     let names = se036_names(
@@ -37,7 +37,7 @@ fn var_used_only_in_ltl_formula_no_unused_warning() {
     );
 }
 
-/// A2: переменная только в `invariant` (Guard-формуле уровня модели) — не мёртвая.
+/// A2: переменная только в `invariant` (Guard-формуле уровня модели) - не мёртвая.
 #[test]
 fn var_used_only_in_invariant_no_unused_warning() {
     let names = se036_names(
@@ -54,8 +54,8 @@ fn var_used_only_in_invariant_no_unused_warning() {
     );
 }
 
-/// A3 (**негативный сторож**): реально неиспользуемая переменная по-прежнему даёт
-/// `SE-036` — обход формул не глушит настоящие находки.
+/// A3 (**негативный тест**): реально неиспользуемая переменная по-прежнему даёт
+/// `SE-036` - обход формул не глушит настоящие находки.
 #[test]
 fn truly_unused_var_still_warns_after_formula_traversal() {
     let names = se036_names(

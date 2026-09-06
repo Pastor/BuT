@@ -1,7 +1,7 @@
-//! Проверки проектов и файлов (фича 0531, задача 09b).
+//! Проверки проектов и файлов.
 //!
-//! Политика та же, что у `http.rs`: нет базы — проверки не выполняются и
-//! говорят об этом словами, а решает это гейт `check-web-server.sh`.
+//! Политика та же, что у `http.rs`: нет базы - проверки не выполняются и говорят об
+//! этом словами, а решает это проверка `check-web-server.sh`.
 
 mod common;
 
@@ -47,8 +47,8 @@ async fn project_is_created_read_patched_and_removed() {
         .await;
     assert_eq!(status, StatusCode::CREATED, "{created}");
     assert_eq!(created["name"], "Термореле");
-    // Умолчание видимости — закрытый: открытым проект становится по просьбе,
-    // а не по умолчанию.
+    // Умолчание видимости - закрытый: открытым проект становится по просьбе, а не по
+    // умолчанию.
     assert_eq!(created["visibility"], "private");
     assert_eq!(created["revision"], 0);
     assert_eq!(created["size_bytes"], 0);
@@ -84,8 +84,8 @@ async fn project_is_created_read_patched_and_removed() {
 
 #[tokio::test]
 async fn a_stranger_project_is_not_found_rather_than_forbidden() {
-    // ⚠️ `403` сделал бы ручку ОРАКУЛОМ: по ответам перечислялись бы чужие
-    // проекты, которых спрашивающий не видел.
+    // `403` сделал бы ручку оракулом: по ответам перечислялись бы чужие проекты,
+    // которых спрашивающий не видел.
     let Some(stand) = Stand::open("p_stranger").await else {
         return skipped("чужой проект");
     };
@@ -123,8 +123,8 @@ async fn a_stranger_project_is_not_found_rather_than_forbidden() {
 
 #[tokio::test]
 async fn file_write_read_and_delete_keep_the_size_in_step() {
-    // ⚠️ Размер считается СУММОЙ по файлам, а не приращением: приращение
-    // расходится с истиной на первой же неудачной попытке, и молча.
+    // Размер считается суммой по файлам, а не приращением: приращение расходится с
+    // истиной на первой же неудачной попытке, и молча.
     let Some(stand) = Stand::open("p_size").await else {
         return skipped("размер проекта");
     };
@@ -166,7 +166,7 @@ async fn file_write_read_and_delete_keep_the_size_in_step() {
     assert_eq!(file["kind"], "scenario", "вид определён расширением");
     assert_eq!(file["revision"], 2, "ревизия ПРОЕКТА, её и шлют обратно");
 
-    // Правка вдвое короче — сумма обязана уменьшиться.
+    // Правка вдвое короче - сумма обязана уменьшиться.
     let shorter = "x\n";
     let (_, written) = stand
         .put_as(
@@ -223,16 +223,16 @@ async fn stale_revision_is_a_conflict_and_names_both_numbers() {
         .await;
     assert_eq!(status, StatusCode::CONFLICT, "{body}");
     assert_eq!(body["error"], "revision_conflict");
-    // ⚠️ Числа едут ПОЛЯМИ, а не только в тексте: по ним страница строит выбор
-    // «перечитать / перезаписать». Разбирай она их из сообщения — текст отказа
-    // стал бы частью протокола и перестал бы переводиться (задача 09e).
+    // Числа едут полями, а не только в тексте: по ним страница строит выбор "перечитать
+    // / перезаписать". Разбирай она их из сообщения - текст отказа стал бы частью
+    // протокола и перестал бы переводиться.
     assert_eq!(body["seen"], 1, "названа ревизия автора");
     assert_eq!(body["revision"], 2, "названа ревизия проекта");
     let message = body["message"].as_str().expect("текст");
     assert!(message.contains('1') && message.contains('2'), "{message}");
 
-    // ⚠️ Правка существующего файла БЕЗ ревизии — тоже конфликт: молчаливая
-    // перезапись чужой работы хуже отказа.
+    // Правка существующего файла без ревизии - тоже конфликт: молчаливая перезапись
+    // чужой работы хуже отказа.
     let (status, body) = stand
         .put_as(
             &format!("/api/projects/{id}/files/main.takt"),
@@ -251,8 +251,8 @@ async fn stale_revision_is_a_conflict_and_names_both_numbers() {
 
 #[tokio::test]
 async fn every_limit_refuses_with_its_number() {
-    // Условие приёмки задачи: `413` на КАЖДОМ пределе, и в тексте обязаны быть
-    // и предел, и факт.
+    // Условие приёмки задачи: `413` на каждом пределе, и в тексте обязаны быть и
+    // предел, и факт.
     let Some(stand) = Stand::open("p_limits").await else {
         return skipped("пределы");
     };
@@ -280,8 +280,8 @@ async fn every_limit_refuses_with_its_number() {
         "факт не назван: {message}"
     );
 
-    // Предел размера проекта: восемь файлов по 64 КиБ — ровно предел, девятый
-    // не влезает.
+    // Предел размера проекта: восемь файлов по 64 КиБ - ровно предел, девятый не
+    // влезает.
     let chunk = "y".repeat(limits::FILE_BYTES);
     let mut revision = 0i64;
     for index in 0..(limits::PROJECT_BYTES / limits::FILE_BYTES as i64) {
@@ -347,8 +347,8 @@ async fn the_number_of_files_is_limited_too() {
             .contains(&limits::FILES_PER_PROJECT.to_string()),
         "{body}"
     );
-    // ⚠️ Правка СУЩЕСТВУЮЩЕГО файла на пределе обязана проходить: предел на
-    // число файлов, а не на число записей.
+    // Правка существующего файла на пределе обязана проходить: предел на число файлов,
+    // а не на число записей.
     let (status, body) = stand
         .put_as(
             &format!("/api/projects/{id}/files/f0.takt"),
@@ -362,8 +362,8 @@ async fn the_number_of_files_is_limited_too() {
 
 #[tokio::test]
 async fn file_name_is_checked_because_it_becomes_a_model_name() {
-    // Имя файла становится именем корневой модели (0195), а она попадает в
-    // порождённый код: кириллица и пробел не пройдут дальше первой цели.
+    // Имя файла становится именем корневой модели, а она попадает в порождённый код:
+    // кириллица и пробел не пройдут дальше первой цели.
     let Some(stand) = Stand::open("p_names").await else {
         return skipped("имя файла");
     };
@@ -428,8 +428,8 @@ async fn main_file_must_exist_and_is_forgotten_when_removed() {
 
 #[tokio::test]
 async fn a_new_project_gets_the_module_version_of_the_service() {
-    // Решение A5: страница проекта грузит модуль ЕГО версии, и подъём —
-    // явное действие владельца.
+    // Решение A5: страница проекта грузит модуль его версии, и подъём - явное действие
+    // владельца.
     let Some(stand) = Stand::open("p_version").await else {
         return skipped("версия модуля");
     };
@@ -457,8 +457,7 @@ async fn project_count_is_limited_per_owner() {
         return skipped("число проектов");
     };
     let token = owner(&stand, "ivan").await;
-    // Предел проверяется на низком значении: сотня проектов в тесте — сотня
-    // запросов ни за чем. Число берётся у самого предела через прямой INSERT.
+    // Число берётся у самого предела через прямой INSERT.
     let filler = limits::PROJECTS_PER_USER - 1;
     stand.fill_projects("ivan", filler).await;
     let (status, body) = stand
@@ -499,9 +498,9 @@ async fn projects_need_a_token() {
 
 #[tokio::test]
 async fn the_build_target_and_flags_are_checked_as_a_pair() {
-    // ⚠️ Проверка ключей идёт МОДУЛЕМ (задача 09p): своего списка ключей у
-    // сервера нет и быть не должно. Значит и здесь нужна собранная статика —
-    // ровно как проверкам генерации в архиве.
+    // Проверка ключей идёт модулем: своего списка ключей у сервера нет и быть не
+    // должно. Значит и здесь нужна собранная статика - ровно как проверкам генерации в
+    // архиве.
     if std::env::var("TAKT_WEB_TEST_STATIC").is_err() {
         return skipped("ключи сборки: не задан TAKT_WEB_TEST_STATIC — модуля нет");
     }
@@ -529,9 +528,9 @@ async fn the_build_target_and_flags_are_checked_as_a_pair() {
     assert_eq!(body["build_target"], "sv-mmio");
     assert_eq!(body["build_args"], "--bus=apb");
 
-    // ⚠️ Половина пары делает негодной другую: `--bus=apb` годится `sv-mmio` и
-    // не годится `rust`. Проверяй сервер только присланное поле — эта смена
-    // прошла бы молча, и проект собирался бы отказом.
+    // Половина пары делает негодной другую: `--bus=apb` годится `sv-mmio` и не годится
+    // `rust`. Проверяй сервер только присланное поле - эта смена прошла бы молча, и
+    // проект собирался бы отказом.
     let (status, body) = stand
         .patch_as(
             &format!("/api/projects/{id}"),
@@ -545,7 +544,7 @@ async fn the_build_target_and_flags_are_checked_as_a_pair() {
         "причина обязана называть ключ: {body}"
     );
 
-    // Неизвестный ключ и неизвестная цель — тоже отказ.
+    // Неизвестный ключ и неизвестная цель - тоже отказ.
     for wrong in [
         serde_json::json!({"build_args": "--нет-такого"}),
         serde_json::json!({"build_target": "verilog"}),
@@ -556,8 +555,8 @@ async fn the_build_target_and_flags_are_checked_as_a_pair() {
         assert_eq!(status, StatusCode::BAD_REQUEST, "{wrong} → {body}");
     }
 
-    // ⚠️ Контроль: отказ не сплошной. Смена ОБЕИХ половин разом законна, и без
-    // этой проверки «отвергать всё» выглядело бы работающим правилом.
+    // Контроль: отказ не сплошной. Смена обеих половин разом законна, и без этой
+    // проверки "отвергать всё" выглядело бы работающим правилом.
     let (status, body) = stand
         .patch_as(
             &format!("/api/projects/{id}"),
@@ -568,8 +567,8 @@ async fn the_build_target_and_flags_are_checked_as_a_pair() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["build_target"], "rust");
 
-    // Длина строки ключей ограничена — до разбора: работа, объём которой
-    // задаёт отправитель, границы не имеет.
+    // Длина строки ключей ограничена - до разбора: работа, объём которой задаёт
+    // отправитель, границы не имеет.
     let (status, body) = stand
         .patch_as(
             &format!("/api/projects/{id}"),
@@ -643,9 +642,8 @@ async fn markdown_lives_in_the_project_and_the_active_scenario_is_named() {
         "причина не называет род: {body}"
     );
 
-    // ⚠️ Активный файл — только МОДЕЛЬ, активный сценарий — только СЦЕНАРИЙ:
-    // перепутанные роли дали бы не отказ, а пустую страницу либо прогон по
-    // пояснению.
+    // Активный файл - только модель, активный сценарий - только сценарий: перепутанные
+    // роли дали бы не отказ, а пустую страницу либо прогон по пояснению.
     for (field, value) in [
         ("main_file", "readme.md"),
         ("main_file", "run.json"),
@@ -663,7 +661,7 @@ async fn markdown_lives_in_the_project_and_the_active_scenario_is_named() {
         assert_eq!(status, StatusCode::BAD_REQUEST, "{field}={value}: {body}");
     }
 
-    // Контроль: годная пара ролей принимается — отказ не сплошной.
+    // Контроль: годная пара ролей принимается - отказ не сплошной.
     let (status, patched) = stand
         .patch_as(
             &format!("/api/projects/{id}"),
@@ -674,8 +672,8 @@ async fn markdown_lives_in_the_project_and_the_active_scenario_is_named() {
     assert_eq!(status, StatusCode::OK, "{patched}");
     assert_eq!(patched["main_scenario"], "cold.json");
 
-    // Удалённый сценарий забывается — как и активный файл: иначе прогон шёл бы
-    // по сценарию, которого нет.
+    // Удалённый сценарий забывается - как и активный файл: иначе прогон шёл бы по
+    // сценарию, которого нет.
     stand
         .delete_as(&format!("/api/projects/{id}/files/cold.json"), &token)
         .await;

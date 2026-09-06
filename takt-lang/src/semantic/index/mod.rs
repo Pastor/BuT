@@ -1,8 +1,8 @@
 //! Индекс семантических узлов для поиска по позиции в исходном тексте.
 //!
-//! Модуль реализует [`SemanticIndex`] — структуру данных, позволяющую LSP-сервису
-//! за O(n) найти наиболее конкретный узел семантического дерева, покрывающий
-//! заданное байтовое смещение в исходном тексте.
+//! Модуль реализует [`SemanticIndex`] - структуру данных, позволяющую LSP-сервису за
+//! O(n) найти наиболее конкретный узел семантического дерева, покрывающий заданное
+//! байтовое смещение в исходном тексте.
 //!
 //! ## Принцип работы
 //!
@@ -12,8 +12,8 @@
 //!    и вложенных моделей.
 //! 2. Записи сортируются по `start_byte`.
 //! 3. [`SemanticIndex::node_at_offset`] перебирает записи и возвращает запись с
-//!    наименьшим диапазоном, покрывающим заданное смещение («наиболее конкретный»
-//!    или «внутренний» узел).
+//!    наименьшим диапазоном, покрывающим заданное смещение ("наиболее конкретный"
+//!    или "внутренний" узел).
 //!
 //! ## Пример
 //!
@@ -27,7 +27,7 @@
 //! let model = construct_model(&ast, None, &[]).unwrap();
 //! let index = SemanticIndex::build(&model);
 //!
-//! // Смещение 4 — внутри имени переменной "x"
+//! // Смещение 4 - внутри имени переменной "x"
 //! let node = index.node_at_offset(4);
 //! assert!(node.is_some());
 //! assert_eq!(node.unwrap().name, "x");
@@ -44,16 +44,16 @@ use crate::semantic::{
 use std::cell::RefCell;
 use std::rc::Rc;
 
-// Сбор записей индекса вынесен в подмодуль (фича 0071: лимит размера).
-// Реэкспорт держит контракт — вызовы `collect_*` в impl и тестах прежние.
+// Сбор записей индекса вынесен в подмодуль. Реэкспорт держит контракт - вызовы
+// `collect_*` в impl и тестах прежние.
 mod collect;
 use collect::*;
 
 /// Вид семантического узла.
 ///
-/// Используется в [`SemanticNodeRef`] для указания категории найденного элемента,
-/// что позволяет LSP-сервису формировать корректный ответ (hover, go-to-definition
-/// и др.) без дополнительного поиска по имени.
+/// Используется в [`SemanticNodeRef`] для указания категории найденного элемента, что
+/// позволяет LSP-сервису формировать корректный ответ (hover, go-to-definition и др.)
+/// без дополнительного поиска по имени.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SemanticNodeKind {
     /// Обычная изменяемая переменная (`var`).
@@ -74,19 +74,18 @@ pub enum SemanticNodeKind {
     ReferenceCondition,
     /// Ссылка на **модель** по имени: `start Main = Helper;`, `S(Helper)`.
     ///
-    /// Единственный вид ссылки, способный указать в **другой файл**: имя,
-    /// связанное `import`, — это корень импортированного файла. Поэтому на нём и
-    /// стоит кросс-файловый переход (фича 0056).
+    /// Единственный вид ссылки, способный указать в **другой файл**: имя, связанное
+    /// `import`, - это корень импортированного файла. Поэтому на нём и стоит
+    /// кросс-файловый переход.
     ///
-    /// ⚠️ Не путать с [`Model`](SemanticNodeKind::Model): тот — **объявление**
-    /// (`model Helper { … }`), этот — **использование** имени.
+    /// Не путать с [`Model`](SemanticNodeKind::Model): тот - **объявление** (`model
+    /// Helper { ... }`), этот - **использование** имени.
     ReferenceModel,
     /// Ссылка на **состояние** по имени внутри условия: `End` в `S(Ping) = End`.
     ///
-    /// ⚠️ Не путать с [`State`](SemanticNodeKind::State) (**объявление**
-    /// `state End { … }`) и с [`Reference`](SemanticNodeKind::Reference) (цель
-    /// `ref`-перехода). Этот — **использование** имени состояния в условии
-    /// (фича 0071, по образцу [`ReferenceModel`](SemanticNodeKind::ReferenceModel)).
+    /// Не путать с [`State`](SemanticNodeKind::State) (**объявление** `state End { ...
+    /// }`) и с [`Reference`](SemanticNodeKind::Reference) (цель `ref`-перехода). Этот -
+    /// **использование** имени состояния в условии).
     ReferenceState,
     /// Начальное состояние автомата (`start`).
     StartState,
@@ -106,11 +105,11 @@ pub enum SemanticNodeKind {
 
 /// Ссылка на узел семантического дерева с позицией в исходном тексте.
 ///
-/// Содержит имя элемента, его вид и позицию объявления (`loc`).
-/// Не хранит сам узел семантического дерева — для получения полных данных
-/// узла используйте методы поиска [`ModelNode`]:
-/// [`search_var`](ModelNode::search_var), [`search_func`](ModelNode::search_func),
-/// [`search_state`](ModelNode::search_state) и т.д.
+/// Содержит имя элемента, его вид и позицию объявления (`loc`). Не хранит сам узел
+/// семантического дерева - для получения полных данных узла используйте методы поиска
+/// [`ModelNode`]: [`search_var`](ModelNode::search_var),
+/// [`search_func`](ModelNode::search_func), [`search_state`](ModelNode::search_state) и
+/// т.д.
 #[derive(Debug, Clone)]
 pub struct SemanticNodeRef {
     /// Имя элемента (переменной, функции, состояния и т.д.).
@@ -119,7 +118,8 @@ pub struct SemanticNodeRef {
     pub kind: SemanticNodeKind,
     /// Позиция объявления в исходном тексте.
     pub loc: Location,
-    /// Модель, в которой объявлен элемент (для поиска в правильном контексте области видимости).
+    /// Модель, в которой объявлен элемент (для поиска в правильном контексте области
+    /// видимости).
     pub model: Option<Rc<RefCell<ModelNode>>>,
 }
 
@@ -137,13 +137,13 @@ struct IndexEntry {
 impl IndexEntry {
     /// Номер файла, которому принадлежит запись.
     ///
-    /// **Выводится из позиции узла, а не хранится отдельным полем** — намеренно:
+    /// **Выводится из позиции узла, а не хранится отдельным полем** - намеренно:
     /// во всех местах построения `start`/`end` берутся из того же `Location`,
     /// что кладётся в `node_ref.loc`. Отдельное поле пришлось бы проставлять в
-    /// каждом из них, и первое же забытое место вернуло бы файлослепоту — ровно
-    /// тот дефект, который чинит фича 0056.
+    /// каждом из них, и первое же забытое место вернуло бы файлослепоту - ровно
+    /// тот дефект, который чинит.
     ///
-    /// Позиция без файла (`Codegen`/`Implicit`/…) в индекс не попадает: записи
+    /// Позиция без файла (`Codegen`/`Implicit`/...) в индекс не попадает: записи
     /// создаются только под `Location::Source`.
     fn file_no(&self) -> u64 {
         match self.node_ref.loc {
@@ -156,8 +156,8 @@ impl IndexEntry {
 /// Индекс семантических узлов, упорядоченный по байтовому смещению.
 ///
 /// Строится из корневого [`ModelNode`] методом [`build`](SemanticIndex::build).
-/// Позволяет за O(n) найти наиболее конкретный узел, покрывающий заданное
-/// байтовое смещение в исходном тексте.
+/// Позволяет за O(n) найти наиболее конкретный узел, покрывающий заданное байтовое
+/// смещение в исходном тексте.
 pub struct SemanticIndex {
     /// Записи, отсортированные по полю `start` для предсказуемого обхода.
     entries: Vec<IndexEntry>,
@@ -174,12 +174,12 @@ impl std::fmt::Debug for SemanticIndex {
 impl SemanticIndex {
     /// Строит индекс из корневого узла семантической модели.
     ///
-    /// Рекурсивно обходит все вложенные модели, собирая позиции объявлений
-    /// переменных, функций, состояний, псевдонимов типов, условий, перечислений
-    /// и именованных моделей.
+    /// Рекурсивно обходит все вложенные модели, собирая позиции объявлений переменных,
+    /// функций, состояний, псевдонимов типов, условий, перечислений и именованных
+    /// моделей.
     ///
-    /// Элементы с [`Location::Builtin`], [`Location::Implicit`] и
-    /// [`Location::Codegen`] в индекс не включаются.
+    /// Элементы с [`Location::Builtin`], [`Location::Implicit`] и [`Location::Codegen`]
+    /// в индекс не включаются.
     ///
     /// # Пример
     ///
@@ -197,33 +197,18 @@ impl SemanticIndex {
     pub fn build(model: &Rc<RefCell<ModelNode>>) -> Self {
         let mut entries = Vec::new();
         collect_model_entries(model, &mut entries);
-        // Сортируем по началу диапазона — позволяет прерывать перебор при start > offset
+        // Сортируем по началу диапазона - позволяет прерывать перебор при start >
+        // offset
         entries.sort_by_key(|e| e.start);
         SemanticIndex { entries }
     }
 
-    /// Возвращает наиболее конкретный узел **корневого файла**, покрывающий
-    /// смещение `offset`.
+    /// Возвращает наиболее конкретный узел **корневого файла**, покрывающий смещение
+    /// `offset`.
     ///
-    /// Среди всех записей, чей диапазон `[start, end]` содержит `offset`,
-    /// выбирается та, у которой наименьший размер диапазона — т.е. наиболее
-    /// специфичный (внутренний) узел.
-    ///
-    /// # Почему только корневой файл
-    ///
-    /// Смещение имеет смысл лишь внутри **своего** файла: индекс строится по
-    /// всему дереву, включая импортированные модели, и их смещения относятся к
-    /// **их** тексту. Прежде поиск шёл по одному смещению, и узел чужого файла
-    /// мог выиграть — зонд фичи 0056: курсор на `Helper` в
-    /// `import "helper.takt"; start Main = Helper;` возвращал переменную `speed`
-    /// **из `helper.takt`** (её диапазон 19..37 там накрыл смещение 35 здесь).
-    /// Не «не тот файл», а **не тот узел**.
-    ///
-    /// Курсор всегда стоит в открытом документе, а он — корень единицы
-    /// компиляции ([`ROOT_FILE_NO`]). Для поиска в другом файле —
-    /// [`node_at_offset_in_file`](Self::node_at_offset_in_file).
-    ///
-    /// Возвращает `None`, если ни один узел корневого файла не покрывает `offset`.
+    /// Среди всех записей, чей диапазон `[start, end]` содержит `offset`, выбирается
+    /// та, у которой наименьший размер диапазона - т.е. наиболее специфичный
+    /// (внутренний) узел.
     ///
     /// # Пример
     ///
@@ -237,7 +222,7 @@ impl SemanticIndex {
     /// let model = construct_model(&ast, None, &[]).unwrap();
     /// let index = SemanticIndex::build(&model);
     ///
-    /// // Смещение 4 — на символе 'c' в "counter"
+    /// // Смещение 4 - на символе 'c' в "counter"
     /// let node = index.node_at_offset(4);
     /// assert!(node.is_some());
     /// let node = node.unwrap();
@@ -254,20 +239,20 @@ impl SemanticIndex {
 
     /// То же, что [`node_at_offset`](Self::node_at_offset), но в заданном файле.
     ///
-    /// Смещение адресует текст **одного** файла, поэтому пара `(file_no, offset)`
-    /// — минимальный ключ, которым узел вообще можно найти однозначно.
+    /// Смещение адресует текст **одного** файла, поэтому пара `(file_no, offset)` -
+    /// минимальный ключ, которым узел вообще можно найти однозначно.
     pub fn node_at_offset_in_file(&self, file_no: u64, offset: usize) -> Option<&SemanticNodeRef> {
         let mut best: Option<&IndexEntry> = None;
         let mut best_size = usize::MAX;
 
         for entry in &self.entries {
-            // Записи отсортированы по start: как только start > offset — дальше
-            // нет смысла. Сортировка сквозная по всем файлам, но проверка
-            // остаётся верной: у последующих записей start только больше.
+            // Записи отсортированы по start: как только start > offset - дальше нет
+            // смысла. Сортировка сквозная по всем файлам, но проверка остаётся верной:
+            // у последующих записей start только больше.
             if entry.start > offset {
                 break;
             }
-            // Чужой файл: его смещения относятся к его тексту — сравнивать не с чем.
+            // Чужой файл: его смещения относятся к его тексту - сравнивать не с чем.
             if entry.file_no() != file_no {
                 continue;
             }
@@ -322,9 +307,9 @@ mod tests {
         SemanticIndex::build(&model)
     }
 
-    // ── Юнит-тесты SemanticIndex ──────────────────────────────────────────────
+    // -- Юнит-тесты SemanticIndex ----------------------------------------------
 
-    /// Пустая программа → пустой индекс.
+    /// Пустая программа -> пустой индекс.
     #[test]
     fn empty_source_gives_empty_index() {
         let index = build_index("");
@@ -346,7 +331,7 @@ mod tests {
         //           0123456789...
         let src = "var x: bit := false;";
         let index = build_index(src);
-        // Смещение 4 — символ 'x'
+        // Смещение 4 - символ 'x'
         let node = index.node_at_offset(4);
         assert!(node.is_some(), "должен найти переменную");
         let node = node.unwrap();
@@ -359,14 +344,14 @@ mod tests {
     fn node_at_offset_out_of_range_returns_none() {
         let src = "var x: bit := false;";
         let index = build_index(src);
-        // Смещение 99999 — далеко за концом файла
+        // Смещение 99999 - далеко за концом файла
         assert!(index.node_at_offset(99999).is_none());
     }
 
     /// Состояние индексируется и находится по смещению.
     #[test]
     fn state_is_indexed() {
-        //           012345678901234
+        // 012345678901234
         let src = "start Init;";
         let index = build_index(src);
         let node = index.node_at_offset(6);
@@ -379,10 +364,10 @@ mod tests {
     /// Функция индексируется и находится по смещению.
     #[test]
     fn function_is_indexed() {
-        // Параметры функции не доступны в выражениях тела — используем литерал
+        // Параметры функции не доступны в выражениях тела - используем литерал
         let src = "fn add(a: bit) -> bit { return true; }";
         let index = build_index(src);
-        // Смещение 3 — символ 'a' в "add"
+        // Смещение 3 - символ 'a' в "add"
         let node = index.node_at_offset(3);
         assert!(node.is_some(), "должен найти функцию");
         let node = node.unwrap();
@@ -395,7 +380,7 @@ mod tests {
     fn type_alias_is_indexed() {
         let src = "type Byte = [bit;8];";
         let index = build_index(src);
-        // Смещение 5 — символ 'B' в "Byte"
+        // Смещение 5 - символ 'B' в "Byte"
         let node = index.node_at_offset(5);
         assert!(node.is_some(), "должен найти псевдоним типа");
         let node = node.unwrap();
@@ -408,7 +393,7 @@ mod tests {
     fn condition_is_indexed() {
         let src = "cond IsReady = true;";
         let index = build_index(src);
-        // Смещение 5 — символ 'I' в "IsReady"
+        // Смещение 5 - символ 'I' в "IsReady"
         let node = index.node_at_offset(5);
         assert!(node.is_some(), "должен найти условие");
         let node = node.unwrap();
@@ -422,7 +407,7 @@ mod tests {
         // Перечисление объявляется внутри модели; варианты разделяются запятыми
         let src = "model M { enum Color { Red, Green, Blue } start S; }";
         let index = build_index(src);
-        // Смещение 16 — символ 'C' в "Color"
+        // Смещение 16 - символ 'C' в "Color"
         let node = index.node_at_offset(16);
         assert!(node.is_some(), "должен найти перечисление");
         let node = node.unwrap();
@@ -435,7 +420,7 @@ mod tests {
     fn model_is_indexed() {
         let src = "model Blinker { start On; state Off; }";
         let index = build_index(src);
-        // Смещение 6 — символ 'B' в "Blinker"
+        // Смещение 6 - символ 'B' в "Blinker"
         let node = index.node_at_offset(6);
         assert!(node.is_some(), "должен найти модель");
         let node = node.unwrap();
@@ -446,14 +431,13 @@ mod tests {
     /// Несколько элементов: поиск возвращает наиболее конкретный.
     #[test]
     fn multiple_elements_most_specific_returned() {
-        //           0         1         2         3
-        //           0123456789012345678901234567890123456789
+        // 0 1 2 3 0123456789012345678901234567890123456789
         let src = "var alpha: bit := false; start Beta;";
         let index = build_index(src);
-        // Смещение 4 — 'a' в "alpha"
+        // Смещение 4 - 'a' в "alpha"
         let node = index.node_at_offset(4).expect("должен найти элемент");
         assert_eq!(node.name, "alpha");
-        // Смещение 30 — 'B' в "Beta"
+        // Смещение 30 - 'B' в "Beta"
         let node2 = index.node_at_offset(30).expect("должен найти состояние");
         assert_eq!(node2.name, "Beta");
     }
@@ -491,12 +475,12 @@ mod tests {
         assert_eq!(node.kind, SemanticNodeKind::ExternFunction);
     }
 
-    // ── Тесты collect_ast_condition_entries ───────────────────────────────────
+    // -- Тесты collect_ast_condition_entries -----------------------------------
 
     /// Переменная с Source-позицией добавляет ReferenceCondition-запись.
     ///
     /// # Пример
-    /// `ast::Condition::Variable(id@"flag", loc=Source(0,5,9))` →
+    /// `ast::Condition::Variable(id@"flag", loc=Source(0,5,9))` ->
     /// `IndexEntry { start:5, end:9, name:"flag", kind:ReferenceCondition }`
     #[test]
     fn ast_condition_variable_adds_reference_condition() {
@@ -525,7 +509,7 @@ mod tests {
     /// Переменная с Builtin-позицией не добавляет записей.
     ///
     /// # Контрпример
-    /// `ast::Condition::Variable(id@"built", loc=Builtin)` → `(нет записей)`
+    /// `ast::Condition::Variable(id@"built", loc=Builtin)` -> `(нет записей)`
     #[test]
     fn ast_condition_variable_builtin_loc_no_entry() {
         use crate::diagnostics::Location;
@@ -549,7 +533,7 @@ mod tests {
     /// Бинарный оператор (AND) рекурсивно обходит оба операнда.
     ///
     /// # Пример
-    /// `And(loc, Variable("a",1..2), Variable("b",5..6))` →
+    /// `And(loc, Variable("a",1..2), Variable("b",5..6))` ->
     /// `IndexEntry("a",1,2), IndexEntry("b",5,6)`
     #[test]
     fn ast_condition_and_recurses_both_operands() {
@@ -579,7 +563,7 @@ mod tests {
     /// Функция в условии добавляет запись для имени функции.
     ///
     /// # Пример
-    /// `Function(loc, id@"check", [Variable("x")])` →
+    /// `Function(loc, id@"check", [Variable("x")])` ->
     /// `IndexEntry("check"), IndexEntry("x")`
     #[test]
     fn ast_condition_function_adds_function_entry() {
@@ -611,7 +595,7 @@ mod tests {
     /// Числовой литерал в условии не добавляет записей.
     ///
     /// # Контрпример
-    /// `ast::Condition::Number(loc, 42)` → `(нет записей)`
+    /// `ast::Condition::Number(loc, 42)` -> `(нет записей)`
     #[test]
     fn ast_condition_number_literal_no_entry() {
         use crate::diagnostics::Location;
@@ -631,7 +615,7 @@ mod tests {
     /// NOT-оператор рекурсивно обходит вложенное условие.
     ///
     /// # Пример
-    /// `Not(loc, Variable("ready", 4..9))` → `IndexEntry("ready", 4, 9)`
+    /// `Not(loc, Variable("ready", 4..9))` -> `IndexEntry("ready", 4, 9)`
     #[test]
     fn ast_condition_not_recurses_into_operand() {
         use crate::diagnostics::Location;
@@ -650,17 +634,17 @@ mod tests {
         assert_eq!(entries[0].node_ref.name, "ready");
     }
 
-    // ── Тесты collect_condition_entries (семантическое условие) ──────────────
+    // -- Тесты collect_condition_entries (семантическое условие) --------------
 
-    /// Разрешённое условие с переменной добавляет ReferenceCondition-запись с позицией использования.
+    /// Разрешённое условие с переменной добавляет ReferenceCondition-запись с позицией
+    /// использования.
     ///
     /// # Пример
-    /// `ref T: flag;` — `flag` разрешена в `Condition::Variable(var, loc_use)` →
+    /// `ref T: flag;` - `flag` разрешена в `Condition::Variable(var, loc_use)` ->
     /// в индексе есть запись `ReferenceCondition` для `flag` по позиции её имени в условии.
     #[test]
     fn collect_condition_entries_resolved_variable_adds_entry() {
-        //      0         1         2         3         4         5
-        //      012345678901234567890123456789012345678901234567890123456789
+        // 0 1 2 3 4 5 012345678901234567890123456789012345678901234567890123456789
         let src = "var flag: bit := false; start S { ref T: flag; } state T;";
         let index = build_index(src);
         let rc_entries: Vec<_> = index
@@ -668,7 +652,7 @@ mod tests {
             .iter()
             .filter(|e| e.node_ref.kind == SemanticNodeKind::ReferenceCondition)
             .collect();
-        // Ожидается ровно одна запись — для "flag" в условии перехода
+        // Ожидается ровно одна запись - для "flag" в условии перехода
         assert_eq!(
             rc_entries.len(),
             1,
@@ -702,12 +686,12 @@ mod tests {
         );
     }
 
-    // ── Тесты collect_ast_expression_entries ─────────────────────────────────
+    // -- Тесты collect_ast_expression_entries ---------------------------------
 
     /// Переменная в выражении добавляет ReferenceCondition-запись.
     ///
     /// # Пример
-    /// `ast::Expression::Variable(id@"speed", loc=Source(0,0,5))` →
+    /// `ast::Expression::Variable(id@"speed", loc=Source(0,0,5))` ->
     /// `IndexEntry { start:0, end:5, name:"speed", kind:ReferenceCondition }`
     #[test]
     fn ast_expression_variable_adds_entry() {
@@ -734,7 +718,7 @@ mod tests {
     /// Присваивание рекурсивно обходит левую и правую части.
     ///
     /// # Пример
-    /// `Assign(_, Variable("x"), Variable("y"))` →
+    /// `Assign(_, Variable("x"), Variable("y"))` ->
     /// `IndexEntry("x"), IndexEntry("y")`
     #[test]
     fn ast_expression_assign_recurses_both_sides() {
@@ -763,7 +747,7 @@ mod tests {
     /// Числовой литерал в выражении не добавляет записей.
     ///
     /// # Контрпример
-    /// `ast::Expression::Number(loc, 7)` → `(нет записей)`
+    /// `ast::Expression::Number(loc, 7)` -> `(нет записей)`
     #[test]
     fn ast_expression_number_literal_no_entry() {
         use crate::diagnostics::Location;
@@ -780,12 +764,12 @@ mod tests {
         );
     }
 
-    // ── Тесты collect_named_block_entries ────────────────────────────────────
+    // -- Тесты collect_named_block_entries ------------------------------------
 
     /// Условие `true` (Bool) не создаёт ReferenceCondition-записей.
     ///
     /// # Контрпример
-    /// `ref T: true;` — литерал, не переменная → нет ReferenceCondition.
+    /// `ref T: true;` - литерал, не переменная -> нет ReferenceCondition.
     #[test]
     fn named_block_bool_condition_no_reference_condition() {
         let src = "var x: bit := false; start S { always { x := true; } ref T: true; } state T;";
@@ -795,7 +779,7 @@ mod tests {
             .iter()
             .filter(|e| e.node_ref.kind == SemanticNodeKind::ReferenceCondition)
             .collect();
-        // `true` — литерал, не переменная → нет записей ReferenceCondition
+        // `true` - литерал, не переменная -> нет записей ReferenceCondition
         assert!(
             rc_entries.is_empty(),
             "bool-литерал в условии не должен давать ReferenceCondition: {:?}",
@@ -806,14 +790,13 @@ mod tests {
     /// Переменная в условии перехода индексируется по позиции использования.
     ///
     /// # Пример
-    /// `ref T: flag;` — `flag` появляется в индексе как `ReferenceCondition`
+    /// `ref T: flag;` - `flag` появляется в индексе как `ReferenceCondition`
     /// по позиции имени `flag` в исходном тексте (use-site), а не по позиции объявления.
     #[test]
     fn condition_variable_use_site_is_indexed() {
-        //      0         1         2         3
-        //      0123456789012345678901234567890123456789012345678901234567
+        // 0 1 2 3 0123456789012345678901234567890123456789012345678901234567
         let src = "var flag: bit := false; start S { ref T: flag; } state T;";
-        //                                            ^^^^ позиция "flag" = 40..44
+        // ^^^^ позиция "flag" = 40..44
         let index = build_index(src);
         // Находим запись ReferenceCondition по use-site позиции (offset внутри "flag")
         let node = index.node_at_offset(41); // 'l' в "flag"
@@ -826,7 +809,7 @@ mod tests {
     /// Переменная в условии AND-перехода: обе стороны индексируются.
     ///
     /// # Пример
-    /// `ref T: a & b;` → записи для `a` и `b` по их позициям в условии.
+    /// `ref T: a & b;` -> записи для `a` и `b` по их позициям в условии.
     #[test]
     fn condition_and_both_variables_indexed() {
         let src = "var a: bit := false; var b: bit := true; start S { ref T: a & b; } state T;";
@@ -863,7 +846,7 @@ mod tests {
     /// collect_ast_statement_entries рекурсивно обходит Block.
     ///
     /// # Пример
-    /// `Block { stmts: [Expression(_, Variable("v"))] }` → `IndexEntry("v")`
+    /// `Block { stmts: [Expression(_, Variable("v"))] }` -> `IndexEntry("v")`
     #[test]
     fn ast_statement_block_recurses_into_expressions() {
         use crate::diagnostics::Location;

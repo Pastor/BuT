@@ -1,27 +1,26 @@
-//! Тесты семантических узлов (вынесены из `semantic/mod.rs` задачей 0535-03).
+//! Тесты семантических узлов (вынесены из `semantic/mod.rs` ).
 //!
-//! Причина выноса — правило размера модуля: `mod.rs` стоит сверх предела
-//! (реестр долга `scripts/module-size-baseline.txt`), и расти ему нельзя.
-//! Приём тот же, которым фичи 0088 и 0225 делили `expression.rs` и
-//! `statement.rs`: «логика / тесты» отдельными файлами.
+//! Причина выноса - правило размера модуля: `mod.rs` стоит сверх предела (реестр долга
+//! `scripts/module-size-baseline.txt`), и расти ему нельзя. Приём тот же, которым и
+//! 0225 делили `expression.rs` и `statement.rs`: "логика / тесты" отдельными файлами.
 
 use super::*;
 use crate::diagnostics::Diagnostic;
 use crate::parse;
 use crate::semantic::tree::construct_model;
 
-// ─── Тесты: отсутствие циклических сильных ссылок (SA8) ──────────────────
+// --- Тесты: отсутствие циклических сильных ссылок (SA8) ------------------
 
 /// Корневая модель с переменными не создаёт сильных циклов.
 ///
-/// После построения модели счётчик сильных ссылок на корневой Rc должен
-/// быть равен 1 — только наш handle. Если бы `upper` переменных был Rc,
-/// он увеличил бы счётчик до 1 + N (по количеству переменных).
+/// После построения модели счётчик сильных ссылок на корневой Rc должен быть равен 1 -
+/// только наш handle. Если бы `upper` переменных был Rc, он увеличил бы счётчик до 1 +
+/// N (по количеству переменных).
 #[test]
 fn model_with_vars_has_no_strong_cycle() {
     let (ast, _) = parse("var a: bit := false; var b: bit := false; start S;", 0).unwrap();
     let root = construct_model(&ast, None, &[]).unwrap();
-    // Единственный сильный владелец — наша переменная `root`
+    // Единственный сильный владелец - наша переменная `root`
     assert_eq!(
         Rc::strong_count(&root),
         1,
@@ -31,7 +30,7 @@ fn model_with_vars_has_no_strong_cycle() {
 
 /// Вложенная модель не создаёт сильных циклов через upper.
 ///
-/// Модель M имеет `upper` → корень через Weak. Счётчик корня = 1.
+/// Модель M имеет `upper` -> корень через Weak. Счётчик корня = 1.
 #[test]
 fn nested_model_has_no_strong_cycle() {
     let (ast, _) = parse("model M { start S; } start Main = M;", 0).unwrap();
@@ -59,12 +58,12 @@ fn upper_weak_invalidated_after_drop() {
         VariableNode::Simple { ref upper, .. } => upper.clone(),
         _ => panic!("ожидался Simple"),
     };
-    // Пока root жив — upgrade() работает
+    // Пока root жив - upgrade() работает
     assert!(
         weak_upper.as_ref().and_then(|w| w.upgrade()).is_some(),
         "upper должен быть жив, пока root существует"
     );
-    // Удаляем root — Weak должен стать недействительным
+    // Удаляем root - Weak должен стать недействительным
     drop(root);
     assert!(
         weak_upper.as_ref().and_then(|w| w.upgrade()).is_none(),
@@ -101,7 +100,7 @@ fn nested_model_upper_points_to_parent() {
         parent.is_some(),
         "Inner должна иметь upper → родительскую модель"
     );
-    // Родитель — анонимная корневая модель (name = None)
+    // Родитель - анонимная корневая модель (name = None)
     assert_eq!(
         parent.unwrap().borrow().name,
         None,
@@ -109,7 +108,7 @@ fn nested_model_upper_points_to_parent() {
     );
 }
 
-// ─── Diagnostic ──────────────────────────────────────────────────────
+// --- Diagnostic ------------------------------------------------------
 
 /// Debug-вывод Diagnostic не паникует.
 #[test]
@@ -118,7 +117,7 @@ fn diagnostic_debug() {
     let _ = format!("{:?}", d);
 }
 
-// ─── ModelNode ───────────────────────────────────────────────────────
+// --- ModelNode -------------------------------------------------------
 
 /// ModelNode по умолчанию не содержит состояний.
 #[test]
@@ -127,7 +126,7 @@ fn model_node_default_has_no_states() {
     assert!(!node.has_states());
 }
 
-/// ModelNode с одним состоянием: has_states() → true.
+/// ModelNode с одним состоянием: has_states() -> true.
 #[test]
 fn model_node_with_state_has_states() {
     let mut node = ModelNode::default();
@@ -155,7 +154,7 @@ fn model_node_get_named_block() {
     assert!(node.get_named_block("enter").is_none());
 }
 
-// ─── StateNode ───────────────────────────────────────────────────────
+// --- StateNode -------------------------------------------------------
 
 /// StateNode::default() равен Unresolved.
 #[test]
@@ -183,7 +182,7 @@ fn state_node_get_named_block() {
     assert_eq!(state.name(), "S");
 }
 
-// ─── Reference ──────────────────────────────────────────────────────
+// --- Reference ------------------------------------------------------
 
 /// Создание Reference<StateNode> с Unresolved-объектом.
 #[test]
@@ -206,7 +205,7 @@ fn reference_default() {
     assert!(r.name.is_empty());
 }
 
-// ─── Condition ──────────────────────────────────────────────────────
+// --- Condition ------------------------------------------------------
 
 /// Condition::default() равен None.
 #[test]

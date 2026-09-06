@@ -94,8 +94,8 @@ def main() -> int:
 
     base = catalogues[BASE_LANG]
     if not base:
-        # Пустой базовый каталог — вырожденный вход: гейт, молчащий на нём,
-        # ничего не прочёл (урок 0531-07a).
+        # Пустой базовый каталог - вырожденный вход: проверка, молчащий на нём,
+        # ничего не прочёл.
         errors.append(f"M1 {BASE_LANG}.txt: базовый каталог пуст")
 
     for lang, entries in catalogues.items():

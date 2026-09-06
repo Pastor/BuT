@@ -1,8 +1,8 @@
 //! Тесты для модуля [`takt_lang::parser::ast`].
 //!
 //! Проверяют все методы типов [`Location`], [`Comment`], [`ImportDefine`],
-//! [`Expression`], [`FunctionDefine`], [`Statement`], [`FormulaBlock`]
-//! и вспомогательных структур.
+//! [`Expression`], [`FunctionDefine`], [`Statement`], [`FormulaBlock`] и
+//! вспомогательных структур.
 
 use takt_lang::diagnostics::Location;
 use takt_lang::parser::ast::{
@@ -10,9 +10,8 @@ use takt_lang::parser::ast::{
     ImportPath, Member, NamedArgument, Statement, StringLiteral, Type,
 };
 
-// ═══════════════════════════════════════════════════════════════════
-// Вспомогательные функции
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------------- Вспомогательные
+// функции -------------------------------------------------------------------
 
 fn loc(start: usize, end: usize) -> Location {
     Location::source(0, start, end)
@@ -30,11 +29,10 @@ fn bool_expr(b: bool) -> Expression {
     Expression::Bool(loc(0, 0), b)
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Location
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------------- Location
+// -------------------------------------------------------------------
 
-/// Default Location — Source(0, 0, 0).
+/// Default Location - Source(0, 0, 0).
 #[test]
 fn location_default() {
     assert_eq!(Location::default(), Location::Source(0, 0, 0));
@@ -99,7 +97,7 @@ fn location_end() {
     assert_eq!(loc(3, 8).end(), 8);
 }
 
-/// `exclusive_end()` — `end + 1`.
+/// `exclusive_end()` - `end + 1`.
 #[test]
 fn location_exclusive_end() {
     assert_eq!(loc(3, 8).exclusive_end(), 9);
@@ -141,21 +139,21 @@ fn location_use_end_from() {
     assert_eq!(l, loc(0, 20));
 }
 
-/// `with_start_from()` — неизменяемая версия `use_start_from`.
+/// `with_start_from()` - неизменяемая версия `use_start_from`.
 #[test]
 fn location_with_start_from() {
     let result = loc(0, 10).with_start_from(&loc(3, 15));
     assert_eq!(result, loc(3, 10));
 }
 
-/// `with_end_from()` — неизменяемая версия `use_end_from`.
+/// `with_end_from()` - неизменяемая версия `use_end_from`.
 #[test]
 fn location_with_end_from() {
     let result = loc(0, 10).with_end_from(&loc(3, 25));
     assert_eq!(result, loc(0, 25));
 }
 
-/// Location Copy — можно скопировать без клонирования.
+/// Location Copy - можно скопировать без клонирования.
 #[test]
 fn location_is_copy() {
     let l = loc(1, 2);
@@ -163,9 +161,8 @@ fn location_is_copy() {
     let _ = l.start(); // оригинал ещё доступен
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Identifier
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------------- Identifier
+// -------------------------------------------------------------------
 
 /// `Identifier::new()` создаёт идентификатор с default-позицией.
 #[test]
@@ -175,9 +172,8 @@ fn identifier_new() {
     assert_eq!(id.loc, Location::default());
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Comment
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------------- Comment
+// -------------------------------------------------------------------
 
 /// `Comment::Line::value()` возвращает текст.
 #[test]
@@ -193,7 +189,7 @@ fn comment_doc_line_value() {
     assert_eq!(c.value(), "документация");
 }
 
-/// `is_doc()` — только для DocLine.
+/// `is_doc()` - только для DocLine.
 #[test]
 fn comment_is_doc() {
     let line = Comment::Line(loc(0, 5), "".to_string());
@@ -202,7 +198,7 @@ fn comment_is_doc() {
     assert!(doc.is_doc());
 }
 
-/// `is_line()` — для обоих вариантов.
+/// `is_line()` - для обоих вариантов.
 #[test]
 fn comment_is_line() {
     let line = Comment::Line(loc(0, 5), "".to_string());
@@ -211,9 +207,9 @@ fn comment_is_line() {
     assert!(doc.is_line()); // DocLine тоже строчный
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------
 // ImportDefine::literal()
-// ═══════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------
 
 fn str_literal(s: &str) -> StringLiteral {
     StringLiteral {
@@ -223,7 +219,7 @@ fn str_literal(s: &str) -> StringLiteral {
     }
 }
 
-/// `ImportDefine::Plain` со строкой — literal() возвращает Some.
+/// `ImportDefine::Plain` со строкой - literal() возвращает Some.
 #[test]
 fn import_plain_literal_some() {
     let import = ImportDefine::Plain(ImportPath::Filename(str_literal("foo.takt")), loc(0, 10));
@@ -231,7 +227,7 @@ fn import_plain_literal_some() {
     assert_eq!(import.literal().unwrap().string, "foo.takt");
 }
 
-/// `ImportDefine::GlobalSymbol` со строкой — literal() возвращает Some.
+/// `ImportDefine::GlobalSymbol` со строкой - literal() возвращает Some.
 #[test]
 fn import_global_symbol_literal_some() {
     let import = ImportDefine::GlobalSymbol(
@@ -242,7 +238,7 @@ fn import_global_symbol_literal_some() {
     assert!(import.literal().is_some());
 }
 
-/// `ImportDefine::Rename` со строкой — literal() возвращает Some.
+/// `ImportDefine::Rename` со строкой - literal() возвращает Some.
 #[test]
 fn import_rename_literal_some() {
     let import = ImportDefine::Rename(
@@ -253,7 +249,7 @@ fn import_rename_literal_some() {
     assert!(import.literal().is_some());
 }
 
-/// `ImportDefine::Plain` с путём (не строкой) — literal() возвращает None.
+/// `ImportDefine::Plain` с путём (не строкой) - literal() возвращает None.
 #[test]
 fn import_plain_path_literal_none() {
     let path = ImportPath::Path(takt_lang::parser::ast::IdentifierPath {
@@ -264,9 +260,8 @@ fn import_plain_path_literal_none() {
     assert!(import.literal().is_none());
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Expression
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------------- Expression
+// -------------------------------------------------------------------
 
 /// `remove_parenthesis()` убирает одни скобки.
 #[test]
@@ -294,7 +289,7 @@ fn expression_strip_parentheses() {
     assert_eq!(nested.strip_parentheses(), &inner);
 }
 
-/// `is_unsplittable()` — числа, переменные, строки и т.д.
+/// `is_unsplittable()` - числа, переменные, строки и т.д.
 #[test]
 fn expression_is_unsplittable() {
     assert!(num(1).is_unsplittable());
@@ -304,7 +299,7 @@ fn expression_is_unsplittable() {
     assert!(Expression::String(vec![]).is_unsplittable());
 }
 
-/// Бинарные и унарные операторы — не `is_unsplittable`.
+/// Бинарные и унарные операторы - не `is_unsplittable`.
 #[test]
 fn expression_not_unsplittable() {
     let add = Expression::Add(loc(0, 0), Box::new(num(1)), Box::new(num(2)));
@@ -314,7 +309,7 @@ fn expression_not_unsplittable() {
     assert!(!not.is_unsplittable());
 }
 
-/// `has_space_around()` — унарные не нуждаются в пробелах.
+/// `has_space_around()` - унарные не нуждаются в пробелах.
 #[test]
 fn expression_has_space_around_unary() {
     let not = Expression::Not(loc(0, 0), Box::new(bool_expr(false)));
@@ -327,14 +322,14 @@ fn expression_has_space_around_unary() {
     assert!(!neg.has_space_around());
 }
 
-/// `has_space_around()` — бинарные нуждаются в пробелах.
+/// `has_space_around()` - бинарные нуждаются в пробелах.
 #[test]
 fn expression_has_space_around_binary() {
     let add = Expression::Add(loc(0, 0), Box::new(num(1)), Box::new(num(2)));
     assert!(add.has_space_around());
 }
 
-/// `is_literal()` — адрес, число, массив, рациональное, строка.
+/// `is_literal()` - адрес, число, массив, рациональное, строка.
 #[test]
 fn expression_is_literal() {
     assert!(Expression::Number(loc(0, 0), 42).is_literal());
@@ -344,7 +339,7 @@ fn expression_is_literal() {
     assert!(Expression::String(vec![]).is_literal());
 }
 
-/// `is_literal()` — переменная и операторы не являются литералами.
+/// `is_literal()` - переменная и операторы не являются литералами.
 #[test]
 fn expression_is_not_literal() {
     assert!(!var("x").is_literal());
@@ -366,7 +361,7 @@ fn expression_loc_string_is_builtin() {
     assert_eq!(e.loc(), Location::Builtin);
 }
 
-/// `loc()` для Variable — берётся из Identifier.
+/// `loc()` для Variable - берётся из Identifier.
 #[test]
 fn expression_loc_variable() {
     let mut id = Identifier::new("x");
@@ -582,9 +577,8 @@ fn expression_loc_all_variants() {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// FunctionDefine
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------------- FunctionDefine
+// -------------------------------------------------------------------
 
 fn empty_fn() -> FunctionDefine {
     FunctionDefine {
@@ -599,14 +593,14 @@ fn empty_fn() -> FunctionDefine {
     }
 }
 
-/// `is_void()` — нет возвращаемого типа.
+/// `is_void()` - нет возвращаемого типа.
 #[test]
 fn function_define_is_void_true() {
     let f = empty_fn();
     assert!(f.is_void());
 }
 
-/// `is_void()` — есть возвращаемый тип.
+/// `is_void()` - есть возвращаемый тип.
 #[test]
 fn function_define_is_void_false() {
     let mut f = empty_fn();
@@ -614,13 +608,13 @@ fn function_define_is_void_false() {
     assert!(!f.is_void());
 }
 
-/// `is_empty()` — тело отсутствует.
+/// `is_empty()` - тело отсутствует.
 #[test]
 fn function_define_is_empty_no_body() {
     assert!(empty_fn().is_empty());
 }
 
-/// `is_empty()` — тело пустой блок.
+/// `is_empty()` - тело пустой блок.
 #[test]
 fn function_define_is_empty_empty_block() {
     let mut f = empty_fn();
@@ -632,7 +626,7 @@ fn function_define_is_empty_empty_block() {
     assert!(f.is_empty());
 }
 
-/// `is_empty()` — тело с операторами: не пустое.
+/// `is_empty()` - тело с операторами: не пустое.
 #[test]
 fn function_define_is_empty_non_empty_body() {
     let mut f = empty_fn();
@@ -644,11 +638,11 @@ fn function_define_is_empty_non_empty_body() {
     assert!(!f.is_empty());
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------
 // Statement::is_empty()
-// ═══════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------
 
-/// Пустой блок — `is_empty()` → true.
+/// Пустой блок - `is_empty()` -> true.
 #[test]
 fn statement_block_is_empty() {
     let s = Statement::Block {
@@ -659,7 +653,7 @@ fn statement_block_is_empty() {
     assert!(s.is_empty());
 }
 
-/// Непустой блок — `is_empty()` → false.
+/// Непустой блок - `is_empty()` -> false.
 #[test]
 fn statement_block_is_not_empty() {
     let s = Statement::Block {
@@ -670,7 +664,7 @@ fn statement_block_is_not_empty() {
     assert!(!s.is_empty());
 }
 
-/// Не-блоковые операторы — `is_empty()` → false.
+/// Не-блоковые операторы - `is_empty()` -> false.
 #[test]
 fn statement_non_block_is_not_empty() {
     assert!(!Statement::Continue(loc(0, 0)).is_empty());
@@ -681,13 +675,13 @@ fn statement_non_block_is_not_empty() {
     assert!(!Statement::Expression(loc(0, 0), num(1)).is_empty());
 }
 
-/// `Statement::Args` пустой список — `is_empty()` → true.
+/// `Statement::Args` пустой список - `is_empty()` -> true.
 #[test]
 fn statement_args_empty_is_empty() {
     assert!(Statement::Args(loc(0, 0), vec![]).is_empty());
 }
 
-/// `Statement::Args` с элементом — `is_empty()` → false.
+/// `Statement::Args` с элементом - `is_empty()` -> false.
 #[test]
 fn statement_args_non_empty_is_not_empty() {
     let arg = NamedArgument {
@@ -698,9 +692,9 @@ fn statement_args_non_empty_is_not_empty() {
     assert!(!Statement::Args(loc(0, 0), vec![arg]).is_empty());
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------
 // FormulaBlock::is_empty()
-// ═══════════════════════════════════════════════════════════════════
+// -------------------------------------------------------------------
 
 /// Пустой блок формулы.
 #[test]
@@ -722,24 +716,23 @@ fn formula_block_is_not_empty() {
     assert!(!b.is_empty());
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Контр-примеры
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------------- Контр-примеры
+// -------------------------------------------------------------------
 
-/// `strip_parentheses()` на нескольких уровнях — не-скобочное выражение.
+/// `strip_parentheses()` на нескольких уровнях - не-скобочное выражение.
 #[test]
 fn expression_strip_no_parens() {
     let e = num(99);
     assert_eq!(e.strip_parentheses(), &e);
 }
 
-/// `is_literal()` на Bool — не литерал.
+/// `is_literal()` на Bool - не литерал.
 #[test]
 fn expression_bool_is_not_literal() {
     assert!(!bool_expr(true).is_literal());
 }
 
-/// `is_literal()` на Initializer — не литерал (инициализатор структуры).
+/// `is_literal()` на Initializer - не литерал (инициализатор структуры).
 #[test]
 fn expression_initializer_is_not_literal() {
     let e = Expression::Initializer(loc(0, 0), vec![num(1)]);

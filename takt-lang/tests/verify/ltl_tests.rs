@@ -117,7 +117,7 @@ model M {
     }
 }
 
-// ─── Фича 0035: семантика LTL (не АСД — риск Р6) ──────────────────────────────
+// ---: семантика LTL (не АСД - риск Р6) ------------------------------
 
 use takt_lang::semantic::tree::construct_model;
 
@@ -131,9 +131,9 @@ fn codes(ws: &[takt_lang::diagnostics::Diagnostic]) -> Vec<String> {
     ws.iter().filter_map(|w| w.code.clone()).collect()
 }
 
-/// A1 (сторож против тихой потери): LTL в БЛОКЕ не выбрасывается — доходит до
-/// семантики и даёт SE-055. При возврате `Vec::new()` (прежнее поведение) тест
-/// падал бы (0 предупреждений).
+/// A1 (тест против тихой потери): LTL в блоке не выбрасывается - доходит до семантики
+/// и даёт SE-055. При возврате `Vec::new()` (прежнее поведение) тест падал бы (0
+/// предупреждений).
 #[test]
 fn ltl_in_block_is_not_silently_dropped() {
     let ws = warnings("var b: u8 := 0; start S { always { : [LTL] G b; } }");
@@ -143,7 +143,7 @@ fn ltl_in_block_is_not_silently_dropped() {
     );
 }
 
-/// A4 (R3): SE-055 выдаётся с каждого уровня — модель, состояние, блок.
+/// A4 (R3): SE-055 выдаётся с каждого уровня - модель, состояние, блок.
 #[test]
 fn ltl_se055_from_all_three_levels() {
     let ws = warnings(
@@ -154,7 +154,7 @@ fn ltl_se055_from_all_three_levels() {
     assert_eq!(se055, 3, "по одному SE-055 на каждый уровень: {ws:?}");
 }
 
-/// A5 (R4): неизвестный атом → SE-056; известный (`var b`) и `true`/`false` — нет.
+/// A5 (R4): неизвестный атом -> SE-056; известный (`var b`) и `true`/`false` - нет.
 #[test]
 fn ltl_unknown_atom_is_se056() {
     let unknown = warnings("start S { : [LTL] F undefined_thing; }");
@@ -174,7 +174,7 @@ fn ltl_unknown_atom_is_se056() {
     );
 }
 
-/// A2 (паритет уровней): состояние — имя `S` — валидный атом (это состояние).
+/// A2 (паритет уровней): состояние - имя `S` - валидный атом (это состояние).
 #[test]
 fn ltl_state_name_is_valid_atom() {
     let ws = warnings("start S { : [LTL] F S; } state Done;");
@@ -184,7 +184,7 @@ fn ltl_state_name_is_valid_atom() {
     );
 }
 
-/// R6/A7: модель без LTL — ни одного предупреждения LTL.
+/// R6/A7: модель без LTL - ни одного предупреждения LTL.
 #[test]
 fn no_ltl_no_warnings() {
     let ws = warnings("var a: u8 := 0; start S { always { a := a + 1; } }");

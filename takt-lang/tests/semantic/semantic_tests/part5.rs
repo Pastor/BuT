@@ -1,17 +1,17 @@
-//! Интеграционные тесты семантики, часть 5 (вынос из `semantic_tests.rs`, фича 0088-11).
+//! Интеграционные тесты семантики, часть 5 (вынос из `semantic_tests.rs`).
 //!
-//! Хелперы и импорты — из родителя через `use super::*` (приём 0088-06/08).
+//! Хелперы и импорты - из родителя через `use super::*` (приём /08).
 
 use super::*;
 
-/// Bug #5: переменная, объявленная в корневой (родительской) модели и
-/// используемая только в коде подмодели, не должна получать предупреждение
-/// Ce13 «переменная объявлена, но нигде не используется».
+/// Bug #5: переменная, объявленная в корневой (родительской) модели и используемая
+/// только в коде подмодели, не должна получать предупреждение Ce13 "переменная
+/// объявлена, но нигде не используется".
 ///
-/// До исправления `check_model_unused` строил множество `used` только из
-/// кода текущего уровня модели. Код вложенных моделей (их `always`-блоки,
-/// тела функций и т.д.) не сканировался, поэтому переменная родительской
-/// модели, которую использует подмодель, ошибочно считалась неиспользуемой.
+/// До исправления `check_model_unused` строил множество `used` только из кода текущего
+/// уровня модели. Код вложенных моделей (их `always`-блоки, тела функций и т.д.) не
+/// сканировался, поэтому переменная родительской модели, которую использует подмодель,
+/// ошибочно считалась неиспользуемой.
 #[test]
 fn test_parent_var_used_in_submodel_no_unused_warning() {
     let src = r#"
@@ -41,9 +41,9 @@ fn test_parent_var_used_in_submodel_no_unused_warning() {
     );
 }
 
-// ─── Тесты FE4: Проверка детерминированности переходов (Ce14) ─────────────────
+// --- Тесты FE4: Проверка детерминированности переходов (Ce14) -----------------
 
-/// FE4: Два безусловных перехода из одного состояния — предупреждение Ce14.
+/// FE4: Два безусловных перехода из одного состояния - предупреждение Ce14.
 #[test]
 fn test_nondeterministic_transitions() {
     use takt_lang::diagnostics::Level;
@@ -68,7 +68,7 @@ fn test_nondeterministic_transitions() {
     );
 }
 
-/// FE4: Переходы с условиями — предупреждений Ce14 нет.
+/// FE4: Переходы с условиями - предупреждений Ce14 нет.
 #[test]
 fn test_deterministic_no_warning() {
     let (ast, _) = parse(
@@ -86,9 +86,10 @@ fn test_deterministic_no_warning() {
     );
 }
 
-// ─── Тесты FE1: Перечисления ──────────────────────────────────────────────────
+// --- Тесты FE1: Перечисления --------------------------------------------------
 
-/// FE1: Базовое перечисление — разбирается без ошибок, варианты присутствуют в EnumNode.
+/// FE1: Базовое перечисление - разбирается без ошибок, варианты присутствуют в
+/// EnumNode.
 #[test]
 fn test_enum_basic() {
     let node = build_file("tests/data/semantic/valid/enum_basic.takt")
@@ -109,10 +110,10 @@ fn test_enum_basic() {
     assert_eq!(dir_enum.find_variant("West"), Some(3), "West = 3");
 }
 
-// ─── Тесты FE2: Вывод типа из пользовательских псевдонимов ───────────────────
+// --- Тесты FE2: Вывод типа из пользовательских псевдонимов -------------------
 
-/// FE2: Переменная, инициализированная результатом функции с псевдонимом типа —
-/// тип выводится как Array(8, Bit) через разрешение псевдонима u8 = [bit;8].
+/// FE2: Переменная, инициализированная результатом функции с псевдонимом типа - тип
+/// выводится как Array(8, Bit) через разрешение псевдонима u8 = [bit;8].
 #[test]
 fn test_type_alias_inference() {
     use takt_lang::semantic::type_node::TypeNode;
@@ -133,7 +134,7 @@ fn test_type_alias_inference() {
     );
 }
 
-/// FE1: Перечисление с явными значениями — значения соответствуют объявлению.
+/// FE1: Перечисление с явными значениями - значения соответствуют объявлению.
 #[test]
 fn test_enum_with_values() {
     let node = build_file("tests/data/semantic/valid/enum_with_values.takt")
@@ -152,7 +153,7 @@ fn test_enum_with_values() {
     assert_eq!(prio.find_variant("High"), Some(10), "High = 10");
 }
 
-// ─── Ce4: Интеграционные тесты enum-типизированных переменных ─────────────────
+// --- Ce4: Интеграционные тесты enum-типизированных переменных -----------------
 
 /// Ce4: переменная с явным типом-перечислением разбирается без ошибок.
 ///
@@ -182,11 +183,11 @@ fn ce4_enum_typed_var_valid() {
     }
 }
 
-/// Ce4: переменная с типом необъявленного перечисления → ошибка Ce4.
+/// Ce4: переменная с типом необъявленного перечисления -> ошибка Ce4.
 ///
 /// # Контр-пример (Takt)
 /// ```text
-/// var current: Status = 0;   // Status не объявлен → ошибка Ce4
+/// var current: Status = 0;   // Status не объявлен -> ошибка Ce4
 /// start S;
 /// ```
 #[test]
@@ -199,7 +200,7 @@ fn ce4_undeclared_enum_type_gives_error() {
     );
 }
 
-/// Ce4: переменная с enum-типом и недопустимым значением → ошибка NI6.
+/// Ce4: переменная с enum-типом и недопустимым значением -> ошибка NI6.
 ///
 /// # Контр-пример (Takt)
 /// ```text
@@ -208,7 +209,7 @@ fn ce4_undeclared_enum_type_gives_error() {
 ///     Green = 1,
 ///     Blue = 2
 /// }
-/// var c: Color = 99;   // 99 не является вариантом Color → NI6
+/// var c: Color = 99;   // 99 не является вариантом Color -> NI6
 /// ```
 #[test]
 fn ce4_enum_typed_var_invalid_value() {
@@ -220,13 +221,14 @@ fn ce4_enum_typed_var_invalid_value() {
     );
 }
 
-/// Ce4: переменная с типом enum инициализируется вариантом через имя (Expression::Number).
+/// Ce4: переменная с типом enum инициализируется вариантом через имя
+/// (Expression::Number).
 ///
-/// Вариант `North` (значение 0) разрешается в `Number(0)`.
-/// Тип переменной остаётся `TypeNode::Enum("Direction")`.
+/// Вариант `North` (значение 0) разрешается в `Number(0)`. Тип переменной остаётся
+/// `TypeNode::Enum("Direction")`.
 #[test]
 fn ce4_enum_variant_used_as_initializer() {
-    // North — вариант enum Direction, разрешается в Number(0)
+    // North - вариант enum Direction, разрешается в Number(0)
     let src = "enum Direction { North = 0, South = 1 } var dir: Direction := North; start S;";
     let node = build(src);
     if let Some(VariableNode::Simple { ty, .. }) = node.search_var("dir") {
@@ -240,7 +242,7 @@ fn ce4_enum_variant_used_as_initializer() {
     }
 }
 
-/// Ce4: два перечисления в одной модели — оба доступны независимо.
+/// Ce4: два перечисления в одной модели - оба доступны независимо.
 ///
 /// # Пример (Takt)
 /// ```text
@@ -278,9 +280,9 @@ fn ce4_two_enums_in_model() {
 
 /// Ce4: варианты перечисления из родительской области видимости доступны через поиск.
 ///
-/// Аннотации типов (`var d: Dir`) работают только в той же области видимости,
-/// где объявлен enum (аналогично псевдонимам `type`). Но `search_enum_variant`
-/// поднимается по цепочке `upper` и находит вариант из внешней модели.
+/// Аннотации типов (`var d: Dir`) работают только в той же области видимости, где
+/// объявлен enum (аналогично псевдонимам `type`). Но `search_enum_variant` поднимается
+/// по цепочке `upper` и находит вариант из внешней модели.
 ///
 /// # Пример (Takt)
 /// ```text
@@ -297,7 +299,7 @@ fn ce4_two_enums_in_model() {
 #[test]
 fn ce4_enum_variant_accessible_from_nested_model() {
     // Вариант N (=0) из Dir должен быть доступен в Inner через search_enum_variant.
-    // Используем Rc напрямую, чтобы не потерять upper-ссылку через .take().
+    // Используем Rc напрямую, чтобы не потерять upper-ссылку через.take().
     let src = "enum Dir { N = 0, S = 1 } \
                model Inner { var d: [bit;8] := N; start S; } \
                start Root = Inner;";
@@ -307,7 +309,7 @@ fn ce4_enum_variant_accessible_from_nested_model() {
         .borrow()
         .search_model("Inner")
         .expect("модель Inner должна быть найдена");
-    // Вариант должен быть найден через цепочку upper → root
+    // Вариант должен быть найден через цепочку upper -> root
     assert!(
         inner.borrow().search_enum_variant("N").is_some(),
         "вариант N из родительского enum Dir должен быть доступен в Inner"
@@ -349,7 +351,7 @@ fn ce4_enum_declared_inside_model_local_to_it() {
     );
 }
 
-// ─── Тесты NI3: Структурные типы ─────────────────────────────────────────────
+// --- Тесты NI3: Структурные типы ---------------------------------------------
 
 /// NI3: Объявление структуры добавляет её в `model.structs`.
 #[test]
@@ -444,7 +446,7 @@ start S;
     );
 }
 
-/// NI3: Интеграционный тест — файл `struct_types.takt` разбирается семантически.
+/// NI3: Интеграционный тест - файл `struct_types.takt` разбирается семантически.
 #[test]
 fn test_struct_types_file_semantic() {
     let node = build_file("tests/data/semantic/valid/struct_types.takt")
@@ -459,9 +461,9 @@ fn test_struct_types_file_semantic() {
     );
 }
 
-// ─── Тесты NI4: Анализ перекрытия условий переходов ──────────────────────────
+// --- Тесты NI4: Анализ перекрытия условий переходов --------------------------
 
-/// NI4: Одинаковые условия `level = 5` на два разных перехода — предупреждение NI4.
+/// NI4: Одинаковые условия `level = 5` на два разных перехода - предупреждение NI4.
 #[test]
 fn test_ni4_duplicate_condition_warns() {
     use takt_lang::diagnostics::Level;
@@ -482,7 +484,8 @@ fn test_ni4_duplicate_condition_warns() {
     assert_eq!(ni4_warnings[0].level, Level::Warning);
 }
 
-/// NI4: Перекрывающиеся интервальные условия `level < 10` и `level < 20` — предупреждение NI4.
+/// NI4: Перекрывающиеся интервальные условия `level < 10` и `level < 20` -
+/// предупреждение NI4.
 #[test]
 fn test_ni4_interval_overlap_warns() {
     let src =
@@ -502,7 +505,7 @@ fn test_ni4_interval_overlap_warns() {
     );
 }
 
-/// NI4: Непересекающиеся условия `level < 10` и `level > 20` — предупреждений NI4 нет.
+/// NI4: Непересекающиеся условия `level < 10` и `level > 20` - предупреждений NI4 нет.
 #[test]
 fn test_ni4_non_overlapping_no_warn() {
     let src = std::fs::read_to_string("tests/data/semantic/valid/no_condition_overlap.takt")
@@ -521,7 +524,7 @@ fn test_ni4_non_overlapping_no_warn() {
     );
 }
 
-/// NI4: Условия `x = 3` и `x < 10` перекрываются (3 < 10) — предупреждение NI4.
+/// NI4: Условия `x = 3` и `x < 10` перекрываются (3 < 10) - предупреждение NI4.
 #[test]
 fn test_ni4_eq_lt_overlap_warns() {
     let src = r#"
@@ -547,7 +550,8 @@ state B { ref S: x >= 10; }
     );
 }
 
-/// NI4: Условия `x = 15` и `x < 10` не перекрываются (15 ≥ 10) — предупреждений NI4 нет.
+/// NI4: Условия `x = 15` и `x < 10` не перекрываются (15 >= 10) - предупреждений NI4
+/// нет.
 #[test]
 fn test_ni4_eq_lt_no_overlap_no_warn() {
     let src = r#"
@@ -573,9 +577,9 @@ state B { ref S: x >= 10; }
     );
 }
 
-// ─── I5: Ce16 — рекурсивные псевдонимы типов ─────────────────────────────────
+// --- I5: Ce16 - рекурсивные псевдонимы типов ---------------------------------
 
-/// Ce16: прямая рекурсия `type A = [A; 8]` — ошибка.
+/// Ce16: прямая рекурсия `type A = [A; 8]` - ошибка.
 #[test]
 fn i5_direct_recursive_type_alias_is_error() {
     let err = build_err("type A = [A; 8]; start S;");
@@ -592,7 +596,7 @@ fn i5_direct_recursive_type_alias_is_error() {
     );
 }
 
-/// Ce16: взаимная рекурсия `type A = [B; 4]; type B = [A; 2];` — ошибка.
+/// Ce16: взаимная рекурсия `type A = [B; 4]; type B = [A; 2];` - ошибка.
 #[test]
 fn i5_mutual_recursive_type_alias_is_error() {
     let err = build_err("type A = [B; 4]; type B = [A; 2]; start S;");
@@ -604,7 +608,7 @@ fn i5_mutual_recursive_type_alias_is_error() {
     );
 }
 
-/// Ce16: линейная цепочка без цикла — OK.
+/// Ce16: линейная цепочка без цикла - OK.
 #[test]
 fn i5_non_recursive_type_alias_ok() {
     let model = build("type A = [bit; 8]; type B = [A; 2]; var x: B := 0; start S;");
@@ -647,16 +651,16 @@ fn i5_file_mutual_recursive_type_alias() {
     );
 }
 
-/// Ce16: корректные псевдонимы из тестового файла `non_recursive_type_alias.takt` — OK.
+/// Ce16: корректные псевдонимы из тестового файла `non_recursive_type_alias.takt` - OK.
 #[test]
 fn i5_file_non_recursive_type_alias_ok() {
     let src = std::fs::read_to_string("tests/data/semantic/valid/non_recursive_type_alias.takt")
         .expect("не удалось прочитать файл");
     let _model = build(&src);
-    // Если дошли сюда — нет ошибки Ce16
+    // Если дошли сюда - нет ошибки Ce16
 }
 
-// ─── NI3: Структурные типы (Ce17, Ce18) ──────────────────────────────────────
+// --- NI3: Структурные типы (Ce17, Ce18) --------------------------------------
 
 /// NI3: базовое объявление структуры парсится и строится без ошибок.
 #[test]
@@ -697,7 +701,7 @@ fn struct_as_var_type_resolves() {
     );
 }
 
-/// NI3: тестовый файл `struct_basic.takt` — без ошибок.
+/// NI3: тестовый файл `struct_basic.takt` - без ошибок.
 #[test]
 fn struct_basic_file_ok() {
     let src = std::fs::read_to_string("tests/data/semantic/valid/struct_basic.takt")
@@ -705,7 +709,7 @@ fn struct_basic_file_ok() {
     let _model = build(&src);
 }
 
-/// NI3: тестовый файл `struct_as_var_type.takt` — без ошибок.
+/// NI3: тестовый файл `struct_as_var_type.takt` - без ошибок.
 #[test]
 fn struct_as_var_type_file_ok() {
     let src = std::fs::read_to_string("tests/data/semantic/valid/struct_as_var_type.takt")
@@ -713,7 +717,7 @@ fn struct_as_var_type_file_ok() {
     let _model = build(&src);
 }
 
-/// Ce17: дублирующееся поле структуры — ошибка.
+/// Ce17: дублирующееся поле структуры - ошибка.
 #[test]
 fn struct_duplicate_field_error() {
     let (ast, _) =
@@ -732,7 +736,7 @@ fn struct_duplicate_field_error() {
     );
 }
 
-/// Ce17: тестовый файл `struct_duplicate_field.takt` — ошибка Ce17.
+/// Ce17: тестовый файл `struct_duplicate_field.takt` - ошибка Ce17.
 #[test]
 fn struct_duplicate_field_file_error() {
     let src = std::fs::read_to_string("tests/data/semantic/invalid/struct_duplicate_field.takt")
@@ -752,7 +756,7 @@ fn struct_duplicate_field_file_error() {
     );
 }
 
-// ─── Task 1: вызов extern функций ─────────────────────────────────────────────
+// --- Task 1: вызов extern функций ---------------------------------------------
 
 /// Extern-функция в блоке always разрешается без ошибок семантики.
 #[test]
@@ -807,7 +811,7 @@ start Root = M;
     );
 }
 
-// ─── Inline formula ──────────────────────────────────────────────────────────
+// --- Inline formula ----------------------------------------------------------
 
 /// Встроенная формула на уровне модели разрешается и попадает в `model.formulas`.
 #[test]
@@ -822,15 +826,15 @@ fn test_inline_formula_model_resolved() {
     );
 }
 
-// ─── Bug #4: переменная в BitAccess-условии ошибочно считается неиспользуемой ──
+// --- Bug #4: переменная в BitAccess-условии ошибочно считается неиспользуемой --
 
-/// Bug #4: переменная, используемая только через битовый доступ в условии
-/// перехода (`x.0`), НЕ должна получать предупреждение Ce13.
+/// Bug #4: переменная, используемая только через битовый доступ в условии перехода
+/// (`x.0`), не должна получать предупреждение Ce13.
 ///
 /// До исправления `collect_from_condition` (и `usage_from_condition`) обрабатывали
-/// `ConditionNode::BitAccess(_, _) => {}` — внутренний узел полностью
-/// игнорировался, поэтому переменная `flag`, упоминаемая только как `flag.0`
-/// в условии, не попадала в множество используемых.
+/// `ConditionNode::BitAccess(_, _) => {}` - внутренний узел полностью игнорировался,
+/// поэтому переменная `flag`, упоминаемая только как `flag.0` в условии, не попадала в
+/// множество используемых.
 #[test]
 fn test_var_used_in_condition_bitaccess_no_unused_warning() {
     let src = r#"
@@ -882,7 +886,7 @@ fn test_inline_formula_state_resolved() {
     }
 }
 
-// ─── Задача 17: диагностика недостижимых состояний ───────────────────────────
+// ---: диагностика недостижимых состояний ---------------------------
 
 /// Изолированное состояние без входящих переходов генерирует предупреждение SE-046.
 #[test]
@@ -915,7 +919,7 @@ fn test_all_reachable_states_no_warning() {
     );
 }
 
-/// Несколько недостижимых состояний — несколько предупреждений.
+/// Несколько недостижимых состояний - несколько предупреждений.
 #[test]
 fn test_multiple_unreachable_states() {
     let src = "start A; state Ghost1; state Ghost2;";
@@ -930,9 +934,9 @@ fn test_multiple_unreachable_states() {
     );
 }
 
-// ─── Задача 13: `from` как ключевое слово ────────────────────────────────────
+// ---: `from` как ключевое слово ------------------------------------
 
-/// `from` больше не является допустимым идентификатором — разбор должен выдать ошибку.
+/// `from` больше не является допустимым идентификатором - разбор должен выдать ошибку.
 #[test]
 fn test_from_is_reserved_keyword_not_identifier() {
     let result = takt_lang::parse("var from: bit = 0; start S;", 0);
@@ -957,4 +961,4 @@ fn test_import_from_keyword_parses_correctly() {
     assert!(has_import, "ожидался элемент Import в АСД");
 }
 
-// ─── Задача 14: предупреждение о неизвестных именованных блоках ──────────────
+// ---: предупреждение о неизвестных именованных блоках --------------

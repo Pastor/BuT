@@ -1,6 +1,6 @@
 //! Константные условия перехода (SE-047).
 //!
-//! Часть модуля `validate` (фича 0027: деление по логике).
+//! Часть модуля `validate`.
 
 use super::*;
 
@@ -8,9 +8,9 @@ use super::*;
 ///
 /// Обнаруживает сравнения двух числовых/булевых литералов, результат
 /// которых известен в compile-time:
-/// - `1 = 0` — всегда ложно (переход никогда не произойдёт);
-/// - `1 = 1` — всегда истинно (переход безусловный);
-/// - `x = 5 & x = 6` — второе сравнение с той же переменной делает
+/// - `1 = 0` - всегда ложно (переход никогда не произойдёт);
+/// - `1 = 1` - всегда истинно (переход безусловный);
+/// - `x = 5 & x = 6` - второе сравнение с той же переменной делает
 ///   конъюнкцию всегда ложной.
 pub fn check_constant_conditions(model: &Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
@@ -74,8 +74,8 @@ fn eval_condition_const(cond: &ConditionNode, loc: Location, out: &mut Vec<Diagn
     }
 }
 
-/// Пытается вычислить булево значение условия из одних литералов.
-/// Возвращает `Some(true/false)` только если результат очевиден статически.
+/// Пытается вычислить булево значение условия из одних литералов. Возвращает
+/// `Some(true/false)` только если результат очевиден статически.
 fn eval_const_value(cond: &ConditionNode) -> Option<bool> {
     match cond {
         ConditionNode::Bool(b) => Some(*b),
@@ -106,13 +106,13 @@ fn eval_const_value(cond: &ConditionNode) -> Option<bool> {
             _ => None,
         },
 
-        // Конъюнкция: если хоть одна ветка константно ложна — всё ложно
+        // Конъюнкция: если хоть одна ветка константно ложна - всё ложно
         ConditionNode::And(l, r) => match (eval_const_value(l), eval_const_value(r)) {
             (Some(false), _) | (_, Some(false)) => Some(false),
             (Some(true), Some(true)) => Some(true),
             _ => None,
         },
-        // Дизъюнкция: если хоть одна ветка константно истинна — всё истинно
+        // Дизъюнкция: если хоть одна ветка константно истинна - всё истинно
         ConditionNode::Or(l, r) => match (eval_const_value(l), eval_const_value(r)) {
             (Some(true), _) | (_, Some(true)) => Some(true),
             (Some(false), Some(false)) => Some(false),

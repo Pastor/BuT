@@ -1,12 +1,11 @@
-//! Адаптер выражений: `ExpressionNode` → [`Value`] поверх ядра [`crate::eval`].
+//! Адаптер выражений: `ExpressionNode` -> [`Value`] поверх ядра [`crate::eval`].
 //!
 //! Симметричен [`crate::predicate`] (адаптер условий) и, как и он, **не содержит
-//! семантики** — только структурный разбор и делегирование в ядро (ADR 0025,
-//! Option B).
+//! семантики** - только структурный разбор и делегирование в ядро.
 //!
 //! # Что здесь чинится
 //!
-//! До задачи 0025-02 тела блоков `enter`/`exit`/`always` вычислял
+//! До тела блоков `enter`/`exit`/`always` вычислял
 //! `unit/builder.rs::eval_expression_rt`, покрывавший **6 из ~45** вариантов
 //! `ExpressionNode`; всё остальное уходило в `_ => None`, а `None` приводил к
 //! **молчаливому пропуску присваивания** (Д1, Д2). Здесь разбор исчерпывающий:
@@ -15,15 +14,13 @@
 //!
 //! # Позиции в диагностиках
 //!
-//! `ExpressionNode::Variable` — в отличие от `ConditionNode::Variable` — позиции
+//! `ExpressionNode::Variable` - в отличие от `ConditionNode::Variable` - позиции
 //! использования **не несёт**, поэтому диагностика привязывается к позиции
 //! *объявления* переменной (`VariableNode::loc()`). Это менее точно, чем в
 //! условиях, но существенно лучше `Location::Builtin`.
 //!
-//! ⚠️ Сам поиск позиции живёт **не здесь**: с фичи 0212 это метод
-//! [`ExpressionNode::loc`](takt_lang::semantic::ExpressionNode::loc) в
-//! `takt-lang`. Прежде он был приватной копией симулятора, и целям был
-//! недоступен — отказы генератора `c` не несли координаты вовсе.
+//! Сам поиск позиции живёт **не здесь**: с это метод
+//! [`ExpressionNode::loc`](takt_lang::semantic::ExpressionNode::loc) в `takt-lang`.
 
 use crate::context::Context;
 use crate::eval::error::EvalError;
@@ -35,36 +32,33 @@ use takt_lang::semantic::ExpressionNode;
 
 /// Вычисляет выражение в значение.
 ///
-/// Паники недостижимы: любой неподдержанный случай — `Err` (R4).
+/// Паники недостижимы: любой неподдержанный случай - `Err` (R4).
 pub(crate) fn eval_expression(
     expr: &ExpressionNode,
     ctx: &mut dyn Context,
 ) -> Result<Value, Diagnostic> {
     match expr {
-        // ── Литералы ─────────────────────────────────────────────────────────
-        // Длительность (фича 0134) несёт **наносекунды** — каноническое
-        // представление языка; профиль («часы»/«такты») есть свойство генерации,
-        // а не модели.
+        // -- Литералы ---------------------------------------------------------
+        // Длительность несёт **наносекунды** - каноническое представление языка;
+        // профиль ("часы"/"такты") есть свойство генерации, а не модели.
         //
-        // ⚠️ Здесь стояла заглушка-отказ «до подзадачи 0134-03», и она пережила
-        // саму 0134-03: адаптер условий (`predicate.rs`) и вычислитель начальных
-        // значений (`unit/initial.rs`) значение длительности отдавали, а **тело
-        // блока** отказывалось его вычислять — то есть обещанное документом
-        // `left := pause + 750ms;` давало `SIM-007` (фикс 0134-02). Три места
-        // разбирают один узел, и одно разошлось с двумя.
+        // Здесь стояла заглушка-отказ "до ", и она пережила саму: адаптер условий
+        // (`predicate.rs`) и вычислитель начальных значений (`unit/initial.rs`)
+        // значение длительности отдавали, а **тело блока** отказывалось его вычислять -
+        // то есть обещанное документом `left := pause + 750ms;` давало `SIM-007`. Три
+        // места разбирают один узел, и одно разошлось с двумя.
         ExpressionNode::Duration(ns) => Ok(Value::Duration(*ns)),
         ExpressionNode::Number(n) => Ok(Value::Number(*n)),
         ExpressionNode::Bool(b) => Ok(Value::Boolean(*b)),
         ExpressionNode::Rational(text, negative) => parse_rational(text, *negative),
-        // Адресный литерал `адрес:бит` — значение самого адреса.
+        // Адресный литерал `адрес:бит` - значение самого адреса.
         ExpressionNode::Address(addr, _bit) => Ok(Value::Number(i128::from(*addr))),
-        // Анонимное обращение к ячейке (фича 0189): чтение памяти. Ячейка
-        // моделируется синтетическим портом — её значение видно в трассе, и
-        // потому сверка с целью `c-hal` возможна потактово, а не «по факту
-        // компиляции».
+        // Анонимное обращение к ячейке: чтение памяти. Ячейка моделируется
+        // синтетическим портом - её значение видно в трассе, и потому сверка с целью
+        // `c-hal` возможна потактово, а не "по факту компиляции".
         ExpressionNode::AnonPort(access) => Ok(crate::anon_cell::read(access, ctx)),
 
-        // ── Переменные и доступ ──────────────────────────────────────────────
+        // -- Переменные и доступ ----------------------------------------------
         ExpressionNode::Variable(var) => {
             let borrowed = var.borrow();
             ctx.get_value(borrowed.name()).ok_or_else(|| {
@@ -76,9 +70,8 @@ pub(crate) fn eval_expression(
             })
         }
         ExpressionNode::Parenthesis(inner) => eval_expression(inner, ctx),
-        // База — ВЫРАЖЕНИЕ (фича 0358): `b.data[1]` вычисляется тем же
-        // вычислителем, что и прочие выражения, поэтому знание о цепочке места
-        // остаётся одно.
+        // База - Выражение: `b.data[1]` вычисляется тем же вычислителем, что и прочие
+        // выражения, поэтому знание о цепочке места остаётся одно.
         ExpressionNode::ArraySubscript(base, index) => {
             let loc = base.loc();
             let array = eval_expression(base, ctx)?;
@@ -134,21 +127,21 @@ pub(crate) fn eval_expression(
                     .with_code("SIM-010")
                 })
         }
-        // `a.b`: поле структуры (`p.x`, фича 0034) или бит целого (`BTN.0`).
-        // Различение — по вычисленному значению, в общем ядре `eval::access`
-        // (адаптеры `expression`/`predicate` его не дублируют).
+        // `a.b`: поле структуры (`p.x`) или бит целого (`BTN.0`). Различение - по
+        // вычисленному значению, в общем ядре `eval::access` (адаптеры
+        // `expression`/`predicate` его не дублируют).
         ExpressionNode::BitAccess(inner, member) => {
             let value = eval_expression(inner, ctx)?;
             eval_core::access::read_member(&value, member).map_err(|e| e.to_diagnostic(expr.loc()))
         }
 
-        // ── Унарные ──────────────────────────────────────────────────────────
+        // -- Унарные ----------------------------------------------------------
         ExpressionNode::Not(inner) => unary(UnOp::Not, inner, ctx),
         ExpressionNode::BitwiseNot(inner) => unary(UnOp::BitwiseNot, inner, ctx),
         ExpressionNode::UnaryPlus(inner) => unary(UnOp::UnaryPlus, inner, ctx),
         ExpressionNode::Negate(inner) => unary(UnOp::Negate, inner, ctx),
 
-        // ── Арифметика — то, чего не умел eval_expression_rt (Д1) ────────────
+        // -- Арифметика - то, чего не умел eval_expression_rt (Д1) ------------
         ExpressionNode::Add(l, r) => binary(BinOp::Add, l, r, ctx),
         ExpressionNode::Subtract(l, r) => binary(BinOp::Subtract, l, r, ctx),
         ExpressionNode::Multiply(l, r) => binary(BinOp::Multiply, l, r, ctx),
@@ -161,19 +154,19 @@ pub(crate) fn eval_expression(
         ExpressionNode::BitwiseXor(l, r) => binary(BinOp::BitwiseXor, l, r, ctx),
         ExpressionNode::BitwiseOr(l, r) => binary(BinOp::BitwiseOr, l, r, ctx),
 
-        // ── Сравнения и логика ───────────────────────────────────────────────
+        // -- Сравнения и логика -----------------------------------------------
         ExpressionNode::Less(l, r) => binary(BinOp::Less, l, r, ctx),
         ExpressionNode::More(l, r) => binary(BinOp::More, l, r, ctx),
         ExpressionNode::LessEqual(l, r) => binary(BinOp::LessEqual, l, r, ctx),
         ExpressionNode::MoreEqual(l, r) => binary(BinOp::MoreEqual, l, r, ctx),
         ExpressionNode::Equal(l, r) => binary(BinOp::Equal, l, r, ctx),
         ExpressionNode::NotEqual(l, r) => binary(BinOp::NotEqual, l, r, ctx),
-        // В `ExpressionNode` побитовые операции — отдельные варианты, поэтому
+        // В `ExpressionNode` побитовые операции - отдельные варианты, поэтому
         // `And`/`Or` здесь именно логические (в отличие от `ConditionNode`).
         ExpressionNode::And(l, r) => binary(BinOp::LogicalAnd, l, r, ctx),
         ExpressionNode::Or(l, r) => binary(BinOp::LogicalOr, l, r, ctx),
 
-        // ── Составные ────────────────────────────────────────────────────────
+        // -- Составные --------------------------------------------------------
         ExpressionNode::ConditionalOperator(cond, then_, else_) => {
             let cond_value = eval_expression(cond, ctx)?;
             let taken = ops::to_bool(&cond_value).map_err(|e| e.to_diagnostic(cond.loc()))?;
@@ -183,9 +176,9 @@ pub(crate) fn eval_expression(
                 eval_expression(else_, ctx)
             }
         }
-        // Приведение типа. Для q(m, n) каст **масштабирует** (int/float ↔ q),
-        // тогда как запись в переменную трактует Number как готовое
-        // представление — поэтому отдельное ядро `cast_to_type` (фича 0061).
+        // Приведение типа. Для q(m, n) каст **масштабирует** (int/float ↔ q), тогда как
+        // запись в переменную трактует Number как готовое представление - поэтому
+        // отдельное ядро `cast_to_type`.
         ExpressionNode::Cast(inner, ty) => {
             let value = eval_expression(inner, ctx)?;
             eval_core::cast_to_type(value, ty).map_err(|e| e.to_diagnostic(inner.loc()))
@@ -198,16 +191,15 @@ pub(crate) fn eval_expression(
             Ok(Value::Array(values))
         }
 
-        // ── Пока не поддержано — но с диагностикой, а не тихим пропуском ─────
+        // -- Пока не поддержано - но с диагностикой, а не тихим пропуском -----
         //
-        // Вызовы функций требуют интерпретатора тела `fn` — задача `0025-02b`.
-        // Д3/Д4: вызов функции. Аргументы вычисляются в контексте вызывающего,
-        // тело исполняет общий интерпретатор (`unit::statement`).
+        // Вызовы функций требуют интерпретатора тела `fn` - задача `0025-02b`. Д3/Д4:
+        // вызов функции. Аргументы вычисляются в контексте вызывающего, тело исполняет
+        // общий интерпретатор (`unit::statement`).
         ExpressionNode::Function(func, args) => {
-            // ⚠️ `debug` перехватывается ДО вычисления аргументов (фича 0248):
-            // его аргумент — строковый литерал, а `Value` строк не
-            // представляет, и общий путь упал бы на «строки не
-            // поддерживаются». Печать идёт в stderr: stdout занят трассой
+            // `debug` перехватывается до вычисления аргументов: его аргумент -
+            // строковый литерал, а `Value` строк не представляет, и общий путь упал бы
+            // на "строки не поддерживаются". Печать идёт в stderr: stdout занят трассой
             // прогона, которую читают сверки.
             if let Some(text) = debug_argument(func, args) {
                 eprintln!("debug: {text}");
@@ -228,25 +220,24 @@ pub(crate) fn eval_expression(
         ExpressionNode::Assign(_, _) => {
             Err(unsupported("присваивание внутри выражения", expr.loc()))
         }
-        // `Value` не представляет строки — пробел зафиксирован анализом.
+        // `Value` не представляет строки - пробел заисправлениеирован анализом.
         ExpressionNode::String(_) => Err(unsupported("строки", expr.loc())),
         ExpressionNode::Type(_) => Err(unsupported("тип как выражение", expr.loc())),
         ExpressionNode::Model(_) => Err(unsupported("модель как выражение", expr.loc())),
-        // Именованное условие в позиции выражения (фича 0331): вычисляется
+        // Именованное условие в позиции выражения: вычисляется
         // **тем же** адаптером условий, что и на ребре. Прежде эталон
         // отказывал `SIM-014`, тогда как цель `c` печатала для того же входа
-        // макрос `COND_…`, которого нигде не определяла, — то есть выдавала
+        // макрос `COND_...`, которого нигде не определяла, - то есть выдавала
         // невалидный C при нулевом коде возврата.
         //
-        // ⚠️ Своего разбора здесь нет и быть не должно: условие судит
-        // `predicate.rs`, и второе знание о нём разошлось бы с первым (класс
-        // 0084/0193/0195).
+        // Своего разбора здесь нет и быть не должно: условие судит `predicate.rs`, и
+        // второе знание о нём разошлось бы с первым.
         ExpressionNode::Condition(cond) => {
             crate::predicate::eval_condition(&cond.borrow().value, ctx)
         }
         ExpressionNode::List(_) => Err(unsupported("список параметров", expr.loc())),
 
-        // ── Невычислимые по определению ──────────────────────────────────────
+        // -- Невычислимые по определению --------------------------------------
         ExpressionNode::None => Err(Diagnostic::error(
             expr.loc(),
             "пустое выражение не может быть вычислено".to_string(),
@@ -260,12 +251,11 @@ pub(crate) fn eval_expression(
     }
 }
 
-/// Текст `debug("…")`, если вызов — именно встроенная `debug` со строковым
-/// литералом.
+/// Текст `debug("...")`, если вызов - именно встроенная `debug` со строковым литералом.
 ///
-/// Форму задаёт цель `rust` (`hal.debug("текст")`): аргумент обязан быть
-/// литералом, потому что форматирования в `no_std` нет. Эталон следует той же
-/// форме — иначе он принимал бы модели, которые прошивка не соберёт.
+/// Форму задаёт цель `rust` (`hal.debug("текст")`): аргумент обязан быть литералом,
+/// потому что форматирования в `no_std` нет. Эталон следует той же форме - иначе он
+/// принимал бы модели, которые прошивка не соберёт.
 fn debug_argument(
     func: &std::rc::Rc<std::cell::RefCell<takt_lang::semantic::FunctionDefinitionNode>>,
     args: &[ExpressionNode],
@@ -356,7 +346,7 @@ mod tests {
         Box::new(ExpressionNode::Number(n))
     }
 
-    // ── Д1: арифметика, которой не было ───────────────────────────────────────
+    // -- Д1: арифметика, которой не было ---------------------------------------
 
     #[test]
     fn d1_add_is_evaluated() {
@@ -455,7 +445,7 @@ mod tests {
         );
     }
 
-    // ── Ошибки: отказ вместо тихого пропуска (Д2) ─────────────────────────────
+    // -- Ошибки: отказ вместо тихого пропуска (Д2) -----------------------------
 
     #[test]
     fn d2_division_by_zero_is_diagnostic_not_silence() {
@@ -467,7 +457,7 @@ mod tests {
 
     #[test]
     fn function_call_returns_value() {
-        // Д3: `fn f(n: u8) -> u8 { return n + 1; }` → f(41) = 42.
+        // Д3: `fn f(n: u8) -> u8 { return n + 1; }` -> f(41) = 42.
         let func = std::rc::Rc::new(std::cell::RefCell::new(
             takt_lang::semantic::FunctionDefinitionNode::Local {
                 upper: None,
@@ -512,7 +502,7 @@ mod tests {
 
     #[test]
     fn unresolved_function_is_diagnostic_not_panic() {
-        // Контрпример: неразрешённая функция — отказ, а не паника.
+        // Контрпример: неразрешённая функция - отказ, а не паника.
         let mut ctx = MockContext::new(&[]);
         let expr = ExpressionNode::Function(
             std::rc::Rc::new(std::cell::RefCell::new(Default::default())),

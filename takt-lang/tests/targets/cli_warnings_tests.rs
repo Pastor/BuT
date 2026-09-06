@@ -1,8 +1,8 @@
-//! Фича 0081: `taktc compile` печатает предупреждения компилятора.
+//! `taktc compile` печатает предупреждения компилятора.
 //!
 //! До 0081 `unused_variable_warnings` (`SE-036`) и
-//! `nondeterministic_transition_warnings` (`SE-037`) — часть публичного API, но из
-//! CLI **не вызывались вовсе**: пользователь не видел ни одного предупреждения.
+//! `nondeterministic_transition_warnings` (`SE-037`) - часть публичного API, но из CLI
+//! **не вызывались вовсе**: пользователь не видел ни одного предупреждения.
 //! Диагностика, которую никто не печатает, равносильна её отсутствию.
 //!
 //! Проверяется через прогон **бинаря** `taktc` (`CARGO_BIN_EXE_taktc`): предупреждения
@@ -16,7 +16,7 @@ fn taktc() -> Command {
     Command::new(env!("CARGO_BIN_EXE_taktc"))
 }
 
-/// Каталог для вывода компиляции (файлы `.c`/`.h` нам не важны — важен stderr).
+/// Каталог для вывода компиляции (файлы `.c`/`.h` нам не важны - важен stderr).
 fn out_dir(tag: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir()
         .join(format!("takt_pid{}", std::process::id()))

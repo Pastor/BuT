@@ -1,8 +1,8 @@
 //! Генерация C-выражений, операторов, блоков кода и разрешение переменных.
 //!
-//! Содержит всю логику генерации C-выражений из семантических узлов:
-//! [`generate_expr`], [`generate_code_block`], [`generate_stmt_expression`],
-//! а также вспомогательные функции разрешения имён переменных и функций.
+//! Содержит всю логику генерации C-выражений из семантических узлов: [`generate_expr`],
+//! [`generate_code_block`], [`generate_stmt_expression`], а также вспомогательные
+//! функции разрешения имён переменных и функций.
 
 use super::{PortClass, c_type_or_diagnostic, typed_variable_or_diagnostic};
 use crate::diagnostics::{Diagnostic, Location};
@@ -31,15 +31,15 @@ mod precedence;
 mod resolve;
 mod stmt;
 
-// Внутренние помощники, которые зовут соседние подмодули: `use super::*` в
-// каждом подмодуле подхватывает их отсюда. Наружу `c_expr` они не выходят.
+// Внутренние помощники, которые зовут соседние подмодули: `use super::*` в каждом
+// подмодуле подхватывает их отсюда. Наружу `c_expr` они не выходят.
 use call::generate_function_call;
 use names::path_from_root;
 use resolve::find_in_extend;
 
-// Реэкспорт: внешние пути импорта НЕ меняются — `c_decl.rs`, `c_model.rs` и
-// `c_source.rs` продолжают писать `use crate::generator::c::c_expr::…`.
-// Контракт модуля — свойство `mod.rs`, а не расположения функций внутри него.
+// Реэкспорт: внешние пути импорта не меняются - `c_decl.rs`, `c_model.rs` и
+// `c_source.rs` продолжают писать `use crate::generator::c::c_expr::...`. Контракт
+// модуля - свойство `mod.rs`, а не расположения функций внутри него.
 pub(super) use condition::generate_condition_expr;
 pub(super) use expr::generate_expr;
 pub(super) use fixed::insert_fixed_helpers;

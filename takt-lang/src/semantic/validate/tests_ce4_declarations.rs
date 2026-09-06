@@ -1,8 +1,8 @@
-//! Тесты модуля `validate` (перенесены из `validate.rs`, фича 0027).
+//! Тесты модуля `validate` (перенесены из `validate.rs`).
 //!
-//! ⚠️ Проверка отдаёт **вектор** диагностик (фича 0151): прежде она возвращала
-//! `Result<(), Diagnostic>` — не более одной ошибки на модель, — и вторая
-//! переменная с необъявленным перечислением молчала.
+//! Проверка отдаёт **вектор** диагностик: прежде она возвращала `Result<(),
+//! Diagnostic>` - не более одной ошибки на модель, - и вторая переменная с
+//! необъявленным перечислением молчала.
 
 use super::*;
 
@@ -12,9 +12,9 @@ fn build_rc(src: &str) -> Rc<RefCell<ModelNode>> {
     crate::semantic::tree::construct_model(&ast, None, &[]).expect("ошибка семантики")
 }
 
-// ── Примеры корректного использования enum-типов ──────────────────────────
+// -- Примеры корректного использования enum-типов --------------------------
 
-/// Переменная с типом enum, где перечисление объявлено — ошибок нет.
+/// Переменная с типом enum, где перечисление объявлено - ошибок нет.
 ///
 /// # Пример (Takt)
 /// ```text
@@ -22,7 +22,7 @@ fn build_rc(src: &str) -> Rc<RefCell<ModelNode>> {
 ///     Red = 0,
 ///     Green = 1
 /// }
-/// var c: Color = 0;   // ✓ Color объявлен
+/// var c: Color = 0;   // Color объявлен
 /// start S;
 /// ```
 #[test]
@@ -32,7 +32,7 @@ fn ce4_declared_enum_type_is_ok() {
         let (ast, _) =
             crate::parse("enum Color { Red = 0, Green = 1 } start S;", 0).expect("ошибка разбора");
         let m = crate::semantic::tree::construct_model(&ast, None, &[]).expect("ошибка семантики");
-        // Переменная типа Color — Color объявлен в AST
+        // Переменная типа Color - Color объявлен в AST
         let var = VariableNode::Simple {
             upper: None,
             loc: Location::Implicit,
@@ -55,7 +55,7 @@ fn ce4_declared_enum_type_is_ok() {
 ///
 /// # Пример (Takt)
 /// ```text
-/// var x: [bit;8] = 0;  // ✓ обычный тип, Ce4 не применяется
+/// var x: [bit;8] = 0;  // обычный тип, Ce4 не применяется
 /// start S;
 /// ```
 #[test]
@@ -82,13 +82,13 @@ fn ce4_inference_type_not_checked() {
     assert!(result.is_empty(), "Inference-тип не должен вызывать Ce4");
 }
 
-// ── Контр-примеры: ошибочные enum-типы ───────────────────────────────────
+// -- Контр-примеры: ошибочные enum-типы -----------------------------------
 
-/// Переменная типа необъявленного перечисления → ошибка Ce4.
+/// Переменная типа необъявленного перечисления -> ошибка Ce4.
 ///
 /// # Контр-пример (Takt)
 /// ```text
-/// var s: Size = 0;  // ✗ Size не объявлен
+/// var s: Size = 0;  // Size не объявлен
 /// start S;
 /// ```
 #[test]
@@ -96,7 +96,7 @@ fn ce4_undeclared_enum_type_is_error() {
     let model_rc = {
         let (ast, _) = crate::parse("start S;", 0).expect("ошибка разбора");
         let m = crate::semantic::tree::construct_model(&ast, None, &[]).expect("ошибка семантики");
-        // Переменная типа Size — Size НЕ объявлен
+        // Переменная типа Size - Size не объявлен
         let var = VariableNode::Simple {
             upper: None,
             loc: Location::Implicit,
@@ -130,7 +130,7 @@ fn ce4_undeclared_enum_type_is_error() {
 ///
 /// # Контр-пример (Takt)
 /// ```text
-/// const C: Status = 0;  // ✗ Status не объявлен
+/// const C: Status = 0;  // Status не объявлен
 /// start S;
 /// ```
 #[test]
@@ -180,7 +180,7 @@ fn ce4_undeclared_enum_in_port_is_error() {
     );
 }
 
-/// Модель без переменных — проверка пуста и всегда ок.
+/// Модель без переменных - проверка пуста и всегда ок.
 #[test]
 fn ce4_empty_model_is_ok() {
     let model_rc = build_rc("start S;");

@@ -1,8 +1,8 @@
-//! Тесты цели `sv-mmio` (фича 0062) на уровне `compile_to_sv_mmio`.
+//! Тесты цели `sv-mmio` на уровне `compile_to_sv_mmio`.
 //!
-//! Проверяют карту регистров, направление по биту, порт без адреса, приём
-//! внешней карты и диагностики-«не угадываем» (SE-060, SV-013, SV-014). Гейт
-//! (verilator + yosys) и потактовая сверка — в `precheck.sh` и
+//! Проверяют карту регистров, направление по биту, порт без адреса, приём внешней карты
+//! и диагностики-"не угадываем" (SE-060, SV-013, SV-014). Проверка (verilator + yosys) и
+//! потактовая сверка - в `precheck.sh` и
 //! `takt-sim/tests/conformance/conformance_sv_mmio_tests.rs`.
 
 use std::path::PathBuf;
@@ -70,10 +70,10 @@ fn addressed_ports_form_register_file() {
         sv.contains("output logic [0:0] reg_rdata,"),
         "нет reg_rdata:\n{sv}"
     );
-    // Адреса портов буквально — карта регистров.
+    // Адреса портов буквально - карта регистров.
     assert!(sv.contains("11'h500"), "нет адреса cmd_fork 0x500:\n{sv}");
     assert!(sv.contains("11'h100"), "нет адреса task_valid 0x100:\n{sv}");
-    // Адресованные порты НЕ порты модуля.
+    // Адресованные порты не порты модуля.
     assert!(
         !sv.contains("output logic cmd_fork"),
         "cmd_fork остался портом:\n{sv}"
@@ -84,23 +84,23 @@ fn addressed_ports_form_register_file() {
     );
 }
 
-/// **A7:** порт **без** адреса остаётся портом модуля; **с** адресом — бит регистра.
+/// **A7:** порт **без** адреса остаётся портом модуля; **с** адресом - бит регистра.
 #[test]
 fn port_without_address_stays_module_port() {
-    // `plain_in` без размещения → адреса нет; `reg_out at 0x200:0` — адрес.
-    // (после фичи 0187 адрес задаётся только `at`, а `:=` означает начальное
-    // значение, поэтому «порт без адреса» — это порт без `at`.)
+    // `plain_in` без размещения -> адреса нет; `reg_out at 0x200:0` - адрес. (после
+    // адрес задаётся только `at`, а `:=` означает начальное значение, поэтому "порт без
+    // адреса" - это порт без `at`.)
     let sv = compile(
         "mixport",
         "in plain_in: bit; out reg_out: bit at 0x200:0; \
          start S { always { reg_out := plain_in; } ref S; }",
     );
-    // Неадресованный вход — порт модуля.
+    // Неадресованный вход - порт модуля.
     assert!(
         sv.contains("input  logic plain_in,"),
         "plain_in не порт модуля:\n{sv}"
     );
-    // Адресованный выход — не порт модуля, а бит регистра.
+    // Адресованный выход - не порт модуля, а бит регистра.
     assert!(
         !sv.contains("output logic reg_out"),
         "reg_out остался портом:\n{sv}"
@@ -108,8 +108,8 @@ fn port_without_address_stays_module_port() {
     assert!(sv.contains("'h200"), "нет адреса reg_out:\n{sv}");
 }
 
-/// **A5:** одно слово несёт биты обоих направлений — читаются все, пишется
-/// только `in` (правило 4–5 ADR). `extend_complex` без `extern fn`.
+/// **A5:** одно слово несёт биты обоих направлений - читаются все, пишется
+/// только `in` (-5 ). `extend_complex` без `extern fn`.
 #[test]
 fn mixed_direction_word_reads_all_writes_only_in() {
     let sv = compile(
@@ -117,7 +117,7 @@ fn mixed_direction_word_reads_all_writes_only_in() {
         "out flag_a: bit at 0x40:1; out flag_b: bit at 0x40:2; in gate: bit at 0x40:33; \
          start S { always { flag_a := gate; flag_b := 1; } ref S; }",
     );
-    // Чтение собирает ВСЕ три бита одного слова.
+    // Чтение собирает все три бита одного слова.
     assert!(
         sv.contains("reg_rdata[1 +: 1] = flag_a;"),
         "нет чтения flag_a:\n{sv}"
@@ -130,7 +130,7 @@ fn mixed_direction_word_reads_all_writes_only_in() {
         sv.contains("reg_rdata[33 +: 1] = gate;"),
         "нет чтения gate:\n{sv}"
     );
-    // Запись касается ТОЛЬКО in-бита gate; out-биты запись игнорируют (R5).
+    // Запись касается только in-бита gate; out-биты запись игнорируют (R5).
     assert!(
         sv.contains("gate <= reg_wdata[33 +: 1];"),
         "нет записи gate:\n{sv}"
@@ -141,7 +141,7 @@ fn mixed_direction_word_reads_all_writes_only_in() {
     );
 }
 
-/// **T12 (не угадываем):** бит адреса вне `[0, 63]` → `SE-060` (не молчаливый
+/// **T12 (не угадываем):** бит адреса вне `[0, 63]` -> `SE-060` (не молчаливый
 /// выбор ширины слова).
 #[test]
 fn bit_out_of_range_is_se060_not_guessed() {
@@ -159,7 +159,7 @@ fn bit_out_of_range_is_se060_not_guessed() {
 /// **SV-013 (не угадываем):** срез порта не помещается в 64-битный регистр.
 #[test]
 fn slice_over_64_is_sv013() {
-    // u8 (8 бит) на бите 60 → биты [60..67], выход за 64.
+    // u8 (8 бит) на бите 60 -> биты [60..67], выход за 64.
     let err = compile_err(
         "slice64",
         "out sig: u8 at 0x1:60; start S { always { sig := 1; } ref S; }",
@@ -186,7 +186,7 @@ fn reg_interface_name_collision_is_sv014() {
 }
 
 /// **T9/A8:** внешняя карта адресов (`--address-map`) принимается целью `sv-mmio`
-/// и переопределяет адрес модели (SE-050 — предупреждение оверлея, не ошибка).
+/// и переопределяет адрес модели (SE-050 - предупреждение наложения, не ошибка).
 #[test]
 fn external_address_map_is_accepted() {
     let dir = out_dir("extmap");
@@ -206,7 +206,7 @@ fn external_address_map_is_accepted() {
     let sv = std::fs::read_to_string(dir.join("extmap.sv")).expect("вывод");
     // Победил адрес карты (0x2A), а не модели (0x1).
     assert!(sv.contains("'h2a"), "адрес карты не применён:\n{sv}");
-    // Оверлей отмечен предупреждением SE-050 (карта поверх адреса модели).
+    // Наложение отмечен предупреждением SE-050 (карта поверх адреса модели).
     assert!(
         warnings.iter().any(|w| w.code.as_deref() == Some("SE-050")),
         "нет предупреждения оверлея SE-050: {warnings:?}"

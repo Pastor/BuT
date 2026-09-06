@@ -1,20 +1,10 @@
-//! Регистровый интерфейс `sv-mmio` отражает состав портов (фича 0214).
+//! Регистровый интерфейс `sv-mmio` отражает состав портов.
 //!
 //! # Что здесь ловится
 //!
-//! Замер 2026-08-17: на модели без входных портов цель печатала `reg_wdata` и
-//! `reg_wen`, которым в модели ничего не соответствует.
-//! `verilator --lint-only -Wall` отвечал двумя `UNUSEDSIGNAL` и **ненулевым**
-//! кодом возврата — то есть уронил бы гейт, попади туда такая модель. В гейте
-//! её не было: `SV_MMIO_TRANSLATABLE` состоял из одного `stacker`, у которого
-//! входные порты есть.
-//!
-//! # Почему проверка текстовая, а не «собралось»
-//!
-//! Предмет фичи — **состав интерфейса**, и он виден только в тексте. Линт и
-//! синтез его не различают: модуль с лишним входом валиден (урок ADR 0045).
-//! Настоящую работу вывода доказывает тестбенч APB в
-//! `examples/generated/sv-mmio/tb/regulator_apb_tb.sv`, а здесь — форма.
+//! `verilator --lint-only -Wall` отвечал двумя `UNUSEDSIGNAL` и **ненулевым** кодом
+//! возврата - то есть уронил бы проверка, попади туда такая модель. В проверке её не было:
+//! `SV_MMIO_TRANSLATABLE` состоял из одного `stacker`, у которого входные порты есть.
 
 use takt_lang::GenerateOptions;
 
@@ -32,12 +22,12 @@ fn out_dir(tag: &str) -> std::path::PathBuf {
     dir
 }
 
-/// Модель, у которой все адресованные порты — выходные.
+/// Модель, у которой все адресованные порты - выходные.
 const ONLY_OUT: &str = "out ready: bit at 0x600:0;\n\
                         var n: u8 := 0;\n\
                         start Run { always { n := n + 1; ready := 1; } ref Run; }\n";
 
-/// Модель с входным портом — шине есть что писать.
+/// Модель с входным портом - шине есть что писать.
 const WITH_IN: &str = "in cmd: bit at 0x100:0;\n\
                        out ready: bit at 0x600:0;\n\
                        start Run { always { ready := cmd; } ref Run; }\n";
@@ -76,7 +66,7 @@ fn read_only_core_has_no_write_signals() {
     );
 }
 
-/// **T2.** При входном порте интерфейс прежний — все четыре сигнала.
+/// **T2.** При входном порте интерфейс прежний - все четыре сигнала.
 #[test]
 fn writable_core_keeps_full_interface() {
     let text = generate("rw_core", WITH_IN, "rw", &GenerateOptions::default());
@@ -90,14 +80,14 @@ fn writable_core_keeps_full_interface() {
 
 /// **T3.** Адаптер APB не заводит проводов к несуществующим выводам ядра.
 ///
-/// ⚠️ Прежде обёртка подключала `.reg_wdata(…)`/`.reg_wen(…)` безусловно, и на
-/// ядре без записи verilator отвечал `PINNOTFOUND` — пара «ядро + обёртка»
-/// вообще не собиралась.
+/// Прежде обёртка подключала `.reg_wdata(...)`/`.reg_wen(...)` безусловно, и на ядре
+/// без записи verilator отвечал `PINNOTFOUND` - пара "ядро + обёртка" вообще не
+/// собиралась.
 #[test]
 fn apb_adapter_follows_core_interface() {
     let dir = out_dir("apb");
-    // `GenerateOptions` помечен `#[non_exhaustive]`: снаружи крейта строится
-    // только через `default()` с последующим присваиванием поля.
+    // `GenerateOptions` помечен `#[non_exhaustive]`: снаружи крейта строится только
+    // через `default()` с последующим присваиванием поля.
     let mut options = GenerateOptions::default();
     options.bus = Some(takt_lang::generator::Bus::Apb);
     takt_lang::compile_to_sv_mmio(

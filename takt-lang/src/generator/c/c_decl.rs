@@ -27,12 +27,11 @@ fn const_expr_string(expr: &ExpressionNode, name: &str) -> Result<String, Diagno
     } else if let ExpressionNode::Rational(value, _) = expr {
         value.clone()
     } else if let ExpressionNode::Duration(nanos) = expr {
-        // Длительность — целое в МИЛЛИСЕКУНДАХ (0183), как и её тип
-        // (`uint32_t`). ⚠️ Без этой ветви `const HOLD: duration := 2s;`
-        // отвергался воронкой недостижимости (`CC-023` «невычисленное значение
-        // константы») — при том, что шесть прочих потребителей константу
-        // переводят, а эталон исполняет (замер 0489). Пересчёт делает общий
-        // носитель, а не своя формула.
+        // Длительность - целое в миллисекундах, как и её тип (`uint32_t`). Без этой
+        // ветви `const HOLD: duration := 2s;` отвергался воронкой недостижимости
+        // (`CC-023` "невычисленное значение константы") - при том, что шесть прочих
+        // потребителей константу переводят, а эталон исполняет (замер 0489). Пересчёт
+        // делает общий носитель, а не своя формула.
         crate::semantic::duration::value_millis(
             *nanos,
             crate::diagnostics::Location::Codegen,
@@ -46,9 +45,9 @@ fn const_expr_string(expr: &ExpressionNode, name: &str) -> Result<String, Diagno
         }
         format!("{{{}}}", parts.join(", "))
     } else {
-        // ⚠️ Без `Debug`-дампа выражения (фича 0231): сообщение читает автор
-        // программы. Ветвь защитная — до неё доходит только значение, не
-        // свёрнутое семантикой, а такое отвергается раньше (`SE-003`).
+        // Без `Debug`-дампа выражения: сообщение читает автор программы. Ветвь защитная -
+        // до неё доходит только значение, не свёрнутое семантикой, а такое отвергается
+        // раньше (`SE-003`).
         return Err(crate::generator::c::c_unresolved::refuse(
             crate::diagnostics::Location::Codegen,
             crate::generator::c::c_unresolved::UnresolvedNode::ConstantValue(name.to_string()),
@@ -80,7 +79,8 @@ pub(super) fn generate_constants_and_ports_and_enums(
             match var {
                 VariableNode::Unresolved | VariableNode::Simple { .. } => {}
                 VariableNode::Port { .. } => {
-                    // Порты генерируются как enum в заголовочном файле (ModelNamePorts).
+                    // Порты генерируются как enum в заголовочном файле
+                    // (ModelNamePorts).
                 }
                 VariableNode::Const {
                     ref upper,
@@ -89,10 +89,10 @@ pub(super) fn generate_constants_and_ports_and_enums(
                     ref ty,
                     ..
                 } => {
-                    // Пропускаем неиспользуемые константы. Ключ — пара
-                    // (владелец, имя) (фича 0193): цель `c` квалифицирует имена
-                    // с самого начала, поэтому голый ключ давал ей лишний
-                    // `#define` неиспользуемой тёзки — безвредный, но неверный.
+                    // Пропускаем неиспользуемые константы. Ключ - пара (владелец, имя):
+                    // цель `c` квалифицирует имена с самого начала, поэтому голый ключ
+                    // давал ей лишний `#define` неиспользуемой тёзки - безвредный, но
+                    // неверный.
                     if !map
                         .usage()
                         .constants
@@ -106,20 +106,18 @@ pub(super) fn generate_constants_and_ports_and_enums(
                             .to_uppercase()
                             .as_str();
                     let value = const_expr_string(expr, &name)?;
-                    // 0080-02: структурная константа — `static const`, а НЕ
-                    // `#define`. Макрос `#define X {…}` при доступе `X.field`
-                    // разворачивается в `{…}.field` — невалидный C (фигурный
-                    // литерал вне объявления). `static const Type X = {…};`
-                    // делает `X.field` корректным. Скаляр/массив — прежним
-                    // `#define` (массив с полевым доступом — территория 0078).
-                    // Массив — то же самое и по той же причине (фича 0490):
-                    // `#define X {1, 2}` при `a[0] = X[0];` разворачивается в
-                    // `{1, 2}[0]`, и `cc` отвечает «expected expression» при
-                    // НУЛЕВОМ коде возврата `taktc`. Замер 2026-09-02: тот же
-                    // вход отвергают `st`/`st-at` и не синтезирует `yosys`.
+                    // структурная константа - `static const`, а не `#define`. Макрос
+                    // `#define X {...}` при доступе `X.field` разворачивается в
+                    // `{...}.field` - невалидный C (фигурный литерал вне объявления).
+                    // `static const Type X = {...};` делает `X.field` корректным.
+                    // Скаляр/массив - прежним `#define` (массив с полевым доступом -
+                    // территория 0078). Массив - то же самое и по той же причине:
+                    // `#define X {1, 2}` при `a[0] = X[0];` разворачивается в `{1,
+                    // 2}[0]`, и `cc` отвечает "expected expression" при нулевом коде
+                    // возврата `taktc`.
                     //
-                    // ⚠️ Бит-вектор `[bit;N≤64]` — упакованный СКАЛЯР (0078):
-                    // ему `#define` верен, и трогать его нельзя.
+                    // Бит-вектор `[bit;N<=64]` - упакованный скаляр: ему `#define`
+                    // верен, и трогать его нельзя.
                     let array_const = matches!(ty, TypeNode::Array(..))
                         && crate::semantic::bit_vector::is_bit_vector(ty).is_none();
                     if let TypeNode::Struct(struct_name) = ty {
@@ -152,11 +150,8 @@ pub(super) fn generate_constants_and_ports_and_enums(
             printer.print(lines.join("\n").as_str()).nl();
         }
 
-        // Имя строит `c_names::enum_constant` — ТА ЖЕ функция, которой
-        // печатается значение (`c_enum::constant_of`, фича 0167). Прежде здесь
-        // жила своя формула без сегмента перечисления, и два перечисления одной
-        // модели с одноимённым вариантом давали дубль `#define` с разными
-        // значениями — `cc -Werror` такой файл отвергает.
+        // Имя строит `c_names::enum_constant` - Та же функция, которой печатается
+        // значение (`c_enum::constant_of`).
         let enums = model.enums.clone().into_values();
         let mut lines = Vec::new();
         for en in enums {
@@ -193,11 +188,11 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
         let model = &*model.borrow();
         let mut external_funcs = Vec::new();
         let mut local_funcs = Vec::new();
-        // 0031: форвард-прототипы локальных функций. Композиция `f → g` (фича
-        // 0031) делает порядок определений значимым: без прототипа `Model_f`,
-        // напечатанная раньше `Model_g`, вызвала бы необъявленную функцию
-        // (`cc -std=c99`: implicit-function-declaration). Прототипы печатаются
-        // ДО определений, поэтому порядок определений (алфавитный) уже не важен.
+        // 0031: форвард-прототипы локальных функций. Композиция `f -> g` делает порядок
+        // определений значимым: без прототипа `Model_f`, напечатанная раньше `Model_g`,
+        // вызвала бы необъявленную функцию (`cc -std=c99`:
+        // implicit-function-declaration). Прототипы печатаются до определений, поэтому
+        // порядок определений (алфавитный) уже не важен.
         let mut local_protos = Vec::new();
         for ref fun in model.functions.clone().into_values() {
             // Пропускаем функции, которые нигде не вызываются
@@ -209,10 +204,10 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
                     params, body, ret, ..
                 } => {
                     let mut definition = String::new();
-                    // 0029-01: было `.unwrap()` — невыразимый тип параметра ронял
-                    // `taktc` паникой (проба: `fn pick(data: [u8;4])`). Параметр
-                    // печатается формой объявления: тип массива в C неотделим от
-                    // имени (`uint8_t data[4]`).
+                    // было `.unwrap()` - невыразимый тип параметра ронял `taktc`
+                    // паникой (проба: `fn pick(data: [u8;4])`). Параметр печатается
+                    // формой объявления: тип массива в C неотделим от имени (`uint8_t
+                    // data[4]`).
                     let mut tiny_params = params
                         .iter()
                         .map(|(name, typ)| {
@@ -225,11 +220,11 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
                             )
                         })
                         .collect::<Result<Vec<String>, Diagnostic>>()?;
-                    // Указатель на состояние печатается ПО НУЖДЕ (фича 0396):
-                    // прежде он стоял в сигнатуре всегда, а тело пользовалось
-                    // им не везде — 53 заглушки `(void)model;` в корпусе.
-                    // Признак берётся у общего носителя (`c_needs`), который
-                    // спрашивает тот же `rust_needs`, что и цель `rust`.
+                    // Указатель на состояние печатается по нужде: прежде он стоял в
+                    // сигнатуре всегда, а тело пользовалось им не везде - 53 заглушки
+                    // `(void)model;` в корпусе. Признак берётся у общего носителя
+                    // (`c_needs`), который спрашивает тот же `rust_needs`, что и цель
+                    // `rust`.
                     let wants_state = crate::generator::c::c_needs::needs_state(&fun, model)?;
                     if wants_state {
                         tiny_params.insert(
@@ -243,11 +238,11 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
                         map.float_width(),
                         &format!("возвращаемое значение функции '{}'", fun.name()),
                     )?;
-                    // ⚠️ Пустой список параметров печатается `void`, а не
-                    // пустотой: `f()` в C означает «список НЕИЗВЕСТЕН» (K&R), и
-                    // `cc -Wstrict-prototypes` отвечает «a function
-                    // declaration without a prototype is deprecated». До фичи
-                    // 0396 случай не возникал — указатель стоял всегда.
+                    // Пустой список параметров печатается `void`, а не пустотой: `f()`
+                    // в C означает "список неизвестен" (K&R), и `cc
+                    // -Wstrict-prototypes` отвечает "a function declaration without a
+                    // prototype is deprecated". До случай не возникал - указатель стоял
+                    // всегда.
                     let param_list = if tiny_params.is_empty() {
                         "void".to_string()
                     } else {
@@ -259,9 +254,8 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
                         get_function_name(&fun),
                         param_list
                     ));
-                    // Комментарий автора перед объявлением функции (фича
-                    // 0535, задача 04): в корпусе таких 23, и объясняют они
-                    // именно то, что делает функция.
+                    // Комментарий автора перед объявлением функции: в корпусе таких 23,
+                    // и объясняют они именно то, что делает функция.
                     for line in crate::generator::comments::leading(
                         fun.loc(),
                         crate::generator::header::CommentStyle::Slashes,
@@ -292,17 +286,15 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
                         )?;
                         tmp_printer.down();
                     }
-                    // Указатель на состояние требует протокол вызова, но тело
-                    // не всегда им пользуется: без заглушки `cc -Wall -Wextra`
-                    // отвечает `-Wunused-parameter` (фича 0260).
-                    // Тот же вопрос задаётся и ОБЪЯВЛЕННЫМ параметрам (фича
-                    // 0337): `fn constant(v: u8) -> u8 { return 7; }` давало
-                    // `-Wunused-parameter`, то есть отказ гейта под `-Werror`,
-                    // при нулевом коде возврата `taktc`.
-                    // ⚠️ Заглушка `model` осталась защитой в глубину: признак
-                    // считает по семантике, а `is_unused` — по напечатанному
-                    // тексту, и расхождение двух взглядов даст отказ `cc`, а не
-                    // молчание. Когда параметра нет, вопрос не задаётся.
+                    // Указатель на состояние требует протокол вызова, но тело не всегда
+                    // им пользуется: без заглушки `cc -Wall -Wextra` отвечает
+                    // `-Wunused-parameter`. Тот же вопрос задаётся и объявленным
+                    // параметрам: `fn constant(v: u8) -> u8 { return 7; }` давало
+                    // `-Wunused-parameter`, то есть отказ проверки под `-Werror`, при
+                    // нулевом коде возврата `taktc`. Заглушка `model` осталась защитой
+                    // в глубину: признак считает по семантике, а `is_unused` - по
+                    // напечатанному тексту, и расхождение двух взглядов даст отказ
+                    // `cc`, а не молчание. Когда параметра нет, вопрос не задаётся.
                     let mut guards: Vec<String> = if wants_state {
                         vec!["model".to_string()]
                     } else {
@@ -347,7 +339,7 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
                         params.join(", ").as_str()
                     ));
                 }
-                // ⚠️ Текст был по-английски и без кода — класс фичи 0212.
+                // Текст был по-английски и без кода - класс.
                 _ => {
                     return Err(crate::generator::c::c_unresolved::refuse(
                         fun.loc(),
@@ -366,7 +358,7 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
             }
         }
         if !local_funcs.is_empty() {
-            // Прототипы — до определений (0031): порядок определений не важен.
+            // Прототипы - до определений: порядок определений не важен.
             local_protos.sort();
             for proto in &local_protos {
                 printer.print(proto.as_str()).nl();

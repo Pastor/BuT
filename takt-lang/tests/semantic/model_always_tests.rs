@@ -1,14 +1,11 @@
-//! Model-level `always` (тело `always` вне состояния) эмитится всеми целями
-//! кода — фича 0083.
+//! Model-level `always` (тело `always` вне состояния) эмитится всеми целями кода -.
 //!
-//! Прежде `generate_model_tick` (и аналоги rust/st/sv) эмитили только
-//! state-level именованные блоки; model-level `always` на модели **со своими
-//! состояниями** молча терялся (на композите — работал, т.к. он тело
-//! синтетического состояния). Контракт 0083: блок исполняется КАЖДЫЙ такт до
-//! диспетчеризации состояния (эталон — шаг 2 `execution("always")` симулятора).
+//! он тело синтетического состояния). Контракт 0083: блок исполняется каждый такт до
+//! диспетчеризации состояния (эталон - шаг 2 `execution("always")` симулятора).
 //!
-//! Здесь — структурная проверка (тело присутствует и стоит ДО диспетчеризации);
-//! потактовое поведение сверяет `conformance_c_tests::model_level_always_matches_generated_c`.
+//! Здесь - структурная проверка (тело присутствует и стоит до диспетчеризации);
+//! потактовое поведение сверяет
+//! `conformance_c_tests::model_level_always_matches_generated_c`.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -24,8 +21,8 @@ fn tool_available(cmd: &str, probe: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// Простая модель `Counter` со **своими** состояниями и model-level `always`.
-/// Обёрнута в композицию — так у цели `c` эмитится `typedef` корня.
+/// Простая модель `Counter` со **своими** состояниями и model-level `always`. Обёрнута
+/// в композицию - так у цели `c` эмитится `typedef` корня.
 const SRC: &str = r#"
 model Counter {
     var n: u8 := 0;
@@ -45,9 +42,9 @@ fn tmp(tag: &str) -> PathBuf {
     dir
 }
 
-/// Тело `always` (инкремент `n`) обязано стоять **до** ключевого слова
-/// диспетчеризации состояния `dispatch` — иначе оно исполнялось бы не каждый
-/// такт, а только внутри ветви состояния.
+/// Тело `always` (инкремент `n`) обязано стоять **до** ключевого слова диспетчеризации
+/// состояния `dispatch` - иначе оно исполнялось бы не каждый такт, а только внутри
+/// ветви состояния.
 fn assert_before(code: &str, incr: &str, dispatch: &str, target: &str) {
     let incr_at = code.find(incr).unwrap_or_else(|| {
         panic!("{target}: тело model-level `always` ('{incr}') не найдено:\n{code}")
@@ -95,9 +92,9 @@ fn rust_emits_model_level_always_before_match() {
     .expect("порождение rust");
     let path = dir.join("ma.rs");
     let code = std::fs::read_to_string(&path).expect(".rs");
-    // `wrapping_add`, а не `+=`: беззнаковая арифметика печатается обёрткой
-    // (фича 0127, правило S1). Свёртка в `+=` вернула бы панику debug-профиля на
-    // переполнении — ровно то, что 0127 устранила.
+    // `wrapping_add`, а не `+=`: беззнаковая арифметика печатается обёрткой. Свёртка в
+    // `+=` вернула бы панику debug-профиля на переполнении - ровно то, что 0127
+    // устранила.
     assert_before(
         &code,
         "self.n = self.n.wrapping_add(1);",
@@ -105,9 +102,9 @@ fn rust_emits_model_level_always_before_match() {
         "rust",
     );
 
-    // В корпусе model-level `always` нет — гейт `rustc` его не компилирует.
-    // Проверяем компиляцию тут же (rustc всегда доступен): касались расчёта
-    // мутабельности `let` (`assigned`), это ловит `-D warnings`.
+    // В корпусе model-level `always` нет - проверка `rustc` его не компилирует. Проверяем
+    // компиляцию тут же (rustc всегда доступен): касались расчёта мутабельности `let`
+    // (`assigned`), это ловит `-D warnings`.
     let out = Command::new("rustc")
         .args(["--edition", "2021", "--crate-type", "lib", "-D", "warnings"])
         .arg(&path)
@@ -150,7 +147,7 @@ fn sv_emits_model_level_always_before_case() {
     )
     .expect("порождение sv");
     let code = std::fs::read_to_string(dir.join("ma.sv")).expect(".sv");
-    // В always_comb инкремент идёт над `_next`; сигнал префиксован именем модуля.
+    // В always_comb инкремент идёт над `_next`; сигнал преисправленийан именем модуля.
     assert_before(
         &code,
         "ma_counter_n_next = (ma_counter_n_next + 1);",
@@ -158,8 +155,8 @@ fn sv_emits_model_level_always_before_case() {
         "sv",
     );
 
-    // Гейт корпуса model-level `always` не покрывает — линтуем тут (мягкий
-    // пропуск, если verilator недоступен).
+    // Проверка корпуса model-level `always` не покрывает - линтуем тут (мягкий пропуск,
+    // если verilator недоступен).
     if !tool_available("verilator", "--version") {
         eprintln!("[ПРОПУСК] verilator недоступен — sv не проверен линтом");
         return;

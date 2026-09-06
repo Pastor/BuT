@@ -13,11 +13,11 @@ use crate::semantic::naming::normalize_lowercase_snakecase;
 use crate::semantic::{PortDirection, VariableNode};
 use log::warn;
 
-/// Словарь портов: `(класс порта, направление)` → список `(имя модели, имя порта)`.
+/// Словарь портов: `(класс порта, направление)` -> список `(имя модели, имя порта)`.
 use crate::generator::c::c_port_enums::{collect_ports_by_class, generate_port_enums};
 
-/// Генерирует поля структуры C для extend состояния.
-/// Единичный Model → `{state}`, составной → делегирует в build_concat_item.
+/// Генерирует поля структуры C для extend состояния. Единичный Model -> `{state}`,
+/// составной -> делегирует в build_concat_item.
 fn build_extend_header(
     printer: &mut Printer,
     state_name: &Name,
@@ -65,8 +65,8 @@ fn build_extend_header(
     Ok(())
 }
 
-/// Генерирует поле для элемента конкатенации.
-/// Model → `{state}_{model}{idx}`, Parallel → struct `{state}_parallel{idx}`.
+/// Генерирует поле для элемента конкатенации. Model -> `{state}_{model}{idx}`, Parallel ->
+/// struct `{state}_parallel{idx}`.
 fn build_concat_item(
     printer: &mut Printer,
     state_name: &Name,
@@ -123,8 +123,8 @@ fn build_concat_item(
     Ok(())
 }
 
-/// Генерирует поле для элемента параллельного блока.
-/// Model → `{model}{idx}`, вложенный Parallel → struct `parallel{idx}` с enum state.
+/// Генерирует поле для элемента параллельного блока. Model -> `{model}{idx}`, вложенный
+/// Parallel -> struct `parallel{idx}` с enum state.
 fn build_parallel_item(
     printer: &mut Printer,
     extend: &StateExtend,
@@ -162,15 +162,14 @@ fn build_parallel_item(
             printer.down().ident("} state;").nl();
             printer.down().ident(&format!("}} parallel{};", idx)).nl();
         }
-        // ВЛОЖЕННАЯ последовательность внутри параллели (фича 0426).
+        // Вложенная последовательность внутри параллели.
         //
-        // ⚠️ Прежде она раскладывалась ПЛОСКО, то есть без собственной машины
-        // шагов: печать тика её пропускала молча (`_ => {}`), и ветвь `A + B`
-        // в прошивке не исполнялась вовсе. Замер 2026-08-23: `cc -Werror`
-        // ловил это лишь косвенно — по `unused-function`.
+        // Прежде она раскладывалась плоско, то есть без собственной машины шагов:
+        // печать тика её пропускала молча (`_ => {}`), и ветвь `A + B` в прошивке не
+        // исполнялась вовсе.
         //
-        // Форма — та же группа, что у вложенной параллели: поля элементов плюс
-        // поле `state` с шагами.
+        // Форма - та же группа, что у вложенной параллели: поля элементов плюс поле
+        // `state` с шагами.
         StateExtend::Concatenation(items) => {
             let nested_prefix = format!("{}_concat{}", unique_prefix, idx);
             printer.ident("struct {").nl().up();
@@ -184,11 +183,11 @@ fn build_parallel_item(
     Ok(())
 }
 
-/// Перечисление шагов вложенной последовательности (фича 0426).
+/// Перечисление шагов вложенной последовательности.
 ///
-/// ⚠️ Варианты именуются по ЭЛЕМЕНТУ, а не по номеру: так же, как у
-/// последовательности верхнего уровня (`build_concat_state_enum`), — иначе
-/// два способа назвать один шаг разошлись бы при первой же правке.
+/// Варианты именуются по элементу, а не по номеру: так же, как у последовательности
+/// верхнего уровня (`build_concat_state_enum`), - иначе два способа назвать один шаг
+/// разошлись бы при первой же правке.
 fn build_step_state_enum(
     printer: &mut Printer,
     unique_prefix: &str,
@@ -213,8 +212,8 @@ fn build_step_state_enum(
     Ok(())
 }
 
-/// Генерирует enum поля состояния для конкатенации.
-/// Вариант INIT + по одному варианту на элемент: Model → {STATE}_{MODEL}{idx}, Parallel → {STATE}_PARALLEL{idx}.
+/// Генерирует enum поля состояния для конкатенации. Вариант INIT + по одному варианту
+/// на элемент: Model -> {STATE}_{MODEL}{idx}, Parallel -> {STATE}_PARALLEL{idx}.
 fn build_concat_state_enum(
     printer: &mut Printer,
     state_name: &Name,
@@ -270,11 +269,10 @@ fn generate_model_header(
     let num = num.unwrap_or(0);
     let model = map.raw_model_at(name.clone())?;
     let struct_name = name.unique_camelcase();
-    // Комментарий автора перед объявлением модели (фича 0535, задача 04). Их в
-    // корпусе больше всего — 103 из 469: перед `model` автор пишет, что за
-    // установка описана и как она работает. ⚠️ У корневой модели это вводный
-    // блок файла, и он же — самое ценное, что есть в исходнике для читателя
-    // вывода.
+    // Комментарий автора перед объявлением модели. Их в корпусе больше всего - 103 из
+    // 469: перед `model` автор пишет, что за установка описана и как она работает. У
+    // корневой модели это вводный блок файла, и он же - самое ценное, что есть в
+    // исходнике для читателя вывода.
     let model_loc = model.borrow().loc;
     for line in decl_comments(model_loc) {
         printer.print(&line).nl();
@@ -291,14 +289,13 @@ fn generate_model_header(
                 if !map.usage().variables.contains(&name) {
                     continue;
                 }
-                // Комментарий автора перед объявлением переменной модели
-                // (фича 0535, задача 04).
+                // Комментарий автора перед объявлением переменной модели.
                 for line in decl_comments(loc) {
                     printer.ident(&line).nl();
                 }
-                // 0029-01: прежде отказ отображения давал CC-009 «Variable not
-                // found» — ошибку не по адресу: переменная найдена, невыразим
-                // её тип. Теперь причина доходит до пользователя (CC-014/015).
+                // прежде отказ отображения давал CC-009 "Variable not found" - ошибку
+                // не по адресу: переменная найдена, невыразим её тип. Теперь причина
+                // доходит до пользователя (CC-014/015).
                 let tv = typed_variable_or_diagnostic(
                     &ty,
                     &name,
@@ -334,11 +331,11 @@ fn generate_model_header(
         printer.ident(&end_constant);
     }
     printer.down().nl().ident("} state;").nl();
-    // Механизмы времени (фича 0134): поля счётчика/метки эмитятся ТОЛЬКО при
-    // использовании `after` (модель без времени — прежний вывод байт-в-байт).
-    // Логика в `c_time` (лимит размера `c_header`).
+    // Механизмы времени: поля счётчика/метки эмитятся только при использовании `after`
+    // (модель без времени - прежний вывод байт-в-байт). Логика в `c_time` (лимит
+    // размера `c_header`).
     crate::generator::c::c_time::emit_state_time_fields(printer, map, &model.borrow())?;
-    // Аккумуляторы периодических блоков `every` (фича 0134-09).
+    // Аккумуляторы периодических блоков `every`.
     crate::generator::c::c_every::emit_fields(printer, map, &model.borrow())?;
     // Генерируем поля extend-состояний
     let mut is_extend = false;
@@ -371,8 +368,8 @@ fn generate_model_header(
             || has_out_rational
             || has_in_numeric
             || has_out_numeric;
-        // Источник времени `now_ms` (профиль «часы», 0134-04b) встаёт рядом с
-        // портовыми колбэками — и требует `userdata`, даже если портов нет.
+        // Источник времени `now_ms` (профиль "часы") встаёт рядом с портовыми колбэками -
+        // и требует `userdata`, даже если портов нет.
         let needs_now_ms = crate::generator::c::c_time::needs_now_ms(map, &model.borrow());
         if has_any || needs_now_ms {
             printer.ident("void  *userdata;").nl();
@@ -454,7 +451,7 @@ fn generate_model_header(
     Ok(num)
 }
 
-/// Как цель называет себя в шапке: профиль HAL — часть имени.
+/// Как цель называет себя в шапке: профиль HAL - часть имени.
 pub(super) fn c_target_name(hal: bool) -> &'static str {
     if hal { "C (HAL profile)" } else { "C" }
 }
@@ -474,10 +471,10 @@ pub fn generate_header(
     for line in file_header(c_target_name(options.hal), CommentStyle::Slashes) {
         printer.print(&line).nl();
     }
-    // Дефолтный `now_ms` цели `c-hal` (0134-04b) зовёт `clock_gettime(CLOCK_MONOTONIC)`,
-    // а на строгом glibc под `-std=c11` этот символ скрыт без `_POSIX_C_SOURCE`.
-    // Объявляем у самого верха — ДО любого системного заголовка, иначе feature-тест
-    // glibc уже отработал. Только для c-hal с профилем «часы»: прочий вывод неизменен.
+    // Умолчательный `now_ms` цели `c-hal` зовёт `clock_gettime(CLOCK_MONOTONIC)`, а на
+    // строгом glibc под `-std=c11` этот символ скрыт без `_POSIX_C_SOURCE`. Объявляем у
+    // самого верха - До любого системного заголовка, иначе feature-тест glibc уже
+    // отработал. Только для c-hal с профилем "часы": прочий вывод неизменен.
     if options.hal
         && map
             .root_model_node()
@@ -502,28 +499,27 @@ pub fn generate_header(
     printer.print("#include <stdbool.h>").nl();
     printer.nl();
 
-    // Отпечаток контракта частоты (фича 0134-05): готовый блок из `c_time`, если
-    // модель объявила `clock` (иначе закреплять нечего). Печатается сырьём.
+    // Отпечаток контракта частоты: готовый блок из `c_time`, если модель объявила
+    // `clock` (иначе закреплять нечего). Печатается сырьём.
     if let Some(block) = c::c_time::clock_contract_block(map) {
         printer.print(&block);
     }
 
-    // Топологически сортируем зависимые модели — зависимости идут первыми
+    // Топологически сортируем зависимые модели - зависимости идут первыми
     let sorted_models = c::topological_sort_models(map, map.using_models());
 
-    // Forward declarations всех структур: позволяют компилятору C знать о типах
-    // раньше их полного определения (важно при взаимных ссылках).
+    // Forward declarations всех структур: позволяют компилятору C знать о типах раньше
+    // их полного определения (важно при взаимных ссылках).
     //
-    // Typedef корня эмитится БЕЗУСЛОВНО — от наличия под-моделей он не зависит.
-    // Структура печатается тегом (`struct {Root} { … };`), а прототипы объявлены
-    // через голое имя (`void {Root}_init({Root} *main);`), поэтому без typedef
-    // голое имя типом не становится и порождённый C НЕ КОМПИЛИРУЕТСЯ:
-    // «must use 'struct' tag to refer to type».
+    // Typedef корня эмитится безусловно - от наличия под-моделей он не зависит.
+    // Структура печатается тегом (`struct {Root} { ... };`), а прототипы объявлены
+    // через голое имя (`void {Root}_init({Root} *main);`), поэтому без typedef голое
+    // имя типом не становится и порождённый C не компилируется: "must use 'struct' tag
+    // to refer to type".
     //
-    // Прежде эмиссия была разветвлена на три случая, и ветка «под-моделей нет,
-    // цель `c`» не печатала ничего — отсюда дефект. Ветку `c-hal` (правка
-    // 0020-05) с ней слили в один путь: расхождение целей и было причиной того,
-    // что `c-hal` работал, а `c` — нет. Единый путь не даёт этому воспроизвестись.
+    // Ветку `c-hal` (правка ) с ней слили в один путь: расхождение целей и было
+    // причиной того, что `c-hal` работал, а `c` - нет. Единый путь не даёт этому
+    // воспроизвестись.
     if !sorted_models.is_empty() {
         for element in &sorted_models {
             let Element::Model { name, .. } = element else {
@@ -542,17 +538,16 @@ pub fn generate_header(
     // Генерируем typedef struct для пользовательских структур
     if let Some(model_rc) = map.root_model_node() {
         let model = model_rc.borrow();
-        // Порядок — по ЗАВИСИМОСТЯМ (фича 0341): вложенная структура обязана
-        // быть объявлена раньше вмещающей. Алфавитный порядок давал `cc`
-        // «unknown type name», потому что `Line` стоит в алфавите раньше
-        // `Point`. Правило общее у трёх целей — носитель один.
+        // Порядок - по зависимостям: вложенная структура обязана быть объявлена раньше
+        // вмещающей. Алфавитный порядок давал `cc` "unknown type name", потому что
+        // `Line` стоит в алфавите раньше `Point`. Правило общее у трёх целей - носитель
+        // один.
         let structs = crate::generator::struct_order::sorted(&model.structs);
         let structs: Vec<_> = structs.iter().collect();
         if !structs.is_empty() {
             for s in structs {
-                // Комментарий автора перед объявлением типа (фича 0535,
-                // задача 04): в корпусе таких — 45 из 469, больше только у
-                // самой модели.
+                // Комментарий автора перед объявлением типа: в корпусе таких - 45 из
+                // 469, больше только у самой модели.
                 for line in decl_comments(s.loc) {
                     printer.print(&line).nl();
                 }
@@ -561,8 +556,8 @@ pub fn generate_header(
                     .nl()
                     .up();
                 for (field_name, field_ty) in &s.fields {
-                    // 0029-01: было `/* unsupported */ имя` — поле без типа,
-                    // то есть НЕВАЛИДНЫЙ C, выданный молча и с кодом 0.
+                    // было `/* unsupported */ имя` - поле без типа, то есть невалидный
+                    // C, выданный молча и с кодом 0.
                     let c_decl = c::typed_variable_or_diagnostic(
                         field_ty,
                         field_name,
@@ -578,7 +573,8 @@ pub fn generate_header(
         }
     }
 
-    // Генерируем enum типы для портов — до struct, чтобы можно было использовать в сигнатурах
+    // Генерируем enum типы для портов - до struct, чтобы можно было использовать в
+    // сигнатурах
     generate_port_enums(&mut printer, map)?;
 
     let mut num = 0;
@@ -627,8 +623,8 @@ pub fn generate_header(
         .print(" *main);")
         .nl();
 
-    // Фича 0020-05: в режиме `c-hal` — таблица адресов портов и дефолтный HAL
-    // (вынесены в `c_hal.rs`, фикс 0020-01 / фича 0098 — лимит размера модуля).
+    // в режиме `c-hal` - таблица адресов портов и умолчательный HAL (вынесены в `c_hal.rs`,
+    // / - лимит размера модуля).
     if options.hal {
         super::c_hal::generate_hal(&mut printer, map, options)?;
     }
@@ -658,13 +654,12 @@ mod tests {
         .unwrap()
     }
 
-    /// **T1.** Одиночная модель БЕЗ под-моделей получает typedef корня.
+    /// **T1.** Одиночная модель без под-моделей получает typedef корня.
     ///
-    /// Дефект фичи 0026: typedef эмитился только при наличии под-моделей либо в
-    /// цели `c-hal`, а ветка «под-моделей нет, цель `c`» не печатала ничего.
-    /// Структура печатается ТЕГОМ (`struct Demo { … };`), а прототипы — через
-    /// голое имя (`void Demo_init(Demo *main);`), поэтому без typedef имя типом
-    /// не становится.
+    /// Дефект: typedef эмитился только при наличии под-моделей либо в цели `c-hal`, а
+    /// ветка "под-моделей нет, цель `c`" не печатала ничего. Структура печатается тегом
+    /// (`struct Demo { ... };`), а прототипы - через голое имя (`void Demo_init(Demo
+    /// *main);`), поэтому без typedef имя типом не становится.
     #[test]
     fn test_single_model_without_submodels_gets_root_typedef() {
         let header = generate_h_content(
@@ -680,8 +675,8 @@ mod tests {
 
     /// **T1.** Модель С под-моделями typedef корня не теряет и не дублирует.
     ///
-    /// Сторож слияния веток: раньше эту ветку правка не трогала, и она обязана
-    /// остаться прежней.
+    /// Тест слияния веток: раньше эту ветку правка не трогала, и она обязана остаться
+    /// прежней.
     #[test]
     fn test_model_with_submodels_still_has_exactly_one_root_typedef() {
         let header = generate_h_content(
@@ -699,7 +694,7 @@ mod tests {
         );
     }
 
-    /// **T3.** Заголовок одиночной модели самодостаточен: голое имя — тип.
+    /// **T3.** Заголовок одиночной модели самодостаточен: голое имя - тип.
     #[test]
     fn test_root_name_is_usable_as_type_in_prototypes() {
         let header = generate_h_content(
@@ -719,13 +714,13 @@ mod tests {
     /// Enum выбирает минимальный беззнаковый тип по максимальному значению варианта.
     ///
     /// Граница: u8::MAX = 255.
-    /// - max ≤ 255  → uint8_t
-    /// - 255 < max ≤ 65535  → uint16_t
-    /// - max > 65535 → uint32_t (и далее uint64_t)
+    /// - max <= 255 -> uint8_t
+    /// - 255 < max <= 65535 -> uint16_t
+    /// - max > 65535 -> uint32_t (и далее uint64_t)
     #[test]
     fn enum_type_sized_by_maximum_variant() {
-        // High=300 > u8::MAX(255) → uint16_t
-        // p используется в always, чтобы попасть в UsageSet.
+        // High=300 > u8::MAX(255) -> uint16_t p используется в always, чтобы попасть в
+        // UsageSet.
         let src = r#"
 enum Priority { Low = 0, Medium = 5, High = 300 }
 var p: Priority := Low;
@@ -751,8 +746,8 @@ start Main { always { p := High; } }
             "uint8_t слишком мал для max=300:\n{header}"
         );
 
-        // High=200 ≤ u8::MAX(255) → uint8_t (ранее ошибочно давал uint16_t)
-        // lv используется в always, чтобы попасть в UsageSet.
+        // High=200 <= u8::MAX(255) -> uint8_t (ранее ошибочно давал uint16_t) lv
+        // используется в always, чтобы попасть в UsageSet.
         let src2 = r#"
 enum Levels { Low = 0, High = 200 }
 var lv: Levels := Low;
@@ -777,8 +772,8 @@ start Main { always { lv := High; } }
 
     #[test]
     fn test_parallel_extend_numbering_starts_from_zero() {
-        // state Par = Eng | Eng: внутри struct поля eng0, eng1 (по имени модели),
-        // сам struct: `} par;` (по имени состояния, без номера).
+        // state Par = Eng | Eng: внутри struct поля eng0, eng1 (по имени модели), сам
+        // struct: `} par;` (по имени состояния, без номера).
         let src = r#"
 model Eng { start S; }
 start Main = Eng {
@@ -811,8 +806,8 @@ state Par = Eng | Eng;
             header.contains("} par;"),
             "struct parallel должен закрываться как `}} par;`:\n{header}"
         );
-        // Поля eng0/eng1 должны быть ПЕРЕД `} state;` внутри parallel struct
-        // Ищем последний `} state;` до `} par;`, чтобы взять state именно parallel struct
+        // Поля eng0/eng1 должны быть перед `} state;` внутри parallel struct Ищем
+        // последний `} state;` до `} par;`, чтобы взять state именно parallel struct
         let pos_par_close = header.find("} par;").expect("} par; не найден");
         let pos_state = header[..pos_par_close]
             .rfind("} state;")
@@ -828,8 +823,8 @@ state Par = Eng | Eng;
 
     #[test]
     fn test_concatenation_with_parallel_no_gaps() {
-        // state Mid = Eng + (Eng | Eng) + Eng:
-        // idx 0: mid_eng0, idx 1: struct{ eng0, eng1 } mid_parallel1, idx 2: mid_eng2.
+        // state Mid = Eng + (Eng | Eng) + Eng: idx 0: mid_eng0, idx 1: struct{ eng0,
+        // eng1 } mid_parallel1, idx 2: mid_eng2.
         let src = r#"
 model Eng { start S; }
 start Main = Eng {
@@ -863,8 +858,8 @@ state Mid = Eng + (Eng | Eng) + Eng;
             header.contains("mid_eng2;"),
             "третий элемент конкатенации должен быть mid_eng2:\n{header}"
         );
-        // Внутри parallel struct поля должны быть перед state enum
-        // Ищем последний `} state;` до `} mid_parallel1;`
+        // Внутри parallel struct поля должны быть перед state enum Ищем последний `}
+        // state;` до `} mid_parallel1;`
         let pos_par1_close = header
             .find("} mid_parallel1;")
             .expect("} mid_parallel1; не найден");
@@ -887,8 +882,8 @@ state Mid = Eng + (Eng | Eng) + Eng;
 
     #[test]
     fn test_concatenation_generates_state_enum() {
-        // state Mid = Eng + (Eng | Eng) + Eng:
-        // ожидается mid_state с вариантами INIT, ENG0, PARALLEL1, ENG2.
+        // state Mid = Eng + (Eng | Eng) + Eng: ожидается mid_state с вариантами INIT,
+        // ENG0, PARALLEL1, ENG2.
         let src = r#"
 model Eng { start S; }
 start Main = Eng {

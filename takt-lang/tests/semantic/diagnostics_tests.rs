@@ -1,20 +1,18 @@
 //! Тесты для модуля [`takt_lang::diagnostics`].
 //!
-//! Проверяют все фабричные методы создания [`Diagnostic`], форматирование
-//! уровней серьёзности и сортировку типов ошибок.
+//! Проверяют все фабричные методы создания [`Diagnostic`], форматирование уровней
+//! серьёзности и сортировку типов ошибок.
 
 use takt_lang::diagnostics::{Diagnostic, ErrorType, Level, Location, Note};
 
-// ═══════════════════════════════════════════════════════════════════
-// Вспомогательная константа
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------------- Вспомогательная
+// константа -------------------------------------------------------------------
 
 const LOC: Location = Location::Source(0, 0, 5);
 const LOC2: Location = Location::Source(0, 10, 20);
 
-// ═══════════════════════════════════════════════════════════════════
-// Level
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------------- Level
+// -------------------------------------------------------------------
 
 /// `Level::as_str()` возвращает ожидаемые строки.
 #[test]
@@ -42,9 +40,8 @@ fn level_ordering() {
     assert!(Level::Warning < Level::Error);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Фабричные методы Diagnostic
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------------- Фабричные методы
+// Diagnostic -------------------------------------------------------------------
 
 /// `Diagnostic::debug()` создаёт отладочное сообщение.
 #[test]
@@ -65,7 +62,7 @@ fn diagnostic_info_method() {
     assert!(d.notes.is_empty());
 }
 
-/// `Diagnostic::parser_error()` — ошибка парсера.
+/// `Diagnostic::parser_error()` - ошибка парсера.
 #[test]
 fn diagnostic_parser_error_method() {
     let d = Diagnostic::parser_error(LOC, "неожиданный токен".to_string());
@@ -74,7 +71,7 @@ fn diagnostic_parser_error_method() {
     assert_eq!(d.message, "неожиданный токен");
 }
 
-/// `Diagnostic::error()` — синтаксическая ошибка.
+/// `Diagnostic::error()` - синтаксическая ошибка.
 #[test]
 fn diagnostic_error_method() {
     let d = Diagnostic::error(LOC, "синтаксическая ошибка".to_string());
@@ -82,7 +79,7 @@ fn diagnostic_error_method() {
     assert_eq!(d.ty, ErrorType::SyntaxError);
 }
 
-/// `Diagnostic::declaration_error()` — ошибка объявления.
+/// `Diagnostic::declaration_error()` - ошибка объявления.
 #[test]
 fn diagnostic_declaration_error_method() {
     let d = Diagnostic::declaration_error(LOC, "неизвестный идентификатор".to_string());
@@ -90,7 +87,7 @@ fn diagnostic_declaration_error_method() {
     assert_eq!(d.ty, ErrorType::DeclarationError);
 }
 
-/// `Diagnostic::cast_error()` — ошибка приведения типов.
+/// `Diagnostic::cast_error()` - ошибка приведения типов.
 #[test]
 fn diagnostic_cast_error_method() {
     let d = Diagnostic::cast_error(LOC, "невозможно привести тип".to_string());
@@ -99,7 +96,7 @@ fn diagnostic_cast_error_method() {
     assert!(d.notes.is_empty());
 }
 
-/// `Diagnostic::cast_error_with_note()` — ошибка с заметкой.
+/// `Diagnostic::cast_error_with_note()` - ошибка с заметкой.
 #[test]
 fn diagnostic_cast_error_with_note_method() {
     let d = Diagnostic::cast_error_with_note(
@@ -115,7 +112,7 @@ fn diagnostic_cast_error_with_note_method() {
     assert_eq!(d.notes[0].message, "здесь объявлен тип");
 }
 
-/// `Diagnostic::type_error()` — ошибка типизации.
+/// `Diagnostic::type_error()` - ошибка типизации.
 #[test]
 fn diagnostic_type_error_method() {
     let d = Diagnostic::type_error(LOC, "несоответствие типов".to_string());
@@ -123,7 +120,7 @@ fn diagnostic_type_error_method() {
     assert_eq!(d.ty, ErrorType::TypeError);
 }
 
-/// `Diagnostic::cast_warning()` — предупреждение о небезопасном приведении.
+/// `Diagnostic::cast_warning()` - предупреждение о небезопасном приведении.
 #[test]
 fn diagnostic_cast_warning_method() {
     let d = Diagnostic::cast_warning(LOC, "потеря точности".to_string());
@@ -131,7 +128,7 @@ fn diagnostic_cast_warning_method() {
     assert_eq!(d.ty, ErrorType::CastError);
 }
 
-/// `Diagnostic::warning()` — предупреждение.
+/// `Diagnostic::warning()` - предупреждение.
 #[test]
 fn diagnostic_warning_method() {
     let d = Diagnostic::warning(LOC, "неиспользуемая переменная".to_string());
@@ -140,7 +137,7 @@ fn diagnostic_warning_method() {
     assert!(d.notes.is_empty());
 }
 
-/// `Diagnostic::warning_with_note()` — предупреждение с одной заметкой.
+/// `Diagnostic::warning_with_note()` - предупреждение с одной заметкой.
 #[test]
 fn diagnostic_warning_with_note_method() {
     let d = Diagnostic::warning_with_note(
@@ -154,7 +151,7 @@ fn diagnostic_warning_with_note_method() {
     assert_eq!(d.notes[0].message, "контекст");
 }
 
-/// `Diagnostic::warning_with_notes()` — предупреждение с несколькими заметками.
+/// `Diagnostic::warning_with_notes()` - предупреждение с несколькими заметками.
 #[test]
 fn diagnostic_warning_with_notes_method() {
     let notes = vec![
@@ -172,7 +169,7 @@ fn diagnostic_warning_with_notes_method() {
     assert_eq!(d.notes.len(), 2);
 }
 
-/// `Diagnostic::error_with_note()` — ошибка с одной заметкой.
+/// `Diagnostic::error_with_note()` - ошибка с одной заметкой.
 #[test]
 fn diagnostic_error_with_note_method() {
     let d = Diagnostic::error_with_note(
@@ -186,7 +183,7 @@ fn diagnostic_error_with_note_method() {
     assert_eq!(d.notes.len(), 1);
 }
 
-/// `Diagnostic::error_with_notes()` — ошибка со списком заметок.
+/// `Diagnostic::error_with_notes()` - ошибка со списком заметок.
 #[test]
 fn diagnostic_error_with_notes_method() {
     let notes = vec![
@@ -204,9 +201,8 @@ fn diagnostic_error_with_notes_method() {
     assert_eq!(d.notes.len(), 2);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Поля Diagnostic
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------------- Поля Diagnostic
+// -------------------------------------------------------------------
 
 /// Местоположение сохраняется корректно.
 #[test]
@@ -240,25 +236,25 @@ fn diagnostic_ordering() {
     assert!(d_debug < d_error);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Контр-примеры (некорректные случаи)
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------------- Контр-примеры
+// (некорректные случаи)
+// -------------------------------------------------------------------
 
-/// Отладочный диагностик НЕ является ошибкой.
+/// Отладочный диагностик не является ошибкой.
 #[test]
 fn debug_is_not_error_level() {
     let d = Diagnostic::debug(LOC, "".to_string());
     assert_ne!(d.level, Level::Error);
 }
 
-/// Предупреждение НЕ является ошибкой.
+/// Предупреждение не является ошибкой.
 #[test]
 fn warning_is_not_error_level() {
     let d = Diagnostic::warning(LOC, "".to_string());
     assert_ne!(d.level, Level::Error);
 }
 
-/// `parser_error` НЕ является предупреждением.
+/// `parser_error` не является предупреждением.
 #[test]
 fn parser_error_is_not_warning() {
     let d = Diagnostic::parser_error(LOC, "".to_string());

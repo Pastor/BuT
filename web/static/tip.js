@@ -45,7 +45,7 @@ export const EDGE = 8;
 export function place(anchor, tip, view) {
   const bottom = anchor.bottom ?? anchor.top + anchor.height;
   const below = bottom + GAP;
-  // Под элементом — если панель туда влезает; иначе над ним, но не выше края.
+  // Под элементом - если панель туда влезает; иначе над ним, но не выше края.
   const fits = below + tip.height <= view.height - EDGE;
   const top = fits ? below : Math.max(EDGE, anchor.top - tip.height - GAP);
 
@@ -133,7 +133,7 @@ export function attach(doc = document, view = window) {
   doc.addEventListener("keydown", (event) => {
     if (event.key === "Escape") hide();
   });
-  // Прокрутка уводит элемент из-под панели; ловим с перехватом — прокручиваются
+  // Прокрутка уводит элемент из-под панели; ловим с перехватом - прокручиваются
   // внутренние области, а не окно.
   doc.addEventListener("scroll", hide, true);
   view.addEventListener("resize", hide);

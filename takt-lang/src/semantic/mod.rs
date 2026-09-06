@@ -1,8 +1,8 @@
 //! Семантические узлы языка Takt.
 //!
-//! [`ModelNode`] — модель со словарями состояний, переменных, условий, функций и
-//! моделей; [`StateNode`] — состояние, [`ReferenceNode`] — переход,
-//! [`ConditionNode`] — условие, [`VariableNode`] — переменная, [`Extend`] — реализация.
+//! [`ModelNode`] - модель со словарями состояний, переменных, условий, функций и
+//! моделей; [`StateNode`] - состояние, [`ReferenceNode`] - переход, [`ConditionNode`] -
+//! условие, [`VariableNode`] - переменная, [`Extend`] - реализация.
 
 pub mod bounds_guard;
 mod condition_node;
@@ -31,14 +31,14 @@ mod extend_args;
 pub mod formula;
 pub(crate) mod fresh;
 mod function;
-pub(crate) mod import; // правила поиска файла нужны и области LSP (0153)
+pub(crate) mod import; // правила поиска файла нужны и области LSP
 pub mod index;
 pub mod inline;
 pub(crate) mod internal;
 pub mod loop_bounds;
 pub mod lower_float;
 pub mod ltl_check;
-/// Снимок достижимых состояний и моделей — плоская карта [`Map`](minimap::Map).
+/// Снимок достижимых состояний и моделей - плоская карта [`Map`](minimap::Map).
 pub mod minimap;
 mod named_block;
 pub(crate) mod named_blocks;
@@ -55,7 +55,7 @@ pub(crate) mod scalar_port;
 pub(crate) mod slice;
 pub(crate) mod specialize;
 pub(crate) mod stages;
-// Позиция оператора и равенство без неё (фича 0535, задача 03).
+// Позиция оператора и равенство без неё.
 mod statement;
 mod statement_loc;
 pub mod struct_node;
@@ -88,11 +88,11 @@ use std::fmt::Debug;
 use std::rc::{Rc, Weak};
 use type_node::TypeNode;
 
-/// Семантический узел модели (конечного автомата): контекст, имя, словарь
-/// состояний и реализация (`implements`).
+/// Семантический узел модели (конечного автомата): контекст, имя, словарь состояний и
+/// реализация (`implements`).
 ///
 /// Поля [`doc`](ModelNode::doc) и [`docs`](ModelNode::docs) заполняет
-/// [`construct_model_with_docs`](tree::construct_model_with_docs) — строками `///`.
+/// [`construct_model_with_docs`](tree::construct_model_with_docs) - строками `///`.
 #[derive(Default, Debug)]
 pub struct ModelNode {
     /// Имя модели (`None` для анонимной корневой модели).
@@ -103,29 +103,25 @@ pub struct ModelNode {
     pub upper: Option<Weak<RefCell<ModelNode>>>,
     /// Вложенные именованные модели.
     pub models: BTreeMap<String, Rc<RefCell<ModelNode>>>,
-    /// Именованные блоки кода (`enter`, `exit`, `always`, …).
+    /// Именованные блоки кода (`enter`, `exit`, `always`, ...).
     pub named_blocks: Vec<NamedCodeBlockDefinitionNode>,
     /// Объявленные функции.
     pub functions: BTreeMap<String, FunctionDefinitionNode>,
     /// Объявленные переменные.
     pub variables: BTreeMap<String, VariableNode>,
-    /// Параметры модели в **порядке объявления** (фича 0185).
-    ///
-    /// Само значение параметра живёт в [`ModelNode::variables`] обычным
-    /// [`VariableNode::Simple`]: в режиме генерации по умолчанию
-    /// (`--parameters=assign`) параметр **и есть** поле экземпляра, и всякий
-    /// потребитель дерева, ничего не знающий о параметрах, обращается с ним
-    /// верно. Здесь — только то, что от переменной его отличает: **имя,
-    /// позиция объявления и порядок**. ⚠️ Порядок значим: по нему строится ключ
-    /// дедупликации специализаций (`--parameters=specialize`, ADR 0185, п. 6), а
-    /// детерминизм вывода (0048) требует зависимости только от входа — поэтому
-    /// `Vec` в порядке объявления, а не множество.
+    /// Параметры модели в **порядке объявления**. Само значение параметра живёт в
+    /// [`ModelNode::variables`] обычным [`VariableNode::Simple`]: в режиме генерации по
+    /// умолчанию (`--parameters=assign`) параметр **и есть** поле экземпляра, и всякий
+    /// потребитель дерева, ничего не знающий о параметрах, обращается с ним верно. Здесь -
+    /// только то, что от переменной его отличает: **имя, позиция объявления и порядок**.
+    /// Порядок значим: по нему строится ключ дедупликации специализаций
+    /// (`--parameters=specialize`,, п.
     pub parameters: Vec<ParameterNode>,
     /// Объявленные псевдонимы типов.
     pub types: BTreeMap<String, TypeNode>,
-    /// Позиции объявлений псевдонимов типов: имя → позиция в исходном тексте.
+    /// Позиции объявлений псевдонимов типов: имя -> позиция в исходном тексте.
     pub type_locs: BTreeMap<String, Location>,
-    /// Сырые АСД-типы псевдонимов: имя → оригинальный AST-тип до разрешения.
+    /// Сырые АСД-типы псевдонимов: имя -> оригинальный AST-тип до разрешения.
     ///
     /// Используется `check_recursive_type_aliases` в `validate.rs` для обнаружения
     /// циклических ссылок между псевдонимами (Ce16).
@@ -141,56 +137,53 @@ pub struct ModelNode {
     pub enums: BTreeMap<String, EnumDefinitionNode>,
     /// Объявленные структурные типы (NI3).
     pub structs: BTreeMap<String, StructDefinitionNode>,
-    /// Состояния модели: имя → узел состояния.
+    /// Состояния модели: имя -> узел состояния.
     pub states: BTreeMap<String, StateNode>,
     /// Информация о реализации (зарезервировано).
     pub implements: Extend,
     /// Документация самой модели (строки из `///`-комментариев перед `model`).
     ///
     /// Заполняется [`construct_model_with_docs`](tree::construct_model_with_docs).
-    /// Пусто у анонимной корневой модели и при использовании [`construct_model`](tree::construct_model).
+    /// Пусто у анонимной корневой модели и при использовании
+    /// [`construct_model`](tree::construct_model).
     pub doc: Vec<String>,
-    /// Документация именованных элементов модели.
-    ///
-    /// Ключ — имя элемента (переменной, состояния, функции, типа, условия).
-    /// Значение — список строк из `///`-комментариев, предшествующих объявлению.
-    ///
-    /// Заполняется [`construct_model_with_docs`](tree::construct_model_with_docs).
+    /// Документация именованных элементов модели. Ключ - имя элемента (переменной,
+    /// состояния, функции, типа, условия). Значение - список строк из `///`-комментариев,
+    /// предшествующих объявлению.
     pub docs: BTreeMap<String, Vec<String>>,
     /// Встроенные формулы модели.
     pub formulas: Vec<Formula>,
-    /// Привязки адресов портов оператором `address` (фича 0020, слой AddressMap).
+    /// Привязки адресов портов оператором `address`.
     ///
-    /// Каждый элемент — один оператор `address Имя = <выражение>;`. Разрешение
+    /// Каждый элемент - один оператор `address Имя = <выражение>;`. Разрешение
     /// (привязка к порту, приоритет источников inline/`address`/внешняя карта) и
     /// диагностики выполняет [`check_port_addresses`](validate::check_port_addresses).
     pub address_defs: Vec<AddressBindingNode>,
-    /// Происхождение модели: объявлена здесь или пришла через `import` (фича 0051).
+    /// Происхождение модели: объявлена здесь или пришла через `import`.
     pub origin: ModelOrigin,
-    /// Частота тактирования, объявленная `clock 1kHz;` (фича 0134), в герцах.
+    /// Частота тактирования, объявленная `clock 1kHz;`, в герцах.
     ///
-    /// `None` — не объявлена, действует профиль «часы». Приоритет с флагом
-    /// `--tick-hz` разрешает [`duration::resolve_profile`](duration::resolve_profile) —
+    /// `None` - не объявлена, действует профиль "часы". Приоритет с флагом
+    /// `--tick-hz` разрешает [`duration::resolve_profile`](duration::resolve_profile) -
     /// **одной** функцией, чтобы источники не перекрывали друг друга по-разному
-    /// в разных целях (урок карты адресов, фича 0020).
+    /// в разных целях.
     pub clock_hz: Option<u64>,
 }
 
-/// Происхождение модели в дереве (фича 0051).
+/// Происхождение модели в дереве.
 ///
-/// Признак **относителен файлу, в дерево которого узел вставлен**, а не
-/// абсолютное свойство модели: вложенная модель `lib.takt`, взятая формой
-/// `import { A as B } from "lib.takt";`, для `lib.takt` локальна, а для `main.takt`
-/// импортирована.
+/// Признак **относителен файлу, в дерево которого узел вставлен**, а не абсолютное
+/// свойство модели: вложенная модель `lib.takt`, взятая формой `import { A as B } from
+/// "lib.takt";`, для `lib.takt` локальна, а для `main.takt` импортирована.
 ///
-/// Заведён потому, что иначе импорт **неотличим** от локальной вложенной модели:
-/// проход 0 кладёт их в один и тот же [`ModelNode::models`], а `Location` несёт
-/// `file_no`, который везде равен нулю.
+/// Заведён потому, что иначе импорт **неотличим** от локальной вложенной модели: проход
+/// 0 кладёт их в один и тот же [`ModelNode::models`], а `Location` несёт `file_no`,
+/// который везде равен нулю.
 ///
-/// Потребитель — область проверки [`verify_all`](crate::verify_all): встретив
-/// `Imported`, обход отсекает поддерево **целиком**. Проверять `origin` у каждого
-/// узла по отдельности недостаточно — вложенные модели импортированного файла
-/// локальны для него и несут `Local`.
+/// Потребитель - область проверки [`verify_all`](crate::verify_all): встретив
+/// `Imported`, обход отсекает поддерево **целиком**. Проверять `origin` у каждого узла
+/// по отдельности недостаточно - вложенные модели импортированного файла локальны для
+/// него и несут `Local`.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModelOrigin {
     /// Модель объявлена в том же файле, что и её родитель.
@@ -248,8 +241,8 @@ impl ModelNode {
             named_blocks: self.named_blocks.clone(),
             functions: self.functions.clone(),
             variables: self.variables.clone(),
-            // Параметры — свойство модели, а не имени, под которым она видна
-            // (тот же довод, что у `origin` и `clock_hz` ниже).
+            // Параметры - свойство модели, а не имени, под которым она видна (тот же
+            // довод, что у `origin` и `clock_hz` ниже).
             parameters: self.parameters.clone(),
             types: self.types.clone(),
             type_locs: self.type_locs.clone(),
@@ -264,11 +257,11 @@ impl ModelNode {
             docs: self.docs.clone(),
             formulas: self.formulas.clone(),
             address_defs: self.address_defs.clone(),
-            // Копия наследует происхождение: переименование модели её источник
-            // не меняет (фича 0051).
+            // Копия наследует происхождение: переименование модели её источник не
+            // меняет.
             origin: self.origin,
-            // …и частоту тактирования (фича 0134): она свойство модели, а не
-            // имени, под которым модель видна импортёру.
+            // ...и частоту тактирования: она свойство модели, а не имени, под которым
+            // модель видна импортёру.
             clock_hz: self.clock_hz,
         }
     }
@@ -318,8 +311,8 @@ impl ModelNode {
 
     /// Ищет модель по имени в текущем контексте и во всех родительских.
     ///
-    /// Обходит цепочку `upper`-ссылок вверх до тех пор, пока модель не найдена
-    /// или цепочка не исчерпана.
+    /// Обходит цепочку `upper`-ссылок вверх до тех пор, пока модель не найдена или
+    /// цепочка не исчерпана.
     ///
     /// # Примеры
     ///
@@ -329,7 +322,7 @@ impl ModelNode {
     ///
     /// let (ast, _) = parse("model Inner { start S; }", 0).unwrap();
     /// let root = construct_model(&ast, None, &[]).unwrap();
-    /// // Вложенная модель «Inner» доступна из корня
+    /// // Вложенная модель "Inner" доступна из корня
     /// assert!(root.borrow().search_model("Inner").is_some());
     /// // Несуществующая модель возвращает None
     /// assert!(root.borrow().search_model("Ghost").is_none());
@@ -383,8 +376,8 @@ impl ModelNode {
 
     /// Ищет объявление перечисления по `name`, обходя цепочку `upper` (Ce4).
     ///
-    /// Возвращает клон [`EnumDefinitionNode`], если перечисление найдено в текущем
-    /// или родительском контексте.
+    /// Возвращает клон [`EnumDefinitionNode`], если перечисление найдено в текущем или
+    /// родительском контексте.
     ///
     /// # Пример
     ///
@@ -407,10 +400,11 @@ impl ModelNode {
         }
     }
 
-    /// Ищет вариант перечисления по имени варианта среди всех доступных перечислений (NI6).
+    /// Ищет вариант перечисления по имени варианта среди всех доступных перечислений
+    /// (NI6).
     ///
-    /// Обходит все перечисления текущего контекста и родительских.
-    /// Возвращает `(имя_перечисления, числовое_значение)` при нахождении.
+    /// Обходит все перечисления текущего контекста и родительских. Возвращает
+    /// `(имя_перечисления, числовое_значение)` при нахождении.
     ///
     /// # Пример
     ///
@@ -499,9 +493,9 @@ impl ModelNode {
     /// Возвращает документацию самой модели.
     ///
     /// Заполняется только при использовании
-    /// [`construct_model_with_docs`](tree::construct_model_with_docs).
-    /// Возвращает пустой срез для анонимной корневой модели или при
-    /// использовании [`construct_model`](tree::construct_model).
+    /// [`construct_model_with_docs`](tree::construct_model_with_docs). Возвращает
+    /// пустой срез для анонимной корневой модели или при использовании
+    /// [`construct_model`](tree::construct_model).
     ///
     /// # Примеры
     ///
@@ -517,12 +511,12 @@ impl ModelNode {
         &self.doc
     }
 
-    /// Возвращает документацию именованного элемента (состояния, переменной,
-    /// функции, типа, условия).
+    /// Возвращает документацию именованного элемента (состояния, переменной, функции,
+    /// типа, условия).
     ///
     /// Заполняется только при использовании
-    /// [`construct_model_with_docs`](tree::construct_model_with_docs).
-    /// Возвращает пустой срез, если документация отсутствует или не загружена.
+    /// [`construct_model_with_docs`](tree::construct_model_with_docs). Возвращает
+    /// пустой срез, если документация отсутствует или не загружена.
     ///
     /// # Примеры
     ///
@@ -560,7 +554,7 @@ pub enum FunctionDefinitionNode {
         ret: TypeNode,
         /// Тело функции.
         body: StatementNode,
-        /// Исходное АСД-определение (фича 0185).
+        /// Исходное АСД-определение.
         ///
         /// Константный вычислитель (`semantic::const_eval`) интерпретирует
         /// **АСД** тела: разрешённый [`StatementNode`] потребовал бы второго
@@ -588,7 +582,8 @@ pub enum FunctionDefinitionNode {
 
 impl PartialEq for FunctionDefinitionNode {
     fn eq(&self, other: &Self) -> bool {
-        // upper и loc игнорируются: не являются частью семантической идентичности функции
+        // upper и loc игнорируются: не являются частью семантической идентичности
+        // функции
         match (self, other) {
             (Self::None, Self::None) => true,
             (Self::Unresolved(a), Self::Unresolved(b)) => a == b,
@@ -635,7 +630,8 @@ impl Eq for FunctionDefinitionNode {}
 impl FunctionDefinitionNode {
     /// Возвращает позицию объявления функции в исходном тексте.
     ///
-    /// Для [`None`](FunctionDefinitionNode::None), [`Unresolved`](FunctionDefinitionNode::Unresolved) и
+    /// Для [`None`](FunctionDefinitionNode::None),
+    /// [`Unresolved`](FunctionDefinitionNode::Unresolved) и
     /// [`Builtin`](FunctionDefinitionNode::Builtin) возвращает [`Location::Implicit`].
     pub fn loc(&self) -> Location {
         match self {
@@ -679,9 +675,9 @@ pub enum StatementNode {
     /// Оператор отсутствует (умолчание).
     #[default]
     None,
-    /// «Сырой» АСД-оператор, ещё не прошедший понижение.
+    /// "Сырой" АСД-оператор, ещё не прошедший понижение.
     Unresolved(ast::Statement),
-    /// Блок операторов `{ … }`.
+    /// Блок операторов `{ ... }`.
     Block(Vec<StatementNode>),
     /// Оператор-выражение и его позиция (0264; у выражения своей нет).
     Expression(Box<ExpressionNode>, crate::diagnostics::Location),
@@ -693,19 +689,19 @@ pub enum StatementNode {
         then_: Box<StatementNode>,
         /// Ветка `else` (если задана).
         else_: Option<Box<StatementNode>>,
-        /// Позиция заголовка `if` в исходнике (0535-03).
+        /// Позиция заголовка `if` в исходнике.
         loc: Location,
     },
     /// Цикл `loop [условие]`.
     Loop {
-        /// Условие продолжения (`None` — бесконечный цикл).
+        /// Условие продолжения (`None` - бесконечный цикл).
         cond: Option<Box<ExpressionNode>>,
         /// Тело цикла.
         body: Box<StatementNode>,
-        /// Позиция заголовка цикла в исходнике (0535-03).
+        /// Позиция заголовка цикла в исходнике.
         loc: Location,
     },
-    /// Цикл `for`; поле `loc` — позиция заголовка (0471).
+    /// Цикл `for`; поле `loc` - позиция заголовка.
     For {
         /// Инициализация (опционально).
         init: Option<Box<StatementNode>>,
@@ -715,52 +711,52 @@ pub enum StatementNode {
         step: Option<Box<ExpressionNode>>,
         /// Тело цикла.
         body: Box<StatementNode>,
-        /// Позиция заголовка (0471).
+        /// Позиция заголовка.
         loc: Location,
     },
-    /// Объявление: `(имя, тип, инициализатор?, позиция)` — позиция с 0386.
+    /// Объявление: `(имя, тип, инициализатор?, позиция)` - позиция с 0386.
     Variable(String, TypeNode, Option<Box<ExpressionNode>>, Location),
-    /// Оператор `return [выражение]` и его позиция (0535-03).
+    /// Оператор `return [выражение]` и его позиция.
     Return(Option<Box<ExpressionNode>>, Location),
-    /// Оператор `continue` и его позиция (0535-03).
+    /// Оператор `continue` и его позиция.
     Continue(Location),
-    /// Оператор `break` и его позиция (0535-03).
+    /// Оператор `break` и его позиция.
     Break(Location),
-    /// Встроенная формула `: условие1[, условие2, …];`
+    /// Встроенная формула `: условие1[, условие2, ...];`
     InlineFormula(Vec<Formula>),
-    /// Блок формул внешнего анализатора `formula [диалект] { … }` (0484): цели
-    /// и эталон его пропускают. ⚠️ Не `Unresolved` — тот означает дефект (0236).
+    /// Блок формул внешнего анализатора `formula [диалект] { ... }`: цели и эталон его
+    /// пропускают. Не `Unresolved` - тот означает дефект.
     Formula(Box<crate::parser::ast::FormulaBlock>),
-    /// Вставка операторов для одной цели: `assembly [«цель»] { … }` (0484).
+    /// Вставка операторов для одной цели: `assembly ["цель"] { ... }`.
     Assembly {
-        /// Язык вывода, чья печать включает тело; `None` — все цели и эталон.
+        /// Язык вывода, чья печать включает тело; `None` - все цели и эталон.
         target: Option<String>,
-        /// Тело вставки — обычные операторы Takt.
+        /// Тело вставки - обычные операторы Takt.
         body: Box<StatementNode>,
-        /// Позиция заголовка вставки в исходнике (0535-03).
+        /// Позиция заголовка вставки в исходнике.
         loc: Location,
     },
-    /// Оператор `match`: `match expr { patterns => body, … }`.
+    /// Оператор `match`: `match expr { patterns => body, ... }`.
     Match {
         /// Разбираемое выражение.
         expr: Box<ExpressionNode>,
         /// Ветки оператора.
         arms: Vec<MatchArmNode>,
-        /// Позиция заголовка `match` в исходнике (0535-03).
+        /// Позиция заголовка `match` в исходнике.
         loc: Location,
     },
 }
 
-// ─── Ce4: Перечисления ────────────────────────────────────────────────────────
+// --- Ce4: Перечисления --------------------------------------------------------
 /// Семантический узел именованного условия.
 ///
-/// Хранит имя условия и его разрешённое значение.
-/// Заполняется в ходе третьего прохода построения модели ([`extract_conditions`]).
+/// Хранит имя условия и его разрешённое значение. Заполняется в ходе третьего прохода
+/// построения модели ([`extract_conditions`]).
 ///
 /// [`extract_conditions`]: crate::semantic::condition::extract_conditions
 #[derive(Default, Debug, Clone)]
 pub struct ConditionDefinitionNode {
-    /// Имя условия, как объявлено в источнике (`cond имя = …`).
+    /// Имя условия, как объявлено в источнике (`cond имя = ...`).
     pub name: String,
     /// Позиция объявления условия в исходном тексте.
     pub loc: Location,
@@ -789,13 +785,14 @@ impl ConditionDefinitionNode {
 /// Состояние конечного автомата.
 ///
 /// Три варианта:
-/// - [`Unresolved`](StateNode::Unresolved) — заглушка на время первого прохода построения.
-/// - [`Simple`](StateNode::Simple) — обычное состояние без реализации.
-/// - [`Implement`](StateNode::Implement) — состояние с реализацией (`= Модель`),
+/// - [`Unresolved`](StateNode::Unresolved) - заглушка на время первого прохода построения.
+/// - [`Simple`](StateNode::Simple) - обычное состояние без реализации.
+/// - [`Implement`](StateNode::Implement) - состояние с реализацией (`= Модель`),
 ///   может иметь оператор `next`.
 #[derive(Default, Debug, Clone)]
 // Вариант Implement крупнее Simple из-за поля `implements`, которое содержит векторы.
-// Боксирование поля `next` допустимо, но требует масштабного рефакторинга — откладываем.
+// Боксирование поля `next` допустимо, но требует масштабного рефакторинга -
+// откладываем.
 #[allow(clippy::large_enum_variant)]
 pub enum StateNode {
     /// Состояние не разрешено (временная заглушка при построении дерева).
@@ -807,7 +804,7 @@ pub enum StateNode {
         upper: Option<Weak<RefCell<ModelNode>>>,
         /// Позиция объявления состояния в исходном тексте.
         loc: Location,
-        /// Именованные блоки кода (`enter`, `exit`, `always`, …).
+        /// Именованные блоки кода (`enter`, `exit`, `always`, ...).
         named_blocks: Vec<NamedCodeBlockDefinitionNode>,
         /// Имя состояния.
         name: String,
@@ -824,7 +821,7 @@ pub enum StateNode {
         upper: Option<Weak<RefCell<ModelNode>>>,
         /// Позиция объявления состояния в исходном тексте.
         loc: Location,
-        /// Именованные блоки кода (`enter`, `exit`, `always`, …).
+        /// Именованные блоки кода (`enter`, `exit`, `always`, ...).
         named_blocks: Vec<NamedCodeBlockDefinitionNode>,
         /// Имя состояния.
         name: String,
@@ -849,11 +846,10 @@ impl StateNode {
         }
     }
 
-    /// Завершает ли состояние автомат (правило — `semantic::terminal`).
+    /// Завершает ли состояние автомат (правило - `semantic::terminal`).
     ///
-    /// ⚠️ Тело считается наравне с рёбрами (фича 0534): состояние с `always`
-    /// работает вечно, и уводить из него автомат нельзя — автор написал
-    /// «всегда», а не «однажды».
+    /// Тело считается наравне с рёбрами: состояние с `always` работает вечно, и уводить
+    /// из него автомат нельзя - автор написал "всегда", а не "однажды".
     pub(crate) fn is_terminated(&self) -> bool {
         crate::semantic::terminal::node_is_terminal(self)
     }
@@ -869,7 +865,8 @@ impl StateNode {
 
 impl PartialEq for StateNode {
     fn eq(&self, other: &Self) -> bool {
-        // upper и loc игнорируются: не являются частью семантической идентичности состояния
+        // upper и loc игнорируются: не являются частью семантической идентичности
+        // состояния
         match (self, other) {
             (StateNode::Unresolved, StateNode::Unresolved) => true,
             (
@@ -981,8 +978,8 @@ impl StateNode {
         }
     }
 
-    /// Ищет именованный блок в состоянии по его имени.
-    /// Возвращает список всех именованных блоков с заданным именем.
+    /// Ищет именованный блок в состоянии по его имени. Возвращает список всех
+    /// именованных блоков с заданным именем.
     pub fn get_named_blocks(&self, name: &str) -> Vec<&NamedCodeBlockDefinitionNode> {
         self.named_blocks()
             .iter()
@@ -996,10 +993,10 @@ impl StateNode {
     }
 }
 
-// `ConditionNode` вынесен в `condition_node.rs` (лимит размера модуля):
-// чистое перемещение, путь `semantic::ConditionNode` держит реэкспорт ниже.
+// `ConditionNode` вынесен в `condition_node.rs` (лимит размера модуля): чистое
+// перемещение, путь `semantic::ConditionNode` держит реэкспорт ниже.
 
-/// Разрешённый семантический узел выражения (заглушка — будет расширено).
+/// Разрешённый семантический узел выражения (заглушка - будет расширено).
 #[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub enum ExpressionDefinitionNode {
     /// Узел выражения ещё не разрешён (значение по умолчанию).

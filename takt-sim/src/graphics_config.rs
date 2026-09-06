@@ -1,18 +1,17 @@
 //! Конфигурация генерации GIF-анимации симуляции.
 //!
-//! Все параметры вёрстки кадров (размеры, цвета, отступы, шрифты, поведение
-//! раскладки графа) собраны в [`GraphicsConfig`]. Конфигурация сериализуется
-//! из/в JSON (через `serde`) и загружается из файла методом
-//! [`GraphicsConfig::from_file`].
+//! Все параметры вёрстки кадров (размеры, цвета, отступы, шрифты, поведение раскладки
+//! графа) собраны в [`GraphicsConfig`]. Конфигурация сериализуется из/в JSON (через
+//! `serde`) и загружается из файла методом [`GraphicsConfig::from_file`].
 //!
-//! Структура разбита на логические группы (canvas/node/edge/legend/...) —
-//! при отсутствии группы или поля в JSON используются значения по умолчанию,
-//! идентичные «зашитым» в коде до выноса в настройки.
+//! Структура разбита на логические группы (canvas/node/edge/legend/...) - при
+//! отсутствии группы или поля в JSON используются значения по умолчанию, идентичные
+//! "зашитым" в коде до выноса в настройки.
 
 use serde::Deserialize;
 use std::path::Path;
 
-// ── Режим сохранения графики ──────────────────────────────────────────────────
+// -- Режим сохранения графики --------------------------------------------------
 
 /// Режим сохранения графики симуляции.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
@@ -25,14 +24,13 @@ pub enum OutputMode {
     Svg,
 }
 
-// ── Корневая конфигурация ─────────────────────────────────────────────────────
+// -- Корневая конфигурация -----------------------------------------------------
 
 /// Полная конфигурация генерации графики симуляции.
 ///
-/// Создаётся через [`GraphicsConfig::default`] либо загружается из JSON-файла
-/// методом [`GraphicsConfig::from_file`]. Все вложенные группы помечены
-/// `#[serde(default)]`, поэтому в файле допустимо указывать только те поля,
-/// которые нужно переопределить.
+/// Создаётся через [`GraphicsConfig::default`] либо загружается из JSON-файла методом
+/// [`GraphicsConfig::from_file`]. Все вложенные группы помечены `#[serde(default)]`,
+/// поэтому в файле допустимо указывать только те поля, которые нужно переопределить.
 #[derive(Clone, Debug, Deserialize)]
 #[serde(default)]
 #[derive(Default)]
@@ -69,7 +67,7 @@ impl GraphicsConfig {
     }
 }
 
-// ── Холст и тайминги ──────────────────────────────────────────────────────────
+// -- Холст и тайминги ----------------------------------------------------------
 
 fn default_svg_background() -> Option<String> {
     Some("white".to_string())
@@ -82,9 +80,9 @@ pub struct CanvasConfig {
     pub height: f64,
     /// Задержка между обычными кадрами (1/100 секунды).
     pub frame_delay_cs: u16,
-    /// Задержка для highlight-кадра — обычно длиннее, чтобы переход успели разглядеть.
+    /// Задержка для highlight-кадра - обычно длиннее, чтобы переход успели разглядеть.
     pub highlight_frame_delay_cs: u16,
-    /// Цвет фона SVG-кадра. `None` — фон не рисуется. По умолчанию белый.
+    /// Цвет фона SVG-кадра. `None` - фон не рисуется. По умолчанию белый.
     #[serde(default = "default_svg_background")]
     pub svg_background: Option<String>,
 }
@@ -101,7 +99,7 @@ impl Default for CanvasConfig {
     }
 }
 
-// ── Узлы ──────────────────────────────────────────────────────────────────────
+// -- Узлы ----------------------------------------------------------------------
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(default)]
@@ -136,7 +134,7 @@ impl Default for NodeConfig {
     }
 }
 
-// ── Рёбра ─────────────────────────────────────────────────────────────────────
+// -- Рёбра ---------------------------------------------------------------------
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(default)]
@@ -162,7 +160,7 @@ impl Default for EdgeConfig {
     }
 }
 
-// ── Подпись к подсвеченному ребру ─────────────────────────────────────────────
+// -- Подпись к подсвеченному ребру ---------------------------------------------
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(default)]
@@ -206,7 +204,7 @@ impl Default for EdgeLabelConfig {
     }
 }
 
-// ── Легенда ───────────────────────────────────────────────────────────────────
+// -- Легенда -------------------------------------------------------------------
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(default)]
@@ -264,7 +262,7 @@ impl Default for LegendConfig {
     }
 }
 
-// ── Подсветка перехода ────────────────────────────────────────────────────────
+// -- Подсветка перехода --------------------------------------------------------
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(default)]
@@ -296,7 +294,7 @@ impl Default for HighlightConfig {
     }
 }
 
-// ── Заголовок с именем модели ─────────────────────────────────────────────────
+// -- Заголовок с именем модели -------------------------------------------------
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(default)]
@@ -320,7 +318,7 @@ impl Default for ModelNameConfig {
     }
 }
 
-// ── Алгоритм раскладки ────────────────────────────────────────────────────────
+// -- Алгоритм раскладки --------------------------------------------------------
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(default)]
@@ -358,7 +356,7 @@ impl Default for LayoutConfig {
     }
 }
 
-// ── Тесты ─────────────────────────────────────────────────────────────────────
+// -- Тесты ---------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
@@ -368,7 +366,7 @@ mod tests {
     #[test]
     fn test_default_config_round_trip() {
         let cfg = GraphicsConfig::default();
-        // Базовая проверка: значения по умолчанию совпадают с исходными «зашитыми».
+        // Базовая проверка: значения по умолчанию совпадают с исходными "зашитыми".
         assert_eq!(cfg.canvas.width, 800.0);
         assert_eq!(cfg.canvas.height, 600.0);
         assert_eq!(cfg.legend.width, 190.0);
@@ -383,7 +381,7 @@ mod tests {
         let cfg = GraphicsConfig::from_file(f.path()).unwrap();
         assert_eq!(cfg.canvas.width, 1024.0);
         assert_eq!(cfg.canvas.height, 768.0);
-        // Остальные группы получили дефолты.
+        // Остальные группы получили умолчаниеы.
         assert_eq!(cfg.canvas.frame_delay_cs, 50);
         assert_eq!(cfg.legend.width, 190.0);
     }
@@ -407,7 +405,7 @@ mod tests {
         assert_eq!(cfg.edge.highlight_stroke, "#0f0");
         assert_eq!(cfg.legend.width, 220.0);
         assert_eq!(cfg.legend.active_label, "ON");
-        // Остальные значения — по умолчанию.
+        // Остальные значения - по умолчанию.
         assert_eq!(cfg.legend.inactive_label, "неактивное");
     }
 
@@ -437,7 +435,7 @@ mod tests {
         writeln!(f, r#"{{ "output_mode": "svg" }}"#).unwrap();
         let cfg = GraphicsConfig::from_file(f.path()).unwrap();
         assert_eq!(cfg.output_mode, OutputMode::Svg);
-        // Остальные поля — дефолт.
+        // Остальные поля - умолчание.
         assert_eq!(cfg.canvas.width, 800.0);
     }
 
@@ -476,13 +474,13 @@ mod tests {
         let mut f = tempfile::NamedTempFile::new().unwrap();
         writeln!(f, r#"{{ "canvas": {{ "width": 1024 }} }}"#).unwrap();
         let cfg = GraphicsConfig::from_file(f.path()).unwrap();
-        // Поле отсутствует → используется default_svg_background() = Some("white")
+        // Поле отсутствует -> используется default_svg_background() = Some("white")
         assert_eq!(cfg.canvas.svg_background, Some("white".to_string()));
     }
 
     /// Все JSON-пресеты в `examples/gif-configs/` должны корректно загружаться.
-    /// Запускаем по абсолютному пути от `CARGO_MANIFEST_DIR`, чтобы работало
-    /// и при `cargo test` из корня workspace.
+    /// Запускаем по абсолютному пути от `CARGO_MANIFEST_DIR`, чтобы работало и при
+    /// `cargo test` из корня workspace.
     #[test]
     fn test_load_example_presets() {
         let presets_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -495,7 +493,7 @@ mod tests {
             assert!(path.exists(), "пресет не найден: {}", path.display());
             let cfg = GraphicsConfig::from_file(&path)
                 .unwrap_or_else(|e| panic!("не удалось загрузить {name}: {e}"));
-            // Базовая проверка корректности — все обязательные поля присутствуют.
+            // Базовая проверка корректности - все обязательные поля присутствуют.
             assert!(cfg.canvas.width > 0.0);
             assert!(cfg.canvas.height > 0.0);
             assert!(cfg.node.radius > 0.0);

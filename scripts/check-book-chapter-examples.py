@@ -62,7 +62,7 @@ ROOT = os.environ.get(
 CHAPTERS = os.path.join(ROOT, "book", "src")
 BASELINE = os.path.join(ROOT, "scripts", "book-chapter-examples-baseline.txt")
 
-# Приложение «Ошибки» держит гейт 0520, «Порождённый код» набран не на Takt.
+# Приложение "Ошибки" держит проверка 0520, "Порождённый код" набран не на Takt.
 EXCLUDED = ("appendix-errors", "appendix-generated")
 
 CODE_RE = re.compile(r"\b([A-Z]{2,3}-[0-9]{3})\b")

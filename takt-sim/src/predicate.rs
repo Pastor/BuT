@@ -1,17 +1,16 @@
-//! Адаптер условий: `ConditionNode` → [`Value`] поверх ядра [`crate::eval`].
+//! Адаптер условий: `ConditionNode` -> [`Value`] поверх ядра [`crate::eval`].
 //!
-//! Модуль **не содержит семантики** — только структурный разбор узлов и
-//! делегирование в ядро (ADR 0025, Option B). До задачи 0025-03 здесь жил
-//! `flat`, который использовал узлы АСД в роли значений и потому:
+//! Модуль **не содержит семантики** - только структурный разбор узлов и делегирование в
+//! ядро. До здесь жил `flat`, который использовал узлы АСД в роли значений и потому:
 //!
 //! - паниковал на вызове функции (`unimplemented!()`, Д4) и на смешении
 //!   `int`/`real` (`unwrap()` на `None`, Д6);
 //! - возвращал внутренний узел скобок **невычисленным** (Д7);
 //! - отвечал `Err` на вариант `enum` (Д8).
 //!
-//! Теперь разбор — исчерпывающий `match` **без `_`** по всем 24 вариантам
-//! `ConditionNode`: новый вариант ломает сборку, а не превращается молча в
-//! «условие ложно».
+//! Теперь разбор - исчерпывающий `match` **без `_`** по всем 24 вариантам
+//! `ConditionNode`: новый вариант ломает сборку, а не превращается молча в "условие
+//! ложно".
 
 use crate::context::Context;
 use crate::eval::error::EvalError;
@@ -25,8 +24,8 @@ use takt_lang::semantic::type_node::TypeNode;
 
 /// Строит предикат перехода из условия.
 ///
-/// Ошибка вычисления **не** сводится к «условие ложно» (требование R5): она
-/// возвращается вызывающему и доходит до `TickResult::Failed` → CLI.
+/// Ошибка вычисления **не** сводится к "условие ложно" (требование R5): она
+/// возвращается вызывающему и доходит до `TickResult::Failed` -> CLI.
 pub(crate) fn create_predicate(cond: &ConditionNode) -> Predicate {
     let name = condition_label(cond);
     let cond = cond.clone();
@@ -44,8 +43,8 @@ fn condition_label(cond: &ConditionNode) -> String {
         ConditionNode::Duration(ns) => crate::runner::format_duration(*ns),
         ConditionNode::After(ns) => format!("after {}", crate::runner::format_duration(*ns)),
         ConditionNode::AfterTicks(ticks) => format!("after {ticks}t"),
-        // Вычисляемая выдержка (фича 0183): значения нет до такта, поэтому на
-        // ребре печатается сама запись автора.
+        // Вычисляемая выдержка: значения нет до такта, поэтому на ребре печатается сама
+        // запись автора.
         ConditionNode::AfterExpr(inner) => format!("after ({})", condition_label(inner)),
         ConditionNode::Number(n) => n.to_string(),
         ConditionNode::Rational(s, neg) => {
@@ -74,8 +73,8 @@ fn condition_label(cond: &ConditionNode) -> String {
         ConditionNode::NotEqual(l, r) => {
             format!("{} != {}", condition_label(l), condition_label(r))
         }
-        // ⚠️ Член печатается как в исходнике (`x.0`, `x.field`), а не
-        // `Debug`-дампом `Number(0)` (фича 0231).
+        // Член печатается как в исходнике (`x.0`, `x.field`), а не `Debug`-дампом
+        // `Number(0)`.
         ConditionNode::BitAccess(c, m) => {
             let member = match m {
                 takt_lang::parser::ast::Member::Identifier(id) => id.name.clone(),
@@ -94,8 +93,8 @@ fn condition_label(cond: &ConditionNode) -> String {
         ConditionNode::State(s, _) => s.borrow().name().to_string(),
         ConditionNode::Model(m, _) => m.borrow().name.clone().unwrap_or_else(|| "?".to_string()),
         ConditionNode::EnumVariant(_, name, _) => name.clone(),
-        // Обращение к ячейке (фича 0189): на ребре печатается сама запись —
-        // значение известно лишь в такте.
+        // Обращение к ячейке: на ребре печатается сама запись - значение известно лишь
+        // в такте.
         ConditionNode::AnonPort(access) => match access.ty {
             TypeNode::Bit | TypeNode::Bool => {
                 format!("#0x{:X}.{}", access.addr as u64, access.bit)
@@ -112,17 +111,17 @@ fn condition_label(cond: &ConditionNode) -> String {
 
 /// Ищет позицию в исходном тексте для привязки диагностики.
 ///
-/// Позицию несут не все узлы (`Variable` и `Function` — несут), поэтому ищем
-/// вглубь по первому попавшемуся потомку. Это даёт диагностике реальную позицию
-/// вместо `Location::Builtin` (критерий A10) в подавляющем большинстве случаев.
+/// Позицию несут не все узлы (`Variable` и `Function` - несут), поэтому ищем вглубь по
+/// первому попавшемуся потомку. Это даёт диагностике реальную позицию вместо
+/// `Location::Builtin` (критерий A10) в подавляющем большинстве случаев.
 fn loc_of(cond: &ConditionNode) -> Location {
     match cond {
-        // У литерала длительности и у `after` позиции нет — как и у прочих
-        // литералов (позиция — свойство ссылки, фича 0056).
+        // У литерала длительности и у `after` позиции нет - как и у прочих литералов
+        // (позиция - свойство ссылки).
         ConditionNode::Duration(_) | ConditionNode::After(_) | ConditionNode::AfterTicks(_) => {
             Location::Implicit
         }
-        // У вычисляемой выдержки позиция есть — у операндов вложенного условия.
+        // У вычисляемой выдержки позиция есть - у операндов вложенного условия.
         ConditionNode::AfterExpr(inner) => loc_of(inner),
         ConditionNode::Variable(_, loc) | ConditionNode::Function(_, _, loc) => *loc,
         ConditionNode::Not(c) | ConditionNode::Parenthesis(c) | ConditionNode::BitAccess(c, _) => {
@@ -148,7 +147,7 @@ fn loc_of(cond: &ConditionNode) -> Location {
         | ConditionNode::Rational(_, _)
         | ConditionNode::String(_)
         | ConditionNode::Bool(_)
-        // У обращения к ячейке позиции нет, как у прочих литералов (фича 0189).
+        // У обращения к ячейке позиции нет, как у прочих литералов.
         | ConditionNode::AnonPort(_)
         | ConditionNode::Model(_, _)
         | ConditionNode::State(..)
@@ -158,27 +157,26 @@ fn loc_of(cond: &ConditionNode) -> Location {
 
 /// Вычисляет условие в значение.
 ///
-/// Структурный разбор — здесь; семантика операций — в [`crate::eval::ops`].
-/// Паники недостижимы: любой неподдержанный случай — `Err` (R4).
+/// Структурный разбор - здесь; семантика операций - в [`crate::eval::ops`]. Паники
+/// недостижимы: любой неподдержанный случай - `Err` (R4).
 pub(crate) fn eval_condition(
     cond: &ConditionNode,
     ctx: &mut dyn Context,
 ) -> Result<Value, Diagnostic> {
     match cond {
-        // ── Литералы ─────────────────────────────────────────────────────────
-        // Длительность и выдержка (фича 0134). `after` истинно, когда с входа
-        // в текущее состояние прошло не меньше указанного: сравнение — по
-        // РАЗНОСТИ модельного времени, а не по абсолютному моменту, иначе
-        // выдержка зависела бы от начала прогона.
+        // -- Литералы ---------------------------------------------------------
+        // Длительность и выдержка. `after` истинно, когда с входа в текущее состояние
+        // прошло не меньше указанного: сравнение - по разности модельного времени, а не
+        // по абсолютному моменту, иначе выдержка зависела бы от начала прогона.
         ConditionNode::Duration(ns) => Ok(Value::Duration(*ns)),
         ConditionNode::After(ns) => Ok(Value::Boolean(ctx.since_state_entry_ns() >= *ns)),
         // Выдержка в тактах: сравнение по счётчику шагов, а не по часам.
         ConditionNode::AfterTicks(ticks) => Ok(Value::Boolean(
             i64::try_from(ctx.ticks_in_state()).unwrap_or(i64::MAX) >= *ticks,
         )),
-        // Вычисляемая выдержка (фича 0183): порог берётся из вложенного условия
-        // **в этом такте**. Эталон считает в наносекундах — как и всё время
-        // симулятора; цели держат миллисекунды (ADR 0183), и совпадение доказывает
+        // Вычисляемая выдержка: порог берётся из вложенного условия
+        // **в этом такте**. Эталон считает в наносекундах - как и всё время
+        // симулятора; цели держат миллисекунды, и совпадение доказывает
         // потактовая сверка, а не рассуждение.
         ConditionNode::AfterExpr(inner) => match eval_condition(inner, ctx)? {
             Value::Duration(ns) => Ok(Value::Boolean(ctx.since_state_entry_ns() >= ns)),
@@ -193,11 +191,10 @@ pub(crate) fn eval_condition(
         },
         ConditionNode::Number(n) => Ok(Value::Number(*n)),
         ConditionNode::Bool(b) => Ok(Value::Boolean(*b)),
-        // Чтение ячейки в условии (фича 0189) — то же чтение, что в выражении:
-        // одна воронка на оба адаптера, иначе ребро и тело разошлись бы.
+        // Чтение ячейки в условии - то же чтение, что в выражении: одна воронка на оба
+        // адаптера, иначе ребро и тело разошлись бы.
         ConditionNode::AnonPort(access) => Ok(crate::anon_cell::read(access, ctx)),
         ConditionNode::Rational(text, negative) => {
-            // Раньше здесь был `unwrap()` при разборе — ещё одна скрытая паника.
             let parsed: f64 = text.parse().map_err(|_| {
                 Diagnostic::error(
                     Location::Builtin,
@@ -207,11 +204,10 @@ pub(crate) fn eval_condition(
             })?;
             Ok(Value::Real(if *negative { -parsed } else { parsed }))
         }
-        // S7 (Д8): вариант enum — целое со значением варианта. Раньше — `Err`,
-        // из-за чего `mode = Manual` было ложным при `mode = Manual`.
+        // S7 (Д8): вариант enum - целое со значением варианта.
         ConditionNode::EnumVariant(_, _, value) => Ok(Value::Number(*value)),
 
-        // ── Переменные и доступ ──────────────────────────────────────────────
+        // -- Переменные и доступ ----------------------------------------------
         ConditionNode::Variable(var, loc) => {
             let name = var.borrow().name().to_string();
             ctx.get_value(&name).ok_or_else(|| {
@@ -219,10 +215,9 @@ pub(crate) fn eval_condition(
                     .with_code("SIM-009")
             })
         }
-        // Д7: скобки вычисляются **рекурсивно**. Раньше возвращался внутренний
-        // узел невычисленным, из-за чего `(t + 1) > 2` при t=5 было ложным.
+        // Д7: скобки вычисляются **рекурсивно**.
         ConditionNode::Parenthesis(inner) => eval_condition(inner, ctx),
-        // База — ВЫРАЖЕНИЕ (фича 0358): вычисляется тем же вычислителем.
+        // База - Выражение: вычисляется тем же вычислителем.
         ConditionNode::ArraySubscript(base, index) => {
             let loc = loc_of(cond);
             let array = eval_condition(base, ctx)?;
@@ -252,33 +247,31 @@ pub(crate) fn eval_condition(
                 })?;
             Ok(element.clone())
         }
-        // `a.b`: поле структуры (`p.x`) или бит целого (`BTN.0`) — тем же ядром
-        // `eval::access`, что и адаптер выражений (симметрия обязательна: иначе
-        // два вычислителя разошлись бы — корневая причина 0025).
+        // `a.b`: поле структуры (`p.x`) или бит целого (`BTN.0`) - тем же ядром
+        // `eval::access`, что и адаптер выражений (симметрия обязательна: иначе два
+        // вычислителя разошлись бы - корневая причина 0025).
         ConditionNode::BitAccess(inner, member) => {
             let value = eval_condition(inner, ctx)?;
             crate::eval::access::read_member(&value, member)
                 .map_err(|e| e.to_diagnostic(loc_of(cond)))
         }
 
-        // ── Операции: семантика делегируется ядру ────────────────────────────
+        // -- Операции: семантика делегируется ядру ----------------------------
         ConditionNode::Not(inner) => unary(UnOp::Not, inner, ctx, loc_of(cond)),
         ConditionNode::Add(l, r) => binary(BinOp::Add, l, r, ctx, loc_of(cond)),
         ConditionNode::Subtract(l, r) => binary(BinOp::Subtract, l, r, ctx, loc_of(cond)),
-        // `And`/`Or` документированы в АСД как побитовые, но исторически
-        // вычислялись логически (`to_bool` в прежнем `flat`). Поведение
-        // сохранено намеренно: менять его — изменение семантики языка, что вне
-        // объёма фичи 0025 (правило 11). Неоднозначность зафиксирована в ADR.
+        // `And`/`Or` документированы в АСД как побитовые, но исторически вычислялись
+        // логически (`to_bool` в прежнем `flat`). Поведение сохранено намеренно: менять
+        // его - изменение семантики языка, что вне объёма.
         ConditionNode::And(l, r) => binary(BinOp::LogicalAnd, l, r, ctx, loc_of(cond)),
         ConditionNode::Or(l, r) => binary(BinOp::LogicalOr, l, r, ctx, loc_of(cond)),
         ConditionNode::Less(l, r) => binary(BinOp::Less, l, r, ctx, loc_of(cond)),
         ConditionNode::More(l, r) => binary(BinOp::More, l, r, ctx, loc_of(cond)),
         ConditionNode::LessEqual(l, r) => binary(BinOp::LessEqual, l, r, ctx, loc_of(cond)),
         ConditionNode::MoreEqual(l, r) => binary(BinOp::MoreEqual, l, r, ctx, loc_of(cond)),
-        // Проверка состояния под-модели (фича 0245): `S(Модель) = Состояние` и
-        // краткая форма `Модель = Состояние`. Форму паттерна разбирает функция
-        // `takt-lang` — та же, что у судьи условий и печатника цели `c` (0203):
-        // второго разбора в проекте нет.
+        // Проверка состояния под-модели: `S(Модель) = Состояние` и краткая форма
+        // `Модель = Состояние`. Форму паттерна разбирает функция `takt-lang` - та же,
+        // что у судьи условий и печатника цели `c`: второго разбора в проекте нет.
         ConditionNode::Equal(l, r) if state_of_model(l).is_some() => {
             state_matches(l, r, ctx, loc_of(cond)).map(Value::Boolean)
         }
@@ -288,12 +281,12 @@ pub(crate) fn eval_condition(
         ConditionNode::Equal(l, r) => binary(BinOp::Equal, l, r, ctx, loc_of(cond)),
         ConditionNode::NotEqual(l, r) => binary(BinOp::NotEqual, l, r, ctx, loc_of(cond)),
 
-        // ── Пока не поддержано — но с диагностикой, а не паникой ─────────────
+        // -- Пока не поддержано - но с диагностикой, а не паникой -------------
         //
-        // Д4: здесь был `unimplemented!()`, роняющий симулятор. Вычисление
-        // вызова требует интерпретатора тела `fn`, который поставляет задача
-        // `0025-02`; до неё — честный отказ.
-        // Д4: вызов функции в условии. Тот же интерпретатор, что и у выражений.
+        // Д4: здесь был `unimplemented!()`, роняющий симулятор. Вычисление вызова
+        // требует интерпретатора тела `fn`, который поставляет задача `0025-02`; до неё -
+        // честный отказ. Д4: вызов функции в условии. Тот же интерпретатор, что и у
+        // выражений.
         ConditionNode::Function(func, args, _) => {
             let values = args
                 .iter()
@@ -301,15 +294,14 @@ pub(crate) fn eval_condition(
                 .collect::<Result<Vec<Value>, Diagnostic>>()?;
             crate::unit::statement::call_function(func, &values, ctx)
         }
-        // ⚠️ Ветвь НЕДОСТИЖИМА из корректной программы (фича 0247): голое имя
-        // состояния или модели условием не является, и такой вход отвергает
-        // семантика (`SE-110`) — до всякого прогона. Отказ оставлен страховкой
-        // на случай дефекта в семантике, как `CC-023` у цели `c`: молчаливое
-        // «условие ложно» развело бы трассу эталона с прошивкой.
+        // Ветвь недостижима из корректной программы: голое имя состояния или модели
+        // условием не является, и такой вход отвергает семантика (`SE-110`) - до
+        // всякого прогона. Отказ оставлен страховкой на случай дефекта в семантике, как
+        // `CC-023` у цели `c`: молчаливое "условие ложно" развело бы трассу эталона с
+        // прошивкой.
         //
-        // Осмысленная запись — паттерн `S(Модель) = Состояние` (и краткая
-        // `Модель = Состояние`); её исполняет `state_of_condition` ниже
-        // (фича 0245).
+        // Осмысленная запись - паттерн `S(Модель) = Состояние` (и краткая `Модель =
+        // Состояние`); её исполняет `state_of_condition` ниже.
         ConditionNode::State(state, _) => Err(Diagnostic::error(
             Location::Builtin,
             format!(
@@ -333,14 +325,14 @@ pub(crate) fn eval_condition(
             ),
         )
         .with_code("SIM-013")),
-        // `Value` не представляет строки — пробел зафиксирован анализом.
+        // `Value` не представляет строки - пробел заисправлениеирован анализом.
         ConditionNode::String(_) => Err(Diagnostic::error(
             Location::Builtin,
             "строки не поддерживаются симулятором".to_string(),
         )
         .with_code("SIM-014")),
 
-        // ── Невычислимые по определению ──────────────────────────────────────
+        // -- Невычислимые по определению --------------------------------------
         ConditionNode::None => Err(Diagnostic::error(
             Location::Builtin,
             "пустое условие не может быть вычислено".to_string(),
@@ -354,15 +346,15 @@ pub(crate) fn eval_condition(
     }
 }
 
-/// Совпадает ли текущее состояние модели-аргумента с названным (фича 0245).
+/// Совпадает ли текущее состояние модели-аргумента с названным.
 ///
-/// Левая часть — паттерн «состояние модели» (проверена вызывающим), правая —
-/// имя состояния в трёх законных формах (`compared_state_name` в `takt-lang`).
+/// Левая часть - паттерн "состояние модели" (проверена вызывающим), правая - имя
+/// состояния в трёх законных формах (`compared_state_name` в `takt-lang`).
 ///
-/// ⚠️ Отсутствие модели в реестре — **отказ**, а не «условие ложно»: цель `c`
-/// на модели, не запущенной в композиции, тоже отказывает (`CC-012`), и
-/// молчаливое `false` развело бы трассу эталона с поведением прошивки — ровно
-/// тот класс, ради которого заведены потактовые сверки.
+/// Отсутствие модели в реестре - **отказ**, а не "условие ложно": цель `c` на модели,
+/// не запущенной в композиции, тоже отказывает (`CC-012`), и молчаливое `false` развело
+/// бы трассу эталона с поведением прошивки - ровно тот класс, ради которого заведены
+/// потактовые сверки.
 fn state_matches(
     left: &ConditionNode,
     right: &ConditionNode,
@@ -462,7 +454,7 @@ mod tests {
         Box::new(ConditionNode::Number(n))
     }
 
-    // ── Литералы ──────────────────────────────────────────────────────────────
+    // -- Литералы --------------------------------------------------------------
 
     #[test]
     fn number_and_bool_literals() {
@@ -492,19 +484,17 @@ mod tests {
 
     #[test]
     fn malformed_rational_is_diagnostic_not_panic() {
-        // Раньше здесь был unwrap() при разборе литерала.
         let mut ctx = empty_ctx();
         let cond = ConditionNode::Rational("не-число".to_string(), false);
         let err = eval_condition(&cond, &mut ctx).unwrap_err();
         assert_eq!(err.code.as_deref(), Some("SIM-008"));
     }
 
-    // ── Д7: скобки ────────────────────────────────────────────────────────────
+    // -- Д7: скобки ------------------------------------------------------------
 
     #[test]
     fn d7_parenthesis_is_evaluated_recursively() {
-        // Проба paren.takt: (t + 1) > 2 при t = 5 → истина.
-        // Прежний flat возвращал внутренний узел невычисленным → было ложно.
+        // Прежний flat возвращал внутренний узел невычисленным -> было ложно.
         let mut ctx = empty_ctx();
         let inner = ConditionNode::Add(num(5), num(1));
         let cond = ConditionNode::More(
@@ -514,7 +504,7 @@ mod tests {
         assert_eq!(eval_condition(&cond, &mut ctx), Ok(Value::Boolean(true)));
     }
 
-    // ── Д8: вариант enum ──────────────────────────────────────────────────────
+    // -- Д8: вариант enum ------------------------------------------------------
 
     #[test]
     fn d8_enum_variant_evaluates_to_its_value() {
@@ -527,11 +517,11 @@ mod tests {
         assert_eq!(eval_condition(&cond, &mut ctx), Ok(Value::Number(1)));
     }
 
-    // ── Д6: смешение int/real не роняет ───────────────────────────────────────
+    // -- Д6: смешение int/real не роняет ---------------------------------------
 
     #[test]
     fn d6_mixed_int_real_does_not_panic() {
-        // Проба mix.takt: t + 2.5 > 3 при t = 1. Прежний flat падал на unwrap().
+        // Прежний flat падал на unwrap().
         let mut ctx = MockContext::new(&[]);
         let sum = ConditionNode::Add(
             num(1),
@@ -541,12 +531,11 @@ mod tests {
         assert_eq!(eval_condition(&cond, &mut ctx), Ok(Value::Boolean(true)));
     }
 
-    // ── Д4: вызов функции — диагностика вместо паники ─────────────────────────
+    // -- Д4: вызов функции - диагностика вместо паники -------------------------
 
     #[test]
     fn d4_function_call_in_condition_is_evaluated() {
-        // Д4: `fn ready() -> u8 { return 1; }` → условие `ready()` истинно.
-        // Раньше здесь была паника `unimplemented!()`.
+        // Д4: `fn ready() -> u8 { return 1; }` -> условие `ready()` истинно.
         use takt_lang::semantic::type_node::TypeNode;
         let func = std::rc::Rc::new(std::cell::RefCell::new(
             takt_lang::semantic::FunctionDefinitionNode::Local {
@@ -582,7 +571,7 @@ mod tests {
         assert_eq!(err.code.as_deref(), Some("SIM-016"));
     }
 
-    // ── Сравнения и арифметика ────────────────────────────────────────────────
+    // -- Сравнения и арифметика ------------------------------------------------
 
     #[test]
     fn comparisons_delegate_to_core() {
@@ -613,24 +602,24 @@ mod tests {
         assert_eq!(eval_condition(&cond, &mut ctx), Ok(Value::Boolean(false)));
     }
 
-    // ── S3: деление на ноль приходит из ядра как диагностика ──────────────────
+    // -- S3: деление на ноль приходит из ядра как диагностика ------------------
 
     #[test]
     fn division_by_zero_surfaces_as_diagnostic() {
-        // В условиях деления нет (нет узла Divide), но проверяем канал ошибок
-        // ядра на доступной операции: сдвиг здесь недоступен, берём типовую
-        // ошибку — сравнение массива с числом.
+        // В условиях деления нет (нет узла Divide), но проверяем канал ошибок ядра на
+        // доступной операции: сдвиг здесь недоступен, берём типовую ошибку - сравнение
+        // массива с числом.
         let mut ctx = MockContext::new(&[("a", Value::Array(vec![]))]);
         let var = std::rc::Rc::new(std::cell::RefCell::new(
             takt_lang::semantic::VariableNode::Unresolved,
         ));
-        // Переменная не найдена по имени — проверяем диагностику доступа.
+        // Переменная не найдена по имени - проверяем диагностику доступа.
         let cond = ConditionNode::Variable(var, Location::Builtin);
         let err = eval_condition(&cond, &mut ctx).unwrap_err();
         assert_eq!(err.code.as_deref(), Some("SIM-009"));
     }
 
-    // ── Контрпримеры: отказ вместо тихого false ───────────────────────────────
+    // -- Контрпримеры: отказ вместо тихого false -------------------------------
 
     #[test]
     fn unresolved_condition_is_diagnostic() {
@@ -649,7 +638,7 @@ mod tests {
         assert_eq!(err.code.as_deref(), Some("SIM-014"));
     }
 
-    // ── Позиция в диагностике (критерий A10) ──────────────────────────────────
+    // -- Позиция в диагностике (критерий A10) ----------------------------------
 
     #[test]
     fn diagnostic_carries_source_location_from_variable() {

@@ -5,7 +5,7 @@
 
 pub(in crate::semantic) mod adopt;
 pub(in crate::semantic) mod build;
-pub mod importers; // «кто подключает эту библиотеку» — подсказка SE-102 (0294)
+pub mod importers; // "кто подключает эту библиотеку" - подсказка SE-102
 pub(in crate::semantic) mod select;
 
 use crate::diagnostics::Diagnostic;
@@ -19,9 +19,9 @@ use std::fs::{exists, read_to_string};
 ///
 /// # Параметры
 ///
-/// - `search_paths` — список директорий для поиска файлов (например, `["/src", "/lib"]`).
-/// - `path` — путь импорта: строковый литерал (`"file.takt"`) или
-///   идентификаторный путь (`a::b::c` → `a/b/c.takt`).
+/// - `search_paths` - список директорий для поиска файлов (например, `["/src", "/lib"]`).
+/// - `path` - путь импорта: строковый литерал (`"file.takt"`) или
+///   идентификаторный путь (`a::b::c` -> `a/b/c.takt`).
 ///
 /// # Возвращает
 ///
@@ -36,16 +36,16 @@ use std::fs::{exists, read_to_string};
 ///
 /// # Примеры
 ///
-/// Использование через интеграционные тесты — см. `tests/semantic_tests.rs`:
+/// Использование через интеграционные тесты - см.
 /// ```text
 /// import "model.takt";            // Plain-импорт
 /// import "engine.takt" as Motor;  // GlobalSymbol-импорт с алиасом
 /// ```
-/// Имя файла без каталога — для сообщений: полный путь в цепочке импорта только
-/// мешает читать.
+/// Имя файла без каталога - для сообщений: полный путь в цепочке импорта только мешает
+/// читать.
 ///
-/// Живёт здесь, а не в `tree.rs`: короткое имя нужно **сообщениям об импорте**, и
-/// это предмет данного модуля, а `tree.rs` пришпилен реестром размеров.
+/// Живёт здесь, а не в `tree.rs`: короткое имя нужно **сообщениям об импорте**, и это
+/// предмет данного модуля, а `tree.rs` пришпилен реестром размеров.
 pub(crate) fn short_name(path: &str) -> String {
     std::path::Path::new(path)
         .file_name()
@@ -57,15 +57,13 @@ pub(crate) fn read_import_file(
     search_paths: &[String],
     path: &ImportPath,
 ) -> Result<(String, String), Diagnostic> {
-    // Позиция директивы `import` — из самого пути (фича 0130). Прежде эти
-    // диагностики строились без позиции и печатались как `файл:1:1`, то есть
-    // указывали в начало файла, а не на неудавшийся импорт.
+    // Позиция директивы `import` - из самого пути.
     let loc = match path {
         ImportPath::Filename(literal) => literal.loc,
         ImportPath::Path(id_path) => id_path.loc,
     };
 
-    // Формируем список кандидатов: cross-product (search_paths × path)
+    // Формируем список кандидатов: cross-product (search_paths x path)
     let files: Vec<String> = match path {
         // Строковый литерал: `import "file.takt";`
         ImportPath::Filename(filename) => search_paths
@@ -73,7 +71,7 @@ pub(crate) fn read_import_file(
             .map(|dir| format!("{}/{}", dir, filename.string))
             .collect(),
 
-        // Идентификаторный путь: `import a::b::c;` → ищем `a/b/c.takt`
+        // Идентификаторный путь: `import a::b::c;` -> ищем `a/b/c.takt`
         ImportPath::Path(id_path) => {
             let inner = id_path.identifiers.iter().map(|i| i.name.clone()).join("/");
             search_paths
@@ -117,10 +115,9 @@ pub(crate) fn read_import_file(
 
     let filename = found.first().unwrap();
 
-    // V3: Защита от обхода каталогов (path traversal).
-    // Канонизируем найденный путь и проверяем, что он находится внутри
-    // одного из разрешённых каталогов поиска.
-    // Это предотвращает импорты вида `import "../../etc/passwd"`.
+    // V3: Защита от обхода каталогов (path traversal). Канонизируем найденный путь и
+    // проверяем, что он находится внутри одного из разрешённых каталогов поиска. Это
+    // предотвращает импорты вида `import "../../etc/passwd"`.
     {
         let canonical_file = std::fs::canonicalize(filename).map_err(|e| {
             Diagnostic::error(
@@ -130,7 +127,7 @@ pub(crate) fn read_import_file(
             .with_code("SE-016")
         })?;
         let is_allowed = search_paths.iter().any(|dir| {
-            // Канонизируем директорию поиска; если это не удаётся — пропускаем её.
+            // Канонизируем директорию поиска; если это не удаётся - пропускаем её.
             std::fs::canonicalize(dir)
                 .map(|canon_dir| canonical_file.starts_with(&canon_dir))
                 .unwrap_or(false)
@@ -147,7 +144,7 @@ pub(crate) fn read_import_file(
         }
     }
 
-    // Проверяем, что файл имеет расширение .takt
+    // Проверяем, что файл имеет расширение.takt
     if !filename.ends_with(".takt") {
         return Err(Diagnostic::error(
             loc,
@@ -167,7 +164,7 @@ pub(crate) fn read_import_file(
     Ok((content, filename.clone()))
 }
 
-// ─── Тесты ────────────────────────────────────────────────────────────────────
+// --- Тесты --------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
@@ -176,10 +173,10 @@ mod tests {
     use crate::parser::ast::{IdentifierPath, ImportPath, StringLiteral};
     use std::fs;
 
-    // ─── Вспомогательные функции ──────────────────────────────────────────────
+    // --- Вспомогательные функции ----------------------------------------------
 
-    /// Создаёт временный `.takt`-файл с заданным содержимым.
-    /// Возвращает (директория, полный_путь_к_файлу).
+    /// Создаёт временный `.takt`-файл с заданным содержимым. Возвращает (директория,
+    /// полный_путь_к_файлу).
     fn make_tmp_but(name: &str, content: &str) -> (tempfile::TempDir, String) {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join(name);
@@ -196,7 +193,7 @@ mod tests {
         })
     }
 
-    // ─── Позитивные тесты ─────────────────────────────────────────────────────
+    // --- Позитивные тесты -----------------------------------------------------
 
     /// Файл найден по строковому литералу: содержимое и путь возвращаются корректно.
     #[test]
@@ -262,9 +259,9 @@ mod tests {
         );
     }
 
-    // ─── Негативные тесты (контр-примеры) ────────────────────────────────────
+    // --- Негативные тесты (контр-примеры) ------------------------------------
 
-    /// Файл не найден → ошибка с упоминанием путей поиска.
+    /// Файл не найден -> ошибка с упоминанием путей поиска.
     #[test]
     fn missing_file_returns_error() {
         let err = read_import_file(
@@ -279,14 +276,14 @@ mod tests {
         );
     }
 
-    /// Пустой список путей поиска → ошибка.
+    /// Пустой список путей поиска -> ошибка.
     #[test]
     fn empty_search_paths_returns_error() {
         let err = read_import_file(&[], &filename_path("any.takt")).unwrap_err();
         assert!(err.message.contains("не найден"));
     }
 
-    /// Файл существует, но не имеет расширения `.takt` → ошибка.
+    /// Файл существует, но не имеет расширения `.takt` -> ошибка.
     #[test]
     fn non_but_extension_is_error() {
         let dir = tempfile::tempdir().unwrap();
@@ -301,7 +298,7 @@ mod tests {
         );
     }
 
-    /// Файл существует, но не имеет расширения вовсе → ошибка.
+    /// Файл существует, но не имеет расширения вовсе -> ошибка.
     #[test]
     fn file_without_extension_is_error() {
         let dir = tempfile::tempdir().unwrap();
@@ -312,21 +309,21 @@ mod tests {
         assert!(err.message.contains("Недопустимое"));
     }
 
-    // ── V3: Защита от обхода каталогов (path traversal) ──────────────────────
+    // -- V3: Защита от обхода каталогов (path traversal) ----------------------
 
-    /// V3: Путь вида `../../etc/passwd` должен возвращать ошибку,
-    /// а не читать файлы за пределами разрешённых директорий.
+    /// V3: Путь вида `../../etc/passwd` должен возвращать ошибку, а не читать файлы за
+    /// пределами разрешённых директорий.
     #[test]
     fn path_traversal_is_rejected() {
-        // Создаём две временные директории: разрешённую (search dir) и «жертву».
+        // Создаём две временные директории: разрешённую (search dir) и "жертву".
         let allowed_dir = tempfile::tempdir().unwrap();
         let victim_dir = tempfile::tempdir().unwrap();
 
-        // Кладём целевой файл в директорию «жертву» (не в search_paths).
+        // Кладём целевой файл в директорию "жертву" (не в search_paths).
         fs::write(victim_dir.path().join("secret.takt"), "start S;").unwrap();
 
-        // Строим относительный путь, выходящий за пределы allowed_dir.
-        // Например: "../<victim_basename>/secret.takt"
+        // Строим относительный путь, выходящий за пределы allowed_dir. Например:
+        // "../<victim_basename>/secret.takt"
         let victim_dirname = victim_dir
             .path()
             .file_name()
@@ -339,8 +336,8 @@ mod tests {
         let path = filename_path(&traversal);
 
         let result = read_import_file(&search, &path);
-        // Ожидаем ошибку: файл либо не найден (файловая система не совпадёт),
-        // либо отклонён проверкой обхода каталогов.
+        // Ожидаем ошибку: файл либо не найден (файловая система не совпадёт), либо
+        // отклонён проверкой обхода каталогов.
         match result {
             Err(e) => {
                 // Допустимо: файл не найден или обход отклонён
@@ -366,13 +363,13 @@ mod tests {
         let search = vec![dir.path().to_string_lossy().into_owned()];
         let path = filename_path("sub/ok.takt");
 
-        // Должно успешно читаться — файл внутри search_dir.
+        // Должно успешно читаться - файл внутри search_dir.
         let (content, _) = read_import_file(&search, &path).unwrap();
         assert_eq!(content, "start S;");
     }
 
-    /// Ошибка чтения файла (нет прав) возвращает осмысленный диагностик.
-    /// Этот тест запускается только на Unix, где можно снять права на чтение.
+    /// Ошибка чтения файла (нет прав) возвращает осмысленный диагностик. Этот тест
+    /// запускается только на Unix, где можно снять права на чтение.
     #[cfg(unix)]
     #[test]
     fn unreadable_file_returns_io_error() {

@@ -1,10 +1,11 @@
-//! Интеграционные тесты LSP-функций: SemanticIndex, position_to_offset, node_at_position, hover_info, goto_declaration.
+//! Интеграционные тесты LSP-функций: SemanticIndex, position_to_offset,
+//! node_at_position, hover_info, goto_declaration.
 //!
 //! Тесты разделены на группы:
-//! - `position_to_offset_*` — конвертация LSP-позиции в байтовое смещение
-//! - `node_at_position_*` — поиск семантического узла по LSP-позиции
-//! - `hover_*` — генерация hover-текста с использованием нового алгоритма
-//! - `goto_declaration_*` — переход к декларации элемента
+//! - `position_to_offset_*` - конвертация LSP-позиции в байтовое смещение
+//! - `node_at_position_*` - поиск семантического узла по LSP-позиции
+//! - `hover_*` - генерация hover-текста с использованием нового алгоритма
+//! - `goto_declaration_*` - переход к декларации элемента
 
 #[cfg(feature = "lsp")]
 mod lsp_integration {
@@ -14,9 +15,9 @@ mod lsp_integration {
     use takt_lang::semantic::index::{SemanticIndex, SemanticNodeKind};
     use takt_lang::semantic::tree::construct_model;
 
-    // ── Тесты position_to_offset ──────────────────────────────────────────────
+    // -- Тесты position_to_offset ----------------------------------------------
 
-    /// Первая строка, нулевой столбец → байт 0.
+    /// Первая строка, нулевой столбец -> байт 0.
     #[test]
     fn position_to_offset_first_char() {
         let src = "var x: bit := false;";
@@ -27,7 +28,7 @@ mod lsp_integration {
         );
     }
 
-    /// Первая строка, 4-й символ → байт 4.
+    /// Первая строка, 4-й символ -> байт 4.
     #[test]
     fn position_to_offset_middle_of_first_line() {
         let src = "var x: bit := false;";
@@ -38,11 +39,11 @@ mod lsp_integration {
         );
     }
 
-    /// Вторая строка: после "\n" = 1 байт, символ 2 → байт 1 + 2 = 3.
+    /// Вторая строка: после "\n" = 1 байт, символ 2 -> байт 1 + 2 = 3.
     #[test]
     fn position_to_offset_second_line() {
         let src = "ab\ncd";
-        // "ab\n" = 3 байта, символ 1 на строке 1 → байт 4
+        // "ab\n" = 3 байта, символ 1 на строке 1 -> байт 4
         assert_eq!(
             position_to_offset(src, Position::new(1, 1)),
             Some(4),
@@ -50,7 +51,7 @@ mod lsp_integration {
         );
     }
 
-    /// Несуществующая строка → None.
+    /// Несуществующая строка -> None.
     #[test]
     fn position_to_offset_nonexistent_line() {
         let src = "hello";
@@ -61,11 +62,11 @@ mod lsp_integration {
         );
     }
 
-    /// Символ за концом строки → байт конца строки.
+    /// Символ за концом строки -> байт конца строки.
     #[test]
     fn position_to_offset_past_end_of_line() {
         let src = "hi";
-        // Строка "hi" = 2 символа; character=99 → clamp до конца строки → байт 2
+        // Строка "hi" = 2 символа; character=99 -> clamp до конца строки -> байт 2
         assert_eq!(
             position_to_offset(src, Position::new(0, 99)),
             Some(2),
@@ -85,7 +86,7 @@ mod lsp_integration {
         );
     }
 
-    // ── Тесты node_at_position ────────────────────────────────────────────────
+    // -- Тесты node_at_position ------------------------------------------------
 
     /// Вспомогательная функция: парсит, строит модель, возвращает её.
     fn make_model(src: &str) -> std::rc::Rc<std::cell::RefCell<takt_lang::semantic::ModelNode>> {
@@ -93,14 +94,13 @@ mod lsp_integration {
         construct_model(&ast, None, &[]).expect("ошибка семантики")
     }
 
-    /// Курсор на объявлении переменной → возвращает Variable.
+    /// Курсор на объявлении переменной -> возвращает Variable.
     #[test]
     fn node_at_position_variable_declaration() {
-        //           0         1
-        //           0123456789012345678
+        // 0 1 0123456789012345678
         let src = "var counter: bit := false;";
         let model = make_model(src);
-        // Позиция 4 — символ 'c' в "counter"
+        // Позиция 4 - символ 'c' в "counter"
         let node = node_at_position(src, Position::new(0, 4), &model);
         assert!(node.is_some(), "должен найти переменную");
         let node = node.unwrap();
@@ -108,18 +108,18 @@ mod lsp_integration {
         assert_eq!(node.kind, SemanticNodeKind::Variable);
     }
 
-    /// Курсор на ключевом слове → None (не объявление).
+    /// Курсор на ключевом слове -> None (не объявление).
     #[test]
     fn node_at_position_on_keyword_returns_none() {
         let src = "var x: bit := false;";
         let model = make_model(src);
-        // Позиция 0 — символ 'v' в "var" (ключевое слово)
-        // Если Location включает всё объявление, может найти переменную;
-        // если нет — None. В любом случае не должно паниковать.
+        // Позиция 0 - символ 'v' в "var" (ключевое слово) Если Location включает всё
+        // объявление, может найти переменную; если нет - None. В любом случае не должно
+        // паниковать.
         let _ = node_at_position(src, Position::new(0, 0), &model);
     }
 
-    /// Курсор за пределами файла → None.
+    /// Курсор за пределами файла -> None.
     #[test]
     fn node_at_position_past_end_of_file() {
         let src = "var x: bit := false;";
@@ -128,14 +128,13 @@ mod lsp_integration {
         assert!(node.is_none(), "позиция за концом файла → None");
     }
 
-    /// Курсор на объявлении константы → возвращает Const.
+    /// Курсор на объявлении константы -> возвращает Const.
     #[test]
     fn node_at_position_const_declaration() {
-        //           0         1         2
-        //           012345678901234567890123456789
+        // 0 1 2 012345678901234567890123456789
         let src = "const LIMIT: bit := true;";
         let model = make_model(src);
-        // Позиция 6 — символ 'L' в "LIMIT"
+        // Позиция 6 - символ 'L' в "LIMIT"
         let node = node_at_position(src, Position::new(0, 6), &model);
         assert!(node.is_some(), "должен найти константу");
         let node = node.unwrap();
@@ -143,14 +142,13 @@ mod lsp_integration {
         assert_eq!(node.kind, SemanticNodeKind::Const);
     }
 
-    /// Курсор на объявлении состояния → возвращает StartState или State.
+    /// Курсор на объявлении состояния -> возвращает StartState или State.
     #[test]
     fn node_at_position_state_declaration() {
-        //           0         1
-        //           0123456789012345
+        // 0 1 0123456789012345
         let src = "start Idle; state Run;";
         let model = make_model(src);
-        // Позиция 6 — символ 'I' в "Idle"
+        // Позиция 6 - символ 'I' в "Idle"
         let node = node_at_position(src, Position::new(0, 6), &model);
         assert!(node.is_some(), "должен найти состояние Idle");
         let node = node.unwrap();
@@ -158,14 +156,13 @@ mod lsp_integration {
         assert_eq!(node.kind, SemanticNodeKind::StartState);
     }
 
-    /// Курсор на объявлении псевдонима типа → возвращает TypeAlias.
+    /// Курсор на объявлении псевдонима типа -> возвращает TypeAlias.
     #[test]
     fn node_at_position_type_alias() {
-        //           0         1
-        //           01234567890123456789
+        // 0 1 01234567890123456789
         let src = "type Byte = [bit;8];";
         let model = make_model(src);
-        // Позиция 5 — символ 'B' в "Byte"
+        // Позиция 5 - символ 'B' в "Byte"
         let node = node_at_position(src, Position::new(0, 5), &model);
         assert!(node.is_some(), "должен найти псевдоним типа");
         let node = node.unwrap();
@@ -173,12 +170,12 @@ mod lsp_integration {
         assert_eq!(node.kind, SemanticNodeKind::TypeAlias);
     }
 
-    /// Курсор на объявлении условия → возвращает Condition.
+    /// Курсор на объявлении условия -> возвращает Condition.
     #[test]
     fn node_at_position_condition() {
         let src = "cond Ready = true;";
         let model = make_model(src);
-        // Позиция 5 — символ 'R' в "Ready"
+        // Позиция 5 - символ 'R' в "Ready"
         let node = node_at_position(src, Position::new(0, 5), &model);
         assert!(node.is_some(), "должен найти условие");
         let node = node.unwrap();
@@ -186,12 +183,12 @@ mod lsp_integration {
         assert_eq!(node.kind, SemanticNodeKind::Condition);
     }
 
-    /// Курсор на объявлении перечисления → возвращает Enum.
+    /// Курсор на объявлении перечисления -> возвращает Enum.
     #[test]
     fn node_at_position_enum() {
         let src = "model M { enum Color { Red, Green } start S; }";
         let model = make_model(src);
-        // Позиция 15 — символ 'C' в "Color"
+        // Позиция 15 - символ 'C' в "Color"
         let node = node_at_position(src, Position::new(0, 15), &model);
         assert!(node.is_some(), "должен найти перечисление");
         let node = node.unwrap();
@@ -199,12 +196,12 @@ mod lsp_integration {
         assert_eq!(node.kind, SemanticNodeKind::Enum);
     }
 
-    /// Курсор на объявлении функции → возвращает Function или ExternFunction.
+    /// Курсор на объявлении функции -> возвращает Function или ExternFunction.
     #[test]
     fn node_at_position_extern_function() {
         let src = "extern fn send(data: bit);";
         let model = make_model(src);
-        // Позиция 10 — символ 's' в "send"
+        // Позиция 10 - символ 's' в "send"
         let node = node_at_position(src, Position::new(0, 10), &model);
         assert!(node.is_some(), "должен найти extern fn");
         let node = node.unwrap();
@@ -212,12 +209,12 @@ mod lsp_integration {
         assert_eq!(node.kind, SemanticNodeKind::ExternFunction);
     }
 
-    /// Курсор на объявлении именованной модели → возвращает Model.
+    /// Курсор на объявлении именованной модели -> возвращает Model.
     #[test]
     fn node_at_position_model() {
         let src = "model Blinker { start On; state Off; }";
         let model = make_model(src);
-        // Позиция 6 — символ 'B' в "Blinker"
+        // Позиция 6 - символ 'B' в "Blinker"
         let node = node_at_position(src, Position::new(0, 6), &model);
         assert!(node.is_some(), "должен найти модель");
         let node = node.unwrap();
@@ -231,29 +228,29 @@ mod lsp_integration {
         let src = "var alpha: bit := false;\nconst BETA: bit := true;\nstart Gamma;";
         let model = make_model(src);
 
-        // Строка 0, позиция 4 — 'a' в "alpha"
+        // Строка 0, позиция 4 - 'a' в "alpha"
         let n0 = node_at_position(src, Position::new(0, 4), &model);
         assert!(n0.is_some());
         assert_eq!(n0.unwrap().name, "alpha");
 
-        // Строка 1, позиция 6 — 'B' в "BETA"
+        // Строка 1, позиция 6 - 'B' в "BETA"
         let n1 = node_at_position(src, Position::new(1, 6), &model);
         assert!(n1.is_some());
         assert_eq!(n1.unwrap().name, "BETA");
 
-        // Строка 2, позиция 6 — 'G' в "Gamma"
+        // Строка 2, позиция 6 - 'G' в "Gamma"
         let n2 = node_at_position(src, Position::new(2, 6), &model);
         assert!(n2.is_some());
         assert_eq!(n2.unwrap().name, "Gamma");
     }
 
-    // ── Тесты hover с использованием нового алгоритма ────────────────────────
+    // -- Тесты hover с использованием нового алгоритма ------------------------
 
     /// Hover на объявлении переменной возвращает корректный тип.
     #[test]
     fn hover_variable_via_position_index() {
         let src = "var speed: bit := false; start S;";
-        // Позиция 4 — 's' в "speed"
+        // Позиция 4 - 's' в "speed"
         let h = hover_info(src, Position::new(0, 4));
         assert!(h.is_some(), "hover должен найти переменную");
         let h = h.unwrap();
@@ -311,11 +308,10 @@ mod lsp_integration {
     /// Hover на объявлении перечисления содержит варианты.
     #[test]
     fn hover_enum_via_position_index() {
-        // Перечисление на верхнем уровне (в корневой модели)
-        //           0         1         2         3         4
-        //           01234567890123456789012345678901234567890
+        // Перечисление на верхнем уровне (в корневой модели) 0 1 2 3 4
+        // 01234567890123456789012345678901234567890
         let src = "enum Status { Active = 0, Idle = 1 } start S;";
-        // Позиция 5 — символ 'S' в "Status"
+        // Позиция 5 - символ 'S' в "Status"
         let h = hover_info(src, Position::new(0, 5));
         assert!(h.is_some(), "hover должен найти перечисление");
         let h = h.unwrap();
@@ -365,12 +361,12 @@ mod lsp_integration {
         }
     }
 
-    /// Hover на использовании переменной (не объявлении) — резервный поиск по имени.
+    /// Hover на использовании переменной (не объявлении) - резервный поиск по имени.
     #[test]
     fn hover_variable_usage_fallback_search() {
         // "var x" на строке 0; использование "x" в условии на строке 1
         let src = "var x: bit := false;\ncond C = x = true;\nstart S;";
-        // Позиция (1, 9) — 'x' в условии (использование)
+        // Позиция (1, 9) - 'x' в условии (использование)
         let h = hover_info(src, Position::new(1, 9));
         // Резервный поиск должен найти переменную "x"
         assert!(
@@ -379,7 +375,7 @@ mod lsp_integration {
         );
     }
 
-    /// Hover в пустом файле → None.
+    /// Hover в пустом файле -> None.
     #[test]
     fn hover_empty_file_returns_none() {
         let h = hover_info("", Position::new(0, 0));
@@ -474,15 +470,14 @@ start Main = Robot;
         }
     }
 
-    // ── Тесты goto_declaration ────────────────────────────────────────────────
+    // -- Тесты goto_declaration ------------------------------------------------
 
-    /// Курсор на объявлении переменной → возвращает тот же диапазон (самоссылка).
+    /// Курсор на объявлении переменной -> возвращает тот же диапазон (самоссылка).
     #[test]
     fn goto_declaration_variable_self() {
-        //           0         1         2
-        //           0123456789012345678901234
+        // 0 1 2 0123456789012345678901234
         let src = "var counter: bit := false;";
-        // Позиция 4 — символ 'c' в "counter"
+        // Позиция 4 - символ 'c' в "counter"
         let range = goto_declaration(src, Position::new(0, 4));
         assert!(
             range.is_some(),
@@ -492,11 +487,11 @@ start Main = Robot;
         assert_eq!(range.start.line, 0, "декларация переменной на строке 0");
     }
 
-    /// Курсор на объявлении функции → возвращает диапазон этой же функции.
+    /// Курсор на объявлении функции -> возвращает диапазон этой же функции.
     #[test]
     fn goto_declaration_function_self() {
         let src = "extern fn send(data: bit); start S;";
-        // Позиция 10 — символ 's' в "send"
+        // Позиция 10 - символ 's' в "send"
         let range = goto_declaration(src, Position::new(0, 10));
         assert!(
             range.is_some(),
@@ -506,11 +501,11 @@ start Main = Robot;
         assert_eq!(range.start.line, 0, "декларация функции на строке 0");
     }
 
-    /// Курсор на объявлении состояния → возвращает диапазон этого же состояния.
+    /// Курсор на объявлении состояния -> возвращает диапазон этого же состояния.
     #[test]
     fn goto_declaration_state_self() {
         let src = "start Idle; state Moving;";
-        // Позиция 6 — символ 'I' в "Idle"
+        // Позиция 6 - символ 'I' в "Idle"
         let range = goto_declaration(src, Position::new(0, 6));
         assert!(
             range.is_some(),
@@ -520,15 +515,14 @@ start Main = Robot;
         assert_eq!(range.start.line, 0, "декларация состояния на строке 0");
     }
 
-    /// Курсор на ref-переходе → возвращает диапазон объявления целевого состояния.
+    /// Курсор на ref-переходе -> возвращает диапазон объявления целевого состояния.
     ///
-    /// Пример: `ref Moving;` внутри состояния → декларация `state Moving;`.
+    /// Пример: `ref Moving;` внутри состояния -> декларация `state Moving;`.
     #[test]
     fn goto_declaration_reference_resolves_to_state() {
-        // Строка 0: "start Idle { ref Moving; }"
-        // Строка 1: "state Moving;"
+        // Строка 0: "start Idle { ref Moving; }" Строка 1: "state Moving;"
         let src = "start Idle { ref Moving; }\nstate Moving;";
-        // Позиция (0, 17) — символ 'M' в "ref Moving"
+        // Позиция (0, 17) - символ 'M' в "ref Moving"
         let range = goto_declaration(src, Position::new(0, 17));
         assert!(
             range.is_some(),
@@ -542,20 +536,17 @@ start Main = Robot;
         );
     }
 
-    /// Курсор на переменной в условии перехода → декларация этой переменной.
+    /// Курсор на переменной в условии перехода -> декларация этой переменной.
     ///
-    /// Пример: `ref Run: flag;` где `flag` — ReferenceCondition → декларация `var flag`.
+    /// Пример: `ref Run: flag;` где `flag` - ReferenceCondition -> декларация `var
+    /// flag`.
     #[test]
     fn goto_declaration_reference_condition_resolves_to_variable() {
-        // Строка 0: "var flag: bit = false;"
-        // Строка 1: "start Idle;"
-        // Строка 2: "state Run;"
-        // Строка 3: "start Idle { ref Run: flag; }"
+        // Строка 0: "var flag: bit = false;" Строка 1: "start Idle;" Строка 2: "state
+        // Run;" Строка 3: "start Idle { ref Run: flag; }"
         let src = "var flag: bit := false;\nstart Idle;\nstate Run;\nstart Idle { ref Run: flag; }";
-        // Строка 3: "start Idle { ref Run: flag; }"
-        //            0         1         2
-        //            0123456789012345678901234567890
-        // "flag" начинается с позиции 22 на строке 3
+        // Строка 3: "start Idle { ref Run: flag; }" 0 1 2
+        // 0123456789012345678901234567890 "flag" начинается с позиции 22 на строке 3
         let range = goto_declaration(src, Position::new(3, 22));
         assert!(
             range.is_some(),
@@ -569,28 +560,28 @@ start Main = Robot;
         );
     }
 
-    /// Курсор вне идентификаторов → None.
+    /// Курсор вне идентификаторов -> None.
     #[test]
     fn goto_declaration_outside_node_returns_none() {
         let src = "var x: bit := false;\nstart S;";
-        // Позиция (0, 0) — символ 'v' в "var" (ключевое слово, не идентификатор объявления)
-        // Может вернуть Some (если Location включает всё объявление) или None.
-        // Главное — не паниковать.
+        // Позиция (0, 0) - символ 'v' в "var" (ключевое слово, не идентификатор
+        // объявления) Может вернуть Some (если Location включает всё объявление) или
+        // None. Главное - не паниковать.
         let _ = goto_declaration(src, Position::new(0, 0));
 
-        // Позиция за пределами файла → точно None
+        // Позиция за пределами файла -> точно None
         let range = goto_declaration(src, Position::new(99, 0));
         assert!(range.is_none(), "позиция за пределами файла → None");
     }
 
-    /// Пустой файл → None.
+    /// Пустой файл -> None.
     #[test]
     fn goto_declaration_empty_file_returns_none() {
         let range = goto_declaration("", Position::new(0, 0));
         assert!(range.is_none(), "пустой файл → None");
     }
 
-    // ── I7: goto_declaration_with_paths ──────────────────────────────────────
+    // -- I7: goto_declaration_with_paths --------------------------------------
 
     /// I7: декларация переменной в текущем файле через goto_declaration_with_paths.
     #[test]
@@ -598,7 +589,7 @@ start Main = Robot;
         use takt_lang::lsp::goto_declaration_with_paths;
 
         let src = "var counter: [bit;8] := 0;\nstart S;";
-        // Позиция 4 — символ 'c' в "counter"
+        // Позиция 4 - символ 'c' в "counter"
         let loc = goto_declaration_with_paths(src, Position::new(0, 4), &[]);
         assert!(
             loc.is_some(),
@@ -618,7 +609,7 @@ start Main = Robot;
         use takt_lang::lsp::goto_declaration_with_paths;
 
         let src = "start S;\nstate Ready;";
-        // Позиция (1, 6) — символ 'R' в "Ready"
+        // Позиция (1, 6) - символ 'R' в "Ready"
         let loc = goto_declaration_with_paths(src, Position::new(1, 6), &[]);
         assert!(
             loc.is_some(),
@@ -636,7 +627,7 @@ start Main = Robot;
         assert!(loc.is_none(), "позиция за пределами файла → None");
     }
 
-    /// I7: пустой файл → None.
+    /// I7: пустой файл -> None.
     #[test]
     fn i7_goto_declaration_empty_file() {
         use takt_lang::lsp::goto_declaration_with_paths;
@@ -645,7 +636,7 @@ start Main = Robot;
         assert!(loc.is_none(), "пустой файл → None");
     }
 
-    // ── I8: индексация локальных переменных в enter/exit/always ─────────────
+    // -- I8: индексация локальных переменных в enter/exit/always -------------
 
     /// I8: локальная переменная в `always`-блоке доступна через SemanticIndex.
     #[test]
@@ -655,8 +646,8 @@ start Main = Robot;
         let model = construct_model(&ast, None, &[]).unwrap();
         let index = SemanticIndex::build(&model);
 
-        // Находим позицию имени "local_x" в "var local_x: ..."
-        // "start S;\nalways { var local_x: " — "local_x" начинается с байта 19
+        // Находим позицию имени "local_x" в "var local_x: ..." "start S;\nalways { var
+        // local_x: " - "local_x" начинается с байта 19
         let offset = src
             .find("local_x")
             .expect("local_x должен быть в источнике");
@@ -748,7 +739,8 @@ start Main = Robot;
         assert_eq!(node.kind, SemanticNodeKind::LocalVar);
     }
 
-    /// I8: тестовый файл local_var_in_blocks.takt — все локальные переменные индексируются.
+    /// I8: тестовый файл local_var_in_blocks.takt - все локальные переменные
+    /// индексируются.
     #[test]
     fn i8_file_local_vars_indexed() {
         let src = std::fs::read_to_string("tests/data/lsp/local_var_in_blocks.takt")
@@ -778,7 +770,7 @@ start Main = Robot;
         }
     }
 
-    /// I7: кросс-файловый переход — объявление модели из импортируемого файла.
+    /// I7: кросс-файловый переход - объявление модели из импортируемого файла.
     #[test]
     fn i7_goto_declaration_cross_file_model() {
         use takt_lang::lsp::goto_declaration_with_paths;
@@ -791,17 +783,17 @@ start Main = Robot;
 
         // Исходный файл с импортом
         let src = r#"import "ping.takt"; start Main;"#;
-        // Позиция 7 — символ '"' (начало строки импорта) — за пределами идентификатора
+        // Позиция 7 - символ '"' (начало строки импорта) - за пределами идентификатора
         // Проверяем что функция не паникует при отсутствии узла
         let _ =
             goto_declaration_with_paths(src, Position::new(0, 7), std::slice::from_ref(&dir_str));
 
-        // Нет паники — тест прошёл
-        // (полное кросс-файловое разрешение зависит от наличия идентификатора в индексе)
+        // Нет паники - тест прошёл (полное кросс-файловое разрешение зависит от наличия
+        // идентификатора в индексе)
     }
 }
 
-// Группы diagnostic/formatting/multifile — в подмодуле (фича 0088).
+// Группы diagnostic/formatting/multifile - в подмодуле.
 #[cfg(feature = "lsp")]
 #[path = "lsp_tests/more.rs"]
 mod more;

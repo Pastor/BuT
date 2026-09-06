@@ -1,12 +1,12 @@
-//! Периодические блоки `every` цели C (фича 0134-09).
+//! Периодические блоки `every` цели C.
 //!
-//! `every Nms { … }` — сахар над механизмом времени (правило 12 ADR 0134): тело
-//! исполняется, пока автомат в состоянии-владельце, каждые `N` единиц профиля.
-//! Скрытое состояние — аккумулятор `takt_every<N>` (поглощённое срабатываниями
-//! `elapsed`-время); срабатывание: `elapsed - consumed >= период` → тело,
-//! `consumed += период`. `elapsed` берётся из ТОЙ ЖЕ инфраструктуры, что и
-//! длительностный `after`: метка входа `takt_entry_ms` (профиль «часы») или
-//! счётчик `takt_dwell` (профиль «такты»), поэтому `c_time` уже завёл её поля.
+//! `every Nms { ... }` - сахар над механизмом времени: тело исполняется, пока автомат в
+//! состоянии-владельце, каждые `N` единиц профиля. Скрытое состояние - аккумулятор
+//! `takt_every<N>` (поглощённое срабатываниями `elapsed`-время); срабатывание: `elapsed -
+//! consumed >= период` -> тело, `consumed += период`. `elapsed` берётся из той же
+//! инфраструктуры, что и длительностный `after`: метка входа `takt_entry_ms` (профиль
+//! "часы") или счётчик `takt_dwell` (профиль "такты"), поэтому `c_time` уже завёл её
+//! поля.
 
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::c::c_expr::condition::{DWELL_FIELD, ENTRY_MS_FIELD};
@@ -20,7 +20,7 @@ use crate::semantic::{ModelNode, StatementNode};
 
 /// Ссылка на `every`-блок с глобальным индексом в модели.
 struct EveryRef<'a> {
-    /// Глобальный индекс (детерминирован — состояния в `BTreeMap`-порядке).
+    /// Глобальный индекс (детерминирован - состояния в `BTreeMap`-порядке).
     idx: usize,
     /// Имя состояния-владельца.
     state: String,
@@ -32,8 +32,8 @@ struct EveryRef<'a> {
 
 /// Перечисляет `every`-блоки модели с глобальным индексом.
 ///
-/// Порядок — обход `states` (`BTreeMap`, детерминизм 0048) и блоков состояния;
-/// индекс сквозной, поэтому имя поля `takt_every<idx>` уникально в структуре.
+/// Порядок - обход `states` (`BTreeMap`, детерминизм 0048) и блоков состояния; индекс
+/// сквозной, поэтому имя поля `takt_every<idx>` уникально в структуре.
 fn every_blocks(model: &ModelNode) -> Vec<EveryRef<'_>> {
     let mut out = Vec::new();
     let mut idx = 0usize;
@@ -60,8 +60,8 @@ fn field(idx: usize) -> String {
     format!("takt_every{idx}")
 }
 
-/// Ширина аккумулятора: делит её с меткой/счётчиком времени (одно место —
-/// `c_time`), иначе `elapsed - consumed` переполнился бы раньше срабатывания.
+/// Ширина аккумулятора: делит её с меткой/счётчиком времени (одно место - `c_time`),
+/// иначе `elapsed - consumed` переполнился бы раньше срабатывания.
 fn bits(map: &CMap, model: &ModelNode) -> Result<u8, Diagnostic> {
     match map.time_profile() {
         TimeProfile::Clock => c_time::clock_marker_bits(map),
@@ -72,7 +72,7 @@ fn bits(map: &CMap, model: &ModelNode) -> Result<u8, Diagnostic> {
     }
 }
 
-/// Печатает поля-аккумуляторы `every` в структуру модели (фича 0134-09).
+/// Печатает поля-аккумуляторы `every` в структуру модели.
 pub(super) fn emit_fields(
     printer: &mut Printer,
     map: &CMap,
@@ -89,20 +89,20 @@ pub(super) fn emit_fields(
     Ok(())
 }
 
-/// Обнуляет аккумуляторы `every` — вызывается при входе в состояние и в `_init`
-/// (фича 0134-09). Отсчёт периода ведётся заново от входа, как и `elapsed`.
+/// Обнуляет аккумуляторы `every` - вызывается при входе в состояние и в `_init`. Отсчёт
+/// периода ведётся заново от входа, как и `elapsed`.
 pub(super) fn emit_reset(printer: &mut Printer, model: &ModelNode) {
     for e in every_blocks(model) {
         printer.ident(&format!("model->{} = 0;", field(e.idx))).nl();
     }
 }
 
-/// Печатает периодические блоки `every` состояния `state_local` в теле такта
-/// (фича 0134-09), после `always`.
+/// Печатает периодические блоки `every` состояния `state_local` в теле такта, после
+/// `always`.
 ///
-/// Гейт читает `elapsed` из инфраструктуры длительностного `after`: разность
-/// `now_ms() - takt_entry_ms` (профиль «часы») либо счётчик `takt_dwell` (профиль
-/// «такты»). Арифметика беззнаковая с усечением к ширине поля — как у `after`.
+/// Проверка читает `elapsed` из инфраструктуры длительностного `after`: разность `now_ms() -
+/// takt_entry_ms` (профиль "часы") либо счётчик `takt_dwell` (профиль "такты").
+/// Арифметика беззнаковая с усечением к ширине поля - как у `after`.
 pub(super) fn emit_state_body(
     printer: &mut Printer,
     map: &CMap,
@@ -146,9 +146,9 @@ pub(super) fn emit_state_body(
 
 /// Выражение `elapsed` (прошло с входа) в единицах профиля.
 ///
-/// Совпадает с тем, что печатает `after_condition`: «часы» — разность
-/// `now_ms() - takt_entry_ms` (HAL на корне — `model`, у под-модели — `main`);
-/// «такты» — счётчик `takt_dwell`.
+/// Совпадает с тем, что печатает `after_condition`: "часы" - разность `now_ms() -
+/// takt_entry_ms` (HAL на корне - `model`, у под-модели - `main`); "такты" - счётчик
+/// `takt_dwell`.
 fn elapsed_expr(map: &CMap, owner: &Element, b: u8) -> Result<String, Diagnostic> {
     match map.time_profile() {
         TimeProfile::Ticks { .. } => Ok(format!("model->{DWELL_FIELD}")),

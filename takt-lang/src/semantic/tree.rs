@@ -1,11 +1,11 @@
 //! Построение семантического дерева из АСД языка Takt.
 //!
 //! Основные функции модуля:
-//! - [`construct_model`] — главная точка входа, строит [`ModelNode`] из [`Model`].
-//! - [`construct_states`] — извлекает состояния и разрешает ссылки между ними.
-//! - [`construct_context_model`] — строит контекст (вложенные модели) для модели.
-//! - [`construct_context_state`] — строит контекст для состояния (заглушка).
-//! - [`construct_condition`] — преобразует условие АСД в семантическое условие.
+//! - [`construct_model`] - главная точка входа, строит [`ModelNode`] из [`Model`].
+//! - [`construct_states`] - извлекает состояния и разрешает ссылки между ними.
+//! - [`construct_context_model`] - строит контекст (вложенные модели) для модели.
+//! - [`construct_context_state`] - строит контекст для состояния (заглушка).
+//! - [`construct_condition`] - преобразует условие АСД в семантическое условие.
 
 use crate::diagnostics::{Diagnostic, FileTable, Location};
 use crate::parse;
@@ -37,7 +37,8 @@ use std::rc::Rc;
 
 /// Извлекает имя из опционального [`Identifier`].
 ///
-/// Возвращает [`Diagnostic`]-ошибку с указанной позицией, если идентификатор отсутствует.
+/// Возвращает [`Diagnostic`]-ошибку с указанной позицией, если идентификатор
+/// отсутствует.
 #[inline]
 fn extract_name(id: Option<Identifier>, loc: Location) -> Result<String, Diagnostic> {
     if let Some(id) = id {
@@ -49,9 +50,9 @@ fn extract_name(id: Option<Identifier>, loc: Location) -> Result<String, Diagnos
 
 /// Проверяет, не создаёт ли импорт файла `new_file` цикл в текущем стеке обработки.
 ///
-/// Если `new_file` уже присутствует в `import_stack`, значит мы столкнулись
-/// с циклической зависимостью. В этом случае возвращается [`Diagnostic`]-ошибка
-/// с цепочкой вида `a.takt → b.takt → a.takt`.
+/// Если `new_file` уже присутствует в `import_stack`, значит мы столкнулись с
+/// циклической зависимостью. В этом случае возвращается [`Diagnostic`]-ошибка с
+/// цепочкой вида `a.takt -> b.takt -> a.takt`.
 ///
 /// # Примеры цикла
 ///
@@ -75,11 +76,11 @@ fn check_import_cycle(
     Ok(())
 }
 
-/// Путь файла, чьи импорты сейчас обрабатываются (фича 0055).
+/// Путь файла, чьи импорты сейчас обрабатываются.
 ///
-/// Вершина стека импортов, а если он пуст (импорт из корневого файла) — корень
-/// из реестра. Реестр-однодневка (`construct_model` без путей) корня не знает —
-/// тогда `None`.
+/// Вершина стека импортов, а если он пуст (импорт из корневого файла) - корень из
+/// реестра. Реестр-однодневка (`construct_model` без путей) корня не знает - тогда
+/// `None`.
 fn importer_path<'a>(import_stack: &'a [String], files: &'a FileTable) -> Option<&'a str> {
     import_stack
         .last()
@@ -87,27 +88,11 @@ fn importer_path<'a>(import_stack: &'a [String], files: &'a FileTable) -> Option
         .or_else(|| files.path(0))
 }
 
-/// Пути поиска импорта с добавленным каталогом **импортирующего файла**
-/// (фича 0055).
+/// Пути поиска импорта с добавленным каталогом **импортирующего файла**.
 ///
-/// Прежде импорт искался **только** по явным `-I`: файл, лежащий рядом с
-/// импортирующим, не находился — даже если компилятор запущен из его каталога.
 /// `import "lib.takt";` в `main.takt` требовал `-I <каталог main.takt>`, иначе
-/// `SE-013`. Это расходилось с интуицией (`#include "x.h"`, Python, JS ищут
-/// рядом) и делало `import` непригодным без настройки.
-///
-/// # Почему каталог добавляется В КОНЕЦ
-///
-/// Правка **строго аддитивна** (правило 11): пути из `-I` перебираются первыми,
-/// поэтому там, где импорт разрешался раньше, найдётся **тот же** файл.
-/// Меняется только случай, где раньше была ошибка. Поставь каталог первым — и
-/// проект с `-I lib`, где рядом с моделью лежит одноимённый файл, начал бы брать
-/// другой файл, молча сменив смысл сборки.
-///
-/// Каталог берётся у **импортирующего** файла: у вершины стека импортов, а если
-/// стек пуст (импорт из корневого файла) — у корня из реестра. Реестр-однодневка
-/// (`construct_model` без путей) корня не знает — тогда неявного пути нет, и
-/// поведение прежнее.
+/// `SE-013`. Это расходилось с интуицией (`#include "x.h"`, Python, JS ищут рядом) и
+/// делало `import` непригодным без настройки.
 fn search_paths_with_importer_dir(
     search_paths: &[String],
     import_stack: &[String],
@@ -118,7 +103,7 @@ fn search_paths_with_importer_dir(
         .map(std::path::Path::new)
         .and_then(std::path::Path::parent)
     {
-        // Путь без каталога (`main.takt`) даёт пустого родителя — это «здесь».
+        // Путь без каталога (`main.takt`) даёт пустого родителя - это "здесь".
         let dir = if parent.as_os_str().is_empty() {
             ".".to_string()
         } else {
@@ -131,13 +116,13 @@ fn search_paths_with_importer_dir(
     paths
 }
 
-/// Отмечает диагностику из импортированного файла местом её `import` (фича 0055).
+/// Отмечает диагностику из импортированного файла местом её `import`.
 ///
-/// Заметка ставится **на каждом** уровне всплытия, поэтому у ошибки из
-/// `top → mid → deep` их две: `deep` импортирован в `mid`, `mid` — в `top`. Это и
-/// есть цепочка импорта — то, что показывает `rustc`, и то, по чему редактор
-/// находит место в **открытом** документе: собственные координаты ошибки
-/// указывают в текст чужого файла.
+/// Заметка ставится **на каждом** уровне всплытия, поэтому у ошибки из `top -> mid ->
+/// deep` их две: `deep` импортирован в `mid`, `mid` - в `top`. Это и есть цепочка
+/// импорта - то, что показывает `rustc`, и то, по чему редактор находит место в
+/// **открытом** документе: собственные координаты ошибки указывают в текст чужого
+/// файла.
 fn note_imported_here(
     d: Diagnostic,
     import_loc: Location,
@@ -146,33 +131,32 @@ fn note_imported_here(
 ) -> Diagnostic {
     let what = crate::semantic::import::short_name(filename);
     let message = match importer.map(crate::semantic::import::short_name) {
-        // Сообщение самодостаточно: `taktc` печатает текст заметки, но не её
-        // позицию, поэтому «импортировано здесь» без имён не сказало бы ничего.
+        // Сообщение самодостаточно: `taktc` печатает текст заметки, но не её позицию,
+        // поэтому "импортировано здесь" без имён не сказало бы ничего.
         Some(where_) => format!("'{what}' импортирован в '{where_}'"),
         None => format!("'{what}' импортирован здесь"),
     };
     d.with_note(import_loc, message)
 }
 
-/// Помечает узел как пришедший через `import` (фича 0051, R2).
+/// Помечает узел как пришедший через `import`.
 ///
-/// Вызывается в **каждой** из трёх точек вставки импорта — `Plain`,
-/// `GlobalSymbol` и `Rename`: иначе импортированная модель неотличима от
-/// локальной вложенной (обе живут в одном [`ModelNode::models`]), и область
-/// проверки `taktc verify --scope file` молча пропустит форму, которую забыли.
+/// Вызывается в **каждой** из трёх точек вставки импорта - `Plain`, `GlobalSymbol` и
+/// `Rename`: иначе импортированная модель неотличима от локальной вложенной (обе живут
+/// в одном [`ModelNode::models`]), и область проверки `taktc verify --scope file` молча
+/// пропустит форму, которую забыли.
 ///
 /// Для `Rename` узел приходит `Rc::clone`-ом чужого дерева. Гонки за него нет:
-/// дерево-источник дропается сразу после блока, а один и тот же файл при
-/// повторном импорте разбирается заново (кэша импортов нет).
+/// дерево-источник дропается сразу после блока, а один и тот же файл при повторном
+/// импорте разбирается заново (кэша импортов нет).
 fn mark_imported(model: Rc<RefCell<ModelNode>>) -> Rc<RefCell<ModelNode>> {
     model.borrow_mut().origin = ModelOrigin::Imported;
     model
 }
 
-/// `specialize` — режим `--parameters=specialize` (фича 0185). Стадия сама им не
-/// пользуется, но **передаёт** подключаемым файлам: они строятся тем же
-/// конвейером (фича 0296), и режим сборки обязан быть у них тот же, иначе
-/// специализация обходит библиотеку стороной.
+/// `specialize` - режим `--parameters=specialize`. Стадия сама им не пользуется, но
+/// **передаёт** подключаемым файлам: они строятся тем же конвейером, и режим сборки
+/// обязан быть у них тот же, иначе специализация обходит библиотеку стороной.
 pub(super) fn construct_model_stage0(
     model: &Model,
     upper: Option<Rc<RefCell<ModelNode>>>,
@@ -197,7 +181,7 @@ pub(super) fn construct_model_stage0(
     let model_node = Rc::new(RefCell::new(model_node));
     let mut models = BTreeMap::new();
     let mut variables = BTreeMap::new();
-    // Параметры модели — в порядке объявления (фича 0185).
+    // Параметры модели - в порядке объявления.
     let mut parameters: Vec<ParameterNode> = Vec::new();
     let mut conditions = BTreeMap::new();
     let mut named_blocks = Vec::new();
@@ -222,11 +206,11 @@ pub(super) fn construct_model_stage0(
         }
     }
 
-    // Типы модели готовятся ОДНИМ шагом (фича 0352): цикл структур, занятие
-    // имён и разрешение псевдонимов — см. `type_registry::prepare_types`.
+    // Типы модели готовятся одним шагом: цикл структур, занятие имён и разрешение
+    // псевдонимов - см.
     crate::semantic::type_registry::prepare_types(&model_node, &model.elements)?;
 
-    // Каталог импортирующего файла — неявный путь поиска (фича 0055).
+    // Каталог импортирующего файла - неявный путь поиска.
     let import_paths = search_paths_with_importer_dir(search_paths, import_stack, files);
     let importer: Option<String> = importer_path(import_stack, files).map(str::to_string);
     let importer = importer.as_deref();
@@ -254,12 +238,10 @@ pub(super) fn construct_model_stage0(
             match def {
                 ImportDefine::Plain(path, import_loc) => {
                     let (content, filename) = read_import_file(&import_paths, path)?;
-                    // Проверяем цикл ДО рекурсивной обработки файла
+                    // Проверяем цикл до рекурсивной обработки файла
                     check_import_cycle(import_stack, &filename, *import_loc)?;
-                    // Извлекаем только имя файла (без директории и расширения),
-                    // затем нормализуем в CamelCase: "my_model.takt" → "MyModel".
-                    // Прежде использовался срез filename[..len-4], что давало полный путь
-                    // и, как следствие, некорректное имя (например, "TmpMyModel").
+                    // Извлекаем только имя файла (без директории и расширения), затем
+                    // нормализуем в CamelCase: "my_model.takt" -> "MyModel".
                     let stem = std::path::Path::new(&filename)
                         .file_stem()
                         .ok_or_else(|| {
@@ -295,10 +277,10 @@ pub(super) fn construct_model_stage0(
                             let node = result.map_err(|d| {
                                 note_imported_here(d, *import_loc, &filename, importer)
                             })?;
-                            // Усыновление (фича 0184): корень подключённого файла
-                            // становится под-моделью импортёра и получает имя, под
-                            // которым внесён в список. Без имени цель `c` отказывает
-                            // `CC-004` на пустом имени модели.
+                            // Усыновление: корень подключённого файла становится
+                            // под-моделью импортёра и получает имя, под которым внесён
+                            // в список. Без имени цель `c` отказывает `CC-004` на
+                            // пустом имени модели.
                             import_adopt::adopt_whole_file(
                                 &node,
                                 &model_node,
@@ -320,7 +302,7 @@ pub(super) fn construct_model_stage0(
                 }
                 ImportDefine::GlobalSymbol(path, id, import_loc) => {
                     let (content, filename) = read_import_file(&import_paths, path)?;
-                    // Проверяем цикл ДО рекурсивной обработки файла
+                    // Проверяем цикл до рекурсивной обработки файла
                     check_import_cycle(import_stack, &filename, *import_loc)?;
                     let model_name = id.name.clone();
                     if models.contains_key(&model_name) {
@@ -347,10 +329,10 @@ pub(super) fn construct_model_stage0(
                             let node = result.map_err(|d| {
                                 note_imported_here(d, *import_loc, &filename, importer)
                             })?;
-                            // Усыновление (фича 0184): корень подключённого файла
-                            // становится под-моделью импортёра и получает имя, под
-                            // которым внесён в список. Без имени цель `c` отказывает
-                            // `CC-004` на пустом имени модели.
+                            // Усыновление: корень подключённого файла становится
+                            // под-моделью импортёра и получает имя, под которым внесён
+                            // в список. Без имени цель `c` отказывает `CC-004` на
+                            // пустом имени модели.
                             import_adopt::adopt_whole_file(
                                 &node,
                                 &model_node,
@@ -372,14 +354,14 @@ pub(super) fn construct_model_stage0(
                 }
                 // `import { A, B as C } from "file.takt";`
                 //
-                // Загружает файл, строит его семантическую модель, затем
-                // выборочно экспортирует указанные имена в текущий контекст.
+                // Загружает файл, строит его семантическую модель, затем выборочно
+                // экспортирует указанные имена в текущий контекст.
                 //
-                // Поддерживаемые категории: модели, псевдонимы типов, переменные, условия.
-                // Приоритет поиска: модель → тип → переменная → условие.
+                // Поддерживаемые категории: модели, псевдонимы типов, переменные,
+                // условия. Приоритет поиска: модель -> тип -> переменная -> условие.
                 ImportDefine::Rename(path, symbols, import_loc) => {
                     let (content, filename) = read_import_file(&import_paths, path)?;
-                    // Проверяем цикл ДО рекурсивной обработки файла
+                    // Проверяем цикл до рекурсивной обработки файла
                     check_import_cycle(import_stack, &filename, *import_loc)?;
                     import_stack.push(filename.clone());
                     let result = match parse(&content, files.add(&filename)) {
@@ -420,7 +402,7 @@ pub(super) fn construct_model_stage0(
                 }
             }
         } else if let ModelElement::Variable(def) = element {
-            // Разбор объявления значения — модуль `declaration.rs`.
+            // Разбор объявления значения - модуль `declaration.rs`.
             declaration::construct_declaration(
                 def,
                 Rc::clone(&model_node),
@@ -428,9 +410,9 @@ pub(super) fn construct_model_stage0(
                 &mut parameters,
             )?;
         } else if let ModelElement::Type(_) = element {
-            // Псевдоним занят и разрешён предпроходом (фича 0352): здесь делать
-            // нечего. Занятие имени по-прежнему живёт в одной воронке (0243) —
-            // она просто переехала выше по конвейеру.
+            // Псевдоним занят и разрешён предпроходом: здесь делать нечего. Занятие
+            // имени по-прежнему живёт в одной воронке - она просто переехала выше по
+            // конвейеру.
         } else if let ModelElement::Condition(def) = element {
             let def_loc = def
                 .as_ref()
@@ -460,12 +442,11 @@ pub(super) fn construct_model_stage0(
                 },
             );
         } else if let ModelElement::Invariant(inv) = element {
-            // 0044: `invariant P = C;` в модели ≡ `cond P = C;` + `: [Guard] P;`
-            // (десахаризация, ADR 0044 Option C). Имя P регистрируется как условие
-            // (→ атом LTL `G(P)` и условие ребра `ref: P`), а обязательство —
-            // Guard-формула с именем инварианта (проверяется каждый такт до
-            // `switch`, эталон C: c_model.rs:549). АСД не переписывается —
-            // форматтер печатает `invariant` (ADR 0024).
+            // 0044: `invariant P = C;` в модели == `cond P = C;` + `: [Guard] P;`
+            // (десахаризация, Option C). Имя P регистрируется как условие (-> атом LTL
+            // `G(P)` и условие ребра `ref: P`), а обязательство - Guard-формула с
+            // именем инварианта (проверяется каждый такт до `switch`, эталон C:
+            // c_model.rs:549). АСД не переписывается - форматтер печатает `invariant`.
             let inv_loc = inv
                 .name
                 .as_ref()
@@ -479,9 +460,9 @@ pub(super) fn construct_model_stage0(
                         .with_code("SE-019")
                 })?
                 .name;
-            // SE-054: коллизия имени с уже объявленным условием или переменной.
-            // Тихая перезапись (HashMap::insert без проверки) недопустима в языке
-            // спецификации промышленных систем (правило 12).
+            // SE-054: коллизия имени с уже объявленным условием или переменной. Тихая
+            // перезапись (HashMap::insert без проверки) недопустима в языке
+            // спецификации промышленных систем.
             if conditions.contains_key(&name) || variables.contains_key(&name) {
                 return Err(Diagnostic::error(
                     inv_loc,
@@ -517,7 +498,8 @@ pub(super) fn construct_model_stage0(
                 })?
                 .name
                 .clone();
-            // I8: сохраняем сырой АСД-оператор для последующей индексации локальных переменных
+            // I8: сохраняем сырой АСД-оператор для последующей индексации локальных
+            // переменных
             model_node
                 .borrow_mut()
                 .named_block_raw
@@ -543,11 +525,10 @@ pub(super) fn construct_model_stage0(
             };
             named_blocks.push(block);
         } else if let ModelElement::Assembly(block) = element {
-            // Вставка уровня МОДЕЛИ (0518) разворачивается в блок `always`
-            // уровня модели, то есть исполняется КАЖДЫЙ ТАКТ до диспетчеризации
-            // состояния (инвариант 0083). Сырой оператор сохраняется рядом —
-            // он нужен индексации локальных переменных (I8), как у обычного
-            // именованного блока.
+            // Вставка уровня модели разворачивается в блок `always` уровня модели, то
+            // есть исполняется каждый такт до диспетчеризации состояния. Сырой оператор
+            // сохраняется рядом - он нужен индексации локальных переменных (I8), как у
+            // обычного именованного блока.
             model_node
                 .borrow_mut()
                 .named_block_raw
@@ -569,11 +550,11 @@ pub(super) fn construct_model_stage0(
                 })?
                 .name
                 .clone();
-            // 0031: дубликат имени функции — ошибка SE-009 (прежде `HashMap::
-            // insert` молча перетирал, побеждала последняя). Проверка живёт здесь,
-            // а не в `construct_function`: после устранения `mem::take` карта на
-            // время разрешения тел непуста, и проверка в точке разрешения ловила
-            // бы каждую функцию как «уже определённую».
+            // 0031: дубликат имени функции - ошибка SE-009 (прежде `HashMap:: insert`
+            // молча перетирал, побеждала последняя). Проверка живёт здесь, а не в
+            // `construct_function`: после устранения `mem::take` карта на время
+            // разрешения тел непуста, и проверка в точке разрешения ловила бы каждую
+            // функцию как "уже определённую".
             if functions.contains_key(&name) {
                 return Err(Diagnostic::error(
                     def.loc,
@@ -586,11 +567,10 @@ pub(super) fn construct_model_stage0(
                 FunctionDefinitionNode::Unresolved(*def.clone()),
             );
         } else if let ModelElement::Enum(e) = element {
-            // Имя уже занято предпроходом `predeclare_named_types` (фича 0352):
-            // повторный `claim_type_name` дал бы ложную `SE-108`.
-            // FE1: узел перечисления строит `enum_build` (фича 0167 — вынос из
-            // этого файла: он сверх лимита размера, и правило велит выносить
-            // новое, а не дописывать сюда).
+            // Имя уже занято предпроходом `predeclare_named_types`: повторный
+            // `claim_type_name` дал бы ложную `SE-108`. FE1: узел перечисления строит
+            // `enum_build` ( - вынос из этого файла: он сверх лимита размера, и правило
+            // велит выносить новое, а не дописывать сюда).
             crate::semantic::enum_node::build_enum(&model_node, e);
         } else if let ModelElement::Struct(s) = element {
             // NI3: Обработка структурных типов.
@@ -600,16 +580,15 @@ pub(super) fn construct_model_stage0(
                 .map(|id| id.name.clone())
                 .unwrap_or_default();
             let struct_loc = s.name.as_ref().map(|id| id.loc).unwrap_or(s.loc);
-            // Фича 0243: имя занимается ДО разбора полей.
-            // Имя занято предпроходом `predeclare_named_types` (фича 0352).
+            // имя занимается до разбора полей. Имя занято предпроходом
+            // `predeclare_named_types`.
 
-            // Типы полей разрешаются при ПОЛНОЙ карте имён, поэтому поле вправе
+            // Типы полей разрешаются при полной карте имён, поэтому поле вправе
             // сослаться на тип, объявленный ниже.
             //
-            // ⚠️ Ошибка `construct_type` возвращается вызывающему, а НЕ
-            // подменяется `TypeNode::Unsupported` (фича 0352): подмена глотала
-            // диагностику, и эталон исполнял модель с полем-структурой,
-            // ставшей числом, — молча.
+            // Ошибка `construct_type` возвращается вызывающему, а не подменяется
+            // `TypeNode::Unsupported`: подмена глотала диагностику, и эталон исполнял
+            // модель с полем-структурой, ставшей числом, - молча.
             let mut field_pairs: Vec<(String, TypeNode)> = Vec::new();
             for field in &s.fields {
                 let field_ty = construct_type(Some(field.ty.clone()), Rc::clone(&model_node))?;
@@ -627,11 +606,11 @@ pub(super) fn construct_model_stage0(
                 .borrow_mut()
                 .structs
                 .insert(struct_name.clone(), struct_node);
-            // Регистрация в `types`/`type_locs` сделана предпроходом (0352):
-            // второе место записи разъехалось бы с первым.
+            // Регистрация в `types`/`type_locs` сделана предпроходом: второе место
+            // записи разъехалось бы с первым.
         } else if let ModelElement::Address(def) = element {
-            // Фича 0020: оператор `address Имя = <выражение>;`. Захватываем сырую
-            // привязку; проверка (существование порта, конфликт источников) —
+            // оператор `address Имя = <выражение>;`. Захватываем сырую привязку;
+            // проверка (существование порта, конфликт источников) -
             // `check_port_addresses` в validate.rs (порты могут объявляться позже).
             let port = extract_name(def.name.clone(), def.loc)?;
             model_node
@@ -663,10 +642,10 @@ pub(super) fn construct_model_stage0(
     model_node.borrow_mut().models = models;
     model_node.borrow_mut().states = construct_states(model, Rc::clone(&model_node))?;
     model_node.borrow_mut().variables = variables;
-    // Анализ изменяемости параметров (задача 0185-06) — здесь, пока АСД модели
-    // под рукой: он ищет присваивания в **сыром** тексте тел, а стадии 2–6 их
-    // ещё не разрешили. Результат — флаг `ParameterNode::mutated`; применяет его
-    // (только в режиме `--parameters=specialize`) `parameter_const::constify_parameters`.
+    // Анализ изменяемости параметров - здесь, пока АСД модели под рукой: он ищет
+    // присваивания в **сыром** тексте тел, а стадии 2-6 их ещё не разрешили. Результат -
+    // флаг `ParameterNode::mutated`; применяет его (только в режиме
+    // `--parameters=specialize`) `parameter_const::constify_parameters`.
     crate::semantic::parameter_const::mark_mutated(model, &mut parameters);
     model_node.borrow_mut().parameters = parameters;
     model_node.borrow_mut().conditions = conditions;
@@ -678,7 +657,7 @@ pub(super) fn construct_model_stage0(
 pub(super) fn construct_model_stage1(
     model: Rc<RefCell<ModelNode>>,
 ) -> Result<Rc<RefCell<ModelNode>>, Diagnostic> {
-    extend::expand_model_implement(&model)?; // форма `model M = A|B {…}`, 0199
+    extend::expand_model_implement(&model)?; // форма `model M = A|B {...}`, 0199
     // Клонируем состояния до займа: construct_implement берёт заём сам
     let states = model.borrow().states.clone();
 
@@ -740,9 +719,9 @@ pub(super) fn construct_model_stage1(
 pub(super) fn construct_model_stage2(
     model: Rc<RefCell<ModelNode>>,
 ) -> Result<Rc<RefCell<ModelNode>>, Diagnostic> {
-    // Шаг 2: разрешение инициализаторов, вывод типов и свёртка в литералы
-    // (фича 0192). Порядок этих трёх шагов неочевиден и потому собран в одном
-    // месте — `declaration::prepare_variables`.
+    // Шаг 2: разрешение инициализаторов, вывод типов и свёртка в литералы. Порядок этих
+    // трёх шагов неочевиден и потому собран в одном месте -
+    // `declaration::prepare_variables`.
     let variables = model.borrow().variables.clone();
     let variables = declaration::prepare_variables(&variables, &model)?;
     model.borrow_mut().variables = variables;
@@ -818,7 +797,7 @@ pub(super) fn resolve_formulas(
 
 /// Разрешает именованные блоки кода внутри одного состояния.
 ///
-/// Ошибки разрешения подавляются — оператор сохраняется как `Unresolved`.
+/// Ошибки разрешения подавляются - оператор сохраняется как `Unresolved`.
 pub(super) fn resolve_state_named_blocks(
     state: StateNode,
     model: Rc<RefCell<ModelNode>>,
@@ -868,12 +847,12 @@ pub(super) fn resolve_state_named_blocks(
 
 /// Строит семантический узел модели из АСД-узла [`Model`].
 ///
-/// Собирает контекст верхнего уровня (вложенные модели), а также
-/// словарь состояний с разрешёнными ссылками между ними.
+/// Собирает контекст верхнего уровня (вложенные модели), а также словарь состояний с
+/// разрешёнными ссылками между ними.
 ///
-/// Обнаруживает циклические зависимости между файлами импорта:
-/// при наличии цикла `a.takt → b.takt → a.takt` возвращает [`Diagnostic`]-ошибку
-/// с полным описанием цепочки.
+/// Обнаруживает циклические зависимости между файлами импорта: при наличии цикла
+/// `a.takt -> b.takt -> a.takt` возвращает [`Diagnostic`]-ошибку с полным описанием
+/// цепочки.
 ///
 /// # Ошибки
 ///
@@ -887,17 +866,17 @@ pub fn construct_model(
     upper: Option<Rc<RefCell<ModelNode>>>,
     search_paths: &[String],
 ) -> Result<Rc<RefCell<ModelNode>>, Diagnostic> {
-    // Реестр-однодневка (0053): пути файлов вызывающему не нужны.
+    // Реестр-однодневка: пути файлов вызывающему не нужны.
     let mut files = FileTable::default();
     construct_model_with_files(model, upper, search_paths, &mut files, false)
 }
 
-/// То же, что [`construct_model`], но с реестром файлов (фича 0053).
+/// То же, что [`construct_model`], но с реестром файлов.
 ///
-/// Реестр раздаёт `file_no` разбираемым файлам и позволяет вызывающему разрешить
-/// номер из [`Location`] обратно в путь — чтобы назвать пользователю, **в каком
-/// файле** ошибка. Корневой файл регистрирует вызывающий
-/// ([`FileTable::new`]); импортируемые регистрирует проход 0 по мере загрузки.
+/// Реестр раздаёт `file_no` разбираемым файлам и позволяет вызывающему разрешить номер
+/// из [`Location`] обратно в путь - чтобы назвать пользователю, **в каком файле**
+/// ошибка. Корневой файл регистрирует вызывающий ([`FileTable::new`]); импортируемые
+/// регистрирует проход 0 по мере загрузки.
 pub fn construct_model_with_files(
     model: &Model,
     upper: Option<Rc<RefCell<ModelNode>>>,
@@ -905,14 +884,14 @@ pub fn construct_model_with_files(
     files: &mut FileTable,
     specialize: bool,
 ) -> Result<Rc<RefCell<ModelNode>>, Diagnostic> {
-    // ⚠️ Контракт этого входа — **одна** диагностика; он таким и остаётся
-    // (фича 0152). Стадии построения с 0152 накапливают внутри себя, но
-    // потребителям вроде `takt-sim` нужна первая ошибка, а не список, и менять
-    // публичную сигнатуру ради этого незачем. Кому нужны все — зовёт
-    // `stages::construct_stages` напрямую (так делают `pipeline` и LSP).
+    // Контракт этого входа - **одна** диагностика; он таким и остаётся. Стадии
+    // построения с 0152 накапливают внутри себя, но потребителям вроде `takt-sim` нужна
+    // первая ошибка, а не список, и менять публичную сигнатуру ради этого незачем. Кому
+    // нужны все - зовёт `stages::construct_stages` напрямую (так делают `pipeline` и
+    // LSP).
     //
-    // `normalize` перед взятием первой — не украшение: без неё «первой»
-    // оказалась бы не самая ранняя по тексту, а первая по порядку обхода.
+    // `normalize` перед взятием первой - не украшение: без неё "первой" оказалась бы не
+    // самая ранняя по тексту, а первая по порядку обхода.
     let model = super::stages::construct_stages(model, upper, search_paths, files, specialize)
         .map_err(|ds| {
             crate::diagnostics::normalize(ds)
@@ -926,23 +905,23 @@ pub fn construct_model_with_files(
 
 /// Строит семантическое дерево модели и привязывает `///`-комментарии.
 ///
-/// Расширенный вариант [`construct_model`]: после построения дерева заполняет
-/// поля [`ModelNode::doc`](crate::semantic::ModelNode::doc) и
+/// Расширенный вариант [`construct_model`]: после построения дерева заполняет поля
+/// [`ModelNode::doc`](crate::semantic::ModelNode::doc) и
 /// [`ModelNode::docs`](crate::semantic::ModelNode::docs) на основе `///`-комментариев
 /// из исходного текста.
 ///
 /// # Параметры
 ///
-/// - `model` — корневой узел АСД, результат [`parse`](parse).
-/// - `upper` — родительская модель (`None` для корня).
-/// - `search_paths` — пути поиска для файлов импорта.
-/// - `comments` — комментарии из [`parse`](parse) (второй элемент кортежа).
+/// - `model` - корневой узел АСД, результат [`parse`](parse).
+/// - `upper` - родительская модель (`None` для корня).
+/// - `search_paths` - пути поиска для файлов импорта.
+/// - `comments` - комментарии из [`parse`](parse) (второй элемент кортежа).
 ///
 /// # Алгоритм привязки
 ///
-/// Для каждого именованного объявления (состояния, переменной, функции и т.д.)
-/// ищутся `///`-комментарии, ближайшим следующим элементом которых является
-/// данное объявление. Подробнее — в [`crate::semantic::docs`].
+/// Для каждого именованного объявления (состояния, переменной, функции и т.д.) ищутся
+/// `///`-комментарии, ближайшим следующим элементом которых является данное объявление.
+/// Подробнее - в [`crate::semantic::docs`].
 ///
 /// # Примеры
 ///
@@ -967,25 +946,25 @@ pub fn construct_model_with_docs(
     Ok(root)
 }
 
-/// Проверяет условия переходов в семантическом дереве и возвращает
-/// предупреждения о неявном приведении числового типа к булевому.
+/// Проверяет условия переходов в семантическом дереве и возвращает предупреждения о
+/// неявном приведении числового типа к булевому.
 ///
-/// Функция обходит все состояния модели (рекурсивно) и проверяет, содержат
-/// ли условия переходов (`ref`/`next`) выражения числового типа (например,
-/// переменная типа `[bit;8]`, числовой литерал, арифметика), используемые
-/// как булевые без явного сравнения.
+/// Функция обходит все состояния модели (рекурсивно) и проверяет, содержат ли условия
+/// переходов (`ref`/`next`) выражения числового типа (например, переменная типа
+/// `[bit;8]`, числовой литерал, арифметика), используемые как булевые без явного
+/// сравнения.
 ///
 /// # Примеры
 ///
 /// ```rust,ignore
-/// // Takt-код с числовым условием → предупреждение
+/// // Takt-код с числовым условием -> предупреждение
 /// let src = "var timer: [bit;8] = 0; start S { ref T: timer; } state T;";
 /// let (ast, _) = parse(src, 0)?;
 /// let root = construct_model(&ast, None, &[])?;
 /// let warnings = implicit_bool_warnings(&root);
 /// assert!(!warnings.is_empty());
 ///
-/// // Takt-код с явным сравнением → без предупреждений
+/// // Takt-код с явным сравнением -> без предупреждений
 /// let src = "var timer: [bit;8] = 0; start S { ref T: timer != 0; } state T;";
 /// let (ast, _) = parse(src, 0)?;
 /// let root = construct_model(&ast, None, &[])?;
@@ -1023,8 +1002,8 @@ pub fn transition_completeness_warnings(model: &Rc<RefCell<ModelNode>>) -> Vec<D
 
 /// Возвращает предупреждения о портах, объявленных во вложенных моделях.
 ///
-/// Порты в дочерних моделях попадают в общесистемные перечисления портов
-/// и доступны через колбэки корневой модели из любого места.
+/// Порты в дочерних моделях попадают в общесистемные перечисления портов и доступны
+/// через колбэки корневой модели из любого места.
 pub fn nested_port_warnings(model: &Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> {
     warn_nested_model_ports(Rc::clone(model))
 }
@@ -1032,14 +1011,14 @@ pub fn nested_port_warnings(model: &Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> {
 /// Извлекает все состояния из модели и разрешает ссылки между ними.
 ///
 /// Алгоритм:
-/// 1. Первый проход — создаём [`StateNode`] для каждого `state`/`start` с
+/// 1. Первый проход - создаём [`StateNode`] для каждого `state`/`start` с
 ///    [`StateNode::Unresolved`] в качестве заглушки для целей ссылок.
-/// 2. Второй проход — заменяем заглушки фактическими [`StateNode`].
+/// 2. Второй проход - заменяем заглушки фактическими [`StateNode`].
 ///
 /// # Ошибки
 ///
-/// Возвращает [`Diagnostic`], если состояние без имени, ссылка не найдена,
-/// или `next` объявлен дважды в одном состоянии.
+/// Возвращает [`Diagnostic`], если состояние без имени, ссылка не найдена, или `next`
+/// объявлен дважды в одном состоянии.
 pub fn construct_states(
     model: &Model,
     upper: Rc<RefCell<ModelNode>>,
@@ -1098,8 +1077,8 @@ pub fn construct_states(
                     }
                 } else if let StateElement::Invariant(inv) = element {
                     // 0044: инвариант состояния = Guard-формула с именем инварианта
-                    // (десахаризация, ADR 0044). Условие C проверяется каждый такт,
-                    // пока автомат в этом состоянии (эталон C: c_model.rs:667).
+                    // (десахаризация). Условие C проверяется каждый такт, пока автомат
+                    // в этом состоянии (эталон C: c_model.rs:667).
                     let inv_name = inv.name.as_ref().map(|id| id.name.clone());
                     let guard = ConditionNode::Unresolved(inv.value.clone());
                     state_formulas.push(Formula::Guard(guard, inv_name, inv.loc));
@@ -1262,8 +1241,8 @@ pub fn construct_states(
     Ok(new_states)
 }
 
-/// Разрешает список `ref`-ссылок, заменяя [`StateNode::Unresolved`]-заглушки
-/// реальными узлами из таблицы первого прохода `states`.
+/// Разрешает список `ref`-ссылок, заменяя [`StateNode::Unresolved`]-заглушки реальными
+/// узлами из таблицы первого прохода `states`.
 ///
 /// # Ошибки
 ///
@@ -1298,7 +1277,7 @@ mod tests {
     use super::*;
     use crate::parse;
 
-    // ─── вспомогательная функция ────────────────────────────────────────────
+    // --- вспомогательная функция --------------------------------------------
 
     /// Разбирает Takt-программу и строит семантическую модель.
     fn build(src: &str) -> Result<ModelNode, Diagnostic> {
@@ -1306,7 +1285,7 @@ mod tests {
         construct_model(&ast, None, &[]).map(|model| model.take())
     }
 
-    // ─── construct_model ───────────────────────────────────────────────────
+    // --- construct_model ---------------------------------------------------
 
     /// Пустая программа (нет состояний): `has_states()` должен вернуть `false`.
     #[test]
@@ -1315,7 +1294,7 @@ mod tests {
         assert!(!node.has_states());
     }
 
-    /// Программа без состояний, но с типом: `has_states()` → false.
+    /// Программа без состояний, но с типом: `has_states()` -> false.
     #[test]
     fn program_with_only_type_has_no_states() {
         let node = build("type Byte = [bit;8];").unwrap();
@@ -1357,9 +1336,9 @@ mod tests {
         }
     }
 
-    // ─── construct_states ─────────────────────────────────────────────────
+    // --- construct_states -------------------------------------------------
 
-    /// Состояние без `ref` — SimpleNode, ссылки пустые.
+    /// Состояние без `ref` - SimpleNode, ссылки пустые.
     #[test]
     fn simple_state_no_refs() {
         let node = build("start S;").unwrap();
@@ -1385,7 +1364,7 @@ mod tests {
         }
     }
 
-    /// Ссылка `ref` на несуществующее состояние — ошибка.
+    /// Ссылка `ref` на несуществующее состояние - ошибка.
     #[test]
     fn ref_to_missing_state_is_error() {
         // Ghost не существует
@@ -1393,7 +1372,7 @@ mod tests {
         assert!(result.is_err(), "ожидалась ошибка при неизвестной ссылке");
     }
 
-    /// Два `next` в одном состоянии — ошибка.
+    /// Два `next` в одном состоянии - ошибка.
     #[test]
     fn double_next_in_state_is_error() {
         // Два next в одном Implement-состоянии
@@ -1443,14 +1422,14 @@ mod tests {
         }
     }
 
-    // ─── construct_context_model ──────────────────────────────────────────
+    // --- construct_context_model ------------------------------------------
 
     /// Вложенная модель попадает в контекст.
     #[test]
     fn nested_model_in_context() {
         let (ast, _) = parse("model Outer { model Inner { start S; } start A; }", 0).unwrap();
         let node = construct_model(&ast, None, &[]).unwrap();
-        // Inner — вложен в Outer, который в корневом контексте
+        // Inner - вложен в Outer, который в корневом контексте
         assert!(!node.take().has_states()); // корень не содержит состояний напрямую
     }
 }

@@ -1,6 +1,6 @@
 //! Позиции: перевод между смещениями Takt и координатами LSP (UTF-16).
 //!
-//! Часть модуля `lsp` (фича 0027: деление по логике).
+//! Часть модуля `lsp`.
 
 use super::*;
 
@@ -12,15 +12,17 @@ pub fn offset_to_range(source: &str, start: usize, end: usize) -> Range {
     }
 }
 
-/// Конвертирует байтовое смещение в LSP `Position` (строка + столбец в кодовых единицах UTF-16).
+/// Конвертирует байтовое смещение в LSP `Position` (строка + столбец в кодовых единицах
+/// UTF-16).
 ///
 /// Протокол LSP (спецификация v3.17, §3.1) требует, чтобы поле `character` позиции
 /// выражалось в **кодовых единицах UTF-16**, а не в байтах или кодовых точках Unicode.
 /// Для ASCII-символов все три единицы совпадают; различие возникает при наличии
-/// многобайтовых UTF-8 символов (кириллица, CJK, эмодзи, …).
+/// многобайтовых UTF-8 символов (кириллица, CJK, эмодзи, ...).
 ///
-/// Если `offset` указывает на середину многобайтового символа (невалидная char-граница),
-/// функция безопасно отступает до ближайшей предшествующей границы символа.
+/// Если `offset` указывает на середину многобайтового символа (невалидная
+/// char-граница), функция безопасно отступает до ближайшей предшествующей границы
+/// символа.
 ///
 /// # Примеры
 ///
@@ -33,12 +35,12 @@ pub fn offset_to_range(source: &str, start: usize, end: usize) -> Range {
 /// // ASCII: байтовое смещение == UTF-16-столбец
 /// assert_eq!(offset_to_position("hello", 3), Position::new(0, 3));
 ///
-/// // Многострочный текст: смещение 7 — второй байт второй строки
+/// // Многострочный текст: смещение 7 - второй байт второй строки
 /// assert_eq!(offset_to_position("line1\nab", 7), Position::new(1, 1));
 ///
 /// // Кириллица: 'А' занимает 2 байта в UTF-8, но 1 кодовую единицу в UTF-16
-/// // "АБ" = [0xD0,0x90, 0xD0,0x91] — 4 байта, 2 символа
-/// let src = "АБ";
+/// // "аб" = [0xD0,0x90, 0xD0,0x91] - 4 байта, 2 символа
+/// let src = "аб";
 /// assert_eq!(offset_to_position(src, 4), Position::new(0, 2)); // конец строки
 /// assert_eq!(offset_to_position(src, 2), Position::new(0, 1)); // после 'А'
 /// # }
@@ -47,7 +49,7 @@ pub fn offset_to_position(source: &str, offset: usize) -> Position {
     // Зажимаем до валидной границы символа UTF-8
     let offset = {
         let clamped = offset.min(source.len());
-        // Если попали в середину многобайтового символа — откатываемся назад
+        // Если попали в середину многобайтового символа - откатываемся назад
         (0..=clamped)
             .rev()
             .find(|&i| source.is_char_boundary(i))
@@ -74,10 +76,10 @@ pub fn offset_to_position(source: &str, offset: usize) -> Position {
 ///
 /// ```
 /// // ASCII: 1 байт = 1 кодовая единица UTF-16
-/// // utf16_offset 3 → байт 3
+/// // utf16_offset 3 -> байт 3
 ///
-/// // "АБВ": каждый символ — 2 байта UTF-8, 1 кодовая единица UTF-16
-/// // utf16_offset 2 → байт 4
+/// // "абв": каждый символ - 2 байта UTF-8, 1 кодовая единица UTF-16
+/// // utf16_offset 2 -> байт 4
 /// ```
 pub(super) fn utf16_to_byte_offset(s: &str, utf16_offset: usize) -> Option<usize> {
     let mut utf16_count = 0usize;
@@ -95,9 +97,10 @@ pub(super) fn utf16_to_byte_offset(s: &str, utf16_offset: usize) -> Option<usize
     }
 }
 
-/// Конвертирует LSP-позицию (строка + UTF-16 символ) в байтовое смещение в исходном тексте.
+/// Конвертирует LSP-позицию (строка + UTF-16 символ) в байтовое смещение в исходном
+/// тексте.
 ///
-/// Протокол LSP использует `Position { line, character }`, где `character` — смещение в
+/// Протокол LSP использует `Position { line, character }`, где `character` - смещение в
 /// кодовых единицах UTF-16 от начала строки. Функция переводит эту позицию в байтовое
 /// смещение от начала файла, пригодное для работы с [`Location::Source`].
 ///
@@ -112,11 +115,11 @@ pub(super) fn utf16_to_byte_offset(s: &str, utf16_offset: usize) -> Option<usize
 /// use lsp_types::Position;
 ///
 /// let src = "hello\nworld";
-/// // Строка 0, символ 3 → байт 3
+/// // Строка 0, символ 3 -> байт 3
 /// assert_eq!(position_to_offset(src, Position::new(0, 3)), Some(3));
-/// // Строка 1 начинается с байта 6 ("hello\n"), символ 2 → байт 8
+/// // Строка 1 начинается с байта 6 ("hello\n"), символ 2 -> байт 8
 /// assert_eq!(position_to_offset(src, Position::new(1, 2)), Some(8));
-/// // Несуществующая строка → None
+/// // Несуществующая строка -> None
 /// assert_eq!(position_to_offset(src, Position::new(99, 0)), None);
 /// # }
 /// ```
@@ -127,7 +130,7 @@ pub fn position_to_offset(source: &str, position: Position) -> Option<usize> {
 
     for (i, c) in source.char_indices() {
         if current_line == target_line {
-            // Нашли начало нужной строки — определяем столбец
+            // Нашли начало нужной строки - определяем столбец
             let line_text = source[line_start..].lines().next().unwrap_or("");
             let col_byte = utf16_to_byte_offset(line_text, position.character as usize)
                 .unwrap_or(line_text.len());
@@ -152,12 +155,12 @@ pub fn position_to_offset(source: &str, position: Position) -> Option<usize> {
 
 /// Возвращает семантический узел по LSP-позиции курсора.
 ///
-/// Строит [`SemanticIndex`](semantic::index::SemanticIndex) из переданной
-/// семантической модели и выполняет поиск наиболее конкретного узла, объявление
-/// которого покрывает позицию курсора. Более точен, чем поиск по имени слова под
-/// курсором: учитывает точные диапазоны объявлений и избегает неоднозначностей
-/// при совпадении имён разных элементов (например, переменная и состояние с одним
-/// именем в разных областях видимости).
+/// Строит [`SemanticIndex`](semantic::index::SemanticIndex) из переданной семантической
+/// модели и выполняет поиск наиболее конкретного узла, объявление которого покрывает
+/// позицию курсора. Более точен, чем поиск по имени слова под курсором: учитывает
+/// точные диапазоны объявлений и избегает неоднозначностей при совпадении имён разных
+/// элементов (например, переменная и состояние с одним именем в разных областях
+/// видимости).
 ///
 /// Возвращает `None`, если:
 /// - `position` выходит за пределы исходного текста.
@@ -179,7 +182,7 @@ pub fn position_to_offset(source: &str, position: Position) -> Option<usize> {
 /// let (ast, _) = parse(src, 0).unwrap();
 /// let model = construct_model(&ast, None, &[]).unwrap();
 ///
-/// // Позиция 4 — символ 'c' в "counter"
+/// // Позиция 4 - символ 'c' в "counter"
 /// let node = node_at_position(src, Position::new(0, 4), &model);
 /// assert!(node.is_some());
 /// let node = node.unwrap();

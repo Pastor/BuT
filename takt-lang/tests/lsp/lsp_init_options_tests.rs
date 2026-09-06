@@ -1,14 +1,14 @@
-//! Интеграционные тесты фичи 0072: пути поиска импортов LSP из
+//! Интеграционные тесты: пути поиска импортов LSP из
 //! `initializationOptions.searchPaths` (аналог `-I` у `taktc`).
 //!
 //! Разбор самого `initializationOptions` покрыт юнит-тестами
-//! `takt_lang::lsp::init_options` (в lib); здесь — сквозная проверка потребителей
-//! ядра (`collect_diagnostics_at`, `goto_declaration_at`), которые зовёт
-//! бинарник `takt_lsp.rs`. Импорт из общей библиотеки **вне** каталога документа
-//! (`lsp72/lib/`) без путей не находится, с путями — находится (паритет с CLI).
+//! `takt_lang::lsp::init_options` (в lib); здесь - сквозная проверка потребителей ядра
+//! (`collect_diagnostics_at`, `goto_declaration_at`), которые зовёт бинарник
+//! `takt_lsp.rs`. Импорт из общей библиотеки **вне** каталога документа (`lsp72/lib/`)
+//! без путей не находится, с путями - находится (паритет с CLI).
 //!
-//! Вынесено в отдельный файл (не в `lsp_tests.rs`): тот сверх лимита размера
-//! модуля (реестр долга) и расти не имеет права (CLAUDE.md, фича 0027).
+//! Вынесено в отдельный файл (не в `lsp_tests.rs`): тот сверх лимита размера модуля
+//! (реестр долга) и расти не имеет права (CLAUDE.md).
 
 #[cfg(feature = "lsp")]
 mod lsp72_init_options {
@@ -34,7 +34,7 @@ mod lsp72_init_options {
     }
 
     /// A4: без путей импорт из соседнего каталога не разрешается (только каталог
-    /// документа, 0055) — как было до 0072.
+    /// документа, 0055) - как было до 0072.
     #[test]
     fn import_unresolved_without_search_paths() {
         let diags = takt_lang::lsp::collect_diagnostics_at(DOC, &doc_source(), &[]);
@@ -44,7 +44,7 @@ mod lsp72_init_options {
         );
     }
 
-    /// A4: с путями (`searchPaths=[lib]`) импорт разрешается — диагностик нет.
+    /// A4: с путями (`searchPaths=[lib]`) импорт разрешается - диагностик нет.
     #[test]
     fn import_resolves_with_search_paths() {
         let paths = vec![LIB.to_string()];
@@ -55,7 +55,7 @@ mod lsp72_init_options {
         );
     }
 
-    /// A5: переход к декларации ведёт в файл из `searchPaths`, а не «никуда».
+    /// A5: переход к декларации ведёт в файл из `searchPaths`, а не "никуда".
     #[test]
     fn goto_opens_file_from_search_paths() {
         let source = doc_source();
@@ -70,8 +70,8 @@ mod lsp72_init_options {
         );
     }
 
-    /// Сторож паритета: без путей переход не находится (нечего открывать) —
-    /// доказывает, что находку A5 даёт именно `searchPaths`, а не угадывание.
+    /// Тест паритета: без путей переход не находится (нечего открывать) - доказывает,
+    /// что находку A5 даёт именно `searchPaths`, а не угадывание.
     #[test]
     fn goto_absent_without_search_paths() {
         let source = doc_source();

@@ -1,7 +1,7 @@
 //! Эмиссия именованных блоков (`enter`/`exit`/`always`) в цель Rust.
 //!
-//! Вынесено из `rust_model.rs` (фича 0083: лимит размера модуля). Два источника
-//! блоков — состояние и **сама модель** (model-level `always`, фича 0083).
+//! Вынесено из `rust_model.rs`. Два источника блоков - состояние и **сама модель**
+//! (model-level `always`).
 
 use crate::diagnostics::Diagnostic;
 use crate::generator::indent::Printer;
@@ -25,8 +25,8 @@ pub(super) fn emit_named_blocks(
     Ok(())
 }
 
-/// Печатает именованные блоки **уровня модели** (фича 0083): `always` вне
-/// состояния. Аналог [`emit_named_blocks`], но источник — сама модель.
+/// Печатает именованные блоки **уровня модели**: `always` вне состояния. Аналог
+/// [`emit_named_blocks`], но источник - сама модель.
 pub(super) fn emit_model_named_blocks(
     p: &mut Printer,
     model: &ModelNode,

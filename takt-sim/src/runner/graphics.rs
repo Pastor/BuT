@@ -1,13 +1,4 @@
-//! Запись прогона в кадры: GIF и SVG (фича 0531 — под фичей `graphics`).
-//!
-//! # Зачем подмодуль
-//!
-//! Растеризатор, раскладка графа и файловая система нужны **визуализации**, а
-//! не исполнению модели: потребитель эталона в браузере (модуль WebAssembly)
-//! исполняет ту же модель и ту же трассу, но кадров не пишет и собрать эти
-//! зависимости под `wasm32-unknown-unknown` не может. Граница проведена по
-//! модулю, а не россыпью `#[cfg]` внутри цикла прогона: так видно, где
-//! кончается симуляция и начинается картинка.
+//! Запись прогона в кадры: GIF и SVG.
 
 use super::SimulationRunner;
 use crate::context::Context;
@@ -19,17 +10,16 @@ use crate::trace::format_value;
 use crate::unit::Unit;
 use crate::unit::viewport::{LegendData, compute_layout, render_from_layout};
 
-/// Рекордер кадров и размер кадра — то, чем прогон обзаводится при запросе
-/// графики.
+/// Рекордер кадров и размер кадра - то, чем прогон обзаводится при запросе графики.
 ///
-/// Именованный тип, а не кортеж в сигнатуре: `clippy::type_complexity` прав —
+/// Именованный тип, а не кортеж в сигнатуре: `clippy::type_complexity` прав -
 /// `Result<(Option<_>, Option<(u32, u32)>), String>` не читается.
 pub(super) type Frames = (Option<GraphicsRecorder>, Option<(u32, u32)>);
 
 /// Заводит рекордер кадров и размер кадра, если прогон просит графику.
 ///
-/// Каталог создаётся здесь же: без него первая запись упала бы в середине
-/// прогона, когда часть работы уже сделана.
+/// Каталог создаётся здесь же: без него первая запись упала бы в середине прогона,
+/// когда часть работы уже сделана.
 pub(super) fn recorder_of(
     output_dir: Option<&std::path::PathBuf>,
     input_stem: &str,
@@ -62,7 +52,7 @@ pub(super) fn recorder_of(
     Ok((Some(recorder), Some(size)))
 }
 
-// ── Диспетчер режимов записи графики ─────────────────────────────────────────
+// -- Диспетчер режимов записи графики -----------------------------------------
 
 pub(crate) enum GraphicsRecorder {
     Gif(GifRecorder),
@@ -126,8 +116,8 @@ impl SimulationRunner {
             None => return Ok(()),
         };
 
-        // Раскладка вычисляется один раз: имитация отжига дорогая, но структура
-        // модели не меняется в ходе симуляции.
+        // Раскладка вычисляется один раз: имитация отжига дорогая, но структура модели
+        // не меняется в ходе симуляции.
         let layout_ms = if self.cached_layout.is_none() {
             let t = std::time::Instant::now();
             self.cached_layout = Some(compute_layout(&self.unit, &self.gif_config));
@@ -158,7 +148,7 @@ impl SimulationRunner {
         .map_err(|d| format!("Ошибка viewport: {}", d.message))?;
         let vp_ms = t_vp.elapsed().as_millis();
 
-        // Highlight-кадры показываются дольше — задержка из конфигурации.
+        // Highlight-кадры показываются дольше - задержка из конфигурации.
         let delay = if highlighted_edge.is_some() {
             Some(self.gif_config.canvas.highlight_frame_delay_cs)
         } else {

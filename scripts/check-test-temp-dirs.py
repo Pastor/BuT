@@ -95,8 +95,8 @@ def main() -> int:
         rel = os.path.relpath(path, ROOT)
         for match in TEMP_DIR.finditer(flat):
             window = flat[match.end() : match.end() + WINDOW]
-            # D4: изоляция по процессу. Имя потока уникально ВНУТРИ процесса, а
-            # прогонов бывает два — предкоммит и запущенный руками `cargo test`.
+            # D4: изоляция по процессу. Имя потока уникально внутри процесса, а
+            # прогонов бывает два - предкоммит и запущенный руками `cargo test`.
             if not PROCESS_JOIN.match(window.lstrip()) and "process::id" not in window:
                 problems.append(
                     f"D4: {rel} — каталог от temp_dir() без идентификатора процесса"
@@ -108,7 +108,7 @@ def main() -> int:
             if kind == "literal":
                 literals[name].add(rel)
             elif "thread" not in flat[max(0, match.start() - 300) : match.end() + WINDOW]:
-                # Имя потока ищется рядом с построением — там, где строится ключ.
+                # Имя потока ищется рядом с построением - там, где строится ключ.
                 templates[name].add(rel)
 
         if "thread" not in text:

@@ -23,7 +23,7 @@ import json
 import os
 import sys
 
-# Файлы, которым позиционная форма нужна ПО СУЩЕСТВУ: путь → причина.
+# Файлы, которым позиционная форма нужна по существу: путь -> причина.
 ALLOWED = {
     "takt-sim/tests/data/named0132/short_positional.json": (
         "фикстура сторожа SIM-032 (длина массива не совпадает с числом портов) — "
@@ -68,7 +68,7 @@ def scan(root: str) -> list[str]:
                 with open(path, encoding="utf-8") as handle:
                     data = json.load(handle)
             except (OSError, ValueError):
-                # Не сценарий либо нечитаемый JSON — не наше дело.
+                # Не сценарий либо нечитаемый JSON - не наше дело.
                 continue
             if has_positional(data):
                 found.append(os.path.relpath(path, root))

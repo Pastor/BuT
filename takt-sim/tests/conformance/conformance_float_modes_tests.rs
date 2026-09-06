@@ -1,17 +1,17 @@
-//! Двухрежимный эталон `float` и native-гейты целей (фича 0096, задача 0096-03).
+//! Двухрежимный эталон `float` и native-проверки целей.
 //!
-//! ADR 0096 (R7): `native`-`float` и Q-`float` — **разные** численные семантики,
-//! автор выбирает явно флагами. Здесь проверяется:
+//! (R7): `native`-`float` и Q-`float` - **разные** численные семантики, автор выбирает
+//! явно флагами. Здесь проверяется:
 //!
 //! - **Двухрежимность эталона-симулятора** (T8/R5): без трансформации `float`
-//!   считается как `f64` (`Value::Real`), с ней — как `q(m, n)` (`Value::Fixed`,
-//!   repr). Это сторож направления (T9): мутация «эталон native, цель Q» дала бы
-//!   `Real` там, где Q-цель ждёт repr, — сверка обязана различать режимы.
+//!   считается как `f64` (`Value::Real`), с ней - как `q(m, n)` (`Value::Fixed`,
+//!   repr). Это тест направления (T9): мутация "эталон native, цель Q" дала бы
+//!   `Real` там, где Q-цель ждёт repr, - сверка обязана различать режимы.
 //! - **Native по умолчанию** (T5/A3): `--float-as-q` **без** `--float-embedded`
-//!   оставляет `c`/`rust`/`st` на нативном `double`/`f64`/`LREAL`; Q-путь — только
+//!   оставляет `c`/`rust`/`st` на нативном `double`/`f64`/`LREAL`; Q-путь - только
 //!   со вторым флагом. Молчаливого Q быть не должно.
 //!
-//! Потактовые Q-сверки целей — в `conformance_{c,rust,st}_tests.rs`
+//! Потактовые Q-сверки целей - в `conformance_{c,rust,st}_tests.rs`
 //! (`float_embedded_*`); файл вынесен из них ради лимита размера модуля.
 
 use takt_lang::semantic::tree::construct_model;
@@ -19,22 +19,22 @@ use takt_sim::{Value, build_unit};
 
 const FLOAT_Q_FIXTURE: &str = "tests/data/eval/conformance_float_q.takt";
 
-/// Опции: точность задана, `--float-embedded` НЕ включён (native для c/rust/st).
-#[allow(clippy::field_reassign_with_default)] // GenerateOptions — #[non_exhaustive]
+/// Опции: точность задана, `--float-embedded` не включён (native для c/rust/st).
+#[allow(clippy::field_reassign_with_default)] // GenerateOptions - #[non_exhaustive]
 fn float_as_q_only(m: u8, n: u8) -> takt_lang::generator::GenerateOptions {
     let mut o = takt_lang::generator::GenerateOptions::default();
     o.float_as_q = Some((m, n));
     o
 }
 
-/// T8/T9/R7: эталон двухрежимен. Без трансформации `acc` — вещественное
-/// (`Value::Real`, native `f64`); с трансформацией — `Value::Fixed` (repr q(8,8)).
-/// Разные представления ⇒ сверка ведётся ВНУТРИ режима, а не между ними.
+/// T8/T9/R7: эталон двухрежимен. Без трансформации `acc` - вещественное (`Value::Real`,
+/// native `f64`); с трансформацией - `Value::Fixed` (repr q(8,8)). Разные представления
+/// ⇒ сверка ведётся внутри режима, а не между ними.
 #[test]
 fn float_native_and_q_modes_differ() {
     let source = std::fs::read_to_string(FLOAT_Q_FIXTURE).expect("фикстура читается");
 
-    // Native режим (трансформация НЕ применена): acc — вещественное.
+    // Native режим (трансформация не применена): acc - вещественное.
     let (ast, _) = takt_lang::parse(&source, 0).expect("разбор");
     let model = construct_model(&ast, None, &[]).expect("семантика");
     let mut unit = build_unit(model).expect("построение юнита");
@@ -44,7 +44,7 @@ fn float_native_and_q_modes_differ() {
         "native-режим float: acc — Value::Real (f64), не Fixed"
     );
 
-    // Q-режим (трансформация применена): acc — представление q(8,8) (−3.0 → −768).
+    // Q-режим (трансформация применена): acc - представление q(8,8) (−3.0 -> −768).
     let (ast, _) = takt_lang::parse(&source, 0).expect("разбор");
     let model = construct_model(&ast, None, &[]).expect("семантика");
     takt_lang::semantic::lower_float::lower_float_to_fixed(model.clone(), 8, 8)
@@ -57,7 +57,7 @@ fn float_native_and_q_modes_differ() {
     );
 }
 
-/// T5/A3 (цель C native по умолчанию): `--float-as-q` без `--float-embedded` →
+/// T5/A3 (цель C native по умолчанию): `--float-as-q` без `--float-embedded` ->
 /// `double` (Q-путь только со вторым флагом).
 #[test]
 fn float_as_q_without_embedded_is_native_c() {

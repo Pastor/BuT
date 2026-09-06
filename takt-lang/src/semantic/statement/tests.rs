@@ -1,10 +1,9 @@
-//! Тесты разрешения семантических операторов (вынесены из `statement.rs`
-//! фичей 0225).
+//! Тесты разрешения семантических операторов (вынесены из `statement.rs` ).
 //!
-//! Причина выноса — правило размера модуля: тесты занимали 599 строк из 976,
-//! то есть 61 % файла, и запаса до предела оставалось 24 строки. Разделение
-//! «логика / тесты» — приём фичи 0088 (директория-подмодуль + `use super::*`),
-//! тот же, которым фича 0129 разделила `semantic/expression.rs`.
+//! Причина выноса - правило размера модуля: тесты занимали 599 строк из 976, то есть 61
+//! % файла, и запаса до предела оставалось 24 строки. Разделение "логика / тесты" -
+//! приём (директория-подмодуль + `use super::*`), тот же, которым разделила
+//! `semantic/expression.rs`.
 
 use super::*;
 use crate::diagnostics::Location;
@@ -19,9 +18,9 @@ fn build(src: &str) -> ModelNode {
         .expect("ошибка построения")
 }
 
-// ─── Тесты resolve_statement ────────────────────────────────────────────
+// --- Тесты resolve_statement --------------------------------------------
 
-/// `Statement::None` → возвращается без изменений.
+/// `Statement::None` -> возвращается без изменений.
 #[test]
 fn resolve_none_returns_none() {
     let m = Rc::new(RefCell::new(ModelNode::default()));
@@ -29,7 +28,7 @@ fn resolve_none_returns_none() {
     assert_eq!(result, StatementNode::None);
 }
 
-/// Уже разрешённый `Statement::Continue` → возвращается без изменений.
+/// Уже разрешённый `Statement::Continue` -> возвращается без изменений.
 #[test]
 fn resolve_already_resolved_passthrough() {
     let m = Rc::new(RefCell::new(ModelNode::default()));
@@ -56,9 +55,9 @@ fn resolve_block_recursively() {
     );
 }
 
-// ─── Интеграционные тесты через construct_model ──────────────────────────
+// --- Интеграционные тесты через construct_model --------------------------
 
-/// `always { it = it; }` с объявленной переменной `it` — разрешается в Block.
+/// `always { it = it; }` с объявленной переменной `it` - разрешается в Block.
 #[test]
 fn model_level_always_block_with_known_var_resolves() {
     let node = build("var it: bit := 0; always { it := it; } start S;");
@@ -74,11 +73,12 @@ fn model_level_always_block_with_known_var_resolves() {
     );
 }
 
-/// `always { debug("msg"); }` с необъявленной функцией — хранится как Unresolved (без паники).
+/// `always { debug("msg"); }` с необъявленной функцией - хранится как Unresolved (без
+/// паники).
 #[test]
 fn model_level_always_block_with_unknown_func_does_not_panic() {
-    // `debug` не объявлена — после изменения expression.rs создаётся заглушка,
-    // поэтому оператор может быть разрешён или нет, но паники быть не должно
+    // `debug` не объявлена - после изменения expression.rs создаётся заглушка, поэтому
+    // оператор может быть разрешён или нет, но паники быть не должно
     let node = build(r#"always { debug("msg"); } start S;"#);
     let nb = node
         .get_named_block("always")
@@ -86,7 +86,7 @@ fn model_level_always_block_with_unknown_func_does_not_panic() {
     let _ = nb.statement(); // просто доступ без паники
 }
 
-/// `enter { A = 0; }` внутри состояния — блок хранится в state.named_blocks.
+/// `enter { A = 0; }` внутри состояния - блок хранится в state.named_blocks.
 #[test]
 fn state_level_named_block_is_populated() {
     let node = build("var A: bit := false; start S { enter { A := A; } }");
@@ -97,7 +97,7 @@ fn state_level_named_block_is_populated() {
     );
 }
 
-/// `enter { A = A; }` с известной переменной — разрешается.
+/// `enter { A = A; }` с известной переменной - разрешается.
 #[test]
 fn state_level_named_block_resolves_known_var() {
     let node = build("var A: bit := false; start S { enter { A := A; } }");
@@ -149,10 +149,10 @@ fn return_statement_resolves() {
     );
 }
 
-/// `continue` и `break` разрешаются в соответствующие варианты — В ЦИКЛЕ.
+/// `continue` и `break` разрешаются в соответствующие варианты - В цикле.
 ///
-/// Вне цикла оба отвергаются `SE-132` (фича 0530), поэтому признак взводится
-/// стражем: тест проверяет понижение, а не место, где оно разрешено.
+/// Вне цикла оба отвергаются `SE-132`, поэтому признак взводится стражем: тест
+/// проверяет понижение, а не место, где оно разрешено.
 #[test]
 fn continue_break_resolve() {
     let _inside = crate::semantic::statement::loop_context::enter();
@@ -166,14 +166,14 @@ fn continue_break_resolve() {
     assert_eq!(r2, StatementNode::Break(Location::Codegen));
 }
 
-// ─── Циклы ────────────────────────────────────────────────────────────────
+// --- Циклы ----------------------------------------------------------------
 
-// ── Вспомогательная функция ───────────────────────────────────────────────
+// -- Вспомогательная функция -----------------------------------------------
 
 /// Возвращает первый реальный оператор из блока (вложенного в always-блок).
 ///
-/// `always { <stmt> }` оборачивает оператор в `Block([<stmt>])`.
-/// Эта функция раскрывает один уровень вложенности.
+/// `always { <stmt> }` оборачивает оператор в `Block([<stmt>])`. Эта функция раскрывает
+/// один уровень вложенности.
 fn first_in_block(stmt: &StatementNode) -> &StatementNode {
     match stmt {
         StatementNode::Block(stmts) => stmts.first().expect("блок пуст"),
@@ -181,7 +181,7 @@ fn first_in_block(stmt: &StatementNode) -> &StatementNode {
     }
 }
 
-// ── Циклы ─────────────────────────────────────────────────────────────────
+// -- Циклы -----------------------------------------------------------------
 
 /// `loop условие { }` разрешается в `Statement::Loop` с условием.
 ///
@@ -195,7 +195,7 @@ fn first_in_block(stmt: &StatementNode) -> &StatementNode {
 #[test]
 fn loop_with_condition_resolves() {
     let node = build(
-        // loop с условием — аналог while
+        // loop с условием - аналог while
         "var flag: bit := false; always { loop flag { flag := flag; } } start S;",
     );
     let nb = node.get_named_block("always").expect("always не найден");
@@ -218,7 +218,7 @@ fn loop_with_condition_resolves() {
 #[test]
 fn loop_without_condition_resolves() {
     let node = build(
-        // loop без условия — бесконечный цикл
+        // loop без условия - бесконечный цикл
         "always { loop { break; } } start S;",
     );
     let nb = node.get_named_block("always").expect("always не найден");
@@ -331,10 +331,10 @@ fn if_without_else_has_none_else() {
     );
 }
 
-// ─── С4: локальные переменные в блоках ────────────────────────────────────
+// --- С4: локальные переменные в блоках ------------------------------------
 
-/// `always { var x: bit = false; x = true; }` — локальная переменная
-/// объявляется и используется в том же блоке.
+/// `always { var x: bit = false; x = true; }` - локальная переменная объявляется и
+/// используется в том же блоке.
 ///
 /// # Пример (Takt)
 /// ```but
@@ -352,7 +352,7 @@ fn local_var_in_block_resolves() {
         "блок с локальной var должен быть разрешён: {:?}",
         stmt
     );
-    // Первый оператор — Statement::Variable(x, ...)
+    // Первый оператор - Statement::Variable(x, ...)
     if let StatementNode::Block(stmts) = stmt {
         assert!(
             matches!(stmts.first(), Some(StatementNode::Variable(n, _, _, _)) if n == "x"),
@@ -364,8 +364,8 @@ fn local_var_in_block_resolves() {
     }
 }
 
-/// `always { var x: bit = false; x = true; }` — инициализатор `false`
-/// сохраняется в `Statement::Variable`.
+/// `always { var x: bit = false; x = true; }` - инициализатор `false` сохраняется в
+/// `Statement::Variable`.
 ///
 /// # Пример (Takt)
 /// ```but
@@ -390,7 +390,7 @@ fn local_var_initializer_is_preserved() {
     }
 }
 
-/// `always { const C: bit = true; C; }` — константа внутри блока разрешается.
+/// `always { const C: bit = true; C; }` - константа внутри блока разрешается.
 ///
 /// # Пример (Takt)
 /// ```but
@@ -398,10 +398,10 @@ fn local_var_initializer_is_preserved() {
 /// start S;
 /// ```
 ///
-/// ⚠️ Прежде вторым оператором стояло голое `C;`. Фича 0189 (решение 6A)
-/// такую запись отвергает: выражение в позиции оператора обязано иметь
-/// эффект. Предмет теста не изменился — локальная `const` по-прежнему
-/// должна разрешаться, — но её использование записано законной формой.
+/// Прежде вторым оператором стояло голое `C;`. (решение 6A) такую запись отвергает:
+/// выражение в позиции оператора обязано иметь эффект. Предмет теста не изменился -
+/// локальная `const` по-прежнему должна разрешаться, - но её использование записано
+/// законной формой.
 #[test]
 fn local_const_in_block_resolves() {
     let node = build("always { const C: bit := true; var seen: bit := C; } start S;");
@@ -423,7 +423,7 @@ fn local_const_in_block_resolves() {
 
 /// Локальная переменная затеняет переменную уровня модели.
 ///
-/// Внутри блока `x` ссылается на локальную переменную, после выхода — на model-level.
+/// Внутри блока `x` ссылается на локальную переменную, после выхода - на model-level.
 ///
 /// # Пример (Takt)
 /// ```but
@@ -451,9 +451,8 @@ fn local_var_shadows_model_var() {
 
 /// После выхода из блока локальная переменная удаляется из модели.
 ///
-/// Проверяет механизм [`unregister_local_vars`] напрямую: после разрешения
-/// `{ var inner: bit = false; }` переменная `inner` не должна находиться
-/// в `model.variables`.
+/// Проверяет механизм [`unregister_local_vars`] напрямую: после разрешения `{ var
+/// inner: bit = false; }` переменная `inner` не должна находиться в `model.variables`.
 ///
 /// # Контрпример (Takt)
 /// ```but
@@ -502,8 +501,8 @@ fn local_var_scope_exits_block() {
     }
 }
 
-/// `for var i: bit = false; i; i = false { }` — переменная из init for
-/// видна в условии и шаге цикла.
+/// `for var i: bit = false; i; i = false { }` - переменная из init for видна в условии
+/// и шаге цикла.
 ///
 /// # Пример (Takt)
 /// ```but
@@ -542,10 +541,10 @@ fn local_var_in_for_init_resolves() {
 
 /// Параметр функции виден в операторе-выражении (`Statement::Expression`).
 ///
-/// Регрессионный тест для ошибки «Идентификатор 'value' не найден в области видимости».
+/// Регрессионный тест для ошибки "Идентификатор 'value' не найден в области видимости".
 /// До исправления `construct_expression` в ветке `Expression` вызывалась с `vec![]`
-/// вместо `params.clone()`, из-за чего параметры функции были невидимы в операторах вида
-/// `value > 100` или `out = value`.
+/// вместо `params.clone()`, из-за чего параметры функции были невидимы в операторах
+/// вида `value > 100` или `out = value`.
 ///
 /// # Пример (Takt)
 /// ```but
@@ -558,8 +557,9 @@ fn local_var_in_for_init_resolves() {
 #[test]
 fn function_param_visible_in_expression_statement() {
     use crate::semantic::FunctionDefinitionNode;
-    // `result = value` — оператор-выражение (присваивание), где `value` — параметр функции.
-    // До исправления это приводило к ошибке LSP «Идентификатор 'value' не найден».
+    // `result = value` - оператор-выражение (присваивание), где `value` - параметр
+    // функции. До исправления это приводило к ошибке LSP "Идентификатор 'value' не
+    // найден".
     let node = build(concat!(
         "",
         "var result: u8 := 0; ",

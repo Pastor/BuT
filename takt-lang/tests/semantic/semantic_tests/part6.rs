@@ -1,6 +1,6 @@
-//! Интеграционные тесты семантики, часть 6 (вынос из `semantic_tests.rs`, фича 0088-11).
+//! Интеграционные тесты семантики, часть 6 (вынос из `semantic_tests.rs`).
 //!
-//! Хелперы и импорты — из родителя через `use super::*` (приём 0088-06/08).
+//! Хелперы и импорты - из родителя через `use super::*` (приём /08).
 
 use super::*;
 
@@ -47,7 +47,7 @@ fn test_unknown_named_block_at_model_level_generates_warning() {
     assert_eq!(warnings[0].code.as_deref(), Some("SE-045"));
 }
 
-// ─── Задача 16: предупреждение о лишней точке с запятой ──────────────────────
+// ---: предупреждение о лишней точке с запятой ----------------------
 
 /// Двойная точка с запятой `;;` на уровне модели генерирует предупреждение SE-044.
 #[test]
@@ -92,9 +92,10 @@ fn test_no_stray_semicolon_no_warning() {
     );
 }
 
-// ─── Задача 1: cond требует завершающего `;` ──────────────────────────────────
+// --- Задача 1: cond требует завершающего `;` ----------------------------------
 
-/// Объявление `cond` с `;` разбирается как один элемент модели (не порождает StraySemicolon).
+/// Объявление `cond` с `;` разбирается как один элемент модели (не порождает
+/// StraySemicolon).
 #[test]
 fn test_cond_define_semicolon_consumed_not_stray() {
     use takt_lang::parser::ast::ModelElement;
@@ -157,9 +158,9 @@ fn match_switch_fixture_is_valid() {
     );
 }
 
-// ─── Задача 18: Анализ константных условий ────────────────────────────────────
+// ---: Анализ константных условий ------------------------------------
 
-/// SE-047: переход с `1 = 0` — всегда ложно → предупреждение.
+/// SE-047: переход с `1 = 0` - всегда ложно -> предупреждение.
 #[test]
 fn constant_condition_always_false_warns() {
     let src = "start S { ref S: 1 = 0; }";
@@ -173,7 +174,7 @@ fn constant_condition_always_false_warns() {
     );
 }
 
-/// SE-047: переход с `1 = 1` — всегда истинно → предупреждение.
+/// SE-047: переход с `1 = 1` - всегда истинно -> предупреждение.
 #[test]
 fn constant_condition_always_true_warns() {
     let src = "start S { ref S: 1 = 1; }";
@@ -187,7 +188,7 @@ fn constant_condition_always_true_warns() {
     );
 }
 
-/// SE-047: переход с переменной в условии — не предупреждение.
+/// SE-047: переход с переменной в условии - не предупреждение.
 #[test]
 fn constant_condition_with_variable_no_warn() {
     let src = "var x: bit := 0; start S { ref S: x = 1; }";
@@ -201,9 +202,9 @@ fn constant_condition_with_variable_no_warn() {
     );
 }
 
-// ─── Фича 0031: вызов функции из тела функции ─────────────────────────────────
+// ---: вызов функции из тела функции ---------------------------------
 
-/// A1 (R1): композиция `f → g` внутри модели компилируется (было SE-004).
+/// A1 (R1): композиция `f -> g` внутри модели компилируется (было SE-004).
 #[test]
 fn fn_calls_fn_composition_compiles() {
     let node = build(
@@ -212,7 +213,7 @@ fn fn_calls_fn_composition_compiles() {
     assert!(node.functions.contains_key("f") && node.functions.contains_key("g"));
 }
 
-/// A2 (R1): порядок объявления не важен — `f` вызывает `g`, объявленную ниже.
+/// A2 (R1): порядок объявления не важен - `f` вызывает `g`, объявленную ниже.
 #[test]
 fn fn_calls_fn_declaration_order_independent() {
     // Не должно паниковать/ошибаться: `f` объявлена раньше вызываемой `g`.
@@ -222,7 +223,7 @@ fn fn_calls_fn_declaration_order_independent() {
     assert!(node.functions.contains_key("f"));
 }
 
-/// A3 (R2): вызов функции родительской модели из вложенной — регресса нет.
+/// A3 (R2): вызов функции родительской модели из вложенной - регресса нет.
 #[test]
 fn fn_calls_parent_fn_still_works() {
     let node = build(
@@ -234,7 +235,7 @@ fn fn_calls_parent_fn_still_works() {
     assert!(inner.borrow().functions.contains_key("inner_fn"));
 }
 
-/// A4 (R3): прямая рекурсия `f → f` отвергается SE-053 с цепочкой.
+/// A4 (R3): прямая рекурсия `f -> f` отвергается SE-053 с цепочкой.
 #[test]
 fn fn_direct_recursion_is_se053() {
     let err = build_err("fn f(x: u8) -> u8 { return f(x); } start Main { always { } }");
@@ -246,7 +247,7 @@ fn fn_direct_recursion_is_se053() {
     );
 }
 
-/// A5 (R3): взаимная рекурсия `f → g → f` отвергается SE-053 с полной цепочкой.
+/// A5 (R3): взаимная рекурсия `f -> g -> f` отвергается SE-053 с полной цепочкой.
 #[test]
 fn fn_mutual_recursion_is_se053() {
     let err = build_err(
@@ -260,7 +261,7 @@ fn fn_mutual_recursion_is_se053() {
     );
 }
 
-/// A6 (R3): цикл длины 3 `f → g → h → f` отвергается SE-053.
+/// A6 (R3): цикл длины 3 `f -> g -> h -> f` отвергается SE-053.
 #[test]
 fn fn_cycle_three_is_se053() {
     let err = build_err(
@@ -277,14 +278,14 @@ fn fn_unknown_call_is_se004() {
     assert_eq!(err.code.as_deref(), Some("SE-004"), "код: {err:?}");
 }
 
-/// A8 (R5): встроенные функции (`min`) из тела `fn` работают — рёбер не дают.
+/// A8 (R5): встроенные функции (`min`) из тела `fn` работают - рёбер не дают.
 #[test]
 fn fn_calls_builtin_compiles() {
     let node = build("fn f(x: u8) -> u8 { return min(x, 1); } start Main { always { } }");
     assert!(node.functions.contains_key("f"));
 }
 
-/// A10 (R7): дубликат имени функции — SE-009 (прежде принимался молча).
+/// A10 (R7): дубликат имени функции - SE-009 (прежде принимался молча).
 #[test]
 fn fn_duplicate_name_is_se009() {
     let err = build_err(
@@ -293,7 +294,7 @@ fn fn_duplicate_name_is_se009() {
     assert_eq!(err.code.as_deref(), Some("SE-009"), "код: {err:?}");
 }
 
-// ─── Фича 0044: инвариант (invariant) ─────────────────────────────────────────
+// ---: инвариант (invariant) -----------------------------------------
 
 /// A1: `invariant P = C;` разбирается как элемент модели.
 #[test]
@@ -304,7 +305,7 @@ fn invariant_parses_as_model_element() {
         node.conditions.contains_key("Safe"),
         "инвариант регистрирует cond"
     );
-    // И обязательство — Guard-формула в formulas.
+    // И обязательство - Guard-формула в formulas.
     assert!(
         node.formulas.iter().any(
             |f| matches!(f, takt_lang::semantic::formula::Formula::Guard(_, Some(n), _) if n == "Safe")
@@ -314,15 +315,15 @@ fn invariant_parses_as_model_element() {
     );
 }
 
-/// A2: `assert` ключевым словом не стал — `var assert` валиден.
+/// A2: `assert` ключевым словом не стал - `var assert` валиден.
 #[test]
 fn assert_is_not_a_keyword() {
     let node = build("var assert: u8 := 1; start Main { always { } }");
     assert!(node.variables.contains_key("assert"));
 }
 
-/// A5 (ключевой тест фичи): имя инварианта — атом LTL. До 0044 `G(t <= 100)`
-/// невыразимо (`LtlPrimary` принимает только идентификатор); инвариант даёт имя.
+/// A5 (ключевой тест фичи): имя инварианта - атом LTL. До 0044 `G(t <= 100)` невыразимо
+/// (`LtlPrimary` принимает только идентификатор); инвариант даёт имя.
 #[test]
 fn invariant_name_is_ltl_atom() {
     // Не должно быть ошибки: G(Safe) ссылается на имя инварианта.
@@ -337,7 +338,7 @@ fn invariant_name_is_ltl_atom() {
     );
 }
 
-/// A6: имя инварианта — условие ребра (`ref Next: P;`).
+/// A6: имя инварианта - условие ребра (`ref Next: P;`).
 #[test]
 fn invariant_name_is_edge_condition() {
     // Не должно паниковать/ошибаться: ref ссылается на инвариант как на условие.
@@ -347,7 +348,7 @@ fn invariant_name_is_edge_condition() {
     );
 }
 
-/// A7: коллизия имени инварианта с существующим `cond` → SE-054.
+/// A7: коллизия имени инварианта с существующим `cond` -> SE-054.
 #[test]
 fn invariant_name_clash_is_se054() {
     let err = build_err(

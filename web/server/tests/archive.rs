@@ -1,12 +1,11 @@
-//! Проверки архива проекта (фича 0531, задача 09g).
+//! Проверки архива проекта.
 //!
-//! Политика та же, что у прочих наборов: нет базы — проверки не выполняются и
-//! говорят об этом словами.
+//! Политика та же, что у прочих наборов: нет базы - проверки не выполняются и говорят
+//! об этом словами.
 //!
-//! ⚠️ Предмет — **круговой рейс**: выгрузить, загрузить, сравнить. «Архив
-//! собрался» не доказывает ничего: испорченный архив тоже собирается, и узнаёт
-//! об этом тот, кто попробовал его прочитать — то есть автор, у которого другой
-//! копии уже нет.
+//! Предмет - **круговой рейс**: выгрузить, загрузить, сравнить. "Архив собрался" не
+//! доказывает ничего: испорченный архив тоже собирается, и узнаёт об этом тот, кто
+//! попробовал его прочитать - то есть автор, у которого другой копии уже нет.
 
 mod common;
 
@@ -66,7 +65,7 @@ async fn project(stand: &Stand, token: &str, name: &str) -> String {
     id
 }
 
-/// Читает состав архива: имя → содержимое.
+/// Читает состав архива: имя -> содержимое.
 fn entries(bytes: &[u8]) -> std::collections::BTreeMap<String, String> {
     let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes)).expect("это архив");
     let mut out = std::collections::BTreeMap::new();
@@ -99,8 +98,8 @@ async fn the_archive_makes_a_round_trip_through_the_service() {
     );
     assert!(files.contains_key("src/model.takt"));
     assert!(files.contains_key("src/run.json"), "сценарий — исходник");
-    // Без просьбы о цели вывода в архиве нет: он воспроизводим и весит на
-    // порядок больше исходника.
+    // Без просьбы о цели вывода в архиве нет: он воспроизводим и весит на порядок
+    // больше исходника.
     assert!(
         files.keys().all(|name| !name.starts_with("generated/")),
         "вывод без просьбы: {files:?}"
@@ -109,16 +108,15 @@ async fn the_archive_makes_a_round_trip_through_the_service() {
         serde_json::from_str(&files["takt-project.json"]).expect("метаданные");
     assert_eq!(manifest["format"], 3, "версия формата названа");
     assert_eq!(manifest["name"], "Термореле");
-    // ⚠️ Версия сверяется с той, что объявил СТЕНД, а не с числом в тесте:
-    // вписанное число отставало бы при каждом подъёме версии крейта, и
-    // проверка судила бы вчерашнее.
+    // Версия сверяется с той, что объявил стенд, а не с числом в тесте: вписанное число
+    // отставало бы при каждом подъёме версии крейта, и проверка судила бы вчерашнее.
     assert_eq!(
         manifest["takt_lang"], stand.module_version,
         "версия модуля — часть архива"
     );
     assert_eq!(manifest["main_file"], "model.takt");
-    // ⚠️ Свойств МЕСТА в архиве нет: восстановив их у себя, автор получил бы
-    // чужие права на своей стороне.
+    // Свойств места в архиве нет: восстановив их у себя, автор получил бы чужие права
+    // на своей стороне.
     for absent in ["visibility", "owner", "forks", "grants"] {
         assert!(
             manifest.get(absent).is_none(),
@@ -126,8 +124,8 @@ async fn the_archive_makes_a_round_trip_through_the_service() {
         );
     }
 
-    // Загрузка тем же человеком заводит ВТОРОЙ проект: перезапись поверх
-    // существующего означала бы молчаливую потерю работы.
+    // Загрузка тем же человеком заводит второй проект: перезапись поверх существующего
+    // означала бы молчаливую потерю работы.
     let (status, created) = stand.upload("/api/projects/import", &author, &bytes).await;
     assert_eq!(status, StatusCode::CREATED, "{created}");
     let copy = created["id"].as_str().expect("идентификатор").to_string();
@@ -139,7 +137,7 @@ async fn the_archive_makes_a_round_trip_through_the_service() {
         "версия модуля пережила рейс"
     );
     assert_eq!(created["main_file"], "model.takt");
-    // Загруженный проект закрыт: видимость — свойство места.
+    // Загруженный проект закрыт: видимость - свойство места.
     assert_eq!(created["visibility"], "private");
 
     // Состав и тексты совпадают с исходными.
@@ -175,8 +173,8 @@ async fn a_broken_archive_is_refused_by_words() {
     assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
     assert_eq!(body["error"], "bad_request");
 
-    // Архив без метаданных: без них проект не восстановить, и половина
-    // восстановленного хуже отказа.
+    // Архив без метаданных: без них проект не восстановить, и половина восстановленного
+    // хуже отказа.
     let mut buffer = std::io::Cursor::new(Vec::new());
     {
         use std::io::Write as _;
@@ -231,8 +229,8 @@ async fn the_archive_follows_visibility() {
         .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 
-    // Открытый скачивает всякий, в том числе без учётной записи: текст ему уже
-    // виден, и запрет скачать его неисполним.
+    // Открытый скачивает всякий, в том числе без учётной записи: текст ему уже виден, и
+    // запрет скачать его неисполним.
     let (status, _) = stand
         .patch_as(
             &format!("/api/projects/{id}"),
@@ -256,9 +254,9 @@ async fn generation_goes_into_the_archive_when_asked() {
         return skipped("генерация в архиве");
     };
     if std::env::var("TAKT_WEB_TEST_STATIC").is_err() {
-        // ⚠️ Пропуск НАЗЫВАЕТСЯ: вывод целей собирает модуль `takt-wasm` из
-        // собранной статики, и без неё проверять нечего. Молча пропущенная
-        // проверка неотличима от прошедшей.
+        // Пропуск называется: вывод целей собирает модуль `takt-wasm` из собранной
+        // статики, и без неё проверять нечего. Молча пропущенная проверка неотличима от
+        // прошедшей.
         eprintln!("пропуск (генерация в архиве): не задан TAKT_WEB_TEST_STATIC — статики нет");
         stand.drop_schema().await;
         return;
@@ -279,7 +277,7 @@ async fn generation_goes_into_the_archive_when_asked() {
         "вывода цели нет: {:?}",
         files.keys().collect::<Vec<_>>()
     );
-    // Имя корневой модели берётся из имени файла (0195), и это видно в выводе.
+    // Имя корневой модели берётся из имени файла, и это видно в выводе.
     assert!(
         files.contains_key("generated/model.h") || files.contains_key("generated/model.c"),
         "вывод назван не по файлу: {:?}",
@@ -292,7 +290,7 @@ async fn generation_goes_into_the_archive_when_asked() {
         "цель названа в метаданных"
     );
 
-    // Загрузка вывод ИГНОРИРУЕТ: он воспроизводим и в проекте не хранится.
+    // Загрузка вывод игнорирует: он воспроизводим и в проекте не хранится.
     let (status, created) = stand.upload("/api/projects/import", &author, &bytes).await;
     assert_eq!(status, StatusCode::CREATED, "{created}");
     let copy = created["id"].as_str().expect("идентификатор");
@@ -326,14 +324,14 @@ async fn a_target_that_refuses_says_so_in_the_archive() {
     }
     let author = person(&stand, "ivan").await;
     let id = project(&stand, &author, "Термореле").await;
-    // Вещественный тип цель `sv` не переводит — и это НОРМАЛЬНЫЙ ответ.
+    // Вещественный тип цель `sv` не переводит - и это нормальный ответ.
     let (status, _) = stand
         .put_as(
             &format!("/api/projects/{id}/files/model.takt"),
             &author,
             serde_json::json!({
-                // ⚠️ Переменная обязана ИСПОЛЬЗОВАТЬСЯ: неиспользуемую цель
-                // до вывода не доводит, и отказа не будет вовсе (замер 09g).
+                // Переменная обязана использоваться: неиспользуемую цель до вывода не
+                // доводит, и отказа не будет вовсе (замер 09g).
                 "text": "var x: float := 1.0;\n\nstart Run {\n    always {\n        x := x + 1.0;\n    }\n}\n",
                 "revision": 2
             }),
@@ -347,9 +345,8 @@ async fn a_target_that_refuses_says_so_in_the_archive() {
             Some(&author),
         )
         .await;
-    // ⚠️ Ответ `200`: отказ цели — не ошибка сервиса. Причина едет В АРХИВЕ
-    // словами, потому что молча пропущенный вывод неотличим от «цель ничего не
-    // печатает».
+    // Ответ `200`: отказ цели - не ошибка сервиса. Причина едет В архиве словами,
+    // потому что молча пропущенный вывод неотличим от "цель ничего не печатает".
     assert_eq!(status, StatusCode::OK);
     let files = entries(&bytes);
     let reason = files
@@ -363,8 +360,8 @@ async fn a_target_that_refuses_says_so_in_the_archive() {
 
 #[tokio::test]
 async fn the_build_target_and_flags_survive_the_round_trip() {
-    // ⚠️ Пара проверяется МОДУЛЕМ и при загрузке: без статики загрузка берёт
-    // умолчания, и проверка судила бы не то.
+    // Пара проверяется модулем и при загрузке: без статики загрузка берёт умолчания, и
+    // проверка судила бы не то.
     if std::env::var("TAKT_WEB_TEST_STATIC").is_err() {
         return skipped("цель и ключи в архиве: не задан TAKT_WEB_TEST_STATIC");
     }
@@ -389,23 +386,23 @@ async fn the_build_target_and_flags_survive_the_round_trip() {
     let files = entries(&bytes);
     let manifest: serde_json::Value =
         serde_json::from_str(&files["takt-project.json"]).expect("метаданные");
-    // ⚠️ Пара названа НЕПУСТОЙ и не умолчанием: на `c` без ключей потеря поля
-    // неотличима от подстановки умолчания.
+    // Пара названа непустой и не умолчанием: на `c` без ключей потеря поля неотличима
+    // от подстановки умолчания.
     assert_eq!(manifest["build_target"], "sv-mmio", "{manifest}");
     assert_eq!(manifest["build_args"], "--bus=apb", "{manifest}");
-    // ⚠️ Полей про цель ДВА, и они значат разное: выгрузка шла без генерации,
-    // значит `generated_target` пуст, а выбор автора — на месте.
+    // Полей про цель два, и они значат разное: выгрузка шла без генерации, значит
+    // `generated_target` пуст, а выбор автора - на месте.
     assert!(manifest["generated_target"].is_null(), "{manifest}");
 
-    // Круговой рейс: загруженный проект открывается СБОРКОЙ АВТОРА.
+    // Круговой рейс: загруженный проект открывается сборкой автора.
     let (status, created) = stand.upload("/api/projects/import", &author, &bytes).await;
     assert_eq!(status, StatusCode::CREATED, "{created}");
     assert_eq!(created["build_target"], "sv-mmio", "{created}");
     assert_eq!(created["build_args"], "--bus=apb", "{created}");
 
-    // ⚠️ Архив ПРЕЖНЕЙ версии формата пары не несёт, и его загрузка обязана
-    // дать умолчание, а не пустую цель: пустой целью не собирается ничего, и
-    // страница показала бы отказ там, где автор ничего не выбирал.
+    // Архив прежней версии формата пары не несёт, и его загрузка обязана дать
+    // умолчание, а не пустую цель: пустой целью не собирается ничего, и страница
+    // показала бы отказ там, где автор ничего не выбирал.
     let (status, old) = stand
         .upload("/api/projects/import", &author, &without_build_pair())
         .await;
