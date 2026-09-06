@@ -171,7 +171,7 @@ fn prune_function(f: &mut FunctionDefinitionNode, language: &str) {
 /// Заменяет вставки в операторе: своя — телом, чужая — пустым оператором.
 fn prune_stmt(stmt: &mut StatementNode, language: &str) {
     match stmt {
-        StatementNode::Assembly { target, body } => {
+        StatementNode::Assembly { target, body, .. } => {
             let mine = emits_for(target.as_deref(), language);
             prune_stmt(body, language);
             *stmt = if mine {
@@ -202,9 +202,9 @@ fn prune_stmt(stmt: &mut StatementNode, language: &str) {
         | StatementNode::Unresolved(_)
         | StatementNode::Expression(_, _)
         | StatementNode::Variable(_, _, _, _)
-        | StatementNode::Return(_)
-        | StatementNode::Continue
-        | StatementNode::Break
+        | StatementNode::Return(_, _)
+        | StatementNode::Continue(_)
+        | StatementNode::Break(_)
         | StatementNode::Formula(_)
         | StatementNode::InlineFormula(_) => {}
     }

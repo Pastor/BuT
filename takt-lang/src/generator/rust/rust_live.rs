@@ -220,7 +220,7 @@ pub(crate) fn fold_assignment<'a>(name: &str, stmt: &'a StatementNode) -> Option
         // Отложенная форма `let t: T;` перед развёрнутым `if/else` не годится:
         // это `clippy::needless_late_init`, то есть замена одного отказа гейта
         // другим (проверено пробой).
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             if reads_expr(name, expr) {
                 return None;
             }
@@ -268,6 +268,7 @@ pub(crate) fn fold_assignment<'a>(name: &str, stmt: &'a StatementNode) -> Option
             cond,
             then_,
             else_: Some(alt),
+            ..
         } => {
             if reads_expr(name, cond) {
                 return None;
@@ -324,7 +325,9 @@ fn verdict_of(name: &str, stmt: &StatementNode) -> Verdict {
         // переписывают переменную и ни условие, ни сами ветки её раньше не
         // читают. `if` без `else` перезаписи не даёт: путь мимо него оставит
         // инициализатор живым.
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             if reads_expr(name, cond) {
                 return Verdict::Read;
             }
@@ -341,7 +344,7 @@ fn verdict_of(name: &str, stmt: &StatementNode) -> Verdict {
             }
         }
         // Тело цикла может не исполниться ни разу — перезаписи оно не гарантирует.
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if cond.as_ref().is_some_and(|c| reads_expr(name, c)) {
                 return Verdict::Read;
             }
@@ -385,7 +388,7 @@ fn verdict_of(name: &str, stmt: &StatementNode) -> Verdict {
         // цепочку `if/else` — на входе с `_`-ветвью получался
         // `let mut t: u8 = 0;` с мёртвым значением, то есть отказ
         // `clippy -D warnings` при нулевом коде возврата `taktc`.
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             if reads_expr(name, expr) {
                 return Verdict::Read;
             }
@@ -404,7 +407,7 @@ fn verdict_of(name: &str, stmt: &StatementNode) -> Verdict {
             }
             Verdict::Unknown
         }
-        StatementNode::Return(Some(expr)) => {
+        StatementNode::Return(Some(expr), _) => {
             if reads_expr(name, expr) {
                 Verdict::Read
             } else {
@@ -414,16 +417,16 @@ fn verdict_of(name: &str, stmt: &StatementNode) -> Verdict {
         // Вставка (0484): вердикт даёт её тело, но лишь когда ЭТА цель его
         // печатает. Тело, адресованное другой цели, в вывод не попадает —
         // значит и переменную оно здесь не читает.
-        StatementNode::Assembly { target, body } => {
+        StatementNode::Assembly { target, body, .. } => {
             if crate::semantic::target_block::emits_for(target.as_deref(), "rust") {
                 verdict_of(name, body)
             } else {
                 Verdict::Unknown
             }
         }
-        StatementNode::Return(None)
-        | StatementNode::Continue
-        | StatementNode::Break
+        StatementNode::Return(None, _)
+        | StatementNode::Continue(_)
+        | StatementNode::Break(_)
         | StatementNode::Formula(_)
         | StatementNode::InlineFormula(_)
         | StatementNode::None

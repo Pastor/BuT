@@ -221,14 +221,16 @@ fn stmt_touches_outside(stmt: &StatementNode, owner: &Rc<RefCell<ModelNode>>) ->
     match stmt {
         StatementNode::Block(items) => items.iter().any(|s| stmt_touches_outside(s, owner)),
         StatementNode::Expression(expr, _) => expr_touches_outside(expr, owner),
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             expr_touches_outside(cond, owner)
                 || stmt_touches_outside(then_, owner)
                 || else_
                     .as_ref()
                     .is_some_and(|alt| stmt_touches_outside(alt, owner))
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             cond.as_ref()
                 .is_some_and(|c| expr_touches_outside(c, owner))
                 || stmt_touches_outside(body, owner)
@@ -250,11 +252,11 @@ fn stmt_touches_outside(stmt: &StatementNode, owner: &Rc<RefCell<ModelNode>>) ->
                     .is_some_and(|s| expr_touches_outside(s, owner))
                 || stmt_touches_outside(body, owner)
         }
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             expr_touches_outside(expr, owner)
                 || arms.iter().any(|a| stmt_touches_outside(&a.body, owner))
         }
-        StatementNode::Return(Some(expr)) => expr_touches_outside(expr, owner),
+        StatementNode::Return(Some(expr), _) => expr_touches_outside(expr, owner),
         StatementNode::Variable(_, _, Some(init), _) => expr_touches_outside(init, owner),
         _ => false,
     }

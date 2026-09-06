@@ -243,14 +243,16 @@ fn lower_stmt(
             }
         }
         StatementNode::Expression(e, _) => lower_expr(e, model)?,
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             lower_expr(cond, model)?;
             lower_stmt(then_, model, ret)?;
             if let Some(e) = else_ {
                 lower_stmt(e, model, ret)?;
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(c) = cond {
                 lower_expr(c, model)?;
             }
@@ -285,13 +287,13 @@ fn lower_stmt(
             }
         }
         // Возврат: приёмник — объявленный тип функции.
-        StatementNode::Return(Some(e)) => {
+        StatementNode::Return(Some(e), _) => {
             lower_expr(e, model)?;
             if let Some(f) = ret {
                 lower_literal(e, f)?;
             }
         }
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             lower_expr(expr, model)?;
             for arm in arms.iter_mut() {
                 lower_stmt(&mut arm.body, model, ret)?;
@@ -302,9 +304,9 @@ fn lower_stmt(
         StatementNode::Assembly { body, .. } => lower_stmt(body, model, ret)?,
         StatementNode::None
         | StatementNode::Unresolved(_)
-        | StatementNode::Return(None)
-        | StatementNode::Continue
-        | StatementNode::Break
+        | StatementNode::Return(None, _)
+        | StatementNode::Continue(_)
+        | StatementNode::Break(_)
         | StatementNode::Formula(_)
         | StatementNode::InlineFormula(_) => {}
     }

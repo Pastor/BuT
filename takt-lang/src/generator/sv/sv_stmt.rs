@@ -47,7 +47,7 @@ pub(crate) fn print_statement(
         StatementNode::Formula(_) => Ok(()),
         // Вставка печатается той целью, чьё имя названо; без имени — всеми.
         // Язык вывода у `sv` и `sv-mmio` один, поэтому метка у них общая.
-        StatementNode::Assembly { target, body } => {
+        StatementNode::Assembly { target, body, .. } => {
             if crate::semantic::target_block::emits_for(target.as_deref(), "sv") {
                 print_statement(p, body, scope)?;
             }
@@ -66,7 +66,9 @@ pub(crate) fn print_statement(
             crate::generator::site::enter(*loc);
             print_expression_statement(p, expr, scope)
         }
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             p.ident(&format!("if ({}) begin", print_expression(cond, scope)?))
                 .nl();
             p.up();
@@ -86,7 +88,7 @@ pub(crate) fn print_statement(
         // принимает** (проба: `ERROR: syntax error, unexpected TOK_ID`), тогда
         // как Verilator принимает молча. Форма выбрана по тому, что принимают
         // оба инструмента.
-        StatementNode::Return(Some(expr)) => {
+        StatementNode::Return(Some(expr), _) => {
             let name = scope
                 .function
                 .ok_or_else(|| sv002("возврат значения вне тела функции"))?;
@@ -100,7 +102,7 @@ pub(crate) fn print_statement(
         // Пустой `return` возвращать нечего: у функции Takt всегда есть значение.
         // В `void`-функции он означал бы «выйти», то есть досрочный возврат, —
         // а его цель отвергает (см. `has_early_return`).
-        StatementNode::Return(None) => Ok(()),
+        StatementNode::Return(None, _) => Ok(()),
         // Локальная переменная: печатается ТОЛЬКО инициализатор — объявление уже
         // вынесено в начало тела (`hoist_locals`). В SystemVerilog объявления
         // обязаны предшествовать операторам, а Takt разрешает объявить переменную
@@ -199,8 +201,8 @@ pub(crate) fn print_statement(
             }
             Ok(())
         }
-        StatementNode::Continue => Err(sv002("оператор continue (циклов нет)")),
-        StatementNode::Break => Err(sv002("оператор break (циклов нет)")),
+        StatementNode::Continue(_) => Err(sv002("оператор continue (циклов нет)")),
+        StatementNode::Break(_) => Err(sv002("оператор break (циклов нет)")),
         // `match` переводится в `case` (фича 0322): в SystemVerilog это прямой
         // аналог, и отказ здесь был пробелом, а не решением — остальные семь
         // потребителей вход исполняли.
@@ -209,7 +211,7 @@ pub(crate) fn print_statement(
         // `always_comb` оставляет сигнал без значения на непокрытом входе, и
         // синтезатор выводит ЗАЩЁЛКУ — то же, чем обернулась необъявленная
         // переменная цикла в 0321. Молчаливая защёлка хуже отказа.
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             p.ident(&format!("case ({})", print_expression(expr, scope)?))
                 .nl();
             p.up();
@@ -343,7 +345,7 @@ pub(crate) fn has_early_return(stmt: &StatementNode) -> bool {
     /// Есть ли возврат где-то внутри поддерева.
     fn contains_return(s: &StatementNode) -> bool {
         match s {
-            StatementNode::Return(_) => true,
+            StatementNode::Return(_, _) => true,
             StatementNode::Block(stmts) => stmts.iter().any(contains_return),
             StatementNode::If { then_, else_, .. } => {
                 contains_return(then_) || else_.as_deref().is_some_and(contains_return)
@@ -360,7 +362,7 @@ pub(crate) fn has_early_return(stmt: &StatementNode) -> bool {
             Some((_, head)) => head.iter().any(contains_return),
             None => false,
         },
-        StatementNode::Return(_) => false,
+        StatementNode::Return(_, _) => false,
         other => contains_return(other),
     }
 }
@@ -813,6 +815,7 @@ fn print_assign_target(target: &ExpressionNode, scope: &Scope) -> Result<String,
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::diagnostics::Location;
 
     fn empty_registered() -> std::collections::BTreeSet<String> {
         std::collections::BTreeSet::new()
@@ -845,6 +848,7 @@ mod tests {
             cond: Box::new(ExpressionNode::Bool(true)),
             then_: Box::new(StatementNode::None),
             else_: None,
+            loc: Location::Codegen,
         };
         print_statement(&mut p, &stmt, &scope).unwrap();
         assert!(out.contains("if (1'b1) begin"), "нет begin:\n{out}");
@@ -877,6 +881,7 @@ mod tests {
         let stmt = StatementNode::Loop {
             cond: None,
             body: Box::new(StatementNode::None),
+            loc: Location::Codegen,
         };
         let err = print_statement(&mut p, &stmt, &scope).unwrap_err();
         assert_eq!(err.code.as_deref(), Some("SV-002"));

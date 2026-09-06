@@ -364,7 +364,7 @@ fn wrap_item(
     // Возврат обязан отдать значение и в ветви отказа: иначе вывод целей
     // невалиден либо значение неопределено (фича 0466). Умолчания у типа нет —
     // оператор не трогаем: дыра в guard честнее невалидного вывода.
-    let returns = matches!(item, StatementNode::Return(Some(_)));
+    let returns = matches!(item, StatementNode::Return(Some(_), _));
     if returns && ret_default.is_none() {
         return;
     }
@@ -396,6 +396,7 @@ fn wrap_item(
                     Location::Implicit,
                 )),
                 else_: Some(Box::new(raise_fault(fault))),
+                loc: Location::Codegen,
             },
         ]);
         return;
@@ -406,7 +407,7 @@ fn wrap_item(
     let otherwise = match ret_default {
         Some(value) if returns => StatementNode::Block(vec![
             raise,
-            StatementNode::Return(Some(Box::new(value.clone()))),
+            StatementNode::Return(Some(Box::new(value.clone())), Location::Codegen),
         ]),
         _ => raise,
     };
@@ -414,6 +415,7 @@ fn wrap_item(
         cond: Box::new(cond),
         then_: Box::new(body),
         else_: Box::new(otherwise).into(),
+        loc: Location::Codegen,
     };
 }
 
@@ -440,7 +442,7 @@ fn collect_checks_stmt(stmt: &StatementNode, model: &ModelNode, out: &mut Vec<Ex
     match stmt {
         StatementNode::Expression(expr, _) => collect_checks_expr(expr, model, out),
         StatementNode::Variable(_, _, Some(init), _) => collect_checks_expr(init, model, out),
-        StatementNode::Return(Some(expr)) => collect_checks_expr(expr, model, out),
+        StatementNode::Return(Some(expr), _) => collect_checks_expr(expr, model, out),
         _ => {}
     }
 }

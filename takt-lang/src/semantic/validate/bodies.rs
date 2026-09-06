@@ -127,14 +127,16 @@ fn check_stmt(stmt: &StatementNode, model: &Rc<RefCell<ModelNode>>, found: &mut 
         StatementNode::Expression(expr, loc) => {
             check_expr(expr, model, found, Position::Statement, *loc)
         }
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             check_expr(cond, model, found, Position::Value, Location::Builtin);
             check_stmt(then_, model, found);
             if let Some(other) = else_ {
                 check_stmt(other, model, found);
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(cond) = cond {
                 check_expr(cond, model, found, Position::Value, Location::Builtin);
             }
@@ -163,10 +165,10 @@ fn check_stmt(stmt: &StatementNode, model: &Rc<RefCell<ModelNode>>, found: &mut 
         StatementNode::Variable(_, _, Some(expr), _) => {
             check_expr(expr, model, found, Position::Value, Location::Builtin)
         }
-        StatementNode::Return(Some(expr)) => {
+        StatementNode::Return(Some(expr), _) => {
             check_expr(expr, model, found, Position::Value, Location::Builtin)
         }
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             check_expr(expr, model, found, Position::Value, Location::Builtin);
             for arm in arms {
                 check_stmt(&arm.body, model, found);

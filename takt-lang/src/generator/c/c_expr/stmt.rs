@@ -119,7 +119,7 @@ pub(in crate::generator::c) fn generate_code_block(
         StatementNode::Formula(_) => {}
         // Вставка печатается той целью, чьё имя названо (0484); без имени —
         // всеми. Язык вывода у `c` и `c-hal` один, поэтому метка у них общая.
-        StatementNode::Assembly { target, body } => {
+        StatementNode::Assembly { target, body, .. } => {
             if crate::semantic::target_block::emits_for(target.as_deref(), "c") {
                 generate_code_block(printer, map, owner, params, body, has_model)?;
             }
@@ -200,7 +200,9 @@ pub(in crate::generator::c) fn generate_code_block(
             }
         }
 
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             // Печатаем первый if
             printer.ident("if (");
             generate_stmt_expression(printer, map, owner, params.clone(), cond, has_model)?;
@@ -221,6 +223,7 @@ pub(in crate::generator::c) fn generate_code_block(
                         cond: ec,
                         then_: et,
                         else_: ee,
+                        ..
                     }) => {
                         // else-ветка — одиночный if: схлопываем в else if
                         printer.down().ident("} else if (");
@@ -254,7 +257,7 @@ pub(in crate::generator::c) fn generate_code_block(
             }
         }
 
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             match cond {
                 None => {
                     // Бесконечный цикл
@@ -434,7 +437,7 @@ pub(in crate::generator::c) fn generate_code_block(
             printer.print(";").nl();
         }
 
-        StatementNode::Return(ret) => {
+        StatementNode::Return(ret, _) => {
             printer.ident("return");
             if let Some(expr) = ret {
                 printer.print(" ");
@@ -443,11 +446,11 @@ pub(in crate::generator::c) fn generate_code_block(
             printer.print(";").nl();
         }
 
-        StatementNode::Continue => {
+        StatementNode::Continue(_) => {
             printer.ident("continue;").nl();
         }
 
-        StatementNode::Break => {
+        StatementNode::Break(_) => {
             printer.ident("break;").nl();
         }
 
@@ -465,7 +468,7 @@ pub(in crate::generator::c) fn generate_code_block(
             }
         }
 
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             printer.ident("switch (");
             generate_stmt_expression(printer, map, owner, params.clone(), expr, has_model)?;
             printer.print(") {").nl();

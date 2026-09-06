@@ -105,14 +105,16 @@ pub(crate) fn walk_stmt_exprs_mut(
             }
         }
         StatementNode::Expression(expr, _) => walk_expr_mut(expr, f),
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             walk_expr_mut(cond, f);
             walk_stmt_exprs_mut(then_, f);
             if let Some(alt) = else_ {
                 walk_stmt_exprs_mut(alt, f);
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(c) = cond {
                 walk_expr_mut(c, f);
             }
@@ -141,12 +143,12 @@ pub(crate) fn walk_stmt_exprs_mut(
                 walk_expr_mut(e, f);
             }
         }
-        StatementNode::Return(expr) => {
+        StatementNode::Return(expr, _) => {
             if let Some(e) = expr {
                 walk_expr_mut(e, f);
             }
         }
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             walk_expr_mut(expr, f);
             for arm in arms.iter_mut() {
                 walk_stmt_exprs_mut(&mut arm.body, f);
@@ -159,8 +161,8 @@ pub(crate) fn walk_stmt_exprs_mut(
         // выражений Takt в нём нет вовсе (0484).
         StatementNode::None
         | StatementNode::Unresolved(_)
-        | StatementNode::Continue
-        | StatementNode::Break
+        | StatementNode::Continue(_)
+        | StatementNode::Break(_)
         | StatementNode::Formula(_)
         | StatementNode::InlineFormula(_) => {}
     }

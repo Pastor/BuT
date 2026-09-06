@@ -485,21 +485,24 @@ mod tests {
                     signed: false,
                 },
                 raw: Box::default(),
-                body: StatementNode::Return(Some(Box::new(ExpressionNode::Add(
-                    Box::new(ExpressionNode::Variable(std::rc::Rc::new(
-                        std::cell::RefCell::new(takt_lang::semantic::VariableNode::Simple {
-                            upper: None,
-                            loc: Location::Builtin,
-                            name: "n".to_string(),
-                            ty: TypeNode::Integer {
-                                bits: 8,
-                                signed: false,
-                            },
-                            expr: ExpressionNode::Number(0),
-                        }),
+                body: StatementNode::Return(
+                    Some(Box::new(ExpressionNode::Add(
+                        Box::new(ExpressionNode::Variable(std::rc::Rc::new(
+                            std::cell::RefCell::new(takt_lang::semantic::VariableNode::Simple {
+                                upper: None,
+                                loc: Location::Builtin,
+                                name: "n".to_string(),
+                                ty: TypeNode::Integer {
+                                    bits: 8,
+                                    signed: false,
+                                },
+                                expr: ExpressionNode::Number(0),
+                            }),
+                        ))),
+                        num(1),
                     ))),
-                    num(1),
-                )))),
+                    Location::Codegen,
+                ),
             },
         ));
         let mut ctx = MockContext::new(&[]);

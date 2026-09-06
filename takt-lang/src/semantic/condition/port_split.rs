@@ -589,7 +589,9 @@ fn rewrite_stmt(
         // ⚠️ Условие оператора — тоже место обращения (фича 0500): прежде
         // обходилось только ТЕЛО, и `if cfg.lo > 1 { … }` доезжало до цели с
         // обращением к развёрнутому порту.
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             // Условие `if` вычисляется ОДИН раз, поэтому пролог перед
             // оператором точен — в отличие от условия цикла (см. ниже).
             rewrite_expr(
@@ -607,7 +609,7 @@ fn rewrite_stmt(
         // ⚠️ У цикла пролога нет и быть не может: он встал бы ПЕРЕД циклом, и
         // значение узла перестало бы обновляться по итерациям — молчаливое
         // расхождение вместо громкого отказа (фича 0501).
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(c) = cond {
                 rewrite_expr(c, cells, lift, None, Location::Implicit)?;
             }
@@ -632,7 +634,7 @@ fn rewrite_stmt(
             }
             rewrite_stmt(body, cells, lift, None)?;
         }
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             rewrite_expr(
                 expr,
                 cells,
@@ -657,7 +659,7 @@ fn rewrite_stmt(
                 rewrite_formula(formula, cells)?;
             }
         }
-        StatementNode::Return(Some(expr)) => {
+        StatementNode::Return(Some(expr), _) => {
             rewrite_expr(
                 expr,
                 cells,

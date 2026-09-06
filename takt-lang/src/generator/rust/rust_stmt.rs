@@ -290,7 +290,7 @@ pub(crate) fn print_block(
 pub(crate) fn tail_foldable(stmt: &StatementNode) -> bool {
     match stmt {
         // `return e;` в хвосте → `e`.
-        StatementNode::Return(Some(_)) => true,
+        StatementNode::Return(Some(_), _) => true,
         // Блок сворачиваем, если сворачиваем его ПОСЛЕДНИЙ оператор (операторы
         // перед ним печатаются как есть — R8).
         StatementNode::Block(items) => items.last().is_some_and(tail_foldable),
@@ -321,7 +321,7 @@ pub(crate) fn print_tail(
     out: &mut StmtOutput,
 ) -> Result<bool, Diagnostic> {
     match stmt {
-        StatementNode::Return(Some(expr)) => {
+        StatementNode::Return(Some(expr), _) => {
             // Хвостовое выражение — тот же приёмник, что и `return` (фича
             // 0336): путей печати возврата ДВА, и правило обязано стоять в
             // обоих — иначе оно действует через раз, в зависимости от того,
@@ -345,6 +345,7 @@ pub(crate) fn print_tail(
             cond,
             then_,
             else_: Some(else_),
+            ..
         } if tail_foldable(stmt) => {
             p.ident(&format!(
                 "if {} {{",
@@ -420,7 +421,7 @@ pub(crate) fn print_statement_ctx(
         // Блок формул адресован внешнему анализатору (0484): печатать нечего;
         // вставка печатается целью, чьё имя названо (без имени — всеми).
         StatementNode::Formula(_) => Ok(0),
-        StatementNode::Assembly { target, body } => {
+        StatementNode::Assembly { target, body, .. } => {
             if crate::semantic::target_block::emits_for(target.as_deref(), "rust") {
                 print_statement_ctx(body, &[], scope, p, out)?;
             }
@@ -598,7 +599,9 @@ pub(crate) fn print_statement_ctx(
             scope.locals.push(name.clone());
             Ok(0)
         }
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             // Вложенный `if`, составляющий ВСЁ тело, сливается с внешним
             // (фича 0510): `clippy` под `-D warnings` отвечает «this `if`
             // statement can be collapsed» — отказ гейта самой цели при нулевом
@@ -666,7 +669,7 @@ pub(crate) fn print_statement_ctx(
             p.ident("}").nl();
             Ok(0)
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             match cond {
                 Some(c) => {
                     p.ident(&format!(
@@ -724,7 +727,7 @@ pub(crate) fn print_statement_ctx(
             p.ident("}").nl();
             Ok(0)
         }
-        StatementNode::Return(value) => {
+        StatementNode::Return(value, _) => {
             match value {
                 // `return (x);` — ещё одна позиция, где скобки лишние.
                 Some(expr) => {
@@ -749,18 +752,18 @@ pub(crate) fn print_statement_ctx(
             }
             Ok(0)
         }
-        StatementNode::Continue => {
+        StatementNode::Continue(_) => {
             p.ident("continue;").nl();
             Ok(0)
         }
-        StatementNode::Break => {
+        StatementNode::Break(_) => {
             p.ident("break;").nl();
             Ok(0)
         }
         // Образцы Takt — произвольные выражения, а `match x { y => … }` в Rust
         // СВЯЗАЛ БЫ `y` как новое имя вместо сравнения с ним (печать — свой
         // модуль `rust_match`, фича 0510).
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             crate::generator::rust::rust_match::print_match(expr, arms, scope, p, out)
         }
         // Формула в теле блока: ОХРАННАЯ печатается `assert!`, темпоральная —
@@ -836,16 +839,18 @@ fn has_temporal(formula: &crate::semantic::formula::Formula) -> bool {
 #[cfg(test)]
 mod tail_tests {
     use super::tail_foldable;
+    use crate::diagnostics::Location;
     use crate::semantic::{ExpressionNode, StatementNode};
 
     fn ret(n: i128) -> StatementNode {
-        StatementNode::Return(Some(Box::new(ExpressionNode::Number(n))))
+        StatementNode::Return(Some(Box::new(ExpressionNode::Number(n))), Location::Codegen)
     }
     fn if_(then_: StatementNode, else_: Option<StatementNode>) -> StatementNode {
         StatementNode::If {
             cond: Box::new(ExpressionNode::Bool(true)),
             then_: Box::new(then_),
             else_: else_.map(Box::new),
+            loc: Location::Codegen,
         }
     }
 

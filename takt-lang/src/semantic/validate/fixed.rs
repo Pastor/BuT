@@ -99,14 +99,16 @@ fn check_stmt(stmt: &StatementNode, model: &Rc<RefCell<ModelNode>>) -> Result<()
             }
         }
         StatementNode::Expression(e, _) => check_expr(e, model)?,
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             check_expr(cond, model)?;
             check_stmt(then_, model)?;
             if let Some(e) = else_ {
                 check_stmt(e, model)?;
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(c) = cond {
                 check_expr(c, model)?;
             }
@@ -131,8 +133,8 @@ fn check_stmt(stmt: &StatementNode, model: &Rc<RefCell<ModelNode>>) -> Result<()
             check_stmt(body, model)?;
         }
         StatementNode::Variable(_, _, Some(e), _) => check_expr(e, model)?,
-        StatementNode::Return(Some(e)) => check_expr(e, model)?,
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Return(Some(e), _) => check_expr(e, model)?,
+        StatementNode::Match { expr, arms, .. } => {
             check_expr(expr, model)?;
             for arm in arms {
                 check_stmt(&arm.body, model)?;
@@ -144,9 +146,9 @@ fn check_stmt(stmt: &StatementNode, model: &Rc<RefCell<ModelNode>>) -> Result<()
         StatementNode::None
         | StatementNode::Unresolved(_)
         | StatementNode::Variable(_, _, None, _)
-        | StatementNode::Return(None)
-        | StatementNode::Continue
-        | StatementNode::Break
+        | StatementNode::Return(None, _)
+        | StatementNode::Continue(_)
+        | StatementNode::Break(_)
         | StatementNode::Formula(_)
         | StatementNode::InlineFormula(_) => {}
     }

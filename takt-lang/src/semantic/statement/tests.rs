@@ -7,6 +7,7 @@
 //! тот же, которым фича 0129 разделила `semantic/expression.rs`.
 
 use super::*;
+use crate::diagnostics::Location;
 use crate::parse;
 use crate::semantic::tree::construct_model;
 
@@ -32,20 +33,26 @@ fn resolve_none_returns_none() {
 #[test]
 fn resolve_already_resolved_passthrough() {
     let m = Rc::new(RefCell::new(ModelNode::default()));
-    let stmt = StatementNode::Continue;
+    let stmt = StatementNode::Continue(Location::Codegen);
     let result = resolve_statement(&stmt, vec![], m).unwrap();
-    assert_eq!(result, StatementNode::Continue);
+    assert_eq!(result, StatementNode::Continue(Location::Codegen));
 }
 
 /// `Statement::Block([Continue, Break])` рекурсивно разрешается.
 #[test]
 fn resolve_block_recursively() {
     let m = Rc::new(RefCell::new(ModelNode::default()));
-    let stmt = StatementNode::Block(vec![StatementNode::Continue, StatementNode::Break]);
+    let stmt = StatementNode::Block(vec![
+        StatementNode::Continue(Location::Codegen),
+        StatementNode::Break(Location::Codegen),
+    ]);
     let result = resolve_statement(&stmt, vec![], m).unwrap();
     assert_eq!(
         result,
-        StatementNode::Block(vec![StatementNode::Continue, StatementNode::Break])
+        StatementNode::Block(vec![
+            StatementNode::Continue(Location::Codegen),
+            StatementNode::Break(Location::Codegen)
+        ])
     );
 }
 
@@ -155,8 +162,8 @@ fn continue_break_resolve() {
     let r1 =
         resolve_statement(&StatementNode::Unresolved(ast_continue), vec![], m.clone()).unwrap();
     let r2 = resolve_statement(&StatementNode::Unresolved(ast_break), vec![], m).unwrap();
-    assert_eq!(r1, StatementNode::Continue);
-    assert_eq!(r2, StatementNode::Break);
+    assert_eq!(r1, StatementNode::Continue(Location::Codegen));
+    assert_eq!(r2, StatementNode::Break(Location::Codegen));
 }
 
 // ─── Циклы ────────────────────────────────────────────────────────────────
@@ -283,7 +290,7 @@ fn return_without_value_resolves() {
     let nb = node.get_named_block("always").expect("always не найден");
     let stmt = first_in_block(nb.statement().expect("оператор должен быть"));
     assert!(
-        matches!(stmt, StatementNode::Return(None)),
+        matches!(stmt, StatementNode::Return(None, _)),
         "ожидался Return(None), получен: {:?}",
         stmt
     );

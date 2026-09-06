@@ -138,7 +138,7 @@ fn resolve_ast_statement(
         }
 
         // ── Условный оператор if ───────────────────────────────────────────────
-        ast::Statement::If(_, cond, then_, else_) => {
+        ast::Statement::If(loc, cond, then_, else_) => {
             let cond = construct_expression(cond.clone(), params.clone(), model.clone())?;
             let then_ = resolve_ast_statement(then_, params.clone(), model.clone())?;
             let else_ = else_
@@ -150,6 +150,7 @@ fn resolve_ast_statement(
                 cond: Box::new(cond),
                 then_: Box::new(then_),
                 else_,
+                loc: *loc,
             })
         }
 
@@ -157,7 +158,7 @@ fn resolve_ast_statement(
         // `loop { тело }` — бесконечный цикл (cond = None)
         // `loop условие { тело }` — продолжается, пока условие истинно
         // Ключевое слово (`loop`/`while`) на семантику не влияет — синонимы.
-        ast::Statement::Loop(_, cond, body, _) => {
+        ast::Statement::Loop(loc, cond, body, _) => {
             let cond = cond
                 .as_ref()
                 .map(|c| construct_expression(c.clone(), params.clone(), model.clone()))
@@ -170,6 +171,7 @@ fn resolve_ast_statement(
             Ok(StatementNode::Loop {
                 cond,
                 body: Box::new(body),
+                loc: *loc,
             })
         }
 
@@ -275,13 +277,13 @@ fn resolve_ast_statement(
         }
 
         // ── Оператор return ────────────────────────────────────────────────────
-        ast::Statement::Return(_, expr) => {
+        ast::Statement::Return(loc, expr) => {
             let expr = expr
                 .as_ref()
                 .map(|e| construct_expression(e.clone(), params.clone(), model))
                 .transpose()?
                 .map(Box::new);
-            Ok(StatementNode::Return(expr))
+            Ok(StatementNode::Return(expr, *loc))
         }
 
         // ── Простые операторы без выражений ───────────────────────────────────
@@ -293,13 +295,13 @@ fn resolve_ast_statement(
             if !loop_context::inside() {
                 return Err(loop_context::refuse("continue", *loc));
             }
-            Ok(StatementNode::Continue)
+            Ok(StatementNode::Continue(*loc))
         }
         ast::Statement::Break(loc) => {
             if !loop_context::inside() {
                 return Err(loop_context::refuse("break", *loc));
             }
-            Ok(StatementNode::Break)
+            Ok(StatementNode::Break(*loc))
         }
 
         // ── Встроенная формула ─────────────────────────────────────────────────
@@ -346,7 +348,7 @@ fn resolve_ast_statement(
         }
 
         // ── Оператор match ─────────────────────────────────────────────────────
-        ast::Statement::Match(_, expr, ast_arms) => {
+        ast::Statement::Match(loc, expr, ast_arms) => {
             let resolved_expr = construct_expression(*expr.clone(), params.clone(), model.clone())?;
             let mut arms: Vec<MatchArmNode> = Vec::new();
             for arm in ast_arms {
@@ -376,6 +378,7 @@ fn resolve_ast_statement(
             Ok(StatementNode::Match {
                 expr: Box::new(resolved_expr),
                 arms,
+                loc: *loc,
             })
         }
 
@@ -394,7 +397,12 @@ fn resolve_ast_statement(
         // Тело — обычные операторы Takt, и понижение у него обычное: имена в
         // нём разрешаются, ошибки диагностируются. Метка — ЯЗЫК ВЫВОДА, её
         // проверяет `target_block::check_target` (`SE-129`).
-        ast::Statement::Assembly { dialect, block, .. } => {
+        ast::Statement::Assembly {
+            loc,
+            dialect,
+            block,
+            ..
+        } => {
             let target = dialect
                 .as_ref()
                 .map(crate::semantic::target_block::check_target)
@@ -403,6 +411,7 @@ fn resolve_ast_statement(
             Ok(StatementNode::Assembly {
                 target,
                 body: Box::new(body),
+                loc: *loc,
             })
         }
 

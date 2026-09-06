@@ -390,14 +390,16 @@ fn check_enum_stmt(
                 check_enum_stmt(s, model, out);
             }
         }
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             check_enum_expr(cond, model, out);
             check_enum_stmt(then_, model, out);
             if let Some(e) = else_ {
                 check_enum_stmt(e, model, out);
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(c) = cond {
                 check_enum_expr(c, model, out);
             }
@@ -421,7 +423,7 @@ fn check_enum_stmt(
             }
             check_enum_stmt(body, model, out);
         }
-        StatementNode::Return(Some(e)) => check_enum_expr(e, model, out),
+        StatementNode::Return(Some(e), _) => check_enum_expr(e, model, out),
         StatementNode::Variable(_, _, Some(e), _) => check_enum_expr(e, model, out),
         _ => {}
     }

@@ -80,16 +80,18 @@ fn walk_statement(stmt: &StatementNode, exprs: &mut Vec<crate::semantic::Express
             }
         }
         StatementNode::Expression(expr, _) => exprs.push((**expr).clone()),
-        StatementNode::Return(Some(expr)) => exprs.push((**expr).clone()),
+        StatementNode::Return(Some(expr), _) => exprs.push((**expr).clone()),
         StatementNode::Variable(_, _, Some(expr), _) => exprs.push((**expr).clone()),
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             exprs.push((**cond).clone());
             walk_statement(then_, exprs);
             if let Some(other) = else_ {
                 walk_statement(other, exprs);
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(cond) = cond {
                 exprs.push((**cond).clone());
             }
@@ -113,7 +115,7 @@ fn walk_statement(stmt: &StatementNode, exprs: &mut Vec<crate::semantic::Express
             }
             walk_statement(body, exprs);
         }
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             exprs.push((**expr).clone());
             for arm in arms {
                 walk_statement(&arm.body, exprs);

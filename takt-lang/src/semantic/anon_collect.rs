@@ -250,14 +250,16 @@ fn walk_stmt_writes(
             }
         }
         StatementNode::Expression(expr, _) => walk_expr_writes(expr, seen, out),
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             walk_expr_writes(cond, seen, out);
             walk_stmt_writes(then_, seen, out);
             if let Some(other) = else_ {
                 walk_stmt_writes(other, seen, out);
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(cond) = cond {
                 walk_expr_writes(cond, seen, out);
             }
@@ -281,7 +283,7 @@ fn walk_stmt_writes(
             }
             walk_stmt_writes(body, seen, out);
         }
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             walk_expr_writes(expr, seen, out);
             for arm in arms {
                 walk_stmt_writes(&arm.body, seen, out);
@@ -377,14 +379,16 @@ fn walk_stmt(
             }
         }
         StatementNode::Expression(expr, _) => walk_expr(expr, found, out),
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             walk_expr(cond, found, out);
             walk_stmt(then_, found, out);
             if let Some(other) = else_ {
                 walk_stmt(other, found, out);
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(cond) = cond {
                 walk_expr(cond, found, out);
             }
@@ -409,8 +413,8 @@ fn walk_stmt(
             walk_stmt(body, found, out);
         }
         StatementNode::Variable(_, _, Some(expr), _) => walk_expr(expr, found, out),
-        StatementNode::Return(Some(expr)) => walk_expr(expr, found, out),
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Return(Some(expr), _) => walk_expr(expr, found, out),
+        StatementNode::Match { expr, arms, .. } => {
             walk_expr(expr, found, out);
             for arm in arms {
                 walk_stmt(&arm.body, found, out);

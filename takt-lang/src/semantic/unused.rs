@@ -336,14 +336,16 @@ pub(crate) fn usage_from_stmt(stmt: &StatementNode, set: &mut UsageSet) {
             }
         }
         StatementNode::Expression(e, _) => usage_from_expr(e, set),
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             usage_from_expr(cond, set);
             usage_from_stmt(then_, set);
             if let Some(e) = else_ {
                 usage_from_stmt(e, set);
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(c) = cond {
                 usage_from_expr(c, set);
             }
@@ -368,8 +370,8 @@ pub(crate) fn usage_from_stmt(stmt: &StatementNode, set: &mut UsageSet) {
             usage_from_stmt(body, set);
         }
         StatementNode::Variable(_, _, Some(e), _) => usage_from_expr(e, set),
-        StatementNode::Return(Some(e)) => usage_from_expr(e, set),
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Return(Some(e), _) => usage_from_expr(e, set),
+        StatementNode::Match { expr, arms, .. } => {
             usage_from_expr(expr, set);
             for arm in arms {
                 usage_from_stmt(&arm.body, set);
@@ -792,14 +794,16 @@ fn collect_from_stmt(stmt: &StatementNode, used: &mut HashSet<String>) {
             }
         }
         StatementNode::Expression(e, _) => collect_from_expr(e, used),
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             collect_from_expr(cond, used);
             collect_from_stmt(then_, used);
             if let Some(e) = else_ {
                 collect_from_stmt(e, used);
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(c) = cond {
                 collect_from_expr(c, used);
             }
@@ -824,8 +828,8 @@ fn collect_from_stmt(stmt: &StatementNode, used: &mut HashSet<String>) {
             collect_from_stmt(body, used);
         }
         StatementNode::Variable(_, _, Some(e), _) => collect_from_expr(e, used),
-        StatementNode::Return(Some(e)) => collect_from_expr(e, used),
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Return(Some(e), _) => collect_from_expr(e, used),
+        StatementNode::Match { expr, arms, .. } => {
             collect_from_expr(expr, used);
             for arm in arms {
                 collect_from_stmt(&arm.body, used);

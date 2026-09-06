@@ -87,7 +87,7 @@ pub(crate) fn print_statement(
         StatementNode::Formula(_) => Ok(()),
         // Вставка печатается той целью, чьё имя названо; без имени — всеми.
         // Язык вывода у `st` и `st-at` один, поэтому метка у них общая.
-        StatementNode::Assembly { target, body } => {
+        StatementNode::Assembly { target, body, .. } => {
             if crate::semantic::target_block::emits_for(target.as_deref(), "st") {
                 print_statement(body, model, p, out, fn_name)?;
             }
@@ -241,7 +241,9 @@ pub(crate) fn print_statement(
             p.ident(&format!("{};", text)).nl();
             Ok(())
         }
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             // Ветви печатаются В БУФЕР: тело, состоящее только из формул, в ST
             // не транслируется (`ST-022`), и на выходе получался `IF … THEN
             // END_IF;` — «no statement defined after THEN», то есть отказ
@@ -288,7 +290,7 @@ pub(crate) fn print_statement(
         // `loop`/`while` → `WHILE … DO`. Бесконечный цикл (`cond: None`) —
         // `WHILE TRUE DO`: в ПЛК он завесит скан-цикл, но это свойство модели, а
         // не трансляции; молча менять семантику нельзя.
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             let guard = match cond {
                 Some(c) => print_expression(c, model)?,
                 None => "TRUE".to_string(),
@@ -344,13 +346,13 @@ pub(crate) fn print_statement(
         }
         // Возврат значения — присваивание имени функции; его подставляет печатник
         // функций (часть 3), поэтому здесь допустим только голый `RETURN`.
-        StatementNode::Return(None) => {
+        StatementNode::Return(None, _) => {
             p.ident("RETURN;").nl();
             Ok(())
         }
         // В ST нет `return <значение>`: результат возвращается присваиванием
         // ИМЕНИ функции, а `RETURN;` лишь досрочно выходит.
-        StatementNode::Return(Some(value)) => {
+        StatementNode::Return(Some(value), _) => {
             let (name, ret) = fn_name.ok_or_else(|| {
                 unsupported(
                     "return со значением вне функции: присваивать нечему — имя \
@@ -363,11 +365,11 @@ pub(crate) fn print_statement(
             Ok(())
         }
         // В ST выход из цикла — `EXIT`, а не `break`.
-        StatementNode::Break => {
+        StatementNode::Break(_) => {
             p.ident("EXIT;").nl();
             Ok(())
         }
-        StatementNode::Continue => {
+        StatementNode::Continue(_) => {
             p.ident("CONTINUE;").nl();
             Ok(())
         }
@@ -376,7 +378,7 @@ pub(crate) fn print_statement(
         // выражениями (включая варианты перечислений, которые у нас стали
         // именованными константами, а не литералами). Цепочка сравнений
         // семантически тождественна и заведомо выразима.
-        StatementNode::Match { expr, arms } => print_match(expr, arms, model, p, out, fn_name),
+        StatementNode::Match { expr, arms, .. } => print_match(expr, arms, model, p, out, fn_name),
         // LTL-формулы в ST не транслируются. Предупреждение, а не тихий пропуск:
         // молчание здесь — ровно класс дефекта фичи 0025 (ср. фича 0035, где
         // формулы теряются молча уже в семантике).
@@ -557,7 +559,7 @@ fn print_match(
 /// Есть ли `continue` в теле (не заходя во вложенные циклы — там он свой).
 fn contains_continue(stmt: &StatementNode) -> bool {
     match stmt {
-        StatementNode::Continue => true,
+        StatementNode::Continue(_) => true,
         StatementNode::Block(items) => items.iter().any(contains_continue),
         StatementNode::If { then_, else_, .. } => {
             contains_continue(then_) || else_.as_ref().is_some_and(|e| contains_continue(e))
@@ -565,7 +567,7 @@ fn contains_continue(stmt: &StatementNode) -> bool {
         StatementNode::Match { arms, .. } => arms.iter().any(|a| contains_continue(&a.body)),
         // Вставка (0484): `continue` внутри неё считается, если тело печатает
         // эта цель.
-        StatementNode::Assembly { target, body } => {
+        StatementNode::Assembly { target, body, .. } => {
             crate::semantic::target_block::emits_for(target.as_deref(), "st")
                 && contains_continue(body)
         }
@@ -576,8 +578,8 @@ fn contains_continue(stmt: &StatementNode) -> bool {
         | StatementNode::Unresolved(_)
         | StatementNode::Expression(_, _)
         | StatementNode::Variable(_, _, _, _)
-        | StatementNode::Return(_)
-        | StatementNode::Break
+        | StatementNode::Return(_, _)
+        | StatementNode::Break(_)
         | StatementNode::InlineFormula(_) => false,
     }
 }

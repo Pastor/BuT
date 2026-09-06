@@ -69,6 +69,7 @@ fn unused_locals_moved(block: &[StatementNode]) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::diagnostics::Location;
     use crate::semantic::type_node::TypeNode;
     use crate::semantic::{ExpressionNode, StatementNode};
 
@@ -111,7 +112,10 @@ mod tests {
         ));
         let block = vec![
             decl("live"),
-            StatementNode::Return(Some(Box::new(ExpressionNode::Variable(cell)))),
+            StatementNode::Return(
+                Some(Box::new(ExpressionNode::Variable(cell))),
+                Location::Codegen,
+            ),
         ];
         assert!(unused_locals(&block).is_empty());
     }

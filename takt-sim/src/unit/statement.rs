@@ -193,7 +193,7 @@ fn collect_locals(stmt: &StatementNode, out: &mut Vec<(String, Value)>) {
         // Вставка (0484): эталон исполняет только БЕЗЫМЯННУЮ — он не является
         // ни одной из целей. Объявления именованной вставки в область не идут:
         // её тело эталон не исполняет.
-        StatementNode::Assembly { target, body } => {
+        StatementNode::Assembly { target, body, .. } => {
             if target.is_none() {
                 collect_locals(body, out);
             }
@@ -218,9 +218,9 @@ fn collect_locals(stmt: &StatementNode, out: &mut Vec<(String, Value)>) {
         StatementNode::None
         | StatementNode::Unresolved(_)
         | StatementNode::Expression(_, _)
-        | StatementNode::Return(_)
-        | StatementNode::Break
-        | StatementNode::Continue
+        | StatementNode::Return(_, _)
+        | StatementNode::Break(_)
+        | StatementNode::Continue(_)
         | StatementNode::Formula(_)
         | StatementNode::InlineFormula(_) => {}
     }
@@ -270,7 +270,7 @@ pub(crate) fn exec_statement(
         // Исполни он тело, помеченное `"c"`, сверка `c` ↔ эталон сошлась бы, а
         // `rust` ↔ эталон разошлась бы: вердикт сверки зависел бы от того,
         // какую цель ей поручили.
-        StatementNode::Assembly { target, body } => {
+        StatementNode::Assembly { target, body, .. } => {
             if target.is_none() {
                 exec_statement(body, ctx)
             } else {
@@ -288,7 +288,9 @@ pub(crate) fn exec_statement(
             Ok(Flow::Normal)
         }
         StatementNode::Expression(expr, _) => exec_expression(expr, ctx),
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             if eval_bool(cond, ctx)? {
                 exec_statement(then_, ctx)
             } else if let Some(else_) = else_ {
@@ -308,7 +310,7 @@ pub(crate) fn exec_statement(
             ctx.set_value(name, value);
             Ok(Flow::Normal)
         }
-        StatementNode::Loop { cond, body } => exec_loop(cond.as_deref(), body, ctx),
+        StatementNode::Loop { cond, body, .. } => exec_loop(cond.as_deref(), body, ctx),
         StatementNode::For {
             init,
             cond,
@@ -316,7 +318,7 @@ pub(crate) fn exec_statement(
             body,
             ..
         } => exec_for(init.as_deref(), cond.as_deref(), step.as_deref(), body, ctx),
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             let subject = eval_expression(expr, ctx)?;
             for arm in arms {
                 if arm_matches(&arm.patterns, &subject, ctx)? {
@@ -325,15 +327,15 @@ pub(crate) fn exec_statement(
             }
             Ok(Flow::Normal)
         }
-        StatementNode::Return(expr) => {
+        StatementNode::Return(expr, _) => {
             let value = match expr {
                 Some(expr) => Some(eval_expression(expr, ctx)?),
                 None => None,
             };
             Ok(Flow::Return(value))
         }
-        StatementNode::Break => Ok(Flow::Break),
-        StatementNode::Continue => Ok(Flow::Continue),
+        StatementNode::Break(_) => Ok(Flow::Break),
+        StatementNode::Continue(_) => Ok(Flow::Continue),
         // 0044: `assert` языка Takt (`: c;` / `: [Guard] c;`) в точке записи —
         // как в порождённом C (`assert()`, эталон c_expr.rs:1693). Нарушение →
         // `Err(SIM-025)` → доходит до `TickResult::Failed` (R13/R14). Ошибка

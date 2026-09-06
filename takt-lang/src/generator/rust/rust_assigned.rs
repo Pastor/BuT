@@ -30,14 +30,16 @@ pub(in crate::generator::rust) fn collect_assigned(
         StatementNode::Block(items) => items.iter().for_each(|i| collect_assigned(i, out)),
         StatementNode::Expression(expr, _) => collect_assigned_expr(expr, out),
         StatementNode::Variable(_, _, Some(init), _) => collect_assigned_expr(init, out),
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             collect_assigned_expr(cond, out);
             collect_assigned(then_, out);
             if let Some(alt) = else_ {
                 collect_assigned(alt, out);
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(cond) = cond {
                 collect_assigned_expr(cond, out);
             }
@@ -61,17 +63,17 @@ pub(in crate::generator::rust) fn collect_assigned(
             }
             collect_assigned(body, out);
         }
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             collect_assigned_expr(expr, out);
             arms.iter().for_each(|a| collect_assigned(&a.body, out));
         }
-        StatementNode::Return(Some(expr)) => collect_assigned_expr(expr, out),
+        StatementNode::Return(Some(expr), _) => collect_assigned_expr(expr, out),
         // Тело вставки — операторы Takt (0484): присваивания в нём считаются.
         StatementNode::Assembly { body, .. } => collect_assigned(body, out),
-        StatementNode::Return(None)
+        StatementNode::Return(None, _)
         | StatementNode::Variable(_, _, None, _)
-        | StatementNode::Continue
-        | StatementNode::Break
+        | StatementNode::Continue(_)
+        | StatementNode::Break(_)
         | StatementNode::Formula(_)
         | StatementNode::InlineFormula(_)
         | StatementNode::None

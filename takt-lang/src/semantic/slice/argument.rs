@@ -226,7 +226,7 @@ fn lift_in_statement(
             let at = *loc;
             lift_in_expr(expr, model, owner, ctx, prelude, at)
         }
-        StatementNode::Return(Some(expr)) => {
+        StatementNode::Return(Some(expr), _) => {
             lift_in_expr(expr, model, owner, ctx, prelude, Location::Implicit)
         }
         StatementNode::Variable(_, _, Some(init), loc) => {

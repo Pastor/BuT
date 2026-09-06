@@ -257,22 +257,31 @@ impl Lowering {
     /// … is never read» (замер 2026-08-31).
     fn statement(&mut self, stmt: &StatementNode, tail: bool) -> StatementNode {
         match stmt {
-            StatementNode::Return(Some(expr)) => {
+            StatementNode::Return(Some(expr), _) => {
                 let mut out = vec![self.assign(self.ret_ref(), (**expr).clone())];
                 if !tail {
                     out.push(self.assign(self.done_ref(), ExpressionNode::Number(1)));
                 }
                 StatementNode::Block(out)
             }
-            StatementNode::Return(None) if tail => StatementNode::Block(Vec::new()),
-            StatementNode::Return(None) => self.assign(self.done_ref(), ExpressionNode::Number(1)),
+            StatementNode::Return(None, _) if tail => StatementNode::Block(Vec::new()),
+            StatementNode::Return(None, _) => {
+                self.assign(self.done_ref(), ExpressionNode::Number(1))
+            }
             StatementNode::Block(items) => StatementNode::Block(self.sequence(items, tail)),
-            StatementNode::If { cond, then_, else_ } => StatementNode::If {
+            StatementNode::If {
+                cond,
+                then_,
+                else_,
+                loc,
+            } => StatementNode::If {
                 cond: cond.clone(),
                 then_: Box::new(self.statement(then_, tail)),
                 else_: else_.as_ref().map(|s| Box::new(self.statement(s, tail))),
+                loc: *loc,
             },
-            StatementNode::Match { expr, arms } => StatementNode::Match {
+            StatementNode::Match { expr, arms, loc } => StatementNode::Match {
+                loc: *loc,
                 expr: expr.clone(),
                 arms: arms
                     .iter()
@@ -335,13 +344,16 @@ impl Lowering {
                 cond,
                 then_,
                 else_: None,
+                loc,
             } => StatementNode::If {
                 cond: Box::new(ExpressionNode::And(Box::new(not_done), cond)),
                 then_,
                 else_: None,
+                loc,
             },
             other => StatementNode::If {
                 cond: Box::new(not_done),
+                loc: other.loc(),
                 then_: Box::new(StatementNode::Block(vec![other])),
                 else_: None,
             },
@@ -390,12 +402,19 @@ fn strip_done(stmt: StatementNode, done_name: &str) -> StatementNode {
                 .filter(|s| !is_done_assignment(s, done_name))
                 .collect(),
         ),
-        StatementNode::If { cond, then_, else_ } => StatementNode::If {
+        StatementNode::If {
+            cond,
+            then_,
+            else_,
+            loc,
+        } => StatementNode::If {
             cond,
             then_: Box::new(strip_done(*then_, done_name)),
             else_: else_.map(|s| Box::new(strip_done(*s, done_name))),
+            loc,
         },
-        StatementNode::Match { expr, arms } => StatementNode::Match {
+        StatementNode::Match { expr, arms, loc } => StatementNode::Match {
+            loc,
             expr,
             arms: arms
                 .into_iter()

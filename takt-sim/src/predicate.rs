@@ -559,9 +559,10 @@ mod tests {
                     signed: false,
                 },
                 raw: Box::default(),
-                body: takt_lang::semantic::StatementNode::Return(Some(Box::new(
-                    takt_lang::semantic::ExpressionNode::Number(1),
-                ))),
+                body: takt_lang::semantic::StatementNode::Return(
+                    Some(Box::new(takt_lang::semantic::ExpressionNode::Number(1))),
+                    Location::Codegen,
+                ),
             },
         ));
         let mut ctx = empty_ctx();

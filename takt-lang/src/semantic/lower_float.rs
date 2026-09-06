@@ -351,14 +351,16 @@ fn lower_stmt(stmt: &mut StatementNode, m: u8, n: u8) -> Result<(), Diagnostic> 
             }
         }
         StatementNode::Expression(e, _) => lower_expr(e, m, n)?,
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             lower_expr(cond, m, n)?;
             lower_stmt(then_, m, n)?;
             if let Some(e) = else_ {
                 lower_stmt(e, m, n)?;
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(c) = cond {
                 lower_expr(c, m, n)?;
             }
@@ -390,8 +392,8 @@ fn lower_stmt(stmt: &mut StatementNode, m: u8, n: u8) -> Result<(), Diagnostic> 
                 lower_expr(e, m, n)?;
             }
         }
-        StatementNode::Return(Some(e)) => lower_expr(e, m, n)?,
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Return(Some(e), _) => lower_expr(e, m, n)?,
+        StatementNode::Match { expr, arms, .. } => {
             lower_expr(expr, m, n)?;
             for arm in arms.iter_mut() {
                 for p in arm.patterns.iter_mut() {
@@ -407,9 +409,9 @@ fn lower_stmt(stmt: &mut StatementNode, m: u8, n: u8) -> Result<(), Diagnostic> 
         StatementNode::Assembly { body, .. } => lower_stmt(body, m, n)?,
         StatementNode::None
         | StatementNode::Unresolved(_)
-        | StatementNode::Return(None)
-        | StatementNode::Continue
-        | StatementNode::Break
+        | StatementNode::Return(None, _)
+        | StatementNode::Continue(_)
+        | StatementNode::Break(_)
         | StatementNode::Formula(_)
         | StatementNode::InlineFormula(_) => {}
     }

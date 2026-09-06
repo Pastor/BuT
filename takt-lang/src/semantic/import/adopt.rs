@@ -591,14 +591,16 @@ fn adopt_stmt(ctx: &mut Adoption, stmt: &mut StatementNode) {
             }
         }
         StatementNode::Expression(e, _) => adopt_expr(ctx, e),
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             adopt_expr(ctx, cond);
             adopt_stmt(ctx, then_);
             if let Some(e) = else_ {
                 adopt_stmt(ctx, e);
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(c) = cond {
                 adopt_expr(ctx, c);
             }
@@ -627,8 +629,8 @@ fn adopt_stmt(ctx: &mut Adoption, stmt: &mut StatementNode) {
                 adopt_expr(ctx, e);
             }
         }
-        StatementNode::Return(Some(e)) => adopt_expr(ctx, e),
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Return(Some(e), _) => adopt_expr(ctx, e),
+        StatementNode::Match { expr, arms, .. } => {
             adopt_expr(ctx, expr);
             for arm in arms.iter_mut() {
                 for p in arm.patterns.iter_mut() {
@@ -644,9 +646,9 @@ fn adopt_stmt(ctx: &mut Adoption, stmt: &mut StatementNode) {
         StatementNode::Assembly { body, .. } => adopt_stmt(ctx, body),
         StatementNode::None
         | StatementNode::Unresolved(_)
-        | StatementNode::Return(None)
-        | StatementNode::Continue
-        | StatementNode::Break
+        | StatementNode::Return(None, _)
+        | StatementNode::Continue(_)
+        | StatementNode::Break(_)
         | StatementNode::Formula(_)
         | StatementNode::InlineFormula(_) => {}
     }

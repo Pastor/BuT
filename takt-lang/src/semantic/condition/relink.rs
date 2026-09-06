@@ -127,14 +127,16 @@ fn relink_stmt(stmt: &mut StatementNode, model: &Rc<RefCell<ModelNode>>) {
             }
         }
         StatementNode::Expression(expr, _) => relink_expr(expr, model),
-        StatementNode::If { cond, then_, else_ } => {
+        StatementNode::If {
+            cond, then_, else_, ..
+        } => {
             relink_expr(cond, model);
             relink_stmt(then_, model);
             if let Some(alt) = else_ {
                 relink_stmt(alt, model);
             }
         }
-        StatementNode::Loop { cond, body } => {
+        StatementNode::Loop { cond, body, .. } => {
             if let Some(c) = cond {
                 relink_expr(c, model);
             }
@@ -158,14 +160,14 @@ fn relink_stmt(stmt: &mut StatementNode, model: &Rc<RefCell<ModelNode>>) {
             }
             relink_stmt(body, model);
         }
-        StatementNode::Match { expr, arms } => {
+        StatementNode::Match { expr, arms, .. } => {
             relink_expr(expr, model);
             for arm in arms.iter_mut() {
                 relink_stmt(&mut arm.body, model);
             }
         }
         StatementNode::Assembly { body, .. } => relink_stmt(body, model),
-        StatementNode::Return(Some(expr)) => relink_expr(expr, model),
+        StatementNode::Return(Some(expr), _) => relink_expr(expr, model),
         StatementNode::Variable(_, _, Some(init), _) => relink_expr(init, model),
         _ => {}
     }

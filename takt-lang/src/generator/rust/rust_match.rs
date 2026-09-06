@@ -203,6 +203,7 @@ fn unwrap_if_chain(body: &StatementNode) -> (Vec<&ExpressionNode>, &StatementNod
             cond,
             then_,
             else_: None,
+            ..
         } = inner
         else {
             break;

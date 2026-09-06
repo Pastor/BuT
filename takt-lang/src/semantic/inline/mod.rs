@@ -304,7 +304,7 @@ fn expand_in_statement(
             let at = *loc;
             expand_in_expr(expr, funcs, owner, ctx, prelude, at);
         }
-        StatementNode::Return(Some(expr)) => {
+        StatementNode::Return(Some(expr), _) => {
             expand_in_expr(expr, funcs, owner, ctx, prelude, Location::Implicit);
         }
         StatementNode::Variable(_, _, Some(init), loc) => {
@@ -537,7 +537,7 @@ pub(crate) fn split_tail_return(
         other => vec![other.clone()],
     };
     let (last, head) = items.split_last()?;
-    let StatementNode::Return(Some(expr)) = last else {
+    let StatementNode::Return(Some(expr), _) = last else {
         return None;
     };
     if head.iter().any(has_return) {
@@ -549,7 +549,7 @@ pub(crate) fn split_tail_return(
 /// Есть ли `return` где-нибудь внутри оператора.
 pub(crate) fn has_return(stmt: &StatementNode) -> bool {
     match stmt {
-        StatementNode::Return(_) => true,
+        StatementNode::Return(_, _) => true,
         StatementNode::Block(items) => items.iter().any(has_return),
         StatementNode::If { then_, else_, .. } => {
             has_return(then_) || else_.as_ref().is_some_and(|s| has_return(s))
