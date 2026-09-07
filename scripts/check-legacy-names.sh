@@ -38,7 +38,7 @@
 #
 # Использование:
 # scripts/check-legacy-names.sh # весь индекс git (шаг precheck.sh)
-# scripts/check-legacy-names.sh файл ... # только указанные (тест 0161)
+# scripts/check-legacy-names.sh файл ... # только указанные
 #
 # POSIX sh, без внешних зависимостей (образец - scripts/check-repo-url.sh).
 set -eu
@@ -64,7 +64,7 @@ is_excluded() {
         scripts/test-legacy-names.sh) return 0 ;;
         # `precheck.sh` исключён частично: он описывает переезд хелперов
         # и обязан называть прежний префикс. Исключение сузилось до
-        # этого повода - прежде оно покрывало весь файл и прятало 16 живых
+        # этого повода - покрывая весь файл, оно прятало бы 16 живых
         # `LAMC`.
         scripts/precheck.sh) return 1 ;;
         *) return 1 ;;

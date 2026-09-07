@@ -189,7 +189,7 @@ echo "  OK: E8 каталог сборки сервера назван один 
 # `postgres:18+` держит данные в подкаталоге с номером версии и при
 # монтировании тома в `/var/lib/postgresql/data` не стартует вовсе: "there
 # appears to be PostgreSQL data in /var/lib/postgresql/data (unused
-# mount/volume)". Раскладка от 17-й версии дожила до стенда - дома стек не
+# mount/volume)". Раскладка от 17-й версии доживает до стенда - дома стек не
 # поднимали ни разу.
 if grep -qE '^\s+- db:/var/lib/postgresql/data' "$ROOT/web/deploy/docker-compose.yml"; then
   echo "  ПРОВАЛ: E9 том базы смонтирован в /var/lib/postgresql/data"

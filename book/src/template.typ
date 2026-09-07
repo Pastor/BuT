@@ -17,7 +17,7 @@
 // примеров рядом с этим шаблоном.
 
 // ── Метаданные документа ───────────────────────────────────────────────────
-// Прежде жили в `book/book.toml` (поля `title`/`authors`/`description`); проверка
+// Поля `title`, `authors` и `description` живут здесь, а не в `book/book.toml`; проверка
 // символов (`scripts/check-book-glyphs.py`) читает их отсюда - они попадают на
 // титульный лист и в свойства PDF.
 #let doc-title = "Язык Takt — описание"
@@ -149,7 +149,7 @@
 #let book(body) = {
   set document(title: doc-title, author: doc-authors, description: doc-description)
 
-  // Страница: A4, поля 1.5 см со всех сторон, номер страницы снизу по центру.
+  // Страница: бумага a4, поля 1.5 см со всех сторон, номер страницы снизу по центру.
   set page(paper: "a4",
     margin: 1.5cm,
     numbering: "1",

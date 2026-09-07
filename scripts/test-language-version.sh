@@ -31,7 +31,7 @@ make_tree() {
         > "$TMP/tree/takt-lang/src/version.rs"
     printf '**Версия языка: %s**\n' "$readme" > "$TMP/tree/README.md"
     # Якорь живого контекста - "**сейчас `X.Y.Z`**" рядом с упоминанием
-    # константы (проверка 0149 требует именно его).
+    # константы: проверка живого контекста требует именно его.
     printf 'LANGUAGE_VERSION, **сейчас `%s`**\n' "$claude" > "$TMP/tree/CLAUDE.md"
 }
 

@@ -7,7 +7,7 @@
 # просмотреть.
 #
 # Использование:
-# scripts/check-stale-candidates.sh 0131 # кандидаты, упоминающие
+# scripts/check-stale-candidates.sh NNNN # кандидаты, упоминающие
 # scripts/check-stale-candidates.sh # сводка по блоку
 #
 # Это подсказка, а не проверка: код возврата всегда 0. Кандидат вполне может

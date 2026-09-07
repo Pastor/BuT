@@ -84,7 +84,7 @@ fn main() {
     // Бит 0 порта SensorsCab снят: кабину не опрашиваем.
     let (calls, done) = run(0, TICKS);
     // Такт 1: вход в стартовое состояние `Idle` такта не расходует (контракт
-    // ADR 0033) - `enter`-блок (door_open) и тело `Idle` идут одним тактом.
+    // вход в стартовое состояние такта не расходует) - `enter`-блок (door_open) и тело `Idle` идут одним тактом.
     assert_eq!(calls[0], "door_open", "enter стартового состояния — door_open");
     assert_eq!(
         calls.len(),

@@ -24,10 +24,10 @@
 # генератор в temp-дереве, не трогая рабочие реестры.
 #
 # Примеры:
-#   scripts/new-feature.sh 0032 my-feature "Моя фича"
-#   scripts/new-feature.sh --with-dev --register 0032 my-feature "Моя фича"
-#   scripts/new-feature.sh --stage report --register 0032 my-feature "Моя фича"
-#   scripts/new-feature.sh --stage dev --subtask 03 --register 0032 my-feature "Моя фича"
+#   scripts/new-feature.sh NNNN my-feature "Моя фича"
+#   scripts/new-feature.sh --with-dev --register NNNN my-feature "Моя фича"
+#   scripts/new-feature.sh --stage report --register NNNN my-feature "Моя фича"
+#   scripts/new-feature.sh --stage dev --subtask NN --register NNNN my-feature "Моя фича"
 set -eu
 
 WITH_DEV=0
@@ -113,7 +113,7 @@ render() {
 
 # insert_row <README> <key> <row>: идемпотентно вставить строку после последней
 # строки таблицы. `key` - литерал первого столбца, однозначно определяющий строку
-# фичи (напр. "| [0094]", "| 0094 |", "| |"). Если строка с ключом уже
+# фичи (напр. "| [NNNN]", "| NNNN |", "| |"). Если строка с ключом уже
 # есть - вставка пропускается.
 insert_row() {
   readme="$1"; key="$2"; row="$3"
@@ -140,7 +140,7 @@ insert_row() {
 # регистрация её строки в реестре. Обе операции безопасны при повторе.
 # Регистрация - через `if ... then ... fi`, а не `[ ... ] && insert_row`: под
 # `set -e` последняя форма при REGISTER=0 возвращает 1 и обрывает do_stage
-# (ломало умолчательный путь без --register; поймано регресс-тестом 0094).
+# (ломало умолчательный путь без --register; поймано регресс-тестом).
 do_stage() {
   case "$1" in
     feature)
