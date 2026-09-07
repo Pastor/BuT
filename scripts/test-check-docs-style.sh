@@ -9,7 +9,8 @@ WORK="$(mktemp -d "${TMPDIR:-/tmp}/takt-docs-style.XXXXXX")"
 trap 'rm -rf "$WORK"' EXIT
 
 mkdir -p "$WORK/docs" "$WORK/scripts"
-cp "$ROOT/scripts/check-docs-style.py" "$WORK/scripts/"
+# Помощник границ входа копируется вместе с проверкой: она его импортирует.
+cp "$ROOT/scripts/check-docs-style.py" "$ROOT/scripts/gatelib.py" "$WORK/scripts/"
 
 run() {
     ( cd "$WORK" && DS_ROOT="$WORK" python3 scripts/check-docs-style.py >"$WORK/out" 2>&1 )

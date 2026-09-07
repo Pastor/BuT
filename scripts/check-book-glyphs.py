@@ -31,6 +31,9 @@
 import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
 import unicodedata
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -71,8 +74,7 @@ def load_charset(path=CHARSET):
                 ranges.append((int(start, 16), int(end, 16)))
     except OSError as error:
         sys.exit(f"ОШИБКА: не прочитать снимок {path}: {error}")
-    if not ranges:
-        sys.exit(f"ОШИБКА: снимок {path} не содержит ни одного диапазона")
+    require_input("диапазоны снимка шрифта", len(ranges), source=path)
     return ranges, family
 
 

@@ -30,6 +30,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.environ.get(
     "TT_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
@@ -143,8 +146,9 @@ def main():
         return 1
 
     sets = sum(len(files) for files, _ in themes.values())
+    note = require_input("наборы интеграционных тестов", sets, source="tests/")
     print(
-        f"Устройство тестов: {len(themes)} тем, {sets} наборов — "
+        f"Устройство тестов: {len(themes)} тем, {note} — "
         "лишних целей нет, все наборы объявлены."
     )
     return 0

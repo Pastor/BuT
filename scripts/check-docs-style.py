@@ -25,6 +25,9 @@
 import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
 from pathlib import Path
 
 ROOTS = ["docs", "book/src", "CLAUDE.md", "README.md", "FEATURES.md", "CHANGES.md"]
@@ -143,7 +146,8 @@ def main() -> int:
         )
         return 1
 
-    print(f"  стиль документов: проверено {files} файлов, нарушений нет")
+    note = require_input("просмотренные файлы документов", files, source="docs, book")
+    print(f"  стиль документов: {note}, нарушений нет")
     return 0
 
 

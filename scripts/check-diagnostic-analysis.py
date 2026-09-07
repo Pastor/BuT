@@ -19,6 +19,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.environ.get("DA_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 REGISTRY = os.path.join(ROOT, "docs", "diagnostics", "README.md")
 APPENDIX = os.path.join(ROOT, "book", "src", "appendix-errors", "index.typ")
@@ -57,14 +60,10 @@ def main() -> int:
     for line in appendix.splitlines():
         if line.startswith("=== "):
             analysed.update(re.findall(r"`([A-Z]{2}-\d{3})`", line))
-    if not analysed:
-        print("ОТКАЗ (A2): в приложении нет ни одного разбора — проверять нечего")
-        return 1
+    require_input("разборы приложения", len(analysed), source=str(APPENDIX))
 
     rows = re.findall(r"^\| `([A-Z]{2}-\d{3})` \| (.+?) \|", registry, re.M)
-    if not rows:
-        print("ОТКАЗ (A2): реестр диагностик не разобран — таблиц не найдено")
-        return 1
+    require_input("строки реестра диагностик", len(rows), source=str(REGISTRY))
 
     missing = []
     matched = 0

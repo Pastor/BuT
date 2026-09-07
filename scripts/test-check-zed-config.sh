@@ -17,7 +17,7 @@ copy_tree() {
     cp "$ROOT/extensions/zed-takt/languages/takt/config.toml" "$1/extensions/zed-takt/languages/takt/"
     cp "$ROOT/extensions/zed-takt/extension.toml" "$1/extensions/zed-takt/"
     cp "$ROOT/takt-lang/src/parser/lexer.rs" "$1/takt-lang/src/parser/"
-    cp "$ROOT/scripts/check-zed-config.py" "$1/scripts/"
+    cp "$ROOT/scripts/check-zed-config.py" "$ROOT/scripts/gatelib.py" "$1/scripts/"
 }
 
 run_gate() {

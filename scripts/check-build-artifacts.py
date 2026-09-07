@@ -31,6 +31,9 @@ import os
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 # Расширения, которых в репозитории быть не должно. Список закрытый: каждая
 # запись - вывод известного инструмента, а не догадка.
 ARTIFACT_SUFFIXES = (
@@ -83,7 +86,8 @@ def main() -> int:
         print("Удалите их (`git rm --cached <файл>`) и проверьте, что расширение")
         print("закрыто в .gitignore: пробы целей кладут вывод в текущий каталог.")
         return 1
-    print(f"Артефакты сборки: проверено {len(files)} отслеживаемых файлов, артефактов нет.")
+    note = require_input("отслеживаемые файлы дерева", len(files), source=root)
+    print(f"Артефакты сборки: {note}, артефактов нет.")
     return 0
 
 

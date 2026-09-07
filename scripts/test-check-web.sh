@@ -58,7 +58,8 @@ cp -R "$ROOT/web/static" "$ROOT/web/tests" "$TREE/web/"
 # `version.rs`).
 mkdir -p "$TREE/web/server/src/oauth"
 cp "$ROOT/web/server/src/oauth/api.rs" "$TREE/web/server/src/oauth/"
-cp "$ROOT/scripts/check-web.sh" "$ROOT/scripts/build-web.sh" "$ROOT/scripts/target-dir.sh" "$TREE/scripts/"
+cp "$ROOT/scripts/check-web.sh" "$ROOT/scripts/build-web.sh" "$ROOT/scripts/target-dir.sh" \
+   "$ROOT/scripts/gatelib.sh" "$TREE/scripts/"
 cp "$ROOT/takt-lang/Cargo.toml" "$TREE/takt-lang/"
 # Версия языка для описи сборки берётся из константы, а не повторяется.
 # Живёт она в `version.rs`; `lib.rs` её только реэкспортирует. Пока сборка

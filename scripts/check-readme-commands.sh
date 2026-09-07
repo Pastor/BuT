@@ -27,6 +27,8 @@
 # POSIX sh, без внешних зависимостей.
 set -eu
 
+. "$(dirname "$0")/gatelib.sh"
+
 ROOT="${RC_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 TAKTC="${TAKTC:-$ROOT/target/precheck/debug/taktc}"
 README="$ROOT/README.md"
@@ -130,4 +132,5 @@ if [ "$BAD" -ne 0 ]; then
     exit 1
 fi
 
-echo "  OK: строк проверено $CHECKED, команд компилятора прогнано $RUN."
+NOTE="$(require_input "проверенные строки README" "$CHECKED" 1 "README.md")" || exit 1
+  echo "  OK: $NOTE, команд компилятора прогнано $RUN."

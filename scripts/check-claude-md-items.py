@@ -29,6 +29,9 @@ from __future__ import annotations
 import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
 from pathlib import Path
 
 # Предел выбран замером: он оставляет место инварианту,
@@ -138,8 +141,9 @@ def main() -> int:
         return 1
 
     total = sum(found.values())
+    note = require_input("пункты живого контекста", len(found), source="CLAUDE.md")
     print(
-        f"Размер пунктов CLAUDE.md: {len(found)} пунктов, {total} строк; "
+        f"Размер пунктов CLAUDE.md: {note}, {total} строк; "
         f"сверх предела {LIMIT} — {len(over)}."
     )
     return 0

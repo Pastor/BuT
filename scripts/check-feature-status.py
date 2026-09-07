@@ -41,6 +41,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REGISTRY = os.path.join(ROOT, "docs", "features", "README.md")
 SHOWCASE = os.path.join(ROOT, "FEATURES.md")
@@ -229,6 +232,7 @@ def main():
         return 0
 
     cards = card_statuses(sorted(glob.glob(CARDS_GLOB)))
+    note = require_input("карточки фич", len(cards), source="docs/features")
     problems = run_checks(read(REGISTRY), cards, read(SHOWCASE))
     if problems:
         print("Расхождения статуса фич (фича 0177):", file=sys.stderr)
@@ -241,7 +245,7 @@ def main():
             file=sys.stderr,
         )
         return 1
-    print(f"Статусы фич: проверено {len(cards)} карточек, расхождений нет.")
+    print(f"Статусы фич: {note}, расхождений нет.")
     return 0
 
 

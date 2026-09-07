@@ -84,7 +84,7 @@ fi
 
 # --- 6. Пустой реестр - вырожденная проверка ----------------------------------
 write_registry ''
-if ! DD_ROOT="$TMP" python3 "$TOOL" >"$TMP/out" 2>&1 && grep -q 'вырожден' "$TMP/out"; then
+if ! DD_ROOT="$TMP" python3 "$TOOL" >"$TMP/out" 2>&1 && grep -q 'записи реестра диагностик' "$TMP/out"; then
     ok "пустой реестр отвергается"
 else
     fail "пустой реестр принят за успех: $(cat "$TMP/out")"

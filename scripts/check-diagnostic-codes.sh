@@ -30,6 +30,8 @@ set -eu
 # каталог скрипта/..). Нужна для тестируемости: scripts/test-diagnostic-codes.sh
 # гоняет проверка в temp-дереве, не трогая рабочий реестр (образец - NF_ROOT у
 # scripts/new-feature.sh).
+. "$(dirname "$0")/gatelib.sh"
+
 ROOT="${DC_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 REGISTRY="$ROOT/docs/diagnostics/README.md"
 # ERE - используется всюду через `grep -E`.
@@ -135,7 +137,8 @@ if [ "$fail" -ne 0 ]; then
 fi
 
 N="$(wc -l < "$TMP/registered" | tr -d ' ')"
-echo "check-diagnostic-codes: реестр согласован с исходником ($N кодов)."
+NOTE="$(require_input "коды реестра диагностик" "$N" 1 "docs/diagnostics/README.md")" || exit 1
+echo "check-diagnostic-codes: реестр согласован с исходником; $NOTE."
 
 # Справка: максимальный занятый номер по каждому префиксу ("следующий" = +1).
 echo "  Занятые диапазоны (макс. номер по префиксу — следующий свободный это +1):"

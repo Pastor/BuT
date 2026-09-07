@@ -34,6 +34,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.environ.get(
     "REG_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
@@ -128,10 +131,7 @@ def main():
         with open(registry, encoding="utf-8") as handle:
             stages[stage] = (stage_files(path), handle.read())
 
-    if not stages:
-        sys.exit(
-            "ОШИБКА: папок-стадий не найдено — гейт проверял бы пустое множество."
-        )
+    note = require_input("папки-стадии", len(stages), source="docs/")
 
     problems = check(stages)
     if problems:
@@ -155,7 +155,7 @@ def main():
 
     total = sum(len(files) for files, _ in stages.values())
     print(
-        f"Реестры артефактов: {len(stages)} папок, {total} артефактов — "
+        f"Реестры артефактов: {note}, артефактов {total} — "
         "расхождений с диском нет."
     )
     return 0

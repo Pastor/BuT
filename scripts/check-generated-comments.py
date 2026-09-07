@@ -45,6 +45,9 @@ import os
 import re
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
 import tempfile
 from pathlib import Path
 
@@ -159,7 +162,8 @@ def main() -> int:
             print(f"  {line}", file=sys.stderr)
         return 1
 
-    print(f"  комментарии вывода: {len(files)} файлов, сочинённого нет; шапок {headers}")
+    note = require_input("файлы порождённого кода", len(files), source="examples/generated")
+    print(f"  комментарии вывода: {note}, сочинённого нет; шапок {headers}")
     return 0
 
 

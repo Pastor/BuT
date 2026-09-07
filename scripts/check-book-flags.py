@@ -36,6 +36,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.environ.get(
     "BF_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
@@ -90,13 +93,7 @@ def read_baseline():
 
 def main():
     flags = declared_flags()
-    if not flags:
-        print(
-            "ОШИБКА: в разборе аргументов не найдено ни одного флага: проверять "
-            "нечего (сменилось устройство CLI?)",
-            file=sys.stderr,
-        )
-        return 1
+    require_input("ключи сборки разбора аргументов", len(flags), source="takt-lang/src/compile_cli")
     document = documented_flags()
     if not document:
         print(f"ОШИБКА: разделы документа не найдены: {CHAPTERS}", file=sys.stderr)

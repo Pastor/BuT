@@ -20,6 +20,8 @@
 
 set -euo pipefail
 
+. "$(dirname "${BASH_SOURCE[0]}")/gatelib.sh"
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
@@ -71,21 +73,29 @@ done < <(sed 's/<base [^>]*>//g' "$DIST/index.html" \
 # На словарь разметка не ссылается - его запрашивает `i18n.js`, и проверка
 # выше его не видит. Пропавший словарь даёт страницу, подписанную ключами.
 BUNDLE_DIR="$(find "$DIST/b" -mindepth 1 -maxdepth 1 -type d | head -1)"
+dicts=0
 for dict in "$ROOT"/web/static/i18n/*.json; do
   name="$(basename "$dict")"
+  dicts=$((dicts + 1))
   if [[ ! -f "$BUNDLE_DIR/i18n/$name" ]]; then
     echo "  ОШИБКА: словарь '$name' не попал в собранную статику"
     exit 1
   fi
 done
 
+DICTS_NOTE="$(require_input "словари оболочки" "$dicts" 1 "web/static/i18n")" || exit 1
+
 # -- 3. Разбор каждого скрипта ------------------------------------------------
+scripts_seen=0
 for script in "$ROOT"/web/static/*.js; do
+  scripts_seen=$((scripts_seen + 1))
   "$NODE" --check "$script" || {
     echo "  ОШИБКА: не разбирается $script"
     exit 1
   }
 done
+SCRIPTS_NOTE="$(require_input "модули веб-части" "$scripts_seen" 1 "web/static")" || exit 1
+echo "  Веб-часть: $DICTS_NOTE, $SCRIPTS_NOTE."
 
 # -- 4. Списка ключевых слов Takt в вебе нет ----------------------------------
 # Признак - набор слов языка рядом друг с другом. Ищутся те, которые нигде,

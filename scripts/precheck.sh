@@ -149,6 +149,17 @@ if require_tool python3 "проверка ссылок, правило 14; apt i
   "$(dirname "$0")/test-check-docs-style.sh"
   "$(dirname "$0")/check-docs-style.py"
 
+  # Нижняя граница входа у самих проверок. Соседние шаги судят дерево, этот -
+  # тех, кто его судит: проверка с пустой выборкой отвечает успехом, не прочитав
+  # ни строки, и отличить такой ответ от настоящего нельзя. Долг и названные
+  # исключения - `scripts/gate-input-baseline.txt`. Контрольные пробы идут
+  # первыми: сперва помощник, затем сама проверка.
+  echo "Нижняя граница входа проверок (фича 0536)..."
+  "$(dirname "$0")/test-gatelib.sh"
+  "$(dirname "$0")/test-check-gate-inputs.sh"
+  "$(dirname "$0")/check-gate-inputs.py" --self-test
+  "$(dirname "$0")/check-gate-inputs.py"
+
   # Комментарии шагов этого файла. Стоит рядом с прочими
   # документными проверками. Правило и замер - в заголовке
   # `scripts/check-precheck-comments.py`.
@@ -230,6 +241,7 @@ if require_tool python3 "проверка ссылок, правило 14; apt i
   # Соседняя проверка сверяет статус самой фичи (карточка, реестр, витрина); здесь
   # предмет другой - колонка вердикта в реестрах стадий 5-6.
   echo "Вердикт тестирования в реестре фич (фича 0218)..."
+  "$(dirname "$0")/test-registry-verdicts.sh"
   "$(dirname "$0")/check-registry-verdicts.py" --self-test
   "$(dirname "$0")/check-registry-verdicts.py"
 

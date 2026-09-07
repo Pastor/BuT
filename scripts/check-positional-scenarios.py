@@ -23,6 +23,9 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 # Файлы, которым позиционная форма нужна по существу: путь -> причина.
 ALLOWED = {
     "takt-sim/tests/data/named0132/short_positional.json": (
@@ -55,9 +58,14 @@ def has_positional(node) -> bool:
     return False
 
 
-def scan(root: str) -> list[str]:
-    """Пути (относительно корня) всех позиционных сценариев."""
+def scan(root: str) -> tuple[list[str], int]:
+    """Позиционные сценарии и число просмотренных файлов сценариев.
+
+    Второе число - вход проверки: позиционных может законно не быть вовсе, а вот
+    отсутствие просмотренных файлов означает, что обход ничего не нашёл.
+    """
     found = []
+    seen = 0
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         for name in filenames:
@@ -70,9 +78,10 @@ def scan(root: str) -> list[str]:
             except (OSError, ValueError):
                 # Не сценарий либо нечитаемый JSON - не наше дело.
                 continue
+            seen += 1
             if has_positional(data):
                 found.append(os.path.relpath(path, root))
-    return sorted(found)
+    return sorted(found), seen
 
 
 def self_check() -> None:
@@ -97,7 +106,8 @@ def main() -> int:
     root = os.path.abspath(root)
     self_check()
 
-    found = scan(root)
+    found, seen = scan(root)
+    note = require_input("просмотренные файлы сценариев", seen, source=root)
     unexpected = [p for p in found if p not in ALLOWED]
     stale = [p for p in ALLOWED if p not in found]
 
@@ -125,7 +135,7 @@ def main() -> int:
         return 1
 
     print(
-        f"  Сценарии: проверено json-файлов дерева, позиционных — {len(found)} "
+        f"  Сценарии: {note}, позиционных — {len(found)} "
         f"(все названы в исключениях)."
     )
     return 0

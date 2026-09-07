@@ -18,6 +18,7 @@
 // Запуск: node scripts/check-wasm-identity.mjs <модуль.wasm> <taktc> <takt-sim>
 
 import { readFile, writeFile, mkdtemp, readdir, rm } from "node:fs/promises";
+import { requireInput } from "./gatelib.mjs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { tmpdir } from "node:os";
@@ -270,6 +271,7 @@ async function main() {
   const examples = (await readdir("examples"))
     .filter((name) => name.endsWith(".takt"))
     .sort();
+  requireInput("примеры корпуса", examples.length, 1, "examples/");
   let compiled = 0;
   for (const name of examples) {
     const file = join("examples", name);
@@ -284,6 +286,7 @@ async function main() {
   const scenarios = (await readdir("examples/simulations"))
     .filter((name) => name.endsWith(".json"))
     .sort();
+  requireInput("сценарии корпуса", scenarios.length, 1, "examples/simulations/");
   let traced = 0;
   for (const name of scenarios) {
     // Имя модели - самый длинный префикс сценария, для которого есть `.takt`
@@ -331,8 +334,9 @@ async function main() {
 
   await rm(workDir, { recursive: true, force: true });
 
+  const note = requireInput("компиляции корпуса под целями", compiled, 1, "examples/");
   console.log(
-    `  Тождественность модуля: компиляций ${compiled}, трасс ${traced}, ` +
+    `  Тождественность модуля: ${note}, трасс ${traced}, ` +
       `редакторских входов ${answered}.`
   );
   if (failures.length > 0) {

@@ -29,6 +29,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.environ.get(
     "BCL_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
@@ -151,12 +154,7 @@ def main():
         sys.exit(f"ОШИБКА: не прочитать шаблон документа: {error}")
 
     languages = block_languages(BOOK_SRC)
-    if not languages:
-        sys.exit(
-            "ОШИБКА: в book/src не найдено ни одного блока кода.\n"
-            "Пустое множество — ошибка, а не успех: при смене разметки проверка\n"
-            "выполнилась бы тривиально."
-        )
+    note = require_input("языки блоков кода", len(languages), source="book/src")
     linked = linked_syntaxes(template_text)
     problems = check(languages, linked, os.path.join(ROOT, "book"))
     if problems:
@@ -174,8 +172,8 @@ def main():
         return 1
 
     print(
-        f"Блоки кода документа: {len(languages)} языков "
-        f"({len(LOCAL)} своих определений), подсветка объявлена у всех."
+        f"Блоки кода документа: {note} "
+        f"({len(LOCAL)} своих определений); подсветка объявлена у всех."
     )
     return 0
 

@@ -28,6 +28,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REGISTRY = os.path.join(ROOT, "scripts", "stub-branches.txt")
 FEATURES_REGISTRY = os.path.join(ROOT, "docs", "features", "README.md")
@@ -245,9 +248,13 @@ def main():
         self_test()
         return 0
 
-    problems = run_checks(
-        read_text(REGISTRY), feature_statuses(read_text(FEATURES_REGISTRY)), collect_sources()
-    )
+    sources = collect_sources()
+    # Заглушки ищутся в исходниках: обнулись обход - заглушка, пережившая свою
+    # фичу, осталась бы ненайденной, а отчёт назвал бы прежнее число записей.
+    note = require_input("просмотренные исходники", len(sources), source="takt-lang, takt-sim")
+    statuses = feature_statuses(read_text(FEATURES_REGISTRY))
+    require_input("записи реестра фич", len(statuses), source="docs/features/README.md")
+    problems = run_checks(read_text(REGISTRY), statuses, sources)
     if problems:
         print("Ветви-заглушки разошлись с реестром (фича 0217):", file=sys.stderr)
         for place, message in problems:
@@ -261,7 +268,9 @@ def main():
         )
         return 1
     entries = [e for e in parse_registry(read_text(REGISTRY)) if e[1] is not None]
-    print(f"Ветви-заглушки: {len(entries)} объявлено, расхождений с кодом нет.")
+    print(
+        f"Ветви-заглушки: {len(entries)} объявлено, {note}, расхождений с кодом нет."
+    )
     return 0
 
 

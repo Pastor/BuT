@@ -32,6 +32,8 @@
 # POSIX sh, без внешних зависимостей.
 set -eu
 
+. "$(dirname "$0")/gatelib.sh"
+
 ROOT="${BG_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 TAKTC="${TAKTC:-$ROOT/target/precheck/debug/taktc}"
 UPDATE=0
@@ -125,8 +127,9 @@ if [ "$BAD" -ne 0 ]; then
     exit 1
 fi
 
+NOTE="$(require_input "снимки целей в разделах документа" "$CHECKED" 1 "book/src")" || exit 1
 if [ "$UPDATE" -eq 1 ]; then
-    echo "  Снимки пересобраны (целей: $CHECKED)."
+    echo "  Снимки пересобраны: $NOTE."
 else
-    echo "  OK: снимки совпадают с выводом (целей: $CHECKED)."
+    echo "  OK: снимки совпадают с выводом; $NOTE."
 fi

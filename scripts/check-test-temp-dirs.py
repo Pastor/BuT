@@ -39,6 +39,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.environ.get("TD_ROOT") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEST_DIRS = ("takt-sim/tests", "takt-lang/tests")
 
@@ -144,7 +147,8 @@ def main() -> int:
         )
         return 1
 
-    print(f"Временные каталоги тестов: проверено {files} файлов, пересечений нет.")
+    note = require_input("просмотренные файлы тестов", files, source="takt-lang, takt-sim")
+    print(f"Временные каталоги тестов: {note}, пересечений нет.")
     return 0
 
 

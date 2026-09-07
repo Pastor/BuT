@@ -18,6 +18,8 @@
 # POSIX sh, без внешних зависимостей.
 set -eu
 
+. "$(dirname "$0")/gatelib.sh"
+
 REV="${CT_REV:-HEAD}"
 FORBIDDEN='^[[:space:]]*[Cc]o-[Aa]uthored-[Bb]y:'
 
@@ -34,7 +36,8 @@ BAD="$(git log "$REV" --format='%H %s' --grep="$FORBIDDEN" --extended-regexp 2>/
 
 if [ -z "$BAD" ]; then
     TOTAL="$(git rev-list --count "$REV" 2>/dev/null || echo '?')"
-    echo "  OK: трейлера нет ни в одном коммите (проверено: $TOTAL)"
+    NOTE="$(require_input "коммиты ветки" "$TOTAL" 1 "$REV")" || exit 1
+  echo "  OK: трейлера нет ни в одном коммите; $NOTE"
     exit 0
 fi
 

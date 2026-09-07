@@ -59,6 +59,9 @@ graphviz, и комментарий в нём не авторский. Блок�
 import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
 from pathlib import Path
 
 # Область - все отслеживаемые файлы проекта, кроме каталога `docs/`: карточки
@@ -341,9 +344,7 @@ def main() -> int:
                     f"находок {actual} (обнови --update-baseline)"
                 )
 
-    if not files:
-        print("ОШИБКА: не найдено ни одного файла с кодом", file=sys.stderr)
-        return 1
+    note = require_input("просмотренные файлы с кодом", files, source=root)
     if listing:
         return 0
     if update:
@@ -363,7 +364,7 @@ def main() -> int:
         )
         return 1
 
-    print(f"  комментарии: проверено {files} файлов, нарушений нет")
+    print(f"  комментарии: {note}, нарушений нет")
     return 0
 
 

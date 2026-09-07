@@ -41,6 +41,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLAUDE_MD = os.path.join(ROOT, "CLAUDE.md")
 FEATURES_REGISTRY = os.path.join(ROOT, "docs", "features", "README.md")
@@ -80,6 +83,11 @@ def feature_statuses():
         )
         if match:
             statuses[match.group(1)] = re.sub(r"[*✅\s]", "", match.group(2))
+    require_input(
+        "записи реестра фич",
+        len(statuses),
+        source=os.path.relpath(FEATURES_REGISTRY, ROOT),
+    )
     return statuses
 
 
@@ -250,8 +258,13 @@ def check_invariant_checklist(lines, problems):
 
 
 def run_checks(lines):
+    # Границы стоят на каждом источнике: строки живого контекста, записи реестра
+    # и индекс дерева. Обнулись любой из них, все пять проверок ниже выполнились
+    # бы тривиально, а отчёт остался бы прежним.
+    require_input("абзацы живого контекста", len(list(paragraphs(lines))), source="CLAUDE.md")
     statuses = feature_statuses()
     index = build_file_index()
+    require_input("файлы дерева в индексе", len(index), source=ROOT)
     problems = []
     check_feature_status(lines, statuses, problems)
     check_paths(lines, index, problems)
@@ -370,7 +383,10 @@ def main():
             file=sys.stderr,
         )
         return 1
-    print(f"Живой контекст CLAUDE.md: проверено {len(lines)} строк, расхождений нет.")
+    print(
+        f"Живой контекст CLAUDE.md: разобрано {len(list(paragraphs(lines)))} абзацев "
+        f"({len(lines)} строк), расхождений нет."
+    )
     return 0
 
 

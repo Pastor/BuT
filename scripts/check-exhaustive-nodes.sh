@@ -34,15 +34,23 @@ set -eu
 
 # Корень переопределяется переменной: тест гоняет проверка на
 # Копии дерева, не трогая рабочие файлы.
+. "$(dirname "$0")/gatelib.sh"
+
 ROOT="${EN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+# Узлы объявлены в трёх файлах: `StatementNode` остался в `mod.rs`, два других
+# вынесены в свои модули. Пока список состоял из одного файла, условие 1 судило
+# один узел из трёх и молчало о двух.
 NODES_FILE="$ROOT/takt-lang/src/semantic/mod.rs"
+CONDITION_NODE_FILE="$ROOT/takt-lang/src/semantic/condition_node.rs"
+EXPRESSION_NODE_FILE="$ROOT/takt-lang/src/semantic/expression_node.rs"
 EVAL_MOD="$ROOT/takt-sim/src/eval/mod.rs"
 INITIAL_MOD="$ROOT/takt-sim/src/unit/initial.rs"
 DEPTH_CHILDREN="$ROOT/takt-lang/src/parser/depth/children.rs"
 DEPTH_DISMANTLE="$ROOT/takt-lang/src/parser/depth/dismantle.rs"
 DENY='#![deny(clippy::wildcard_enum_match_arm)]'
 
-for f in "$NODES_FILE" "$EVAL_MOD" "$INITIAL_MOD" "$DEPTH_CHILDREN" "$DEPTH_DISMANTLE"; do
+for f in "$NODES_FILE" "$CONDITION_NODE_FILE" "$EXPRESSION_NODE_FILE" \
+         "$EVAL_MOD" "$INITIAL_MOD" "$DEPTH_CHILDREN" "$DEPTH_DISMANTLE"; do
   [ -f "$f" ] || { echo "check-exhaustive-nodes: не найден $f" >&2; exit 1; }
 done
 
@@ -63,7 +71,13 @@ BAD_NODES="$(awk '
   /^[[:space:]]*#/ { next }        # другой атрибут (#[derive], …) — часть блока
   /^[[:space:]]*\/\// { next }     # док-/обычный комментарий — часть блока
   { pending = 0 }                  # строка кода — связь с атрибутом сброшена
-' "$NODES_FILE")"
+' "$NODES_FILE" "$CONDITION_NODE_FILE" "$EXPRESSION_NODE_FILE")"
+
+# Объявления узлов обязаны найтись все три: разъехавшись по модулям, они уже
+# однажды вывели два узла из-под условия 1, и проверка этого не заметила.
+NODES_FOUND="$(grep -chE '^pub enum (ExpressionNode|ConditionNode|StatementNode)[ {]' \
+  "$NODES_FILE" "$CONDITION_NODE_FILE" "$EXPRESSION_NODE_FILE" | awk '{ total += $1 } END { print total + 0 }')"
+NODES_NOTE="$(require_input "объявления семантических узлов" "$NODES_FOUND" 3 "takt-lang/src/semantic")" || exit 1
 
 if [ -n "$BAD_NODES" ]; then
   echo "  ОШИБКА: семантический узел помечен #[non_exhaustive] (фича 0093):" >&2
@@ -92,4 +106,4 @@ done
 if [ "$fail" != 0 ]; then
   exit 1
 fi
-echo "  OK: узлы не #[non_exhaustive]; вычислители симулятора и обходы глубины АСД хранят deny(wildcard_enum_match_arm)."
+echo "  OK: $NODES_NOTE; они не #[non_exhaustive], а вычислители симулятора и обходы глубины АСД хранят deny(wildcard_enum_match_arm)."

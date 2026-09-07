@@ -44,6 +44,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.environ.get(
     "BD_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
@@ -64,13 +67,7 @@ def registry_codes(text, source):
         match = re.match(rf"\|\s*`({CODE})`\s*\|", line)
         if match:
             codes.add(match.group(1))
-    if not codes:
-        sys.exit(
-            f"ОШИБКА: в {source} не найдено ни одной строки таблицы кодов.\n"
-            "Гейт 0290 читает реестр как источник истины: без строк он молча\n"
-            "проверял бы пустое множество. Верните разметку либо обновите гейт\n"
-            "вместе с нею — но не оставляйте проверку без входа."
-        )
+    require_input("строки таблиц реестра", len(codes), source=source)
     return codes
 
 
@@ -86,12 +83,7 @@ def appendix_codes(text, source):
     end = text.find(SUMMARY_END, start)
     summary = text[start:end if end > 0 else len(text)]
     codes = set(re.findall(rf"\[`({CODE})`\]", summary))
-    if not codes:
-        sys.exit(
-            f"ОШИБКА: в сводной таблице {source} не найдено ни одного кода.\n"
-            "Пустое множество — ошибка, а не успех: проверка «документ ⊆ реестр»\n"
-            "выполнилась бы тривиально."
-        )
+    require_input("коды сводной таблицы приложения", len(codes), source=source)
     return codes
 
 

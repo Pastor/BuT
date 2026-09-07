@@ -58,6 +58,9 @@ import re
 import shutil
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
 import tempfile
 
 ROOT = os.environ.get(
@@ -259,13 +262,7 @@ def main():
     checkable = [item for item in found if item[0] is not None]
     foreign = len(found) - len(checkable)
 
-    if not checkable:
-        print(
-            "ОШИБКА: в приложении не найдено ни одной пары «пример → вывод»: "
-            "проверять нечего (сменилась разметка?)",
-            file=sys.stderr,
-        )
-        return 1
+    require_input("пары «пример - вывод» приложения", len(checkable), source=APPENDIX)
 
     print("Разбор приложения «Ошибки»: воспроизводимость примеров (фича 0520)...")
     baseline = read_baseline()

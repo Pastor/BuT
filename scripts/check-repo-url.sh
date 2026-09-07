@@ -36,6 +36,8 @@
 set -eu
 
 # Корень переопределяется переменной - для теста проверки.
+. "$(dirname "$0")/gatelib.sh"
+
 ROOT="${RU_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 MANIFEST="$ROOT/takt-lang/Cargo.toml"
 README="$ROOT/README.md"
@@ -71,9 +73,11 @@ extensions/intellij-takt/src/main/resources/META-INF/plugin.xml
 "
 
 BAD=0
+SEEN=0
 for REL in $FILES; do
     F="$ROOT/$REL"
     [ -f "$F" ] || { echo "  ОШИБКА: проверяемый файл отсутствует: $REL" >&2; BAD=1; continue; }
+    SEEN=$((SEEN + 1))
     FOUND="$(grep -oE "github\.com/$REF_OWNER/[A-Za-z0-9_.-]+" "$F" | sort -u || true)"
     for SLUG in $FOUND; do
         SLUG="${SLUG#github.com/}"
@@ -116,4 +120,5 @@ if [ "$BAD" -ne 0 ]; then
     exit 1
 fi
 
-echo "  OK: адрес репозитория один — $REF_SLUG (каталог после клонирования: $REF_NAME)"
+NOTE="$(require_input "файлы, где адрес исполняется" "$SEEN" 1 "$ROOT")" || exit 1
+echo "  OK: адрес репозитория один — $REF_SLUG; $NOTE (каталог после клонирования: $REF_NAME)"

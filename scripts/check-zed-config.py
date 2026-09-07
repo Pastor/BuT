@@ -29,6 +29,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "extensions/zed-takt/languages/takt/config.toml"
 LEXER = ROOT / "takt-lang/src/parser/lexer.rs"
@@ -99,8 +102,9 @@ def main() -> None:
         if "takt-lsp" not in manifest:
             fail("Z4: манифест расширения не объявляет сервер 'takt-lsp'")
 
+    note = require_input("формы строчного комментария конфигурации", len(declared), source="extensions/zed-takt")
     print(
-        f"Конфиг Zed: суффикс, {len(declared)} формы строчного комментария, "
+        f"Конфиг Zed: суффикс, {note}, "
         f"блочный комментарий, {len(declared_pairs)} пар скобок и языковой "
         f"сервер сверены с языком."
     )

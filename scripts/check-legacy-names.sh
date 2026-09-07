@@ -43,6 +43,8 @@
 # POSIX sh, без внешних зависимостей (образец - scripts/check-repo-url.sh).
 set -eu
 
+. "$(dirname "$0")/gatelib.sh"
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 # --- Что запрещено ----------------------------------------------------------
@@ -81,7 +83,11 @@ fi
 
 BAD=0
 COUNT=0
+SEEN=0
 for REL in $FILES; do
+    # Границей судится поданный список, а не остаток после исключений: один
+    # исключённый файл на входе - законный вызов, пустой список - слепой обход.
+    SEEN=$((SEEN + 1))
     is_excluded "$REL" && continue
     F="$ROOT/$REL"
     [ -f "$F" ] || F="$REL"
@@ -108,4 +114,5 @@ if [ "$BAD" -ne 0 ]; then
     exit 1
 fi
 
-echo "  OK: старых имён нет (проверено файлов: $COUNT)"
+NOTE="$(require_input "файлы, поданные на проверку" "$SEEN" 1 "$ROOT")" || exit 1
+echo "  OK: старых имён нет; $NOTE (просмотрено $COUNT)"

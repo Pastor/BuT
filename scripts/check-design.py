@@ -34,6 +34,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = Path(__file__).resolve().parent.parent
 CSS = ROOT / "web/static/app.css"
 BOOK = ROOT / "web/design/BOOK.md"
@@ -150,9 +153,7 @@ def main():
     book = BOOK.read_text(encoding="utf-8")
     showcase = SHOWCASE.read_text(encoding="utf-8")
     rules = parse(css)
-    if not rules:
-        print("  ОШИБКА: в app.css не разобрано ни одного правила")
-        return 1
+    note = require_input("правила оформления", len(rules), source=str(CSS))
 
     # D8 - упомянутая переменная объявлена. Неизвестная переменная - не ошибка
     # для браузера: он молча отбрасывает объявление, и правило пропадает
@@ -166,9 +167,7 @@ def main():
             problems.append(f"D8 app.css:{line}: переменная '{match.group(1)}' нигде не объявлена")
 
     registry = book_pairs(book)
-    if not registry:
-        print("  ОШИБКА: в книге нет реестра пар")
-        return 1
+    require_input("пары реестра книги оформления", len(registry), source=str(BOOK))
     used_pairs = set()
 
     for rule in rules:
@@ -267,7 +266,7 @@ def main():
         return 1
 
     print(
-        f"  Дизайн-система: правил {len(rules)}, пар в реестре {len(registry)}, "
+        f"  Дизайн-система: {note}, пар в реестре {len(registry)}, "
         f"контролов {len(described)} — расхождений нет."
     )
     return 0

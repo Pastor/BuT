@@ -39,6 +39,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.environ.get(
     "DD_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
@@ -119,8 +122,7 @@ def main():
         sys.exit(f"ОШИБКА: не найден реестр {REGISTRY}.")
     with open(REGISTRY, encoding="utf-8") as handle:
         entries = rows(handle.read())
-    if not entries:
-        sys.exit("ОШИБКА: в реестре не найдено ни одной записи — проверка вырождена.")
+    note = require_input("записи реестра диагностик", len(entries), source=REGISTRY)
     baseline = read_baseline(BASELINE)
     problems = check(entries, baseline)
     if problems:
@@ -135,7 +137,7 @@ def main():
         return 1
 
     print(
-        f"Описания диагностик: проверено {len(entries)} записей, "
+        f"Описания диагностик: {note}, "
         f"узаконенного долга {len(baseline)} — безликих нет."
     )
     return 0

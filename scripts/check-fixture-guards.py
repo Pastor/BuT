@@ -40,6 +40,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.environ.get(
     "FG_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
@@ -163,8 +166,9 @@ def main():
         )
         return 1
 
+    note = require_input("тесты на фикстуры valid", total, source="takt-lang/tests")
     print(
-        f"Сторожа фикстур: {total} тестов на `valid/`, "
+        f"Сторожа фикстур: {note}, "
         f"констатаций в реестре {len(baseline)} — новых нет."
     )
     return 0

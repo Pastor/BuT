@@ -54,6 +54,9 @@ import re
 import shutil
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
 import tempfile
 
 ROOT = os.environ.get(
@@ -238,13 +241,7 @@ def main():
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
-    if not total:
-        print(
-            "ОШИБКА: в главах не найдено ни одного блока `takt`: проверять нечего "
-            "(сменилась разметка?)",
-            file=sys.stderr,
-        )
-        return 1
+    require_input("блоки `takt` в главах", total, source="book/src")
 
     if unparsed:
         print(f"  ОШИБКА: пример не разбирается ({len(unparsed)}):", file=sys.stderr)

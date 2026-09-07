@@ -38,6 +38,8 @@ set -eu
 
 # Корень переопределяется MS_ROOT - для теста scripts/test-module-size.sh:
 # он гоняет проверка на временном дереве, не трогая рабочее.
+. "$(dirname "$0")/gatelib.sh"
+
 ROOT="${MS_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 BASELINE="$ROOT/scripts/module-size-baseline.txt"
 LIMIT=1000
@@ -155,4 +157,5 @@ if [ "$warned" -ne 0 ]; then
 fi
 
 entries=$(grep -cv '^[[:space:]]*#' "$BASELINE" 2>/dev/null || echo 0)
-echo "Размер модулей: проверено $checked файлов, записей долга $entries, превышение $debt строк."
+NOTE="$(require_input "просмотренные модули" "$checked" 1 "$ROOT")" || exit 1
+echo "Размер модулей: $NOTE, записей долга $entries, превышение $debt строк."

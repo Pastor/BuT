@@ -28,6 +28,9 @@ import os
 import re
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -220,8 +223,9 @@ def main():
             print(f"  … и ещё {len(problems) - 40}")
         sys.exit(1)
 
+    note = require_input("сообщения корпуса", checked, source="корпус матрицы")
     print(
-        f"Качество диагностик: {checked} сообщений проверено, "
+        f"Качество диагностик: {note}, "
         f"кодов достигнуто {len(seen)} из {len(all_codes)}, "
         f"долг позиций {len(position_debt)}, долг покрытия {len(coverage_debt)}."
     )

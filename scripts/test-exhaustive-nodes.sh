@@ -24,10 +24,12 @@ fail() { echo "  ПРОВАЛ: $1" >&2; FAILED=1; }
 
 echo "Сторож гейта исчерпаемости разборов (фича 0315)..."
 
-# Копия только нужных файлов: проверка читает пять путей.
+# Копия только нужных файлов: проверка читает семь путей.
 copy_tree() {
     rm -rf "$TMP/tree"
     for rel in takt-lang/src/semantic/mod.rs \
+               takt-lang/src/semantic/condition_node.rs \
+               takt-lang/src/semantic/expression_node.rs \
                takt-sim/src/eval/mod.rs \
                takt-sim/src/unit/initial.rs \
                takt-lang/src/parser/depth/children.rs \
@@ -76,6 +78,20 @@ if ! EN_ROOT="$TMP/tree" sh "$TOOL" >"$TMP/out" 2>&1; then
     ok "пропавший файл ловится"
 else
     fail "пропавший файл принят за успех: $(cat "$TMP/out")"
+fi
+
+# Узел, выпавший из поля зрения, ловится границей. Пока список файлов состоял
+# из одного модуля, два узла из трёх не проверялись вовсе, и проверка молчала:
+# выборка усохла, а вердикт остался прежним.
+copy_tree
+sed -i.bak 's/^pub enum ConditionNode {/pub enum ConditionNodeRenamed {/' \
+    "$TMP/tree/takt-lang/src/semantic/condition_node.rs"
+if EN_ROOT="$TMP/tree" sh "$TOOL" >"$TMP/out" 2>&1; then
+    fail "потеря узла из выборки НЕ поймана: $(cat "$TMP/out")"
+elif grep -q 'объявления семантических узлов' "$TMP/out"; then
+    ok "потеря узла из выборки ловится границей"
+else
+    fail "отказ не назвал вход: $(cat "$TMP/out")"
 fi
 
 [ "$FAILED" -eq 0 ] || { echo "  Сторож гейта исчерпаемости: ПРОВАЛ" >&2; exit 1; }

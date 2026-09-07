@@ -49,6 +49,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APPENDIX = os.path.join(ROOT, "book", "src", "appendix-grammar", "index.typ")
 LEXICAL = os.path.join(ROOT, "book", "src", "02-lexical", "index.typ")
@@ -103,12 +106,7 @@ def marked_paragraph(text, mark, source):
     for block in paragraphs(text):
         if block.startswith(mark):
             return block[len(mark) :]
-    sys.exit(
-        f"ОШИБКА: в {source} нет абзаца «{mark}».\n"
-        "Гейт лексики (фича 0160) держится на этой разметке: без неё он молча\n"
-        "проверял бы пустое множество. Верните абзац либо обновите гейт вместе\n"
-        "с разметкой — но не оставляйте проверку без входа."
-    )
+    require_input(f"абзац «{mark}»", 0, source=source)
 
 
 def backticked(fragment):
@@ -169,19 +167,12 @@ def lexical_table(text, heading, source):
     ловить лишнее слово.
     """
     start = text.find(heading)
-    if start < 0:
-        sys.exit(
-            f"ОШИБКА: в {source} нет раздела «{heading}».\n"
-            "Гейт лексики (фича 0298) сверяет таблицы раздела «Лексика» с языком:\n"
-            "без раздела он молча проверял бы пустое множество."
-        )
+    require_input(f"раздел «{heading}»", 1 if start >= 0 else 0, source=source)
     table = text.find("#table(", start)
     end = table_end(text, table) if table >= 0 else -1
-    if table < 0 or end < 0:
-        sys.exit(
-            f"ОШИБКА: в {source} после «{heading}» не найдена таблица.\n"
-            "Гейт лексики (фича 0298) читает её как список раздела."
-        )
+    require_input(
+        f"таблица раздела «{heading}»", 1 if table >= 0 and end >= 0 else 0, source=source
+    )
     return text[table:end]
 
 
@@ -283,8 +274,7 @@ def check(doc_text, lexer_text, grammar_text, list_text=None, syntax_text=None,
         ("сводка пунктуации документа", punct_doc),
         ("терминалы-знаки грамматики", punct_code),
     ):
-        if not group:
-            sys.exit(f"ОШИБКА: {name} пуст — гейт проверял бы пустое множество.")
+        require_input(name, len(group))
 
     for word in sorted(keywords_code - keywords_doc - CONTEXTUAL):
         problems.append(("K1", word, "ключевое слово лексера отсутствует в списке документа"))
@@ -318,8 +308,7 @@ def check_lexical(lexical_text, keywords_code, punct_code):
         ("таблица ключевых слов раздела «Лексика»", words),
         ("таблицы знаков раздела «Лексика»", signs),
     ):
-        if not group:
-            sys.exit(f"ОШИБКА: {name} пуста — гейт проверял бы пустое множество.")
+        require_input(name, len(group))
 
     for word in sorted(keywords_code - words - CONTEXTUAL):
         problems.append(("L1", word, "ключевое слово лексера отсутствует в разделе «Лексика»"))
@@ -346,17 +335,17 @@ def check_highlight(list_text, syntax_text, keywords_code):
     sections = highlight_sections(list_text)
     extra = sections.get(HIGHLIGHT_EXTRA_SECTION, set())
     listed = sections.get("keywords", set()) | sections.get("constants", set())
-    if not listed:
-        sys.exit(
-            f"ОШИБКА: в {os.path.relpath(KEYWORD_LIST, ROOT)} нет секций "
-            "[keywords]/[constants] — гейт проверял бы пустое множество."
-        )
+    require_input(
+        "секции [keywords] и [constants] списка подсветки",
+        len(listed),
+        source=os.path.relpath(KEYWORD_LIST, ROOT),
+    )
     from_syntax = syntax_words(syntax_text)
-    if not from_syntax:
-        sys.exit(
-            f"ОШИБКА: в {os.path.relpath(SYNTAX, ROOT)} не найдены правила подсветки "
-            "ключевых слов — гейт проверял бы пустое множество."
-        )
+    require_input(
+        "правила подсветки ключевых слов",
+        len(from_syntax),
+        source=os.path.relpath(SYNTAX, ROOT),
+    )
 
     expected = keywords_code - CONTEXTUAL - HIGHLIGHT_EXCLUDED
     for word in sorted(expected - listed):

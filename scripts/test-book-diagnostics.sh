@@ -86,7 +86,7 @@ restore
 
 # --- 5. Реестр без строк таблиц - тоже ошибка -------------------------------
 printf '# Реестр\nПроза без таблиц.\n' > "$TMP/tree/docs/diagnostics/README.md"
-if ! run_gate && grep -q 'строки таблицы кодов' "$TMP/out"; then
+if ! run_gate && grep -q 'строки таблиц реестра' "$TMP/out"; then
     ok "реестр без таблиц валит гейт"
 else
     fail "реестр без таблиц НЕ пойман: $(cat "$TMP/out")"

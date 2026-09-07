@@ -28,7 +28,12 @@ import os
 import re
 import sys
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
+ROOT = os.environ.get(
+    "RV_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 FEATURES_REGISTRY = os.path.join(ROOT, "docs", "features", "README.md")
 # Реестр один: стадии живут разделами карточки, и
 # реестров `docs/tests/`, `docs/reports/` больше нет. Колонок в строке фичи
@@ -169,6 +174,14 @@ def main():
         return 0
 
     statuses = feature_statuses(read_lines(FEATURES_REGISTRY))
+    # Граница стоит на разобранных записях, а не на строках файла: смена формы
+    # первой ячейки уже обнуляла разбор, и проверка отвечала успехом с прежним
+    # числом строк в отчёте.
+    note = require_input(
+        "записи реестра фич",
+        len(statuses),
+        source=os.path.relpath(FEATURES_REGISTRY, ROOT),
+    )
     registries = {
         path: (read_lines(os.path.join(ROOT, path)), column)
         for path, column in STAGE_REGISTRIES.items()
@@ -187,9 +200,8 @@ def main():
             file=sys.stderr,
         )
         return 1
-    total = sum(len(lines) for lines, _ in registries.values())
     print(
-        f"Вердикт тестирования в реестре фич: проверено {total} строк, "
+        f"Вердикт тестирования в реестре фич: {note}, "
         f"заготовок у закрытых фич нет."
     )
     return 0

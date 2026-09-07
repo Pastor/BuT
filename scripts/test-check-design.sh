@@ -30,7 +30,8 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 TREE="$WORK/tree"
 mkdir -p "$TREE/scripts" "$TREE/web/static" "$TREE/web/design"
-cp "$ROOT/scripts/check-design.py" "$TREE/scripts/"
+# Помощник границ входа копируется вместе с проверкой: она его импортирует.
+cp "$ROOT/scripts/check-design.py" "$ROOT/scripts/gatelib.py" "$TREE/scripts/"
 cp "$ROOT/web/static/app.css" "$TREE/web/static/"
 cp "$ROOT/web/design/BOOK.md" "$ROOT/web/design/controls.html" "$TREE/web/design/"
 

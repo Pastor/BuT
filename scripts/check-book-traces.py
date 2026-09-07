@@ -52,6 +52,9 @@ import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.environ.get(
     "BTR_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
@@ -262,13 +265,7 @@ def main():
             elif key not in baseline:
                 broken.append((key, line, problems))
 
-    if not total:
-        print(
-            "ОШИБКА: в главах не найдено ни одной трассы: проверять нечего "
-            "(сменилась разметка?)",
-            file=sys.stderr,
-        )
-        return 1
+    require_input("трассы прогонов в главах", total, source="book/src")
 
     if broken:
         print(

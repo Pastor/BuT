@@ -29,6 +29,9 @@
 import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
 from pathlib import Path
 
 BASE_LANG = "ru"
@@ -128,7 +131,8 @@ def main() -> int:
         return 1
 
     langs = ", ".join(sorted(catalogues))
-    print(f"  каталоги сообщений: {len(base)} ключей × [{langs}] — паритет соблюдён")
+    note = require_input("ключи базового каталога сообщений", len(base), source=str(BASE_LANG))
+    print(f"  каталоги сообщений: {note} × [{langs}] — паритет соблюдён")
     return 0
 
 

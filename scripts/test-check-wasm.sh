@@ -112,7 +112,7 @@ setup_tree() {  # $1 = корень
   printf 'var n: u8 := 0;\n\nstart S {\n    always {\n        n := n + 1;\n    }\n}\n' \
     > "$1/examples/probe.takt"
   printf '[{}]\n' > "$1/examples/simulations/probe_run.json"
-  cp "$ROOT/scripts/check-wasm-identity.mjs" "$1/scripts/"
+  cp "$ROOT/scripts/check-wasm-identity.mjs" "$ROOT/scripts/gatelib.mjs" "$1/scripts/"
 }
 
 run_gate() {  # $1 = корень дерева, $2 = режим модуля

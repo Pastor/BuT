@@ -28,6 +28,8 @@
 # POSIX sh.
 set -eu
 
+. "$(dirname "$0")/gatelib.sh"
+
 ROOT="${BT_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 TAKTC="${TAKTC:-$ROOT/target/precheck/debug/taktc}"
 IEC_LIB="${IEC2C_LIB:-$HOME/.local/share/matiec/lib}"
@@ -136,7 +138,8 @@ for SRC in $(find "$ROOT/book/src" -name '*.takt' | sort); do
     done
 done
 
-echo "  Проверено пар пример×цель: $CHECKED; отказов самой цели (границы): $SKIPPED."
+NOTE="$(require_input "пары пример-цель" "$CHECKED" 1 "book/src")" || exit 1
+echo "  Проверено: $NOTE; отказов самой цели (границы): $SKIPPED."
 if [ "$BAD" -ne 0 ]; then
     echo "  Пример документа порождает код, который отвергает инструмент цели" \
          "— предкоммит провален (фича 0513)." >&2

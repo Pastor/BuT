@@ -20,6 +20,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 # Ссылка вида [текст](цель). Исключаем цели, начинающиеся с '#' (чистые якоря).
 LINK_RE = re.compile(r"\]\(\s*([^)\s#][^)\s]*?)\s*\)")
 # Инлайновый код-спан: `...` / `````3`](..`.`)`)` - не ссылка, а текст
@@ -47,7 +50,8 @@ def markdown_files(root="."):
                 yield os.path.join(dirpath, name)
 
 
-def check(path):
+def check(path, counter=None):
+    """Битые ссылки файла; `counter` копит число проверенных — вход проверки."""
     broken = []
     in_fence = False
     with open(path, encoding="utf-8") as handle:
@@ -63,6 +67,8 @@ def check(path):
                 target = match.group(1).split("#", 1)[0]
                 if not target or target.startswith(EXTERNAL):
                     continue
+                if counter is not None:
+                    counter.append(target)
                 resolved = os.path.normpath(os.path.join(os.path.dirname(path), target))
                 if not os.path.exists(resolved):
                     broken.append((lineno, target, resolved))
@@ -92,7 +98,17 @@ def self_test():
         broken = check(page)
         if len(broken) != 1 or broken[0][1] != "missing.md":
             sys.exit(f"САМОПРОВЕРКА ПРОВАЛЕНА: битая ссылка не поймана ({broken})")
-    print("  самопроверка гейта: ловушка взведена (битая ловится, код и блок — нет)")
+        # Дерево без Markdown - отказ: проверка, не нашедшая ни одного файла,
+        # ничего не прочла, а ответ про отсутствие битых звучал бы так же.
+        empty = os.path.join(tmp, "пусто")
+        os.makedirs(empty)
+        try:
+            require_input("просмотренные файлы Markdown", len(list(markdown_files(empty))))
+        except SystemExit:
+            pass
+        else:
+            sys.exit("САМОПРОВЕРКА ПРОВАЛЕНА: дерево без Markdown принято за успех")
+    print("  самопроверка гейта: ловушка взведена (битая ловится, код, блок и пустое дерево — нет)")
 
 
 def main():
@@ -101,8 +117,11 @@ def main():
         return 0
     quiet = "--quiet" in sys.argv
     total = 0
-    for path in sorted(markdown_files()):
-        for lineno, target, resolved in check(path):
+    files = sorted(markdown_files())
+    require_input("просмотренные файлы Markdown", len(files), source=os.getcwd())
+    links = []
+    for path in files:
+        for lineno, target, resolved in check(path, links):
             total += 1
             if not quiet:
                 print(f"{path}:{lineno}: битая ссылка -> {target} (ищется как {resolved})")
@@ -110,8 +129,9 @@ def main():
         if not quiet:
             print(f"\nИтого битых ссылок: {total} (правило 14)")
         return 1
+    note = require_input("проверенные относительные ссылки", len(links), source=os.getcwd())
     if not quiet:
-        print("Битых ссылок нет (правило 14)")
+        print(f"Битых ссылок нет: {note} (правило 14)")
     return 0
 
 

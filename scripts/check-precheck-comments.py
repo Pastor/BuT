@@ -30,6 +30,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gatelib import require_input  # noqa: E402  (путь к помощнику известен только здесь)
+
 ROOT = os.environ.get(
     "PC_ROOT", os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
@@ -136,7 +139,8 @@ def main():
         )
         return 1
 
-    print(f"Комментарии шагов precheck: проверено {len(pairs)} шагов, пересказов нет.")
+    note = require_input("шаги предкоммита", len(pairs), source="scripts/precheck.sh")
+    print(f"Комментарии шагов precheck: {note}, пересказов нет.")
     return 0
 
 
