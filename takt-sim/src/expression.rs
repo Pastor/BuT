@@ -199,10 +199,11 @@ pub(crate) fn eval_expression(
         ExpressionNode::Function(func, args) => {
             // `debug` перехватывается до вычисления аргументов: его аргумент -
             // строковый литерал, а `Value` строк не представляет, и общий путь упал бы
-            // на "строки не поддерживаются". Печать идёт в stderr: stdout занят трассой
-            // прогона, которую читают сверки.
+            // на "строки не поддерживаются". Строка уходит в канал вывода программы:
+            // библиотека его возвращает, а печатает вызывающий - в stderr, потому что
+            // stdout занят трассой прогона, которую читают сверки.
             if let Some(text) = debug_argument(func, args) {
-                eprintln!("debug: {text}");
+                ctx.emit_output(&format!("debug: {text}"));
                 return Ok(Value::Number(0));
             }
             let values = args

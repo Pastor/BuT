@@ -912,7 +912,16 @@ function onWorker(message) {
       dom.trace.scrollTop = dom.trace.scrollHeight;
       break;
     case "warnings":
-      for (const line of message.lines) dom.trace.appendChild(row(line, "warning"));
+      // Код показывается отдельно от текста - как у предупреждений компиляции.
+      for (const item of message.items ?? []) {
+        const place = item.step ? t("trace.warningStep", { step: item.step }) : "";
+        const code = item.code ? `[${item.code}] ` : "";
+        dom.trace.appendChild(row(`${code}${place}${item.message}`.trim(), "warning"));
+      }
+      break;
+    case "output":
+      // Вывод модели - не замечание к ней: своя строка и свой цвет.
+      for (const line of message.lines) dom.trace.appendChild(row(line, "output"));
       break;
     case "finished":
       for (const line of message.info ?? []) dom.trace.appendChild(row(line, "ok"));

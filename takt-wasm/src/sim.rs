@@ -29,11 +29,32 @@ thread_local! {
 /// `scenario` - JSON-сценарий той же формы, что файл `-s` у `takt-sim` (пустая строка -
 /// сценария нет). `tick_ms` - период модельных часов; `0` означает "взять из объявления
 /// `clock` модели, иначе 1 мс", как в CLI.
+/// Предупреждение прогона в форме страницы.
+///
+/// Код отдельным полем - как у предупреждений компиляции: страница показывает его
+/// перед текстом, а не ищет внутри строки. `null` означает, что кода у сообщения нет.
+#[derive(Serialize)]
+struct RunWarningJson {
+    code: Option<String>,
+    message: String,
+    step: Option<usize>,
+}
+
+impl From<&takt_sim::runner::RunWarning> for RunWarningJson {
+    fn from(warning: &takt_sim::runner::RunWarning) -> Self {
+        Self {
+            code: (!warning.code.is_empty()).then(|| warning.code.to_string()),
+            message: warning.message.clone(),
+            step: warning.step,
+        }
+    }
+}
+
 pub fn open(source: &str, scenario: &str, tick_ms: i64) -> String {
     #[derive(Serialize)]
     struct Reply {
         id: u32,
-        warnings: Vec<String>,
+        warnings: Vec<RunWarningJson>,
     }
 
     let mut files = FileTable::new(DEFAULT_FILENAME);
@@ -98,7 +119,11 @@ pub fn open(source: &str, scenario: &str, tick_ms: i64) -> String {
         runner.set_tick_period_ns(1_000_000_000 / i64::try_from(hz).unwrap_or(i64::MAX));
     }
 
-    let warnings = runner.ambiguous_name_warnings();
+    let warnings: Vec<RunWarningJson> = runner
+        .ambiguous_name_warnings()
+        .iter()
+        .map(RunWarningJson::from)
+        .collect();
     let id = NEXT_ID.with(|next| {
         let mut next = next.borrow_mut();
         let id = *next;
@@ -121,6 +146,10 @@ pub fn tick(id: u32, budget: u32) -> String {
         done: bool,
         info: Vec<String>,
         errors: Vec<String>,
+        /// Предупреждения тактов этой порции - сообщения инструмента о прогоне.
+        warnings: Vec<RunWarningJson>,
+        /// Вывод программы (`debug`) - строки самой модели, а не замечания к ней.
+        output: Vec<String>,
     }
 
     SESSIONS.with(|sessions| {
@@ -129,9 +158,13 @@ pub fn tick(id: u32, budget: u32) -> String {
             return reply::refused(format!("прогон {id} не открыт"));
         };
         let mut lines = Vec::new();
+        let mut warnings = Vec::new();
+        let mut output = Vec::new();
         for _ in 0..budget {
             match runner.step() {
                 Ok(step) => {
+                    warnings.extend(step.warnings.iter().map(RunWarningJson::from));
+                    output.extend(step.output);
                     if let Some(line) = step.line {
                         lines.push(line);
                     }
@@ -142,6 +175,8 @@ pub fn tick(id: u32, budget: u32) -> String {
                             done: true,
                             info: report.info,
                             errors: report.errors,
+                            warnings,
+                            output,
                         });
                     }
                 }
@@ -156,6 +191,8 @@ pub fn tick(id: u32, budget: u32) -> String {
             done: false,
             info: Vec::new(),
             errors: Vec::new(),
+            warnings,
+            output,
         })
     })
 }

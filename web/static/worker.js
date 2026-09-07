@@ -41,7 +41,7 @@ async function run({ wasmUrl, source, scenario, tickMs, budget, chunk }) {
     return;
   }
   session = opened.id;
-  if (opened.warnings?.length) post({ type: "warnings", lines: opened.warnings });
+  if (opened.warnings?.length) post({ type: "warnings", items: opened.warnings });
 
   // Бюджет всего прогона - свойство прогона, а не модели: автор просит столько тактов,
   // сколько готов ждать, и остановка называется словами.
@@ -56,6 +56,10 @@ async function run({ wasmUrl, source, scenario, tickMs, budget, chunk }) {
       return;
     }
     done += ticked.lines.length;
+    // Предупреждения такта и вывод модели отправляются до строк трассы своей
+    // порции: место сообщения в потоке совпадает с тем, что даёт эталон в консоли.
+    if (ticked.warnings?.length) post({ type: "warnings", items: ticked.warnings });
+    if (ticked.output?.length) post({ type: "output", lines: ticked.output });
     post({ type: "lines", lines: ticked.lines, done });
     if (ticked.done) {
       post({ type: "finished", info: ticked.info, errors: ticked.errors, steps: done });

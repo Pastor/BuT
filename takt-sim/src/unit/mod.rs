@@ -290,6 +290,36 @@ impl Context for Unit {
         }
     }
 
+    fn emit_output(&self, text: &str) {
+        match &self.0 {
+            UnitKind::Node { context, .. } => {
+                if let Some(ctx) = context.as_ref() {
+                    ctx.borrow().emit_output(text);
+                }
+            }
+            UnitKind::Parallel { units, .. } | UnitKind::Sequential { units, .. } => {
+                if let Some(unit) = units.first() {
+                    unit.borrow().emit_output(text);
+                }
+            }
+            UnitKind::None => {}
+        }
+    }
+
+    fn take_output(&self) -> Vec<String> {
+        match &self.0 {
+            UnitKind::Node { context, .. } => context
+                .as_ref()
+                .map(|ctx| ctx.borrow().take_output())
+                .unwrap_or_default(),
+            UnitKind::Parallel { units, .. } | UnitKind::Sequential { units, .. } => units
+                .first()
+                .map(|unit| unit.borrow().take_output())
+                .unwrap_or_default(),
+            UnitKind::None => Vec::new(),
+        }
+    }
+
     fn ticks_in_state(&self) -> u64 {
         Unit::ticks_in_state(self)
     }

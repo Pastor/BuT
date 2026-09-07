@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use takt_lang::semantic::tree::construct_model;
 use takt_sim::graphics_config::{GraphicsConfig, OutputMode};
 use takt_sim::json_input::SimStep;
-use takt_sim::runner::{PortNames, RunResult, SimulationRunner};
+use takt_sim::runner::{PortNames, RunResult, RunWarning, SimulationRunner};
 use takt_sim::{Value, build_unit};
 
 /// Две под-модели с **одноимённым** входным портом `sensor`: в корпусе таких моделей
@@ -67,6 +67,105 @@ fn run(src: &str, scenario: &str, steps: usize) -> Result<RunResult, String> {
     )
     .expect("создание бегуна");
     runner.run()
+}
+
+/// Прогоняет сценарий по тактам и собирает предупреждения, которые вернул бегун.
+///
+/// Проверка **возврата**, а не печати: печать проверяют соседние тесты через `stderr`
+/// бинарника, и одной её мало - потребитель без консоли получает предупреждения
+/// только полем шага.
+pub(super) fn collect_warnings_of(src: &str, scenario: &str, steps: usize) -> Vec<RunWarning> {
+    let (ast, _) = takt_lang::parse(src, 0).expect("разбор модели");
+    let model = construct_model(&ast, None, &[]).expect("семантика");
+    let unit = build_unit(model.clone()).expect("построение Unit");
+    let names = PortNames::from_model(&model.borrow());
+    let steps_json: Vec<SimStep> = serde_json::from_str(scenario).expect("разбор сценария");
+    let mut runner = SimulationRunner::new(
+        unit,
+        steps_json,
+        Some(steps),
+        None::<&PathBuf>,
+        "test",
+        OutputMode::Gif,
+        names,
+        None,
+        GraphicsConfig::default(),
+    )
+    .expect("создание бегуна");
+
+    let mut collected = Vec::new();
+    loop {
+        let step = runner.step().expect("такт прогона");
+        collected.extend(step.warnings);
+        if step.result.is_some() {
+            return collected;
+        }
+    }
+}
+
+/// Предупреждение о длине позиционного массива возвращается шагом, а не только
+/// печатается.
+#[test]
+fn positional_length_warning_is_returned_by_step() {
+    let warnings = collect_warnings_of(SIMPLE, r#"[{"in_ports": [1]}, {"in_ports": [1]}]"#, 2);
+    let length: Vec<_> = warnings.iter().filter(|w| w.code == "SIM-032").collect();
+    assert_eq!(
+        length.len(),
+        2,
+        "о длине говорится на каждом позиционном шаге: {warnings:?}"
+    );
+    assert_eq!(
+        length[0].step,
+        Some(1),
+        "номер шага в предупреждении: {warnings:?}"
+    );
+    assert_eq!(
+        length[1].step,
+        Some(2),
+        "номер шага в предупреждении: {warnings:?}"
+    );
+}
+
+/// Предупреждение о форме возвращается **один раз за прогон** - признак пережил
+/// перенос на возврат.
+///
+/// Соблазн переложить дедупликацию на потребителя прямо отвергнут: потребителей два, и
+/// они разошлись бы.
+#[test]
+fn deprecation_warning_is_returned_once() {
+    let warnings = collect_warnings_of(
+        SIMPLE,
+        r#"[{"in_ports": [1, 0]}, {"in_ports": [1, 0]}, {"in_ports": [1, 0]}]"#,
+        3,
+    );
+    assert_eq!(
+        warnings.iter().filter(|w| w.code == "SIM-037").count(),
+        1,
+        "о форме говорится один раз за прогон: {warnings:?}"
+    );
+    assert_eq!(
+        warnings
+            .iter()
+            .find(|w| w.code == "SIM-037")
+            .expect("предупреждение о форме")
+            .step,
+        None,
+        "предупреждение о форме относится к прогону, а не к шагу"
+    );
+}
+
+/// Именованная форма не порождает предупреждений вовсе.
+#[test]
+fn named_form_returns_no_warnings() {
+    let warnings = collect_warnings_of(
+        SIMPLE,
+        r#"[{"in_ports": {"start_btn": 1}}, {"in_ports": {"stop_btn": 1}}]"#,
+        2,
+    );
+    assert!(
+        warnings.is_empty(),
+        "именованная форма молчит: {warnings:?}"
+    );
 }
 
 /// Именованный вход задаёт названный порт и не трогает соседний.
@@ -322,4 +421,72 @@ fn length_and_form_warnings_are_independent() {
     let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(stderr.contains("SIM-032"), "о длине: {stderr}");
     assert!(stderr.contains("SIM-037"), "о форме: {stderr}");
+}
+
+/// Вывод встроенной функции `debug` возвращается шагом, а не печатается из
+/// библиотеки.
+///
+/// Канал у него свой: это вывод модели, а не сообщение инструмента о ней, и в
+/// `warnings` он попадать не должен - иначе отладочная печать автора показывалась бы
+/// как замечание к его же модели.
+#[test]
+fn debug_output_is_returned_by_step() {
+    const WITH_DEBUG: &str = r#"
+model Probe {
+    var n: u8 := 0;
+
+    start Run {
+        always {
+            n := n + 1;
+            debug("такт исполнен");
+        }
+        ref Done: n >= 2;
+    }
+
+    state Done { }
+}
+start Root = Probe;
+"#;
+
+    let (ast, _) = takt_lang::parse(WITH_DEBUG, 0).expect("разбор модели");
+    let model = construct_model(&ast, None, &[]).expect("семантика");
+    let unit = build_unit(model.clone()).expect("построение Unit");
+    let names = PortNames::from_model(&model.borrow());
+    let mut runner = SimulationRunner::new(
+        unit,
+        Vec::new(),
+        Some(2),
+        None::<&PathBuf>,
+        "test",
+        OutputMode::Gif,
+        names,
+        None,
+        GraphicsConfig::default(),
+    )
+    .expect("создание бегуна");
+
+    let mut output = Vec::new();
+    let mut warnings = Vec::new();
+    loop {
+        let step = runner.step().expect("такт прогона");
+        output.extend(step.output);
+        warnings.extend(step.warnings);
+        if step.result.is_some() {
+            break;
+        }
+    }
+    // Строк две: тело `always` исполняется и на такте, которым автомат уходит в
+    // терминальное состояние.
+    assert_eq!(
+        output,
+        vec![
+            "debug: такт исполнен".to_string(),
+            "debug: такт исполнен".to_string()
+        ],
+        "вывод программы приходит полем шага: {output:?}"
+    );
+    assert!(
+        warnings.is_empty(),
+        "вывод программы не предупреждение: {warnings:?}"
+    );
 }

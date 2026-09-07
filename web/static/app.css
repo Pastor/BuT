@@ -1065,6 +1065,8 @@ body[data-panel="none"] .work { grid-template-columns: 1fr; }
 .row-warning { color: var(--on-surface-warn); }
 .row-ok { color: var(--on-surface-soft); }
 .row-trace { color: var(--on-surface); }
+/* Вывод модели: не замечание инструмента, но и не строка трассы. */
+.row-output { color: var(--on-surface-soft); font-style: italic; }
 
 /* ── Вкладки и панели ───────────────────────────────────────────────────── */
 .tabs {

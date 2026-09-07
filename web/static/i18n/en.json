@@ -33,6 +33,7 @@
   "trace.scenario": "Input scenario (JSON, same as the -s file of takt-sim)",
   "trace.notOpened": "the run did not open",
   "trace.tickFailed": "the tick did not execute",
+  "trace.warningStep": "step {step}: ",
   "trace.stoppedByAuthor": "stopped by the author",
   "trace.budgetSpent": "run budget spent, ticks: {steps}",
   "trace.unknownCommand": "unknown worker command: {type}",

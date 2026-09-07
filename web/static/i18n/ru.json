@@ -33,6 +33,7 @@
   "trace.scenario": "Сценарий входов (JSON, как файл -s у takt-sim)",
   "trace.notOpened": "прогон не открыт",
   "trace.tickFailed": "такт не выполнен",
+  "trace.warningStep": "шаг {step}: ",
   "trace.stoppedByAuthor": "остановлено автором",
   "trace.budgetSpent": "бюджет прогона исчерпан, тактов: {steps}",
   "trace.unknownCommand": "неизвестная команда воркера: {type}",

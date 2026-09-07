@@ -3,7 +3,7 @@
 use crate::context::Context;
 use crate::eval::value::Value;
 use crate::port_names::PortNames;
-use crate::runner::RunResult;
+use crate::runner::{RunResult, RunWarning};
 use crate::unit::Unit;
 
 /// Строит строку шага трассы - ту же, что печатает `takt-sim`.
@@ -67,6 +67,27 @@ pub fn step_line(unit: &Unit, port_names: &PortNames, step_no: usize, now_ns: i6
         }
     }
     line
+}
+
+/// Печатная форма предупреждения прогона - единственная в проекте.
+///
+/// Библиотека предупреждения возвращает, печатает вызывающий, но **форма** строки одна
+/// на всех: второй носитель формата разошёлся бы с первым молча, и один и тот же код
+/// выглядел бы в консоли и на странице по-разному.
+///
+/// Пустой код означает, что кода у предупреждения нет: таково предупреждение о
+/// двусмысленных именах, печатавшееся словом внимания с самого появления.
+pub fn warning_line(warning: &RunWarning) -> String {
+    if warning.code.is_empty() {
+        return format!("ВНИМАНИЕ: {}", warning.message);
+    }
+    match warning.step {
+        Some(step) => format!(
+            "Предупреждение [{}]: шаг {step}: {}",
+            warning.code, warning.message
+        ),
+        None => format!("Предупреждение [{}]: {}", warning.code, warning.message),
+    }
 }
 
 /// Итог прогона: что сказать в обычный поток, а что - в поток ошибок.

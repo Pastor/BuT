@@ -165,6 +165,58 @@ test("мост: страница и модуль сходятся формой �
   bridge.simClose(opened.id);
 });
 
+test("прогон: предупреждения и вывод модели доезжают до страницы", async () => {
+  // Ради этого фича и заведена: печать внутри библиотеки для страницы не
+  // существует, и до перевода на возврат автор не узнавал ни что форма сценария
+  // устарела, ни что часть его значений игнорируется.
+  const bridge = await loadBridge();
+  const MODEL_WITH_DEBUG = `
+model Probe {
+    in a: bit;
+    in b: bit;
+    var n: u8 := 0;
+
+    start Run {
+        always {
+            n := n + 1;
+            debug("такт исполнен");
+        }
+        ref Done: n >= 2;
+    }
+
+    state Done { }
+}
+start Root = Probe;
+`;
+
+  // Позиционная форма короче списка портов: обе причины предупреждений сразу.
+  const scenario = JSON.stringify([{ in_ports: [1] }, { in_ports: [1] }]);
+  const opened = bridge.simOpen(MODEL_WITH_DEBUG, scenario, 0);
+  assert.equal(opened.ok, true, JSON.stringify(opened));
+
+  const ticked = bridge.simTick(opened.id, 2);
+  assert.equal(ticked.ok, true, JSON.stringify(ticked));
+
+  const codes = (ticked.warnings ?? []).map((w) => w.code);
+  assert.ok(codes.includes("SIM-037"), `о форме сценария: ${JSON.stringify(ticked.warnings)}`);
+  assert.ok(codes.includes("SIM-032"), `о длине массива: ${JSON.stringify(ticked.warnings)}`);
+  // Код приходит отдельным полем, а не внутри текста: страница показывает его сама.
+  for (const warning of ticked.warnings) {
+    assert.ok(!warning.message.includes("SIM-"), `код внутри текста: ${warning.message}`);
+  }
+  // Номер шага есть у предупреждения о длине и отсутствует у предупреждения о форме.
+  const length = ticked.warnings.find((w) => w.code === "SIM-032");
+  assert.equal(length.step, 1, JSON.stringify(length));
+  assert.equal(ticked.warnings.find((w) => w.code === "SIM-037").step, null);
+
+  // Вывод модели - свой канал, не предупреждение.
+  assert.ok(
+    ticked.output.some((line) => line.startsWith("debug: ")),
+    `вывод модели: ${JSON.stringify(ticked.output)}`
+  );
+  bridge.simClose(opened.id);
+});
+
 test("подсветка: каждая цель красит свой вывод", async () => {
   // У каждой из восьми целей разметка непуста и различает ключевое слово, число
   // и комментарий. Цель, забытая в таблице языков, показывала бы чёрный текст, и

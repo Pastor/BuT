@@ -44,6 +44,28 @@ pub enum RunResult {
     },
 }
 
+/// Предупреждение прогона: сообщение инструмента автору сценария или модели.
+///
+/// Библиотека предупреждения **возвращает**, а печатает вызывающий - то же правило,
+/// что у генераторов. Потребитель без консоли (модуль WebAssembly) иначе
+/// не получил бы их вовсе: печать внутри библиотеки для страницы не существует.
+///
+/// Код держится отдельным полем, а не внутри текста: получатель показывает его
+/// отдельно, а проверка `scripts/check-diagnostic-codes.sh` собирает коды строковыми
+/// литералами - вплавленный в сообщение код выпадает из реестра диагностик.
+///
+/// Места в исходном файле у такого предупреждения нет, поэтому это не `Diagnostic`:
+/// есть номер шага сценария, и он честнее пустой координаты.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunWarning {
+    /// Код диагностики вида `SIM-037`.
+    pub code: &'static str,
+    /// Текст сообщения: без кода и без слова, открывающего печатную строку.
+    pub message: String,
+    /// Шаг сценария (нумерация с 1); `None` - предупреждение о прогоне целиком.
+    pub step: Option<usize>,
+}
+
 /// Итог одного такта прогона.
 ///
 /// Строка и исход **вместе**: такт, на котором автомат пришёл в терминальное состояние,
@@ -56,6 +78,17 @@ pub struct Step {
     pub line: Option<String>,
     /// Исход прогона, если он окончен на этом такте.
     pub result: Option<RunResult>,
+    /// Предупреждения, родившиеся на этом такте; пустой список - обычное состояние.
+    ///
+    /// Поле, а не отдельный метод-накопитель: потребитель, забывший его позвать,
+    /// потерял бы предупреждение молча - ровно тот класс, против которого правило и
+    /// заведено. Со строкой трассы оно приходит вместе.
+    pub warnings: Vec<RunWarning>,
+    /// Вывод программы за этот такт: строки встроенной функции `debug`.
+    ///
+    /// Канал отдельный от предупреждений: это вывод модели, а не сообщение
+    /// инструмента о ней, и получатель показывает их по-разному.
+    pub output: Vec<String>,
 }
 
 // -- Бегун симуляции ----------------------------------------------------------
@@ -103,6 +136,9 @@ pub struct SimulationRunner {
     /// предупреждение потерялось бы среди повторов. `Cell`, потому что разбор значений
     /// идёт по `&self`.
     positional_form_warned: std::cell::Cell<bool>,
+    /// Предупреждения текущего такта: разбор значений идёт по `&self`, поэтому
+    /// накопитель - `RefCell`. `step` забирает их и кладёт в [`Step::warnings`].
+    pending_warnings: std::cell::RefCell<Vec<RunWarning>>,
 }
 
 impl SimulationRunner {
@@ -148,6 +184,7 @@ impl SimulationRunner {
             completed: 0,
             soft_violations: Vec::new(),
             positional_form_warned: std::cell::Cell::new(false),
+            pending_warnings: std::cell::RefCell::new(Vec::new()),
             now_ns: 0,
             tick_period_ns: 1_000_000,
         })
@@ -181,10 +218,20 @@ impl SimulationRunner {
     /// молча - и сверки перестали бы что-либо доказывать.
     pub fn run(&mut self) -> Result<RunResult, String> {
         for warning in self.ambiguous_name_warnings() {
-            eprintln!("{warning}");
+            eprintln!("{}", crate::trace::warning_line(&warning));
         }
         loop {
             let step = self.step()?;
+            // Предупреждения такта идут в поток до строки трассы этого такта: место
+            // сообщения в потоке - часть наблюдаемого поведения, и сверка его проверяет.
+            for warning in &step.warnings {
+                eprintln!("{}", crate::trace::warning_line(warning));
+            }
+            // Вывод программы печатается там же, где его печатало место вызова:
+            // в поток ошибок и до строки трассы своего такта.
+            for line in &step.output {
+                eprintln!("{line}");
+            }
             if let Some(line) = step.line {
                 println!("{line}");
             }
@@ -214,6 +261,8 @@ impl SimulationRunner {
             return Ok(Step {
                 line: None,
                 result: Some(self.outcome(false)),
+                warnings: self.take_warnings(),
+                output: self.unit.take_output(),
             });
         }
 
@@ -260,6 +309,8 @@ impl SimulationRunner {
                     step: self.completed + 1,
                     details: details.clone(),
                 }),
+                warnings: self.take_warnings(),
+                output: self.unit.take_output(),
             });
         }
         self.completed += 1;
@@ -294,6 +345,8 @@ impl SimulationRunner {
         Ok(Step {
             line: Some(line),
             result,
+            warnings: self.take_warnings(),
+            output: self.unit.take_output(),
         })
     }
 
@@ -339,17 +392,22 @@ impl SimulationRunner {
     /// Пространство имён значений плоское: по голому имени читается первая нашедшаяся
     /// ветвь, а запись расходится по всем. Теперь двусмысленность названа, и рядом
     /// показано, как адресовать точно.
-    pub fn ambiguous_name_warnings(&self) -> Vec<String> {
+    pub fn ambiguous_name_warnings(&self) -> Vec<RunWarning> {
         self.port_names
             .ambiguous
             .iter()
-            .map(|(bare, qualified)| {
-                format!(
-                    "ВНИМАНИЕ: имя '{bare}' объявлено несколькими моделями ({}). \
+            .map(|(bare, qualified)| RunWarning {
+                // Кода у этого предупреждения не было и нет: оно печатается словом
+                // внимания с самого своего появления, и смена формы вывода - не повод
+                // заводить код задним числом. Пустая строка означает отсутствие кода.
+                code: "",
+                message: format!(
+                    "имя '{bare}' объявлено несколькими моделями ({}). \
                      По голому имени адресуется первая из них; для точного обращения \
                      используйте квалифицированное имя.",
                     qualified.join(", ")
-                )
+                ),
+                step: None,
             })
             .collect()
     }
@@ -382,6 +440,16 @@ impl SimulationRunner {
     /// этот - о самой форме, даже когда длина верна. Слить их значило бы потерять
     /// различие "массив не той длины" и "форма устарела"; на входе с коротким массивом
     /// печатаются оба.
+    /// Кладёт предупреждение в накопитель текущего такта.
+    fn warn(&self, warning: RunWarning) {
+        self.pending_warnings.borrow_mut().push(warning);
+    }
+
+    /// Забирает накопленные предупреждения; накопитель остаётся пустым.
+    fn take_warnings(&self) -> Vec<RunWarning> {
+        std::mem::take(&mut self.pending_warnings.borrow_mut())
+    }
+
     fn warn_positional_form_once(&self) {
         if self.positional_form_warned.replace(true) {
             return;
@@ -391,14 +459,17 @@ impl SimulationRunner {
         // вида `"XX-NNN"`, и код, вплавленный в сообщение, для неё невидим - то есть
         // выпадает и из реестра диагностик.
         const CODE: &str = "SIM-037";
-        eprintln!(
-            "Предупреждение [{CODE}]: сценарий задаёт значения портов позиционным массивом — \
-             форма устарела. Индекс в массиве привязан к месту имени в АЛФАВИТНОМ списке портов \
-             модели и её под-моделей, поэтому добавление или переименование порта сдвигает весь \
-             массив, и шаг начинает описывать другое событие — молча. Пользуйтесь именами: \
-             `\"in_ports\": {{\"имя_порта\": значение}}`; при тёзках из разных моделей имя \
-             уточняется как `Модель::порт`."
-        );
+        self.warn(RunWarning {
+            code: CODE,
+            message: "сценарий задаёт значения портов позиционным массивом — форма устарела. \
+                      Индекс в массиве привязан к месту имени в АЛФАВИТНОМ списке портов модели \
+                      и её под-моделей, поэтому добавление или переименование порта сдвигает \
+                      весь массив, и шаг начинает описывать другое событие — молча. Пользуйтесь \
+                      именами: `\"in_ports\": {\"имя_порта\": значение}`; при тёзках из разных \
+                      моделей имя уточняется как `Модель::порт`."
+                .to_string(),
+            step: None,
+        });
     }
 
     fn resolve_values(
@@ -417,13 +488,17 @@ impl SimulationRunner {
                     // массивы, и ломать его фича не должна. Код - отдельным литералом
                     // (см.
                     const CODE: &str = "SIM-032";
-                    eprintln!(
-                        "Предупреждение [{CODE}]: шаг {step_no}: {} значений в позиционном \
-                         массиве `{}`, а портов {} — лишние игнорируются, недостающие не задаются",
-                        list.len(),
-                        direction.field(),
-                        names.len()
-                    );
+                    self.warn(RunWarning {
+                        code: CODE,
+                        message: format!(
+                            "{} значений в позиционном массиве `{}`, а портов {} — лишние \
+                             игнорируются, недостающие не задаются",
+                            list.len(),
+                            direction.field(),
+                            names.len()
+                        ),
+                        step: Some(step_no),
+                    });
                 }
                 for (i, json_val) in list.iter().enumerate() {
                     if let (Some(name), Some(value)) = (names.get(i), json_to_value(json_val)) {

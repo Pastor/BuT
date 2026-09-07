@@ -92,6 +92,14 @@ impl Context for BlockScope<'_> {
         self.outer.set_model_state(model, state);
     }
 
+    fn emit_output(&self, text: &str) {
+        self.outer.emit_output(text);
+    }
+
+    fn take_output(&self) -> Vec<String> {
+        self.outer.take_output()
+    }
+
     fn get_value(&self, name: &str) -> Option<Value> {
         self.locals
             .get(name)
@@ -152,6 +160,14 @@ impl Context for FunctionScope<'_> {
 
     fn set_model_state(&self, model: &str, state: &str) {
         self.outer.set_model_state(model, state);
+    }
+
+    fn emit_output(&self, text: &str) {
+        self.outer.emit_output(text);
+    }
+
+    fn take_output(&self) -> Vec<String> {
+        self.outer.take_output()
     }
 
     fn get_value(&self, name: &str) -> Option<Value> {

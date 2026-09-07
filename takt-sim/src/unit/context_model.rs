@@ -45,6 +45,11 @@ pub(crate) struct ModelNodeContext {
     /// родитель, видят состояния друг друга - тем же путём, каким видят общие
     /// переменные корня.
     states: RefCell<HashMap<String, String>>,
+    /// Вывод программы за текущий такт: строки встроенной функции `debug`.
+    ///
+    /// Копится там же, где реестр состояний, - в контексте-корне цепочки: вложенная
+    /// модель печатает в тот же буфер, что и корневая, и порядок строк сохраняется.
+    output: RefCell<Vec<String>>,
 }
 
 impl ModelNodeContext {
@@ -63,6 +68,7 @@ impl ModelNodeContext {
             parent,
             extern_stubs: Default::default(),
             states: RefCell::new(HashMap::new()),
+            output: RefCell::new(Vec::new()),
         }
     }
 
@@ -76,6 +82,7 @@ impl ModelNodeContext {
             parent,
             extern_stubs: Default::default(),
             states: RefCell::new(HashMap::new()),
+            output: RefCell::new(Vec::new()),
         }
     }
 }
@@ -154,6 +161,22 @@ impl Context for ModelNodeContext {
                     .borrow_mut()
                     .insert(model.to_string(), state.to_string());
             }
+        }
+    }
+
+    /// Вывод программы уходит в корневой буфер - тем же путём, что состояния.
+    fn emit_output(&self, text: &str) {
+        match &self.parent {
+            Some(parent) => parent.borrow().emit_output(text),
+            None => self.output.borrow_mut().push(text.to_string()),
+        }
+    }
+
+    /// Забирает вывод из корневого буфера.
+    fn take_output(&self) -> Vec<String> {
+        match &self.parent {
+            Some(parent) => parent.borrow().take_output(),
+            None => std::mem::take(&mut self.output.borrow_mut()),
         }
     }
 
