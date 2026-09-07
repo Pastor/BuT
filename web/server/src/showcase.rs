@@ -105,7 +105,7 @@ pub struct ShowcaseItem {
     pub id: String,
     pub name: String,
     pub description: String,
-    /// Логин владельца - псевдоним, а не персональные данные (проработка §0).
+    /// Логин владельца - псевдоним, а не персональные данные.
     pub owner: String,
     pub takt_lang: String,
     pub language_version: String,

@@ -35,7 +35,7 @@ pub(super) fn multiple_of(
         _ => return Ok(None),
     };
     // Стороны равноправны: `0 = n % 2` даёт тот же отказ линтера, что `n % 2 = 0`
-    // (замер 0448 - обе формы).
+    //
     let (remainder, zero) = match (unwrap_parens(a), unwrap_parens(b)) {
         (rem @ ExpressionNode::Modulo(_, _), z) => (rem, z),
         (z, rem @ ExpressionNode::Modulo(_, _)) => (rem, z),

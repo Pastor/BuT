@@ -11,7 +11,7 @@
 use std::path::Path;
 use std::process::Command;
 
-/// Исправлениетура: `elapsed := pause + 750ms`, `ms := elapsed as u32`, `late := elapsed >
+/// Фикстура: `elapsed := pause + 750ms`, `ms := elapsed as u32`, `late := elapsed >
 /// 500ms`.
 const FIXTURE: &str = "tests/data/eval/conformance_duration_value.takt";
 

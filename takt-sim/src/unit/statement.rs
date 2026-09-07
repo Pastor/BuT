@@ -47,7 +47,7 @@ const MAX_ITERATIONS: u32 = 100_000;
 const MAX_CALL_DEPTH: u32 = 256;
 
 thread_local! {
-    /// Текущая глубина вложенных вызовов функций (S10).
+    /// Текущая глубина вложенных вызовов функций.
     static CALL_DEPTH: Cell<u32> = const { Cell::new(0) };
 }
 
@@ -246,7 +246,7 @@ pub(crate) fn compile_block_body(
             write: write_ctx.clone(),
         };
         // Ошибка пробрасывается наверх: до она печаталась в stderr и терялась. Теперь
-        // её увидит `TickResult::Failed` -> CLI (R5).
+        // её увидит `TickResult::Failed` -> CLI.
         exec_statement(&stmt, &mut scope).map(|_| Flow::Normal)
     });
     vec![f]
@@ -337,8 +337,8 @@ pub(crate) fn exec_statement(
         StatementNode::Continue(_) => Ok(Flow::Continue),
         // 0044: `assert` языка Takt (`: c;` / `: [Guard] c;`) в точке записи - как в
         // порождённом C (`assert()`, эталон c_expr.rs:1693). Нарушение ->
-        // `Err(SIM-025)` -> доходит до `TickResult::Failed` (R13/R14). Ошибка
-        // вычисления самого условия -> существующий `SIM-0xx` (R15). LTL - статика,
+        // `Err(SIM-025)` -> доходит до `TickResult::Failed`. Ошибка
+        // вычисления самого условия -> существующий `SIM-0xx`. LTL - статика,
         // явно игнорируется.
         StatementNode::InlineFormula(formulas) => {
             for f in formulas {
@@ -448,7 +448,7 @@ fn loc_of_assign(lhs: &ExpressionNode) -> Location {
 
 /// Исполняет выражение-оператор.
 ///
-/// Присваивание - с приведением к типу цели (S9). Прочие выражения (в первую очередь
+/// Присваивание - с приведением к типу цели. Прочие выражения (в первую очередь
 /// вызовы функций, Д3) вычисляются ради побочного эффекта.
 fn exec_expression(expr: &ExpressionNode, ctx: &mut dyn Context) -> Result<Flow, Diagnostic> {
     match expr {

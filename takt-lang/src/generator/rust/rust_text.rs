@@ -7,7 +7,7 @@
 /// Снимает внешние скобки, если ими обёрнуто выражение целиком.
 ///
 /// Нужен в позиции условия: `if (x != 0) {` даёт `unnecessary parentheses around 'if'
-/// condition` - ошибку под `-D warnings` (проба 2026-07-16). Внутренние скобки при этом
+/// condition` - ошибку под `-D warnings`. Внутренние скобки при этом
 /// обязаны остаться: именно они и держат приоритет.
 pub(crate) fn unwrap_outer(text: &str) -> &str {
     let bytes = text.as_bytes();

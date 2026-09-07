@@ -3,7 +3,7 @@
 //! Ядро [`crate::eval`] позиций не знает: оно оперирует значениями, а не узлами АСД.
 //! Позицию добавляет адаптер, у которого она есть, - через
 //! [`EvalError::to_diagnostic`]. Такое разделение даёт диагностику с позицией в
-//! исходнике (критерий A10 ) вместо `Location::Builtin`.
+//! исходнике вместо `Location::Builtin`.
 
 use takt_lang::diagnostics::{Diagnostic, Location};
 
@@ -31,7 +31,7 @@ pub(crate) enum EvalError {
     },
     /// Значение нельзя привести к типу назначения.
     NotCoercible { value: &'static str, ty: String },
-    /// Тип не поддерживается симулятором (например, структуры - пробел `Value`).
+    /// Тип не поддерживается симулятором.
     UnsupportedType { ty: String },
     /// Доступ к полю (`.имя`) у значения, не являющегося структурой.
     FieldOfNonStruct { value: &'static str },
@@ -228,7 +228,7 @@ mod tests {
 
     #[test]
     fn to_diagnostic_carries_location_and_code() {
-        // Позицию даёт адаптер - ядро её не знает (критерий A10).
+        // Позицию даёт адаптер - ядро её не знает.
         let loc = Location::Source(0, 10, 20);
         let diag = EvalError::DivisionByZero.to_diagnostic(loc);
         assert_eq!(diag.loc, loc);

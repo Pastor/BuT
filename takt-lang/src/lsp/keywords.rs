@@ -182,7 +182,7 @@ mod tests {
     use crate::parser::lexer::all_keywords;
     use std::collections::HashSet;
 
-    /// Тест редакторского слоя (R4, критерий A6 ).
+    /// Тест редакторского слоя (R4,).
     ///
     /// Каждое ключевое слово лексера обязано быть либо в [`TAKT_KEYWORDS`]
     /// (предлагается автодополнением), либо в [`COMPLETION_EXCLUDED`] (решено не

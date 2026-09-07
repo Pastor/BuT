@@ -377,7 +377,7 @@ impl<'input> Lexer<'input> {
             // как `2.5` и как длительность `1m30s`: форматтер печатает авторскую форму.
             // Потребители текста готовы: `f64::from_str` понимает показатель, цели
             // `c`/`rust`/`sv` печатают форму как есть, MatIEC принимает строчную `e`
-            // (проба `iec2c`, rc=0).
+            //
             let text_end = if has_exponent { end } else { rational_end };
             return Ok((
                 start,

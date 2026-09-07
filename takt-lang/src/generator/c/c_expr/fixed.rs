@@ -344,7 +344,7 @@ const TAKT_SHR_I: &str = "static int64_t takt_shr_i(int64_t v, uint64_t n, unsig
 
 /// Вставляет определения Q-хелперов, фактически вызванных в `source`, сразу после
 /// `#include`. Эмитятся ровно нужные (без `-Wunused-function`); корпус без `q` остаётся
-/// байт-в-байт прежним (T14). `takt_q_mul` тянет `takt_q_floordiv`; порядок определений -
+/// байт-в-байт прежним. `takt_q_mul` тянет `takt_q_floordiv`; порядок определений -
 /// floordiv -> mul -> div (C требует объявления до использования).
 pub(in crate::generator::c) fn insert_fixed_helpers(source: String) -> String {
     let uses_mul = source.contains("takt_q_mul(");

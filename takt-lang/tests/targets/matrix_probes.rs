@@ -375,7 +375,7 @@ impl Touch {
             }
             // Адрес задаётся отдельно (оператором либо картой), поэтому у объявления
             // его нет. Оператор `address` действует в области своего объявления - он
-            // стоит рядом с портом (замер 0458).
+            // стоит рядом с портом.
             Touch::AddressOperator => "    out a: u8;\n    address a = 0x40000200;\n".to_string(),
             Touch::AddressBit => "    out a: bit;\n    address a = 0x40000004:3;\n".to_string(),
             Touch::AddressExpression => {

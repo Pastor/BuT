@@ -376,7 +376,7 @@ mod formatting_tests {
 
     #[test]
     fn a6_lsp_and_cli_share_one_core() {
-        // Критерий A6: LSP и `taktc fmt` не могут разойтись в стиле - они зовут одну и
+        // : LSP и `taktc fmt` не могут разойтись в стиле - они зовут одну и
         // ту же функцию. Проверяем это фактом, а не договорённостью.
         let source = "var   x :u8:=0;\nstart   S ;\n";
         let from_core = takt_lang::format::format_source(source).unwrap();

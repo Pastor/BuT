@@ -428,7 +428,7 @@ async fn main_file_must_exist_and_is_forgotten_when_removed() {
 
 #[tokio::test]
 async fn a_new_project_gets_the_module_version_of_the_service() {
-    // Решение A5: страница проекта грузит модуль его версии, и подъём - явное действие
+    // : страница проекта грузит модуль его версии, и подъём - явное действие
     // владельца.
     let Some(stand) = Stand::open("p_version").await else {
         return skipped("версия модуля");

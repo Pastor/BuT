@@ -9,7 +9,7 @@
 //!
 //! - **Массивы не вкладываются.** `ARRAY [0..2] OF ARRAY [0..1] OF USINT` -
 //!   `error: invalid item data type in array specification`. Принятая форма -
-//!   многомерная: `ARRAY [0..2, 0..1] OF USINT` (проба ✅). Поэтому
+//!   многомерная: `ARRAY [0..2, 0..1] OF USINT`. Поэтому
 //!   [`get_st_type`] **уплощает** вложенные [`TypeNode::Array`] в список
 //!   размерностей, а не рекурсирует в текст типа.
 //! - **Перечисления не отображаются напрямую.** `TYPE F : (A := 80); END_TYPE` -
@@ -81,7 +81,7 @@ pub(crate) fn get_st_type(typ: &TypeNode, model: &ModelNode) -> Result<String, D
             }
             array_type(typ, model)
         }
-        // Откат Option C: перечислимый тип MatIEC не принимает (проба П4).
+        // Откат Option C: перечислимый тип MatIEC не принимает.
         TypeNode::Enum(name) => enum_type(name, model),
         // Ссылка на объявление `TYPE ... STRUCT ... END_STRUCT; END_TYPE`, которое
         // печатает `st_decl`.
@@ -508,7 +508,7 @@ mod tests {
     /// Перечисление шире байта получает более широкий тип, а не усекается.
     ///
     /// Вход не гипотетический: `enum Action { Idle = 670, Closing }` -
-    /// `examples/elevator.takt:121`. Плоский `USINT` (как предполагал ) усёк бы 670
+    /// `examples/elevator.takt:121`. Плоский `USINT` (как предполагалось) усёк бы 670
     /// молча.
     #[test]
     fn test_get_st_type_enum_wider_than_byte_is_widened_not_truncated() {

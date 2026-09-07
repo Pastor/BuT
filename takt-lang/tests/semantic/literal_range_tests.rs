@@ -99,7 +99,7 @@ fn bit_vector_width_bounds_the_literal() {
     assert!(codes(bad).contains(&"SE-089".to_string()));
 }
 
-/// Исправлениетура-контрпример строится и даёт ровно `SE-089` (три раза).
+/// Фикстура-контрпример строится и даёт ровно `SE-089` (три раза).
 #[test]
 fn fixture_reports_every_violation_not_just_first() {
     let source =

@@ -36,7 +36,7 @@
 //! запрещает). Жёсткий предел - 64 ([`MAX_REG_WIDTH`]): `SE-060` держит бит в `[0,
 //! 63]`, то есть регистр не шире `uint64_t` (то же слово, что читает умолчательный HAL
 //! стороны `c-hal`). Порт занимает срез `reg_*[bit +: width]`; выход за 64 (`bit +
-//! width > 64`) - **отказ** (`SV-013`), а не догадка (R6).
+//! width > 64`) - **отказ** (`SV-013`), а не догадка.
 
 use crate::address_map::ResolvedAddress;
 use crate::diagnostics::{Diagnostic, Location};
@@ -262,7 +262,7 @@ impl Mmio {
             // Имя порта в модуле уникально (то же правило, что у `collect_ports` цели
             // `sv`): под `--parameters=specialize` копии модели дают один порт по
             // одному адресу дважды, и `verilator` отвечал "Duplicate declaration of
-            // signal" при нулевом коде возврата `taktc` (замер 0457).
+            // signal" при нулевом коде возврата `taktc`.
             if ports.iter().any(|p| p.name == *name) {
                 continue;
             }
@@ -292,7 +292,7 @@ impl Mmio {
         //
         // Отсюда ограничение цели, которое обязано быть в документе: в RTL ячейка не
         // может измениться "снаружи" между тактами - внешнего устройства у модуля нет.
-        // Эталон (решение 5B) устроен так же, поэтому сверка трасс осмысленна.
+        // Эталон устроен так же, поэтому сверка трасс осмысленна.
         for cell in anon_cells {
             let width = u32::from(cell.width_bits());
             if cell.bit + i64::from(width) > i64::from(MAX_REG_WIDTH) {
@@ -592,7 +592,7 @@ pub(crate) fn emit_register_file(p: &mut Printer, mmio: &Mmio) {
         for port in &inputs {
             // Перечислимый сигнал сбрасывается своим умолчанием - первым по тексту
             // вариантом: `'0` может не принадлежать набору, и `verilator` отвечает
-            // `ENUMVALUE` (тот же класс, что, но в регистровом файле - замер 0452).
+            // `ENUMVALUE`.
             p.ident(&format!("{} <= {};", port.name, port.reset)).nl();
         }
         p.down();
@@ -612,7 +612,7 @@ pub(crate) fn emit_register_file(p: &mut Printer, mmio: &Mmio) {
             for port in group {
                 // Перечислимому сигналу сырые биты не присваиваются: перечисления в SV
                 // строго типизированы, и `verilator` отвечает `ENUMVALUE` - "Implicit
-                // conversion to enum from 'bit'" (замер 0452). Приведение печатается
+                // conversion to enum from 'bit'". Приведение печатается
                 // только ему: у прочих типов оно было бы шумом.
                 let slice = format!("reg_wdata[{} +: {}]", port.bit, port.width);
                 let value = match &port.ty {

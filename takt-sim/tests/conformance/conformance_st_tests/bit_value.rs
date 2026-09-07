@@ -14,7 +14,7 @@
 
 use super::*;
 
-/// Исправлениетура: `high := src.7`, `low := src.0` при `src: u8 := 200`.
+/// Фикстура: `high := src.7`, `low := src.0` при `src: u8 := 200`.
 const BIT_FIXTURE: &str = "tests/data/eval/conformance_bit_value.takt";
 
 /// Трасса `(high, low)` у эталона.

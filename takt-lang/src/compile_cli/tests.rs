@@ -191,7 +191,7 @@ fn address_map_requires_argument() {
     assert!(err.contains("--address-map"), "сообщение: {err}");
 }
 
-/// Три формы флага `--define` дают одно и то же (T6).
+/// Три формы флага `--define` дают одно и то же.
 #[test]
 fn define_flag_forms_are_equivalent() {
     let expected = vec!["N=0x1".to_string()];
@@ -222,7 +222,7 @@ fn define_flag_is_repeatable() {
     assert_eq!(opts.defines, vec!["A=0x1".to_string(), "B=0x2".to_string()]);
 }
 
-/// Разбор `-D` не проглатывает чужие флаги (T21).
+/// Разбор `-D` не проглатывает чужие флаги.
 #[test]
 fn unknown_flag_is_still_rejected() {
     let args = vec!["m.takt".to_string(), "-Q".to_string(), "foo".to_string()];
@@ -256,7 +256,7 @@ fn parse_float_width_both_forms() {
     assert_eq!(sep.float_width, crate::FloatWidth::W32);
 }
 
-/// `--float-width=16` - ошибка разбора, а не молчаливое умолчание (T16).
+/// `--float-width=16` - ошибка разбора, а не молчаливое умолчание.
 #[test]
 fn float_width_rejects_unsupported_value() {
     let err =
@@ -267,7 +267,7 @@ fn float_width_rejects_unsupported_value() {
     );
 }
 
-/// `--float-as-q=10.22` -> `(10, 22)`; обе формы флага (T2).
+/// `--float-as-q=10.22` -> `(10, 22)`; обе формы флага.
 #[test]
 fn parse_float_as_q_valid() {
     let slit =
@@ -282,7 +282,7 @@ fn parse_float_as_q_valid() {
     assert_eq!(sep.float_as_q, Some((8, 8)));
 }
 
-/// Контрпримеры границ и формата `--float-as-q` - ошибка CLI (T3).
+/// Контрпримеры границ и формата `--float-as-q` - ошибка CLI.
 #[test]
 fn float_as_q_rejects_out_of_bounds_and_bad_format() {
     for bad in ["40.40", "0.8", "8.0", "abc", "8", "8.x"] {
@@ -368,7 +368,7 @@ fn parse_parameters_specialize() {
 }
 
 /// Неизвестное значение - ошибка с перечислением допустимых, а не молчаливое умолчание
-/// (критерий A11 анализа 0185).
+///
 #[test]
 fn parse_parameters_unknown_value_is_an_error() {
     let err =

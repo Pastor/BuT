@@ -153,7 +153,7 @@ impl Workspace {
         Workspace { files }
     }
 
-    /// Число файлов области (для замеров и тестов).
+    /// Число файлов области.
     pub fn len(&self) -> usize {
         self.files.len()
     }

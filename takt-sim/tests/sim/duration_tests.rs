@@ -350,7 +350,7 @@ start Main = Arith;
     assert_eq!(unit.variable("diff"), Some(Value::Duration(750_000_000)));
 }
 
-// -- Запись длительности в трассе (исправление по требованию ) ---------------
+// -- Запись длительности в трассе (исправление по требованию) ---------------
 
 #[test]
 fn trace_carries_duration_into_larger_units() {

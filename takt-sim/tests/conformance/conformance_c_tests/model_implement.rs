@@ -17,7 +17,7 @@ use super::*;
 
 const FIXTURE: &str = "tests/data/eval/conformance_model_implement.takt";
 
-/// **R3/R4 (A1/A2):** трассы эталона и цели `c` совпадают потактово.
+/// **R3/R4:** трассы эталона и цели `c` совпадают потактово.
 #[test]
 fn model_implement_form_matches_generated_c() {
     let vars = ["n"];

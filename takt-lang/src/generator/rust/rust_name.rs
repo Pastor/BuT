@@ -204,7 +204,7 @@ mod tests {
     /// **Тест против переноса ловушки 0041 туда, где её нет.**
     ///
     /// В IEC модель `Concat` ломает вывод; в Rust `Box`/`Option` - законные имена
-    /// (проба 2026-07-16). Диагностики быть не должно.
+    /// . Диагностики быть не должно.
     #[test]
     fn prelude_names_are_not_an_error() {
         assert_eq!(rust_type_name("Box", loc()).unwrap(), "Box");

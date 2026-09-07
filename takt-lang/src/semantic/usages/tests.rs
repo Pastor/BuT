@@ -51,7 +51,7 @@ const ALL_PLACES: &str = r#"model M {
 "#;
 
 /// Полнота: вхождения в телах блоков и функции - те самые, которых нет в
-/// `SemanticIndex` (замер F1 анализа).
+/// `SemanticIndex`.
 #[test]
 fn usages_cover_block_and_function_bodies() {
     let table = table_of(ALL_PLACES);

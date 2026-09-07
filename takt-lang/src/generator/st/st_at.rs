@@ -9,7 +9,7 @@
 //!   `VAR_EXTERNAL`.
 //!
 //! Асимметрия навязана фактом, а не вкусом: **`VAR_GLOBAL` вне `CONFIGURATION`
-//! недопустим** (проба П8: `error: unknown syntax error`), поэтому `st-at`
+//! недопустим**, поэтому `st-at`
 //! **обязана** эмитить полную обёртку `CONFIGURATION`/`RESOURCE`/`TASK`/`PROGRAM`,
 //! тогда как `st` обходится голыми блоками (П2).
 //!
@@ -133,7 +133,7 @@ fn size_of(ty: &TypeNode, model: &crate::semantic::ModelNode) -> Option<&'static
         TypeNode::Integer { bits: 16, .. } => "W",
         TypeNode::Integer { bits: 32, .. } => "D",
         TypeNode::Integer { bits: 64, .. } => "L",
-        // `LREAL` - 64 бита (T11).
+        // `LREAL` - 64 бита.
         TypeNode::Rational => "L",
         // Прочие скаляры цель печатает целым, и локация даётся именно целому:
         // перечисление, длительность и `q(m, n)`. Ширину даёт один носитель

@@ -247,7 +247,7 @@ pub(crate) fn print_condition(node: &ConditionNode, scope: &Scope) -> Result<Str
         }
         // Ветки `_` нет намеренно: `ConditionNode` объявлен в этом же крейте, поэтому
         // исчерпывающий разбор возможен - и обязан валить сборку при добавлении
-        // варианта, а не проглатывать его молча (R4).
+        // варианта, а не проглатывать его молча.
         ConditionNode::Unresolved(_) => Err(sv002("неразрешённое условие")),
         ConditionNode::Rational(_, _) => Err(sv002(
             "вещественный литерал: в синтезируемом RTL плавающей точки нет (см. SV-003)",
@@ -334,7 +334,7 @@ pub(crate) fn print_expression(node: &ExpressionNode, scope: &Scope) -> Result<S
         // `/` и `%` синтезируются в аппаратный делитель - крупный и медленный блок.
         // Трансляция прямая (и для q(m, n) через `fixed_bin`, action A-3), но
         // переменный делитель порождает `SV-009`: автор `.takt` цену потолка частоты из
-        // текста модели иначе не увидит. Константа - молча (замер: дёшево).
+        // текста модели иначе не увидит. Константа - молча.
         ExpressionNode::Divide(l, r) => {
             warn_variable_divisor(scope, r);
             fixed_bin(node, super::sv_fixed::FixedOp::Divide, l, r)
@@ -864,7 +864,7 @@ mod tests {
         assert_eq!(codes(&warnings), ["SV-009"]);
     }
 
-    /// T2/A2: `a / 2` (константа - степень двойки) -> **молчание** (замер: 17 LUT).
+    /// T2/A2: `a / 2` (константа - степень двойки) -> **молчание**.
     #[test]
     fn constant_power_of_two_divide_is_silent() {
         let node = ExpressionNode::Divide(var("a"), Box::new(ExpressionNode::Number(2)));
@@ -902,7 +902,7 @@ mod tests {
         assert!(warnings.is_empty(), "{warnings:?}");
     }
 
-    /// T5/A4: `a * b` -> **молчание** (замер: 3 DSP + 17 LUT - дешевле сложения).
+    /// T5/A4: `a * b` -> **молчание**.
     #[test]
     fn multiply_is_silent() {
         let node = ExpressionNode::Multiply(var("a"), var("b"));

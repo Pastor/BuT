@@ -43,7 +43,7 @@ impl Unit {
         // 0044: инварианты (Guard-формулы) проверяются до `always` - как в порождённом
         // C (`assert()` до `switch`/`always`). Жёсткий режим: нарушение -> `Failed`
         // (стоп). Мягкий: нарушение записано, `None` -> такт продолжается. Ошибка
-        // вычисления самого условия != нарушению (R15) - `Failed` в обоих режимах. Для
+        // вычисления самого условия != нарушению  - `Failed` в обоих режимах. Для
         // композитов проверяет каждый дочерний `Node` в своём `tick_mode`.
         if matches!(self.0, UnitKind::Node { .. })
             && let Some(failed) = self.check_guards(soft)
@@ -77,7 +77,7 @@ impl Unit {
     /// нарушении (жёсткий режим) или ошибке вычисления, `None` если обязательства
     /// выполнены **или** нарушение записано в мягком режиме. Различает нарушение
     /// (SIM-025) и ошибку самого условия (существующий `SIM-0xx`) - как переходы в
-    /// `tick_node` (R15): ошибка условия - `Failed` в **обоих** режимах.
+    /// `tick_node`: ошибка условия - `Failed` в **обоих** режимах.
     fn check_guards(&mut self, soft: bool) -> Option<TickResult> {
         let guards: Vec<Guard> = if let UnitKind::Node { guards, state, .. } = &self.0 {
             let mut all = guards.model.clone();
@@ -110,7 +110,7 @@ impl Unit {
                     }
                 }
                 // Ошибка вычисления условия - недостоверность прогона, а не "инвариант
-                // ложен": `Failed` в обоих режимах (R15/R4).
+                // ложен": `Failed` в обоих режимах.
                 Err(diagnostic) => return Some(TickResult::Failed(describe(&diagnostic))),
             }
         }
@@ -309,7 +309,7 @@ impl Unit {
         } else {
             unreachable!()
         };
-        // Ошибка любого из параллельных детей делает шаг недостоверным (R5).
+        // Ошибка любого из параллельных детей делает шаг недостоверным.
         if let Some(failed) = results
             .iter()
             .find(|r| matches!(r, TickResult::Failed(_)))
@@ -340,7 +340,7 @@ impl Unit {
         };
         match child_result {
             TickResult::Processing => TickResult::Processing,
-            // Ошибка ребёнка - ошибка всей последовательности (R5).
+            // Ошибка ребёнка - ошибка всей последовательности.
             failed @ TickResult::Failed(_) => failed,
             TickResult::Terminated => {
                 let mut finished = false;
@@ -389,7 +389,7 @@ impl Unit {
         // Выдержка `after` отсчитывается от входа в состояние - в том числе в
         // Стартовое. Без этой отметки отсчёт шёл бы от начала прогона, и выдержка
         // срабатывала бы раньше, чем у цели `st` со штатным `TON`: тот латчит момент,
-        // когда условие стало истинным (проба П3 ).
+        // когда условие стало истинным.
         self.mark_state_entry();
         let enter_fns: Vec<Execution> = match &self.0 {
             UnitKind::Node {

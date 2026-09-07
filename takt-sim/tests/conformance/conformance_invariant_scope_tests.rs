@@ -177,7 +177,7 @@ fn state_invariant_fires_inside_its_state() {
     //
     // Понизить одну лишь границу мало: при `ref Go: k < 2` автомат уходит в `Done`
     // раньше, чем условие нарушится, - и "нарушения нет" означало бы не работу
-    // проверки, а её отсутствие (замер 2026-09-01).
+    // проверки, а её отсутствие.
     let text = source().replace("ref Go: k < 2;", "ref Go: k < 9;");
     let (ast, _) = takt_lang::parse(&text, 0).expect("разбор пробы");
     let model = takt_lang::semantic::tree::construct_model(&ast, None, &[FIXTURE_DIR.to_string()])

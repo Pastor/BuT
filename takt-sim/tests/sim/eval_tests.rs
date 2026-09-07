@@ -116,7 +116,7 @@ fn t3_bare_extern_procedure_call_does_not_block_block() {
 
 #[test]
 fn t20_local_function_call_returns_correct_value() {
-    // Критерий A7: метрика Чебышёва max(5, 3, 7) = 7 - как travel_time в stacker.
+    // : метрика Чебышёва max(5, 3, 7) = 7 - как travel_time в stacker.
     let (unit, _) = run("local_fn_call.takt", 1);
     assert_eq!(
         num(&unit, "eta"),
@@ -219,7 +219,7 @@ fn fn_composition_is_evaluated() {
 
 // --: инварианты и assert в симуляторе ------------------------------
 
-/// T14/T15 (A9): нарушение инварианта модели останавливает прогон с SIM-025 и именем
+/// T14/T15: нарушение инварианта модели останавливает прогон с SIM-025 и именем
 /// 'P'. Значение `c == 1` - проверка сработала до `always` второго такта (эталон C:
 /// assert до switch), а не после.
 #[test]
@@ -244,7 +244,7 @@ fn invariant_holds_does_not_interfere() {
     assert_eq!(num(&unit, "c"), 2, "c растёт нормально");
 }
 
-/// T16 (A10): инвариант состояния Q нарушается (проверяется, пока автомат в A).
+/// T16: инвариант состояния Q нарушается (проверяется, пока автомат в A).
 #[test]
 fn invariant_state_violation_stops_with_name() {
     let (_unit, last) = run("invariant_state_violated.takt", 5);
@@ -304,7 +304,7 @@ fn invariant_soft_records_and_continues() {
 
 /// A3: ошибка вычисления условия инварианта (индекс за границей массива, SIM-010) -
 /// `Failed` даже в мягком режиме. Мягкий режим глушит только "инвариант ложен"
-/// (SIM-025), не "условие не вычислилось" (R4).
+/// (SIM-025), не "условие не вычислилось".
 #[test]
 fn invariant_soft_does_not_swallow_eval_error() {
     let (_unit, violations, last) = run_soft("invariant_eval_error.takt", 5);
@@ -336,7 +336,7 @@ fn invariant_soft_collects_from_composition() {
     );
 }
 
-/// T17 (A10): `: c;` (assert языка Takt) в блоке нарушается - так же, как invariant.
+/// T17: `: c;` (assert языка Takt) в блоке нарушается - так же, как invariant.
 #[test]
 fn assert_in_block_violation_stops() {
     let (_unit, last) = run("assert_in_block.takt", 3);

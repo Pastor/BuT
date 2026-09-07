@@ -51,7 +51,7 @@ fn print_body(out: &mut Out, head: &str, block: &ast::FormulaBlock) -> Result<()
 fn print_statement(out: &mut Out, statement: &ast::FormulaStatement) -> Result<(), FormatError> {
     match statement {
         ast::FormulaStatement::Block(block) => print_body(out, "", block),
-        // Грамматика этот вариант не строит (замер ), но печать у него очевидна, и
+        // Грамматика этот вариант не строит, но печать у него очевидна, и
         // отказ здесь означал бы отказ на законной записи, появись для неё правило.
         ast::FormulaStatement::Expression(loc, node) => {
             out.node_line(loc, &expression(node)?);

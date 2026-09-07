@@ -6,7 +6,7 @@
 //! "Reformat Code" в IntelliJ идёт через `takt-lsp` `textDocument/formatting` ->
 //! [`takt_lang::lsp::formatting_edits`] -> тот же [`takt_lang::format::format_source`],
 //! что и `taktc fmt`. Значит результат реформата в IDE совпадает с `taktc fmt` **по
-//! построению**. Этот тест закрывает критерий A2 ("байт-в-байт равно `taktc fmt`") на
+//! построению**. Этот тест закрывает   ("байт-в-байт равно `taktc fmt`") на
 //! всём корпусе, а не на одной строке (её проверяет `a6_lsp_and_cli_share_one_core` в
 //! `lsp_tests.rs`).
 

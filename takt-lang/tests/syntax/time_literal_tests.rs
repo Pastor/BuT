@@ -218,7 +218,7 @@ fn model_with(body: &str) -> String {
 #[test]
 fn duration_literal_and_type_are_accepted_by_semantics() {
     // Тип `duration` связан по имени, литерал понижается в наносекунды - SE-066 (отказ
-    // стадии ) больше не возникает.
+    // этой стадии больше не возникает.
     let src = model_with("    const DWELL := 3s;\n    var left: duration := 0s;");
     assert!(
         !codes(&src).iter().any(|c| c == "SE-066"),

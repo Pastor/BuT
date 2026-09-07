@@ -21,7 +21,7 @@ fn parses(src: &str) -> Result<(), String> {
     }
 }
 
-/// `from` - имя поля структуры (запись из замера).
+/// `from` - имя поля структуры.
 #[test]
 fn from_is_a_field_name() {
     let src = r#"

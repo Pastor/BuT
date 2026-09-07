@@ -106,7 +106,7 @@ fn every_declaration_site_of_a_formula_is_checked() {
     );
 }
 
-// -- Формы записи и накопление (A2, A5, A7) -----------------------------------
+// -- Формы записи и накопление  -----------------------------------
 
 #[test]
 fn unknown_name_in_short_form_formula_is_diagnosed() {
@@ -135,7 +135,7 @@ fn two_broken_formulas_yield_two_diagnostics() {
     );
 }
 
-// -- Границы объёма (A6, A8) --------------------------------------------------
+// -- Границы объёма  --------------------------------------------------
 
 #[test]
 fn ltl_formula_with_unknown_atom_is_not_an_error() {

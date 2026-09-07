@@ -135,7 +135,7 @@ pub(crate) fn emit_composition(
     }
 
     // Переменные корня под-FB видит через `VAR_IN_OUT`: в ST указателей нет, а
-    // `main->lift_request` цели `c` выразить нечем (О1-в, проба П7).
+    // `main->lift_request` цели `c` выразить нечем.
     let ctx = ChainCtx {
         state_name,
         prefix: "",

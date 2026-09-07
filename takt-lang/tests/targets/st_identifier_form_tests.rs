@@ -9,7 +9,7 @@
 use std::process::Command;
 use takt_lang::generator::GenerateOptions;
 
-/// Исправлениетура корпуса: подчёркивание в конце имени переменной.
+/// Фикстура корпуса: подчёркивание в конце имени переменной.
 const FIXTURE: &str = "tests/data/st/invalid/name_trailing_underscore.takt";
 
 /// Позиции, где имя автора доезжает до вывода `st`.

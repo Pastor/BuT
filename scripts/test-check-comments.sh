@@ -73,9 +73,29 @@ D=$(mktemp -d); prepare "$D"
 printf '// Разбор АСД идёт одним проходом.\n' >> "$D/takt-lang/src/lib.rs"
 expect "C6 аббревиатура прописными законна" pass "$D"
 
-# C8: пустое дерево - проверка, молчащий на нём, ничего не прочёл.
+D=$(mktemp -d); prepare "$D"
+printf '// Форма выбрана решением A5 разбора.\n' >> "$D/takt-lang/src/lib.rs"
+expect "C7 отсылка к решению карточки" fail "$D"
+
+D=$(mktemp -d); prepare "$D"
+printf '// Список ключей заводит задача `09b`.\n' >> "$D/takt-lang/src/lib.rs"
+expect "C7 отсылка к задаче в кавычках" fail "$D"
+
+D=$(mktemp -d); prepare "$D"
+printf '// Устройство взято у референса.\n' >> "$D/takt-lang/src/lib.rs"
+expect "C8 отсылка к образцу заимствования" fail "$D"
+
+D=$(mktemp -d); prepare "$D"
+printf '// Форма выбрана прогоном (замер 2026-09-04).\n' >> "$D/takt-lang/src/lib.rs"
+expect "C9 датированный замер" fail "$D"
+
+D=$(mktemp -d); prepare "$D"
+printf '// Ширина слова задана стандартом (IEEE 1800 §23.2).\n' >> "$D/takt-lang/src/lib.rs"
+expect "C9 ссылка на стандарт законна" pass "$D"
+
+# C10: пустое дерево - проверка, молчащая на нём, ничего не прочла.
 D=$(mktemp -d); mkdir -p "$D/takt-lang/src"
-expect "C8 нет файлов с кодом - отказ" fail "$D"
+expect "C10 нет файлов с кодом - отказ" fail "$D"
 
 if [ "$FAILED" -ne 0 ]; then
   echo "Самопроверка проверки комментариев: провал"

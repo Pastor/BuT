@@ -148,7 +148,7 @@ pub(crate) fn print_statement(
             Ok(())
         }
         // Ветки `_` нет намеренно: добавление оператора обязано валить сборку, а не
-        // проваливаться молча (R4).
+        // проваливаться молча.
         //
         // Циклы отвергаются не "пока не сделано": в `always_comb` цикл обязан
         // разворачиваться в схему, то есть иметь границы, известные на этапе синтеза.
@@ -455,7 +455,7 @@ pub(crate) fn index_only_variables(body: &StatementNode, names: &[String], out: 
     let mut total: BTreeMap<String, usize> = BTreeMap::new();
     let mut under: BTreeMap<String, usize> = BTreeMap::new();
     // `walk_stmt_exprs_mut` сам спускается в подвыражения - второй `walk_expr_mut`
-    // внутри дал бы двойной счёт (замер: `i` считался дважды, и признак молчал).
+    // внутри дал бы двойной счёт.
     crate::semantic::walk::walk_stmt_exprs_mut(&mut copy, &mut |node| match node {
         ExpressionNode::Variable(cell) => {
             let name = cell.borrow().name().to_string();

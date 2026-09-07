@@ -143,7 +143,7 @@ fn ltl_in_block_is_not_silently_dropped() {
     );
 }
 
-/// A4 (R3): SE-055 выдаётся с каждого уровня - модель, состояние, блок.
+/// A4: SE-055 выдаётся с каждого уровня - модель, состояние, блок.
 #[test]
 fn ltl_se055_from_all_three_levels() {
     let ws = warnings(
@@ -154,7 +154,7 @@ fn ltl_se055_from_all_three_levels() {
     assert_eq!(se055, 3, "по одному SE-055 на каждый уровень: {ws:?}");
 }
 
-/// A5 (R4): неизвестный атом -> SE-056; известный (`var b`) и `true`/`false` - нет.
+/// A5: неизвестный атом -> SE-056; известный (`var b`) и `true`/`false` - нет.
 #[test]
 fn ltl_unknown_atom_is_se056() {
     let unknown = warnings("start S { : [LTL] F undefined_thing; }");

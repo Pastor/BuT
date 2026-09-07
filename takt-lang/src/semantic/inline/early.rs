@@ -22,7 +22,7 @@
 //! **Результат объявляется С начальным значением, и это замер, а не вкус.**
 //! Форма "объявление без инициализатора + условные присваивания" валидна у
 //! семи потребителей, а `rustc` отвечает `E0381: used binding is
-//! possibly-uninitialized` (замер 2026-08-31, `probe.sh`): его анализ не знает,
+//! possibly-uninitialized`: его анализ не знает,
 //! что один из путей срабатывает всегда. С начальным значением вывод принимают
 //! **все восемь** целей и оба инструмента SV.
 //!
@@ -325,7 +325,7 @@ impl Lowering {
     /// Условное ветвление **сливается** с обёрткой (`if !done && cond`), а не
     /// вкладывается в неё: вложенная форма валидна у семи потребителей, а `clippy` под
     /// `-D warnings` отвечает `collapsible_if` - "this `if` statement can be collapsed"
-    /// (замер 2026-08-31).
+    ///
     fn guarded(&mut self, lowered: StatementNode) -> StatementNode {
         self.done_read = true;
         let not_done = ExpressionNode::Not(Box::new(self.done_ref()));

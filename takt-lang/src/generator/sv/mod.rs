@@ -231,7 +231,7 @@ fn generate_program(
     p.nl();
 
     // Служебный вход времени (профиль "часы" + длительностная выдержка в дереве);
-    // ширина - по максимуму `after` (R8), общий источник с регистрами.
+    // ширина - по максимуму `after`, общий источник с регистрами.
     let time_ms_bits = match map.root_model_node() {
         Some(root) if sv_time::needs_time_port(map, &root.borrow()) => {
             Some(sv_time::time_bits(map)?)

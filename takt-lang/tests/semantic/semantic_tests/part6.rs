@@ -204,7 +204,7 @@ fn constant_condition_with_variable_no_warn() {
 
 // ---: вызов функции из тела функции ---------------------------------
 
-/// A1 (R1): композиция `f -> g` внутри модели компилируется (было SE-004).
+/// A1: композиция `f -> g` внутри модели компилируется (было SE-004).
 #[test]
 fn fn_calls_fn_composition_compiles() {
     let node = build(
@@ -213,7 +213,7 @@ fn fn_calls_fn_composition_compiles() {
     assert!(node.functions.contains_key("f") && node.functions.contains_key("g"));
 }
 
-/// A2 (R1): порядок объявления не важен - `f` вызывает `g`, объявленную ниже.
+/// A2: порядок объявления не важен - `f` вызывает `g`, объявленную ниже.
 #[test]
 fn fn_calls_fn_declaration_order_independent() {
     // Не должно паниковать/ошибаться: `f` объявлена раньше вызываемой `g`.
@@ -223,7 +223,7 @@ fn fn_calls_fn_declaration_order_independent() {
     assert!(node.functions.contains_key("f"));
 }
 
-/// A3 (R2): вызов функции родительской модели из вложенной - регресса нет.
+/// A3: вызов функции родительской модели из вложенной - регресса нет.
 #[test]
 fn fn_calls_parent_fn_still_works() {
     let node = build(
@@ -235,7 +235,7 @@ fn fn_calls_parent_fn_still_works() {
     assert!(inner.borrow().functions.contains_key("inner_fn"));
 }
 
-/// A4 (R3): прямая рекурсия `f -> f` отвергается SE-053 с цепочкой.
+/// A4: прямая рекурсия `f -> f` отвергается SE-053 с цепочкой.
 #[test]
 fn fn_direct_recursion_is_se053() {
     let err = build_err("fn f(x: u8) -> u8 { return f(x); } start Main { always { } }");
@@ -247,7 +247,7 @@ fn fn_direct_recursion_is_se053() {
     );
 }
 
-/// A5 (R3): взаимная рекурсия `f -> g -> f` отвергается SE-053 с полной цепочкой.
+/// A5: взаимная рекурсия `f -> g -> f` отвергается SE-053 с полной цепочкой.
 #[test]
 fn fn_mutual_recursion_is_se053() {
     let err = build_err(
@@ -261,7 +261,7 @@ fn fn_mutual_recursion_is_se053() {
     );
 }
 
-/// A6 (R3): цикл длины 3 `f -> g -> h -> f` отвергается SE-053.
+/// A6: цикл длины 3 `f -> g -> h -> f` отвергается SE-053.
 #[test]
 fn fn_cycle_three_is_se053() {
     let err = build_err(
@@ -271,21 +271,21 @@ fn fn_cycle_three_is_se053() {
     assert_eq!(err.code.as_deref(), Some("SE-053"), "код: {err:?}");
 }
 
-/// A7 (R4): вызов необъявленного имени остаётся SE-004, не SE-053.
+/// A7: вызов необъявленного имени остаётся SE-004, не SE-053.
 #[test]
 fn fn_unknown_call_is_se004() {
     let err = build_err("fn f(x: u8) -> u8 { return ghost(x); } start Main { always { } }");
     assert_eq!(err.code.as_deref(), Some("SE-004"), "код: {err:?}");
 }
 
-/// A8 (R5): встроенные функции (`min`) из тела `fn` работают - рёбер не дают.
+/// A8: встроенные функции (`min`) из тела `fn` работают - рёбер не дают.
 #[test]
 fn fn_calls_builtin_compiles() {
     let node = build("fn f(x: u8) -> u8 { return min(x, 1); } start Main { always { } }");
     assert!(node.functions.contains_key("f"));
 }
 
-/// A10 (R7): дубликат имени функции - SE-009 (прежде принимался молча).
+/// A10: дубликат имени функции - SE-009 (прежде принимался молча).
 #[test]
 fn fn_duplicate_name_is_se009() {
     let err = build_err(

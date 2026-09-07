@@ -160,7 +160,7 @@ fn needs_root_inner(
     // переставляется при входе в состояние. Признак знал об этом только в ветви
     // `_init`, и `_tick` под-модели с `after Nms` печатался без параметра - `cc`
     // отвечал "use of undeclared identifier 'main'" при нулевом коде возврата `taktc`
-    // (замер 0449).
+    //
     let mut needed = clock_profile && crate::generator::c::c_time::uses_duration_time(&b);
     for block in &b.named_blocks {
         if let Some(stmt) = block.statement() {

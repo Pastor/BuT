@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# Выкатка на стенд (d; приём референса - `ssh стенд
-# 'git pull && make up'`).
+# Выкатка на стенд: `ssh стенд 'git pull && make up'`.
 #
 # Что делает:
 #   1. проверяет, что выкатывать есть что и что рабочее дерево чисто;
@@ -19,7 +18,7 @@
 # на стенде нужен Docker и минуты на сборку Rust.
 #
 # Использование:
-#   scripts/deploy-stand.sh [хост-из-ssh-config] [-p ПРЕИсправление] [--dirty]
+#   scripts/deploy-stand.sh [хост-из-ssh-config] [-p префикс] [--dirty]
 #
 # Настройки: TAKT_STAND (хост), TAKT_STAND_DIR (каталог клона на стенде),
 # TAKT_STAND_URL (внешний адрес для проверки), TAKT_WEB_BASE_PATH (префикс).

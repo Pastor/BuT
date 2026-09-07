@@ -58,7 +58,7 @@ impl Lasso {
 
 /// Ищет достижимый принимающий цикл в произведении.
 ///
-/// `None` - язык пуст (нарушающего прогона нет ⟹ свойство держится); `Some(lasso)` -
+/// `None` - язык пуст; `Some(lasso)` -
 /// контрпример.
 pub fn emptiness(product: &Product) -> Option<Lasso> {
     let mut outer_visited = BTreeSet::new();

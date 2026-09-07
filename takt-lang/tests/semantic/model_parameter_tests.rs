@@ -187,7 +187,7 @@ fn plain_variables_are_not_parameters() {
     );
 }
 
-/// Исправлениетура валидного объявления строится.
+/// Фикстура валидного объявления строится.
 #[test]
 fn valid_fixture_builds() {
     let root = build_file("tests/data/semantic/valid/parameter_declaration.takt")

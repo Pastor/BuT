@@ -196,7 +196,7 @@ fn write_warns_and_names_the_way_out() {
     );
 }
 
-/// Чтение молчит: оно безопаснее записи (решение 3B ).
+/// Чтение молчит: оно безопаснее записи.
 #[test]
 fn read_does_not_warn() {
     let src = "model Probe {\n\

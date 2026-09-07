@@ -126,7 +126,7 @@ fn type_and_function_names_are_left_alone() {
     .expect("порт рядом с одноимённой функцией законен");
 }
 
-/// **T6.** Исправлениетура корпуса даёт `SV-020` - код достижим проверками.
+/// **T6.** Фикстура корпуса даёт `SV-020` - код достижим проверками.
 #[test]
 fn corpus_fixture_reports_the_code() {
     let path = concat!(

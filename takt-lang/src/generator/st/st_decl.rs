@@ -12,12 +12,12 @@
 //! ## Перечисления: константы вместо перечислимого типа
 //!
 //! Перечисление Takt не становится `TYPE ... : (...); END_TYPE` - MatIEC отвергает
-//! явные значения вариантов (проба П4). Действует откат Option C
+//! явные значения вариантов. Действует откат Option C
 //! тип варианта считает [`get_st_type`], а сами варианты объявляются
 //! именованными константами `<Перечисление>_<Вариант>` в секции `VAR CONSTANT`
 //! **внутри** блока. Не `VAR_GLOBAL CONSTANT`, как предполагал: `VAR_GLOBAL`
-//! вне `CONFIGURATION` недопустим (проба П8), а цель `st` `CONFIGURATION` не
-//! эмитит (проба П2).
+//! вне `CONFIGURATION` недопустим, а цель `st` `CONFIGURATION` не
+//! эмитит.
 
 use crate::diagnostics::Diagnostic;
 use crate::generator::indent::Printer;
@@ -57,7 +57,7 @@ impl Declaration {
 pub(crate) struct Extras {
     /// Эмитить `state : USINT := 0;` - переменную автомата.
     pub state_var: bool,
-    /// Эмитить `is_done : BOOL;` в `VAR_OUTPUT` - признак завершения (S11).
+    /// Эмитить `is_done : BOOL;` в `VAR_OUTPUT` - признак завершения.
     pub is_done: bool,
     /// Переменные корня, разделяемые через `VAR_IN_OUT` (О1-в).
     pub shared: Vec<(String, TypeNode)>,
@@ -66,7 +66,7 @@ pub(crate) struct Extras {
     pub shared_owner: String,
     /// То же имя, когда печатается **сам корень**: его собственные массивы тоже
     /// объявляются именованным типом, иначе MatIEC сочтёт типы параметра и значения
-    /// несовместимыми (проба ).
+    /// несовместимыми.
     pub root_owner: Option<String>,
     /// Имена массивов, которым нужен именованный тип, - те, что **фактически**
     /// передаются под-моделям.
@@ -134,7 +134,7 @@ pub(crate) fn emit_declarations(
     };
     let named_arrays = extras.named_arrays.as_slice();
 
-    // Признак завершения - выход FB: по нему родитель узнаёт об окончании (S11).
+    // Признак завершения - выход FB: по нему родитель узнаёт об окончании.
     if extras.is_done {
         outputs.push(Declaration {
             name: "is_done".to_string(),
@@ -143,7 +143,7 @@ pub(crate) fn emit_declarations(
         });
     }
     // Переменная автомата. Ноль - это `INIT`: холодный старт ПЛК обнуляет `VAR`,
-    // поэтому отдельная инициализация не нужна (S3).
+    // поэтому отдельная инициализация не нужна.
     if extras.state_var {
         locals.push(Declaration {
             name: "state".to_string(),
@@ -359,7 +359,7 @@ pub(crate) fn emit_declarations(
 
     // В `VAR_IN_OUT` инициализатора быть не может: секция передаёт ссылку на чужую
     // переменную, и MatIEC отвечает "';' missing at end of variable(s) declaration"
-    // (замер 0452). Значение появлялось само - у перечислимого типа умолчание есть
+    // . Значение появлялось само - у перечислимого типа умолчание есть
     // всегда (первый вариант).
     let in_outs: Vec<Declaration> = in_outs
         .into_iter()
@@ -547,7 +547,7 @@ fn struct_init(items: &[ExpressionNode], name: &str, model: &ModelNode) -> Optio
 /// `[bit;N<=64]` сюда не входит: это упакованный скаляр, и печатается он числом -
 /// признак берётся из того же слоя, что и печать типа.
 ///
-/// Поле-Структура отложено по той же причине, что поле-массив (замер 0496): `conf :
+/// Поле-Структура отложено по той же причине, что поле-массив: `conf :
 /// Outer := (head := (mode := 0, hold := 2000));` `iec2c` отвергает - "Initialization
 /// element identifier (mode) is not declared in referenced structure/FB scope" - при
 /// Нулевом коде возврата `taktc`, тогда как эталон и остальные семь потребителей вход

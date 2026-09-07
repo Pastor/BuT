@@ -368,7 +368,7 @@ mod tests {
         );
     }
 
-    /// Неизвестные атомы перечисляются для честного отказа (R7).
+    /// Неизвестные атомы перечисляются для честного отказа.
     #[test]
     fn unknown_atoms_are_reported() {
         let k = kripke_of("var temp: u8 := 0; start A { ref B; } state B;");

@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::process::Command;
 
-/// Исправлениетура: `op: u8` растёт, переход в `Halted` при `op = Hlt` (значение 3).
+/// Фикстура: `op: u8` растёт, переход в `Halted` при `op = Hlt` (значение 3).
 const FIXTURE: &str = "tests/data/eval/conformance_enum_variant_value.takt";
 /// Тактов: два до перехода, такт перехода и такт после него.
 const TICKS: usize = 4;

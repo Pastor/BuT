@@ -69,7 +69,7 @@ export function attach(nodes, callbacks) {
   dom.account.addEventListener("click", () => toggle());
   // Кнопка одна на вход и выход: пока не вошли - открывает панель со формой, после
   // входа - выходит. Двух кнопок, из которых всегда видна одна, читателю не нужно
-  // (раскладка 2026-09-05).
+  //
   dom.session.addEventListener("click", () => (api.who() ? leave() : openSignin()));
   dom["signin-cancel"].addEventListener("click", closeSignin);
   // Окно закрывается щелчком по затемнению и клавишей Escape - как всякое модальное: из
@@ -649,7 +649,7 @@ async function openProject(id) {
     } else {
       // У нового проекта файлов ещё нет, но писать автор начинает сразу. Не назови мы
       // файл здесь - кнопки сохранения не было бы вовсе, и первый же набранный текст
-      // оставался бы только в черновике (нашлось прогоном страницы).
+      // оставался бы только в черновике.
       state.file = DEFAULT_FILE;
       state.revision = null;
       hideConflict();

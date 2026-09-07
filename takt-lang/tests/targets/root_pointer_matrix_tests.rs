@@ -78,12 +78,12 @@ fn expects(touch: Touch, _kind: Kind) -> (bool, bool) {
         // которая её тикает, - как у видов с параметром.
         Touch::ImportNameClash => (false, true),
         // Донор с параметром пишет свой порт - указатель нужен ему и обёртке, которая
-        // его тикает (замер 0457).
+        // его тикает.
         Touch::ParameterDefault | Touch::ParameterArgument | Touch::ParameterExpression => {
             (false, true)
         }
         // Порт читается и пишется в такте - через HAL корня; у входного и
-        // двунаправленного это так же, как у выходного (замер 0452).
+        // двунаправленного это так же, как у выходного.
         Touch::PortWrite
         | Touch::SharedRead
         | Touch::Transitive

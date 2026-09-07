@@ -516,7 +516,7 @@ mod tests {
         )
     }
 
-    /// `q(8, 8)` -> `TypeNode::Fixed { m: 8, n: 8, sat: false }` (T1).
+    /// `q(8, 8)` -> `TypeNode::Fixed { m: 8, n: 8, sat: false }`.
     #[test]
     fn fixed_q_8_8_builds() {
         assert_eq!(
@@ -529,7 +529,7 @@ mod tests {
         );
     }
 
-    /// Границы `m >= 1`, `n >= 1`, `m + n <= 64` - ошибка `SE-057` (T2).
+    /// Границы `m >= 1`, `n >= 1`, `m + n <= 64` - ошибка `SE-057`.
     #[test]
     fn fixed_bounds_are_rejected() {
         for (m, n) in [(0, 8), (8, 0), (40, 40), (-1, 8)] {
@@ -576,7 +576,7 @@ mod tests {
         ExpressionNode::Rational(s.to_string(), neg)
     }
 
-    /// Литерал точен: `1.5` в `q(8, 8)` -> представление `384` (T4).
+    /// Литерал точен: `1.5` в `q(8, 8)` -> представление `384`.
     #[test]
     fn fixed_literal_1_5_is_384() {
         let v = lower_fixed_literal(&rat("1.5", false), 8, 8, Location::Implicit).unwrap();
@@ -618,7 +618,7 @@ mod tests {
         assert_eq!(v, Some(768));
     }
 
-    /// Непредставимый литерал `0.001` -> `SE-058` (T3), а не тихое округление.
+    /// Непредставимый литерал `0.001` -> `SE-058`, а не тихое округление.
     #[test]
     fn fixed_literal_unrepresentable_is_se058() {
         let err = lower_fixed_literal(&rat("0.001", false), 8, 8, Location::Implicit).unwrap_err();

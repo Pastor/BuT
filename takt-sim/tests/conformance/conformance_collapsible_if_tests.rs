@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::process::Command;
 
-/// Исправлениетура: ветвь `1 => { if acc > 100 { ... } }` стоит перед `_`.
+/// Фикстура: ветвь `1 => { if acc > 100 { ... } }` стоит перед `_`.
 const FIXTURE: &str = "tests/data/eval/conformance_collapsible_if.takt";
 /// Тактов: первый - ветвь с ложным вложенным условием, дальше - `_`.
 const TICKS: usize = 4;

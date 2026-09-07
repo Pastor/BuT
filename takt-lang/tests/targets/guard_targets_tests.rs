@@ -58,7 +58,7 @@ fn tool_available(tool: &str) -> bool {
         .unwrap_or(false)
 }
 
-// -- Цель sv: проверка печатается (A1, A3) ------------------------------------
+// -- Цель sv: проверка печатается  ------------------------------------
 
 #[test]
 fn sv_emits_guard_assertion() {
@@ -92,7 +92,7 @@ fn sv_guard_has_no_else_branch() {
     }
 }
 
-// -- Цель sv: инструменты проверки (A2) ------------------------------------------
+// -- Цель sv: инструменты проверки  ------------------------------------------
 
 #[test]
 fn sv_guard_output_is_accepted_by_both_tools() {
@@ -136,7 +136,7 @@ fn sv_guard_output_is_accepted_by_both_tools() {
     );
 }
 
-// -- Цель sv: --guard-disable (A4) --------------------------------------------
+// -- Цель sv: --guard-disable  --------------------------------------------
 
 #[test]
 fn sv_guard_disable_suppresses_assertions() {

@@ -126,7 +126,7 @@ pub(crate) fn emit_defaults(p: &mut Printer, hoisted: &HoistedLocals) {
         }
         // Операнды редукции - то, что в SystemVerilog можно склеить: упакованное
         // значение целиком, а распакованный массив - поэлементно. `&{1'b0, tmp}` над
-        // `tmp [0:1]` yosys встречает "Invalid array access" (прогон 2026-08-21).
+        // `tmp [0:1]` yosys встречает "Invalid array access".
         let packed = local.defaults.iter().any(|(suffix, _)| suffix.is_empty());
         let operands: Vec<String> = if packed {
             vec![local.name.clone()]

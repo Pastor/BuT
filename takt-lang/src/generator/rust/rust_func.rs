@@ -7,7 +7,7 @@
 //! `extern fn` сюда не попадает: он становится методом трейта `Hal`
 //! (`rust_decl::collect_ports`) - решение (а). Вариант `extern "C" { fn ... }`
 //! отвергнут: он потребовал бы `unsafe` в порождаемом коде и уничтожил бы главную
-//! дельту фичи к цели `c` (R10).
+//! дельту фичи к цели `c`.
 
 use crate::diagnostics::Diagnostic;
 use crate::generator::rust::Printer;

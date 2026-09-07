@@ -50,7 +50,7 @@ fn field(unit: &Unit, var: &str, field: &str) -> Value {
 
 // -- T1: наблюдаемость структуры ----------------------------------------------
 
-/// T1 (A1): структурная переменная наблюдаема как `Value::Struct` целиком, поля в
+/// T1: структурная переменная наблюдаема как `Value::Struct` целиком, поля в
 /// объявленном порядке.
 #[test]
 fn struct_variable_is_observable() {
@@ -68,8 +68,8 @@ fn struct_variable_is_observable() {
 
 // -- T3/T4/T5/T22: чтение и запись поля ---------------------------------------
 
-/// T4 (A4): запись в поле `p.x := 7`. T5: точечность - `p.y` не затёрт записью в `p.x`.
-/// T22 (A9): `p.y := 300` при `y: u8` усекается до `44` (S9 внутри поля).
+/// T4: запись в поле `p.x := 7`. T5: точечность - `p.y` не затёрт записью в `p.x`.
+/// T22: `p.y := 300` при `y: u8` усекается до `44` (S9 внутри поля).
 #[test]
 fn field_write_is_pointwise_and_truncates() {
     let (unit, _) = run("struct_var.takt", 1);
@@ -81,7 +81,7 @@ fn field_write_is_pointwise_and_truncates() {
     );
 }
 
-/// T3 (A3): чтение поля `rx := p.x`, `ry := p.y` (после записи и усечения).
+/// T3: чтение поля `rx := p.x`, `ry := p.y` (после записи и усечения).
 #[test]
 fn field_read_returns_value() {
     let (unit, _) = run("struct_var.takt", 1);
@@ -89,7 +89,7 @@ fn field_read_returns_value() {
     assert_eq!(num(&unit, "ry"), 44, "ry = p.y = 44 (усечено)");
 }
 
-/// T8 (A4): запись во **вложенное** поле `o.i.v := 5` - путь рекурсивен.
+/// T8: запись во **вложенное** поле `o.i.v := 5` - путь рекурсивен.
 #[test]
 fn nested_field_write() {
     let (unit, _) = run("struct_nested.takt", 1);
@@ -114,7 +114,7 @@ fn failure(fixture: &str) -> String {
     }
 }
 
-/// T12 (A7): чтение неизвестного поля `p.z`.
+/// T12: чтение неизвестного поля `p.z`.
 ///
 /// ** (SE-061):** ошибка теперь ловится на **компиляции**
 /// (`construct_model` -> `validate`), а не в времени выполнения симулятора (`SIM-027`) -
@@ -134,7 +134,7 @@ fn unknown_field_read_is_se061_at_compile_time() {
     );
 }
 
-/// T13 (A7): обращение к структуре по номеру бита `p.0` -> диагностика (SIM-029).
+/// T13: обращение к структуре по номеру бита `p.0` -> диагностика (SIM-029).
 #[test]
 fn bit_index_on_struct_is_diagnostic() {
     let msg = failure("struct_bit_index.takt");
@@ -142,7 +142,7 @@ fn bit_index_on_struct_is_diagnostic() {
     assert!(msg.contains("по номеру бита"), "{msg}");
 }
 
-/// T15 (A7): сравнение структур `p = q` не определено (C запрещает `==` на структурах) ->
+/// T15: сравнение структур `p = q` не определено (C запрещает `==` на структурах) ->
 /// диагностика (SIM-005 TypeMismatch), а не тихое `false`.
 #[test]
 fn struct_comparison_is_diagnostic_not_false() {

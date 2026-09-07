@@ -130,7 +130,7 @@ fn mixed_direction_word_reads_all_writes_only_in() {
         sv.contains("reg_rdata[33 +: 1] = gate;"),
         "нет чтения gate:\n{sv}"
     );
-    // Запись касается только in-бита gate; out-биты запись игнорируют (R5).
+    // Запись касается только in-бита gate; out-биты запись игнорируют.
     assert!(
         sv.contains("gate <= reg_wdata[33 +: 1];"),
         "нет записи gate:\n{sv}"

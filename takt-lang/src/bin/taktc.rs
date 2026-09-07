@@ -141,7 +141,7 @@ fn report_format_error(error: &takt_lang::format::FormatError, path: Option<&str
 ///
 /// Коды: `0` - всё канонично (или файлы отформатированы); `1` - при `--check` найдены
 /// отличия либо произошла ошибка. Ненулевой код при `--check` - это и есть контракт для
-/// CI (критерий A4).
+/// CI.
 fn run_fmt(options: &FmtOptions) -> i32 {
     if options.stdin {
         let mut source = String::new();
@@ -257,7 +257,7 @@ use takt_lang::verification::verify_cli::{VerifyOptions, parse_verify_args};
 /// Выполняет подкоманду `verify`; возвращает код возврата процесса.
 ///
 /// Код `0` - все проверенные свойства держатся; `1` - есть нарушение, непроверяемое
-/// свойство или ошибка разбора (R8/A1).
+/// свойство или ошибка разбора.
 fn run_verify(options: &VerifyOptions) -> i32 {
     let source = match fs::read_to_string(&options.input_file) {
         Ok(s) => s,

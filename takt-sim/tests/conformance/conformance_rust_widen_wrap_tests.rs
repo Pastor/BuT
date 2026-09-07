@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::process::Command;
 
-/// Исправлениетура: `total: u16` растёт шагом `step: u8`, перенос на третьем такте.
+/// Фикстура: `total: u16` растёт шагом `step: u8`, перенос на третьем такте.
 const FIXTURE: &str = "tests/data/eval/conformance_widen_wrap.takt";
 /// Тактов в трассе: два до переноса, такт переноса и такт после него.
 const TICKS: usize = 4;

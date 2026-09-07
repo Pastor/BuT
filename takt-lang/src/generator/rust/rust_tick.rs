@@ -301,7 +301,7 @@ pub(crate) fn emit_guard(
 /// Цепочка `if`/`else if` вместо C-шного "`if (c) {...break;}` подряд": `break` в C
 /// означает "такт окончен", то есть следующие `if` при сработавшем первом недостижимы.
 /// Семантика та же, но недостижимого кода нет - а он валит проверка
-/// (`unreachable_statement`, проба П5).
+///
 fn emit_transitions(
     p: &mut Printer,
     raw: &StateNode,

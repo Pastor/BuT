@@ -192,7 +192,7 @@ fn qualified_registry_covers_every_port() {
     }
 }
 
-/// Значение действительно доезжает до порта (а не просто "прогон прошёл").
+/// Значение действительно доезжает до порта.
 #[test]
 fn named_input_reaches_the_port() {
     let (ast, _) = takt_lang::parse(SIMPLE, 0).expect("разбор");

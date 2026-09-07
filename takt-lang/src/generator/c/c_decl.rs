@@ -30,7 +30,7 @@ fn const_expr_string(expr: &ExpressionNode, name: &str) -> Result<String, Diagno
         // Длительность - целое в миллисекундах, как и её тип (`uint32_t`). Без этой
         // ветви `const HOLD: duration := 2s;` отвергался воронкой недостижимости
         // (`CC-023` "невычисленное значение константы") - при том, что шесть прочих
-        // потребителей константу переводят, а эталон исполняет (замер 0489). Пересчёт
+        // потребителей константу переводят, а эталон исполняет. Пересчёт
         // делает общий носитель, а не своя формула.
         crate::semantic::duration::value_millis(
             *nanos,
@@ -205,7 +205,7 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
                 } => {
                     let mut definition = String::new();
                     // было `.unwrap()` - невыразимый тип параметра ронял `taktc`
-                    // паникой (проба: `fn pick(data: [u8;4])`). Параметр печатается
+                    // паникой. Параметр печатается
                     // формой объявления: тип массива в C неотделим от имени (`uint8_t
                     // data[4]`).
                     let mut tiny_params = params

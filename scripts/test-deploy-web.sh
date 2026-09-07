@@ -156,7 +156,7 @@ fi
 # `build-web.sh` ищет модуль по `TAKT_WASM_PROFILE` (умолчание `wasm`), а
 # образ собирал его `--release` - и сборка падала на "Модуль не собран" уже на
 # Стенде, после полутора сотен скомпилированных крейтов. Два носителя одного
-# знания разошлись молча (выкладка 2026-09-05).
+# знания разошлись молча.
 DOCKER_PROFILE="$(grep -oE 'cargo build --profile \$\{WASM_PROFILE\}|cargo build --release --target wasm32' "$ROOT/web/deploy/Dockerfile" | head -1)"
 if [[ "$DOCKER_PROFILE" != 'cargo build --profile ${WASM_PROFILE}' ]]; then
   echo "  ПРОВАЛ: E7 образ собирает модуль не тем профилем, что ищет build-web.sh"
@@ -190,7 +190,7 @@ echo "  OK: E8 каталог сборки сервера назван один 
 # монтировании тома в `/var/lib/postgresql/data` не стартует вовсе: "there
 # appears to be PostgreSQL data in /var/lib/postgresql/data (unused
 # mount/volume)". Раскладка от 17-й версии дожила до стенда - дома стек не
-# поднимали ни разу (2026-09-05).
+# поднимали ни разу.
 if grep -qE '^\s+- db:/var/lib/postgresql/data' "$ROOT/web/deploy/docker-compose.yml"; then
   echo "  ПРОВАЛ: E9 том базы смонтирован в /var/lib/postgresql/data"
   echo "          образ 18+ с такой раскладкой не стартует — стек не поднимется"

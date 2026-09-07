@@ -331,7 +331,7 @@ async fn a_target_that_refuses_says_so_in_the_archive() {
             &author,
             serde_json::json!({
                 // Переменная обязана использоваться: неиспользуемую цель до вывода не
-                // доводит, и отказа не будет вовсе (замер 09g).
+                // доводит, и отказа не будет вовсе.
                 "text": "var x: float := 1.0;\n\nstart Run {\n    always {\n        x := x + 1.0;\n    }\n}\n",
                 "revision": 2
             }),

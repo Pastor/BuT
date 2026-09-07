@@ -310,7 +310,7 @@ fn eval_const_cycle_terminates_with_diagnostic() {
 
 /// T14: ** не тронут** - карта бьёт `address` с define'ом.
 ///
-/// Define не источник адреса (решение A2) и приоритет слоя не повышает.
+/// Define не источник адреса  и приоритет слоя не повышает.
 #[test]
 fn define_does_not_raise_layer_priority() {
     let model = model_of("out LED: bit; address LED = BTN_ADDR; start Idle;");

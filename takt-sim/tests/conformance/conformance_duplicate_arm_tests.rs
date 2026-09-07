@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::process::Command;
 
-/// Исправлениетура: два образца `1` подряд, тела с разными приращениями.
+/// Фикстура: два образца `1` подряд, тела с разными приращениями.
 const FIXTURE: &str = "tests/data/eval/conformance_duplicate_arm.takt";
 /// Тактов: первый - дублированный образец, второй - соседний, третий - `_` нет.
 const TICKS: usize = 3;

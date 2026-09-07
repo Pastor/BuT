@@ -112,7 +112,7 @@ pub(crate) fn collect_ports(
         // `extern fn` -> метод HAL (решение (а) ): единообразно с портами,
         // типобезопасно и без `unsafe`. Вариант `extern "C"` отвергнут именно потому,
         // что внёс бы `unsafe` в порождаемый код и тем самым уничтожил бы главную
-        // дельту фичи к цели `c` (R10).
+        // дельту фичи к цели `c`.
         for def in model.functions.values() {
             if let crate::semantic::FunctionDefinitionNode::External {
                 name,
@@ -294,7 +294,7 @@ pub(crate) fn emit_enums(
             )?;
 
             // Разрядность - По диапазону вариантов. `#[repr(u8)]` по умолчанию отверг
-            // бы `Idle = 670` из `elevator.takt:121` (проба 2026-07-16).
+            // бы `Idle = 670` из `elevator.takt:121`.
             p.ident("#[derive(Debug, Clone, Copy, PartialEq, Eq)]").nl();
             p.ident(&format!("#[repr({})]", enum_repr(&def.variants)))
                 .nl();

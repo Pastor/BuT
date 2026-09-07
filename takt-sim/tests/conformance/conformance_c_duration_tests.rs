@@ -12,7 +12,7 @@
 use std::path::Path;
 use std::process::Command;
 
-/// Исправлениетура: `elapsed := pause + 750ms`, `ms := elapsed as u32`, `late := elapsed >
+/// Фикстура: `elapsed := pause + 750ms`, `ms := elapsed as u32`, `late := elapsed >
 /// 500ms`.
 const FIXTURE: &str = "tests/data/eval/conformance_duration_value.takt";
 
@@ -188,7 +188,7 @@ fn cast_between_duration_and_number_emits_no_arithmetic() {
 
 // -- Вычисляемая выдержка -------------------------
 
-/// Исправлениетура: `after (base + 2ms)` при `base := 3ms` и 1 кГц - пять тактов.
+/// Фикстура: `after (base + 2ms)` при `base := 3ms` и 1 кГц - пять тактов.
 const DYNAMIC_FIXTURE: &str = "tests/data/eval/conformance_dynamic_dwell.takt";
 
 /// На каком такте `done` впервые стал единицей - у эталона.

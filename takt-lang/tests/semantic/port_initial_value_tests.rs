@@ -180,7 +180,7 @@ fn rust_writes_initial_value_in_new_and_init() {
 /// **Контрпример:** без начальных значений форма `new()` прежняя.
 ///
 /// Временная привязка появляется только там, где есть что писать: иначе изменился бы
-/// вывод всего корпуса (R12).
+/// вывод всего корпуса.
 #[test]
 fn rust_constructor_shape_unchanged_without_values() {
     let src = "out ready: bit at 0x40000004:0;\nstart S { always { ready := 1; } }";

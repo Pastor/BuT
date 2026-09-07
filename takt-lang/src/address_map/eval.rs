@@ -173,7 +173,7 @@ fn unary_bitless(value: i64, bit: Option<i64>, loc: Location) -> Result<AddrValu
 
 /// Разрешает имя в выражении адреса: **сначала** define, **затем** `const` модели.
 ///
-/// Порядок - решение D2: платформенный слой главнее модели (прямая симметрия с наложением
+/// Порядок: платформенный слой главнее модели (прямая симметрия с наложением
 /// внешней карты `SE-050`). Предупреждение о перекрытии (`SE-053`) выдаёт вызывающий:
 /// здесь нет позиции объявления `const`.
 fn resolve_symbol(
@@ -184,7 +184,7 @@ fn resolve_symbol(
     seen: &mut Vec<String>,
 ) -> Result<AddrValue, Diagnostic> {
     if let Some(v) = env.lookup(name) {
-        // Define побеждает `const` (решение D2), но перекрытие обязано быть заметным -
+        // Define побеждает `const`, но перекрытие обязано быть заметным -
         // прямая симметрия с наложением внешней карты (`SE-050`): платформенный слой
         // главнее модели, однако молча её не подменяет.
         if let Some(VariableNode::Const { loc: const_loc, .. }) = scope.borrow().search_var(name) {
@@ -205,7 +205,7 @@ fn resolve_symbol(
     let VariableNode::Const { expr, .. } = &var else {
         // Параметр модели - величина, которая станет константой в режиме
         // `--parameters=specialize`: диагностика **называет режим**, иначе автор читал
-        // бы "не константа" о том, что константой быть может (R12).
+        // бы "не константа" о том, что константой быть может.
         if crate::semantic::parameter_const::is_parameter(&var) {
             return Err(crate::semantic::parameter_const::compile_time_parameter(
                 loc,

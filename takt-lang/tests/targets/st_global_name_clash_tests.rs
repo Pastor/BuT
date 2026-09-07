@@ -90,7 +90,7 @@ fn allowed_names_stay_allowed() {
         );
     }
     // Локальную переменную правило не задевает: она живёт внутри блока, и совпадение с
-    // именем POU `iec2c` принимает (проверено прогоном).
+    // именем POU `iec2c` принимает.
     let (ok, stderr) = compile("local_probe", &local_source("probe"));
     assert!(
         ok,

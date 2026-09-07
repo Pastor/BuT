@@ -26,7 +26,7 @@ fn cc_available() -> bool {
 // заданы одной частотой (1 кГц), поэтому сравнение осмысленно: сверка идёт
 // **внутри** профиля.
 
-/// Исправлениетура: выход из состояния через 5 мс при 1 кГц (5 тактов от входа).
+/// Фикстура: выход из состояния через 5 мс при 1 кГц (5 тактов от входа).
 const AFTER_FIXTURE: &str = "tests/data/eval/conformance_after.takt";
 
 /// На каком такте выходной порт `done` впервые стал единицей - у эталона.
@@ -49,7 +49,7 @@ fn simulator_dwell_tick() -> usize {
 /// На каком такте `done` впервые стал единицей - у порождённого C.
 fn generated_c_dwell_tick(dir: &Path) -> usize {
     let source = std::fs::read_to_string(AFTER_FIXTURE).expect("фикстура читается");
-    // Исправлениетура объявляет `clock 1kHz` -> контракт частоты требует подтверждающий
+    // Фикстура объявляет `clock 1kHz` -> контракт частоты требует подтверждающий
     // `--tick-hz`; здесь - совпадающая частота.
     let mut options = takt_lang::generator::GenerateOptions::default();
     options.tick_hz = Some(1_000);

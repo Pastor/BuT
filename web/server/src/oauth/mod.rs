@@ -321,7 +321,7 @@ mod tests {
         );
         // Тело, где есть И корень, И `user`: каждый провайдер обязан взять своё.
         // Проверка стоит потому, что первая редакция смотрела только в `user`, и Яндекс
-        // переставал находиться (нашлось первым прогоном).
+        // переставал находиться.
         let both = r#"{"id":"yandex-42","user":{"user_id":"vk-42"}}"#;
         assert_eq!(subject_of(&yandex, both).as_deref(), Some("yandex-42"));
         assert_eq!(subject_of(&vk, both).as_deref(), Some("vk-42"));

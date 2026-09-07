@@ -146,7 +146,7 @@ fn struct_assignment_stays_whole() {
 ///
 /// Оба класса нашёл **второй инструмент проверки**: `verilator` принимал `localparam logic
 /// [7:0] X [0:1]` и `localparam mode_e X`, а `yosys` отвечал "syntax error, unexpected
-/// '['" и "Non-constant width range on parameter decl" (замер 0491). Проверка
+/// '['" и "Non-constant width range on parameter decl". Проверка
 /// текстовая: линт и синтез сами по себе форму не различают, а прогон обоих
 /// инструментов идёт в проверке цели.
 #[test]

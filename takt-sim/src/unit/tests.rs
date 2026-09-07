@@ -303,7 +303,7 @@ fn test_is_terminal_sequential_all_terminal() {
 
 #[test]
 fn r5_eval_error_is_distinguishable_from_false_condition() {
-    // Ядро требования R5.
+    // Ядро.
     let mut st = HashMap::new();
     let failing = Predicate::new("сломанное", |_| {
         Err(takt_lang::diagnostics::Diagnostic::error(

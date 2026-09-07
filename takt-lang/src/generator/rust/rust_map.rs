@@ -122,7 +122,7 @@ impl RustMap {
     /// Фильтр `is_state()` - то же, что у `CMap::state_at`: он и делает "недостижимое
     /// состояние -> варианта в `enum` нет". Для цели `rust` это не оптимизация, а
     /// условие прохождения проверки: неконструируемый вариант валит `-D warnings` по
-    /// `dead_code` (решение R9).
+    /// `dead_code`.
     pub(crate) fn state_at(&self, name: Name) -> Option<Element> {
         self.map
             .element_at(name)

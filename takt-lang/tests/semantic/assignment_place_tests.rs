@@ -157,7 +157,7 @@ fn constant_under_selector_is_rejected_too() {
 /// отказ зря, названо поимённо.
 ///
 /// Тест обязателен. Правило легко ужесточить до неработающего языка, а заметить это
-/// на корпусе нельзя: записи бита в переменную в `examples/` нет ни одной (замер фичи).
+/// на корпусе нельзя: записи бита в переменную в `examples/` нет ни одной.
 #[test]
 fn every_place_of_the_language_is_accepted() {
     let refused: Vec<String> = A_PLACE
