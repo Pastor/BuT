@@ -70,7 +70,7 @@ fn mmio_mode_is_refused_too() {
     assert_eq!(err.code.as_deref(), Some("SV-020"), "{err:?}");
 }
 
-/// **Контроль:** различные имена переводятся как прежде.
+/// **Контроль:** различные имена переводятся без отказа.
 #[test]
 fn distinct_names_are_translated() {
     compile_sv(

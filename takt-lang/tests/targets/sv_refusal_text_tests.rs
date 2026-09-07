@@ -59,7 +59,7 @@ fn refusal_text_reads_as_a_sentence() {
 /// Носитель шаблона один.
 ///
 /// Проверка грепом, а не типом: вторая копия - обычная функция, компилятор её не
-/// запретит. Падает **списком** мест (образец 0203, 0291).
+/// запретит. Падает **списком** мест.
 #[test]
 fn sv002_has_a_single_definition() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("src/generator/sv");

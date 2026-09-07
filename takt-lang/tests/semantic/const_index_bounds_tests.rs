@@ -51,7 +51,7 @@ fn variable_index_is_not_judged_statically() {
     );
 }
 
-/// Литеральный индекс за границей отвергается по-прежнему - контроль 0028.
+/// Литеральный индекс за границей отвергается - контроль соседнего правила.
 #[test]
 fn literal_index_out_of_bounds_is_rejected() {
     let src = "var d: [u8; 3] := {1, 2, 3};\n\

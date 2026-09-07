@@ -83,7 +83,7 @@ fn cc_available() -> bool {
         .unwrap_or(false)
 }
 
-/// Каталог сборки, уникальный по имени потока (0190; двоеточие - ).
+/// Каталог сборки, уникальный по имени потока; двоеточие вычищается.
 fn build_dir(tag: &str) -> PathBuf {
     let thread = std::thread::current()
         .name()

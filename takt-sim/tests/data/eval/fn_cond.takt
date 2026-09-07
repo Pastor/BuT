@@ -1,6 +1,6 @@
 /// Вызов функции в условии перехода.
 ///
-/// До фичи 0025 роняло симулятор: unimplemented!() в predicate.rs.
+/// Без вычислителя роняет эталон: unimplemented!() в predicate.rs.
 var t: u8 := 0;
 
 fn ready(v: u8) -> u8 {

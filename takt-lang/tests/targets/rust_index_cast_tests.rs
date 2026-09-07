@@ -90,7 +90,7 @@ fn literal_index_has_no_cast_variable_keeps_it() {
 /// Печатник условий подчиняется тому же правилу.
 ///
 /// У него было своё `as usize`; носитель теперь один на обоих (`subscript`), иначе
-/// правило разъехалось бы - /0193/0195.
+/// правило разъехалось бы молча.
 #[test]
 fn condition_printer_follows_the_same_rule() {
     let (_dir, text) = generate_rust("idx_cond", IN_CONDITION);

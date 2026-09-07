@@ -353,7 +353,7 @@ fn composition_blocks_match_generated_rust() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// RTL цели `sv` считает то же - прежде `exit` печатался дважды.
+/// RTL цели `sv` считает то же - без правки `exit` печатается дважды.
 #[test]
 fn composition_blocks_match_generated_sv() {
     if !tool("verilator") {
@@ -365,7 +365,7 @@ fn composition_blocks_match_generated_sv() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// ПЛК цели `st` считает то же - прежде `exit` терялся.
+/// ПЛК цели `st` считает то же - без правки `exit` теряется.
 #[test]
 fn composition_blocks_match_generated_st() {
     let Some((iec2c, lib)) = iec2c_paths() else {

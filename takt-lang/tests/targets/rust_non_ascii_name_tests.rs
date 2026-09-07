@@ -89,7 +89,7 @@ fn non_ascii_name_is_capitalised() {
     );
 }
 
-/// **Контроль: имена, работавшие и прежде, не изменились.**
+/// **Контроль: имена, законные и без правки, не изменились.**
 #[test]
 fn already_correct_names_are_untouched() {
     let (_dir, upper) = generate_rust("upper", UPPER);

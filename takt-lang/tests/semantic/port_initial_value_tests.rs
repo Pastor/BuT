@@ -116,7 +116,7 @@ fn c_writes_initial_value_in_init() {
 
 /// **Контрпример:** у порта без `:=` записи в `_init` не появляется.
 ///
-/// Без этой проверки "починка", пишущая ноль всякому выходу, прошла бы предыдущий тест
+/// Без этой проверки правка, пишущая ноль всякому выходу, прошла бы предыдущий тест
 /// и изменила бы поведение всего корпуса.
 #[test]
 fn c_port_without_value_is_not_written() {
@@ -237,7 +237,7 @@ fn tool_available(tool: &str, arg: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// Порождённый C собирается `cc -Wall -Werror` (проверка 0171).
+/// Порождённый C собирается `cc -Wall -Werror` проверкой цели.
 #[test]
 fn generated_c_passes_cc_gate() {
     if !tool_available("cc", "--version") {

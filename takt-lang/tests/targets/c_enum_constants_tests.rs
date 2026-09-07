@@ -140,7 +140,7 @@ fn constant_name_carries_the_enum_segment() {
 
 /// И порождённый файл компилируется под флагами проверки проекта.
 ///
-/// Прежде здесь был `-Wmacro-redefined`: дубль `#define` с разными значениями.
+/// Без сегмента перечисления здесь `-Wmacro-redefined`: дубль `#define` с разными значениями.
 /// Держалось это лишь тем, что в корпусе одноимённых вариантов нет.
 #[test]
 fn clashing_variants_compile_under_werror() {

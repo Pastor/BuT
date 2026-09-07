@@ -142,7 +142,7 @@ fn arguments_are_parsed_in_every_instantiation_position() {
     }
 }
 
-/// Вызов без аргументов ведёт себя как прежде - обратная совместимость.
+/// Вызов без аргументов не задет - обратная совместимость.
 #[test]
 fn call_without_arguments_still_builds() {
     let src = format!("{TUNER}start Main = Tuner;\n");

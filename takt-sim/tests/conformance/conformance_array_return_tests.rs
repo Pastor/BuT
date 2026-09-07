@@ -286,7 +286,7 @@ fn array_return_matches_generated_rust() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// RTL цели `sv` считает то же - прежде вывод не синтезировался.
+/// RTL цели `sv` считает то же - без подъёма вывод не синтезируется.
 #[test]
 fn array_return_matches_generated_sv() {
     if !tool("verilator") {
@@ -298,7 +298,7 @@ fn array_return_matches_generated_sv() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// ПЛК цели `st` считает то же - прежде `iec2c` вывод отвергал.
+/// ПЛК цели `st` считает то же - без подъёма `iec2c` вывод отвергает.
 #[test]
 fn array_return_matches_generated_st() {
     let Some((iec2c, lib)) = iec2c_paths() else {
@@ -322,7 +322,7 @@ fn array_return_matches_generated_st() {
 ///
 /// Именно здесь класс и жил вторым слоем: `pair(k)[1]` verilator принимает, а yosys
 /// отвечает "syntax error, unexpected '['". Разворот во временную сделан в семантике
-/// (приём 0400), поэтому форму видят все цели сразу.
+/// подъёмом в семантике, поэтому форму видят все цели сразу.
 #[test]
 fn array_return_sv_is_synthesizable() {
     if !tool("yosys") {

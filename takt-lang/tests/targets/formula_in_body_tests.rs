@@ -67,7 +67,7 @@ fn target_c_prints_both_guards() {
     );
 }
 
-/// То же у цели `rust`: прежде формула тела давала ложное `RS-010`.
+/// То же у цели `rust`: без правки формула тела даёт ложное `RS-010`.
 #[test]
 fn target_rust_prints_both_guards() {
     let dir = work_dir("rust");
@@ -86,7 +86,7 @@ fn target_rust_prints_both_guards() {
     );
 }
 
-/// То же у цели `sv`: прежде формула тела терялась молча.
+/// То же у цели `sv`: без правки формула тела теряется молча.
 #[test]
 fn target_sv_prints_both_guards() {
     let dir = work_dir("sv");

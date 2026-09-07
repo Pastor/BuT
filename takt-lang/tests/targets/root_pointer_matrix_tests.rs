@@ -142,7 +142,7 @@ fn compile(dir: &Path, source: &str, touch: Touch) -> String {
     let out = Command::new(env!("CARGO_BIN_EXE_taktc"))
         .arg("compile")
         .args(["-t", "c"])
-        // Ключи вида обращения: карта адресов, `-D`, `--tick-hz` (0458, 0459).
+        // Ключи вида обращения: карта адресов, `-D`, `--tick-hz`.
         .args(
             extra_flags(touch)
                 .into_iter()
@@ -209,7 +209,7 @@ fn root_pointer_is_exact_for_every_shape_and_touch() {
     let mut failures: Vec<String> = Vec::new();
     for (shape, touch, kind) in &all {
         let tag = case_name(*shape, *touch, *kind);
-        // Законную границу цели судит таблица набора 0450 - здесь она означает
+        // Законную границу цели судит таблица набора целей - здесь она означает
         // "сигнатуры проверять не на чем", а не "тест молчит".
         if let Some(code) = refusal("c", *touch, *kind) {
             let dir = work_dir(&tag);

@@ -48,7 +48,7 @@ fn cc_available() -> bool {
         .unwrap_or(false)
 }
 
-/// Каталог сборки, уникальный по имени потока (тесты идут параллельно, 0190).
+/// Каталог сборки, уникальный по имени потока: тесты идут параллельно.
 fn build_dir() -> PathBuf {
     let thread = std::thread::current()
         .name()

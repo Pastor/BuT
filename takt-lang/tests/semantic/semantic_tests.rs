@@ -153,7 +153,7 @@ fn type_array_resolves_correctly() {
 
 /// Псевдоним типа `Byte = [bit;8]` раскрывается в `TypeNode::Array`.
 ///
-/// Прежде псевдоним звался `u8` и **затенял** встроенный тип; с это `SE-107`, поэтому
+/// Псевдоним `u8` здесь не годится: он затеняет встроенный тип и даёт `SE-107`, поэтому
 /// проверка идёт на законном имени.
 #[test]
 fn type_alias_resolves_through_map() {
@@ -356,8 +356,8 @@ fn port_without_type_is_error() {
 
 /// Инициализатор **выходного** порта - начальное значение, и построение его принимает.
 ///
-/// Прежде тест назывался "порт с инициализатором не-адресом" и стоял на
-/// **входном** порте: до 0187 инициализатор означал адрес, и не-адрес просто
+/// Предмет теста - не "порт с инициализатором не-адресом", а запись на
+/// **входном** порте: инициализатор там означает адрес, и не-адрес просто
 /// игнорировался. Теперь у входа начального значения быть не может (`SE-092`) -
 /// проба переехала на выход, где значение законно.
 #[test]
@@ -413,7 +413,7 @@ fn example_port_address_separate_is_valid() {
     );
 }
 
-/// (R4/SE-049): адрес задан и inline, и оператором `address`.
+/// `SE-049`: адрес задан и inline, и оператором `address`.
 #[test]
 fn port_address_conflict_inline_and_operator_is_error() {
     let err = build_file_err("tests/data/semantic/invalid/port_address_conflict.takt");
@@ -425,7 +425,7 @@ fn port_address_conflict_inline_and_operator_is_error() {
     );
 }
 
-/// (R4/SE-049): несколько операторов `address` для одного порта.
+/// `SE-049`: несколько операторов `address` для одного порта.
 #[test]
 fn port_address_duplicate_operator_is_error() {
     let err = build_from_src(
@@ -440,7 +440,7 @@ fn port_address_duplicate_operator_is_error() {
     );
 }
 
-/// (R5/SE-048): `address` для несуществующего порта.
+/// `SE-048`: `address` для несуществующего порта.
 #[test]
 fn port_address_dangling_reference_is_error() {
     let err = build_file_err("tests/data/semantic/invalid/port_address_dangling.takt");

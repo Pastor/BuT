@@ -1,4 +1,4 @@
-//! Интеграционные тесты семантики, часть 6 (вынос из `semantic_tests.rs`).
+//! Интеграционные тесты семантики, часть 6.
 //!
 //! Хелперы и импорты - из родителя через `use super::*`.
 
@@ -285,7 +285,7 @@ fn fn_calls_builtin_compiles() {
     assert!(node.functions.contains_key("f"));
 }
 
-/// Дубликат имени функции - SE-009 (прежде принимался молча).
+/// Дубликат имени функции - SE-009, а не молчаливый приём.
 #[test]
 fn fn_duplicate_name_is_se009() {
     let err = build_err(
@@ -322,7 +322,7 @@ fn assert_is_not_a_keyword() {
     assert!(node.variables.contains_key("assert"));
 }
 
-/// Имя инварианта - атом LTL. До 0044 `G(t <= 100)` невыразимо
+/// Имя инварианта - атом LTL. Без него `G(t <= 100)` невыразимо
 /// (`LtlPrimary` принимает только идентификатор); инвариант даёт имя.
 #[test]
 fn invariant_name_is_ltl_atom() {

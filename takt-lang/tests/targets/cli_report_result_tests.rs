@@ -87,7 +87,7 @@ fn verbose_prints_canonical_input_for_simple_target() {
 
 /// `--verbose` даёт канонический путь входа и у адрес-потребляющей цели.
 ///
-/// Это и есть предмет: прежде `st-at` флаг игнорировал.
+/// Это и есть предмет: без правки `st-at` флаг игнорирует.
 #[test]
 fn verbose_prints_canonical_input_for_address_target() {
     let (stderr, input) = compile("address_verbose", "st-at", &["--verbose"]);

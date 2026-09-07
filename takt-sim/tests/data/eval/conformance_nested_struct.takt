@@ -1,7 +1,7 @@
 // Сверка вложенной структуры.
 //
 // `struct Line { a: Point, b: Point }` - структура, содержащая структуру.
-// Прежде один вход давал четыре отказа чужих инструментов при нулевом коде
+// Без правки один вход даёт четыре отказа чужих инструментов при нулевом коде
 // возврата `taktc`: `cc` "unknown type name 'Point'", `iec2c` "invalid
 // specification in structure element declaration", verilator "Reference to
 // 'point_t' before declaration" - все три оттого, что структуры печатались

@@ -36,7 +36,7 @@ fn model() -> std::rc::Rc<std::cell::RefCell<takt_lang::semantic::ModelNode>> {
     construct_model(&ast, None, &[]).expect("семантика")
 }
 
-/// Порты под-моделей композиции перечисляются (регрессия дефекта 0079).
+/// Порты под-моделей композиции перечисляются.
 #[test]
 fn composition_submodel_ports_are_enumerated() {
     let names = PortNames::from_model(&model().borrow());
@@ -58,7 +58,7 @@ fn composition_submodel_ports_are_enumerated() {
 }
 
 /// Читаемость порта под-модели композиции (страховка): чтение `Sensor` (значение по
-/// умолчанию `0` после 0086) не даёт `SIM-009` - порт в среде. Сквозная реакция на
+/// умолчанию `0`) не даёт `SIM-009` - порт в среде. Сквозная реакция на
 /// поданный вход проверяется driven-сценарием
 /// `examples/simulations/elevator_mini_floor2.json` (`floor_sensor_f2_bottom` ->
 /// `current_floor := 2`), прогоняемым `scripts/run_simulations.sh`.
@@ -99,7 +99,7 @@ fn qualified_name_reads_the_named_branch() {
     // Голое имя по-прежнему находит первую ветвь - совместимость.
     assert_eq!(unit.variable("val"), Some(Value::Number(1)));
 
-    // Квалифицированное - обе ветви различимы. До 0135 значение `Right::val` не
+    // Квалифицированное - обе ветви различимы. С голым именем значение `Right::val` не
     // читалось никак: оно существовало в снимке, но было недоступно по имени.
     assert_eq!(unit.variable("Left::val"), Some(Value::Number(1)));
     assert_eq!(unit.variable("Right::val"), Some(Value::Number(2)));

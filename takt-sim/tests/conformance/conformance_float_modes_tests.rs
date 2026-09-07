@@ -12,7 +12,7 @@
 //!   со вторым флагом. Молчаливого Q быть не должно.
 //!
 //! Потактовые Q-сверки целей - в `conformance_{c,rust,st}_tests.rs`
-//! (`float_embedded_*`); файл вынесен из них ради лимита размера модуля.
+//! (`float_embedded_*`); здесь они собраны в отдельный файл по предмету.
 
 use takt_lang::semantic::tree::construct_model;
 use takt_sim::{Value, build_unit};

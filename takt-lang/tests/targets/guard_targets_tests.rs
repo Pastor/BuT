@@ -151,7 +151,7 @@ fn sv_guard_disable_suppresses_assertions() {
     );
 }
 
-// -- Цель st: предупреждение, а не молчание и не отказ (A6-A8) ----------------
+// -- Цель st: предупреждение, а не молчание и не отказ ------------------------
 
 #[test]
 fn st_warns_about_untranslatable_guard_and_still_compiles() {

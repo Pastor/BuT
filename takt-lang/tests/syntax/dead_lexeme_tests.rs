@@ -118,7 +118,7 @@ fn every_keyword_is_a_grammar_terminal() {
     // `duration`, ...) - категории токенов, а не ключевые слова, и совпадение имени
     // обманчиво: терминал `string` в extern-блоке означает `Token::StringLiteral` -
     // строковый литерал, а не слово `string`. Мутационная проверка (анализа
-    // 0201) поймала здесь ложное "зелено" именно на этой паре.
+    // сверка в обе стороны ловит здесь ложное "зелено" именно на этой паре.
     let declared: BTreeSet<String> = extern_terminals()
         .into_iter()
         .filter(|(_, quoted)| *quoted)

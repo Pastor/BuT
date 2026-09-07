@@ -123,7 +123,7 @@ int main(void) {{
     );
     std::fs::write(dir.join("harness.c"), harness).expect("харнесс");
     let bin = dir.join("bin");
-    // Флаги - те же, что у проверки цели (0171/0220): без `-Werror` дефект выглядел бы
+    // Флаги - те же, что у проверки цели: без `-Werror` дефект выглядел бы
     // предупреждением, а проверка считает его отказом.
     let compile = Command::new("cc")
         .args([

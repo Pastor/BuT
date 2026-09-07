@@ -44,7 +44,7 @@ fn elements_use_the_integer_rule() {
     );
 }
 
-/// **Контроль:** агрегат без приведения работает как прежде.
+/// **Контроль:** агрегат без приведения не задет.
 #[test]
 fn plain_aggregate_is_unchanged() {
     let text = declare("{1, 2}");

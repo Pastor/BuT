@@ -425,7 +425,7 @@ fn every_declaration_kind_of_the_canon_is_reported() {
         ("функция", "BadFn", "snake_case"),
         ("параметр", "BadArg", "snake_case"),
         ("состояние", "bad_state", "UpperCamelCase"),
-        // прежде оба падали в `_ => {}` и не проверялись вовсе.
+        // без явных ветвей оба падают в `_ => {}` и не проверяются вовсе.
         ("условие", "bad_cond", "UpperCamelCase"),
         ("инвариант", "bad_invariant", "UpperCamelCase"),
     ];

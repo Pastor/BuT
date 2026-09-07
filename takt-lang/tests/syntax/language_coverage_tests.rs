@@ -175,7 +175,7 @@ fn covered_by(area_dir: &str) -> BTreeSet<&'static str> {
                 continue;
             }
             let src = std::fs::read_to_string(&path).expect("пример читается");
-            // Неразобранный пример - предмет других проверок (0133, компиляция корпуса);
+            // Неразобранный пример - предмет других проверок (компиляция корпуса);
             // здесь он просто не даёт покрытия.
             if let Ok((model, comments)) = takt_lang::parse(&src, 0) {
                 found.extend(takt_lang::parser::coverage::constructs_of(

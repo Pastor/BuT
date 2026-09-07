@@ -94,7 +94,7 @@ fn data_atom_is_reported_as_unsupported() {
     );
 }
 
-// --- Детерминизм вердикта (проверка 0048) -------------------------------------
+// --- Детерминизм вердикта -----------------------------------------------------
 
 #[test]
 fn verdicts_are_deterministic() {
@@ -119,7 +119,7 @@ fn verdicts_are_deterministic() {
 // --- Разбор свойства из командной строки (--property) -------------------------
 
 /// Свойство из строки разбирается грамматикой языка: имена состояний - не по одному
-/// символу (в отличие от тестового `parse_ltl`, A6).
+/// символу, в отличие от тестового `parse_ltl`.
 #[test]
 fn property_string_parses_multi_char_atoms() {
     let phi = takt_lang::parse_ltl_property("G (Fault -> F Idle)").unwrap();
@@ -481,7 +481,7 @@ fn state_scoped_formula_is_reported_desugared() {
 }
 
 /// Область - свойство состояния, а не текста: формула уровня модели не связывается
-/// ничем и проверяется от старта, как и прежде.
+/// ничем и проверяется от старта.
 #[test]
 fn model_level_formula_is_not_scoped() {
     let results = takt_lang::verify_all(model_of("fails.takt"));
@@ -533,7 +533,7 @@ fn plain_import_is_out_of_scope_by_default() {
     assert_eq!(outcome.skipped, vec!["Badlib".to_string()]);
 }
 
-/// `--scope all` возвращает поведение 0049 дословно.
+/// `--scope all` возвращает поведение без сужения области дословно.
 #[test]
 fn plain_import_is_verified_with_scope_all() {
     let outcome = takt_lang::verify_all_scoped(
@@ -554,7 +554,7 @@ fn plain_import_is_verified_with_scope_all() {
     );
 }
 
-/// A3/Р1: форма `import { A as B }` - узел приходит `Rc::clone`-ом чужого дерева и его
+/// Форма `import { A as B }`: узел приходит `Rc::clone`-ом чужого дерева и его
 /// собственный `origin` - `Local`; пометить обязан импортёр.
 ///
 /// Забудь пометку - и область молча не сработает именно на этой форме.
@@ -569,7 +569,7 @@ fn rename_import_is_out_of_scope_by_default() {
     assert!(outcome.results.iter().all(|r| r.verdict == Verdict::Holds));
 }
 
-/// A2/Р3: **контрпример к сужению** - локальная вложенная модель проверяется при любой
+/// **Контрпример к сужению** - локальная вложенная модель проверяется при любой
 /// области.
 ///
 /// Без него "сузили область" неотличимо от "перестали проверять вложенные модели

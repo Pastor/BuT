@@ -5,7 +5,7 @@
 // "invalid located variable declaration" с указанием на `AT %...`, которого в
 // объявлении нет. Отказ приходит до генерации и называет форму.
 //
-// Сторож обещания - `st_identifier_form_tests::every_position_is_refused`.
+// Контроль обещания - `st_identifier_form_tests::every_position_is_refused`.
 
 out sum: u8 at 0x2000;
 

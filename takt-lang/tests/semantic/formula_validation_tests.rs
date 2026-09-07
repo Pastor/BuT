@@ -44,7 +44,7 @@ fn expect_single_se025(name: &str, lost: &str) {
     );
 }
 
-// -- Шесть мест объявления формулы (A1-A4, A9) --------------------------------
+// -- Шесть мест объявления формулы --------------------------------------------
 
 #[test]
 fn unknown_name_in_model_level_formula_is_diagnosed() {
@@ -139,9 +139,9 @@ fn two_broken_formulas_yield_two_diagnostics() {
 
 #[test]
 fn ltl_formula_with_unknown_atom_is_not_an_error() {
-    // `Formula::LTL` в объём 0203 не входит: у неё своя проверка и иной режим строгости -
+    // `Formula::LTL` в объём не входит: у неё своя проверка и иной режим строгости -
     // предупреждение SE-056, потому что абстракция LTL заведомо сверх-аппроксимирует
-    // (0049/0068). Ошибкой оно стать не должно.
+    // предупреждение. Ошибкой оно стать не должно.
     let found = diagnostics("ltl_unknown_atom.takt");
     let errors: Vec<_> = found.iter().filter(|(code, _)| code == "SE-025").collect();
     assert!(
@@ -159,7 +159,7 @@ fn resolvable_formulas_are_accepted_in_all_sites() {
     );
 }
 
-// -- Попутные проверки судьи (R2, R4 анализа) ---------------------------------
+// -- Попутные проверки судьи --------------------------------------------------
 
 #[test]
 fn formula_gets_the_other_condition_checks_too() {

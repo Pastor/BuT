@@ -60,7 +60,7 @@ pub(crate) fn refusal(target: &str, touch: Touch, kind: Kind) -> Option<&'static
         // В IEC 61131-3 есть `EXIT` (аналог `break`), а продолжения итерации нет вовсе:
         // `continue` целью `st` не выражается.
         ("st" | "st-at", Touch::LoopContinue, _) => Some("ST-011"),
-        // Порт перечислимого типа прежде отвергали `rust` (`RS-016`) и `st-at`
+        // Порт перечислимого типа отвергали `rust` (`RS-016`) и `st-at`
         // (`ST-004`) - записи здесь и стояли. обе границы сняла: перечисление - скаляр,
         // его ширину и знак даёт `enum_facts`, и порт ложится на метод HAL-трейта либо
         // на локацию `AT %QB`. Записи удалены, а не помечены пропуском: ожидание
@@ -229,7 +229,7 @@ fn verdict(target: &str, failures: Vec<String>) {
 /// Без него перебор был бы зелен и на выводе, из которого формула пропала:
 /// охранная формула - это `assert` у трёх целей, а темпоральное
 /// свойство до целей не доезжает вовсе (предмет верификации). Проверяется
-/// **наличие** обязательства, а не его текст: текст - предмет 0235.
+/// **наличие** обязательства, а не его текст: текст - предмет своего набора.
 fn assertion_expected(touch: Touch) -> Option<bool> {
     match touch {
         Touch::InvariantModel | Touch::InvariantState | Touch::GuardFormula => Some(true),
@@ -431,7 +431,7 @@ fn target_rust_accepts_every_shape() {
     }
     let check = |dir: &Path, out: &Path, touch: Touch| -> Result<(), String> {
         // Рабочий каталог - каталог случая: без него `clippy-driver` кладёт
-        // `libprobe.rlib` в текущий, то есть в дерево репозитория (проверка 0377 ловит
+        // `libprobe.rlib` в текущий, то есть в дерево репозитория (проверка гигиены ловит
         // такие артефакты, но лучше их не порождать).
         let run = Command::new("clippy-driver")
             .current_dir(dir)

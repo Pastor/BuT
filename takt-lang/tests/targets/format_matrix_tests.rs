@@ -56,7 +56,7 @@ fn format_file(path: &Path) -> Result<(), String> {
 }
 
 /// Компилирует файл целью `c`; отдаёт текст вывода либо `None`, если цель отказала
-/// (законные границы таблицы 0450 - не предмет этого набора).
+/// (законные границы таблицы целей - не предмет этого набора).
 fn emit_c(dir: &Path, input: &Path, touch: Touch, out_name: &str) -> Option<String> {
     let out_dir = dir.join(out_name);
     let ok = taktc()

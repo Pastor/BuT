@@ -117,7 +117,7 @@ fn rust_array_of_structs_compiles() {
 ///
 /// Контроль границы: в объявлении переменной форма `:= [9, 8, 7, 6]` законна и `iec2c`
 /// её принимает, а в инициализаторе экземпляра `FUNCTION_BLOCK` тот же массив даёт
-/// "Initialization element identifier ... incompatible datatype". Первая редакция
+/// "Initialization element identifier ... incompatible datatype". Печать одним уровнем
 /// правки сняла отказ вместе с потерей - и породила невалидный файл; поймал это тест.
 #[test]
 fn st_still_refuses_aggregate_parameter_argument() {

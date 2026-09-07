@@ -62,7 +62,7 @@ fn simulator_trace() -> Vec<(i128, i128)> {
 fn generated_c_trace(dir: &Path) -> Vec<(i128, i128)> {
     let source = std::fs::read_to_string(FIXTURE).expect("фикстура читается");
     // Частота такта берётся из объявления `clock` фикстуры - цель `c` требует
-    // совпадающего `--tick-hz` (контракт 0134).
+    // совпадающего `--tick-hz`: таков контракт объявления частоты.
     let mut options = takt_lang::generator::GenerateOptions::default();
     options.tick_hz = Some(1000);
     takt_lang::compile_to_c(
