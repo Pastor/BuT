@@ -80,7 +80,7 @@ fn input_port_with_initial_value_is_rejected() {
 
 #[test]
 fn output_initial_value_is_silent_now_that_all_targets_emit_it() {
-    // Тест тестыт именно снятие: вернувшееся `SE-093` означало бы, что какая-то цель
+    // Тест проверяет именно снятие: вернувшееся `SE-093` означало бы, что какая-то цель
     // снова теряет значение молча.
     let codes = warning_codes(
         "out led: bit at 0x40000004:2 := 1;\nvar t: u8 := 0;\n\

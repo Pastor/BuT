@@ -899,7 +899,7 @@ fn address_operator_parses_to_model_element_address() {
         Some("BTN"),
         "имя порта в address-операторе"
     );
-    // Голый hex `0x...` без суфисправления `:bit` лексируется как число; адресный литерал
+    // Голый hex `0x...` без суффикса `:bit` лексируется как число; адресный литерал
     // `Expression::Address` порождается только формой `0xADDR:bit`.
     assert!(
         matches!(

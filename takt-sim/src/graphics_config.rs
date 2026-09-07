@@ -381,7 +381,7 @@ mod tests {
         let cfg = GraphicsConfig::from_file(f.path()).unwrap();
         assert_eq!(cfg.canvas.width, 1024.0);
         assert_eq!(cfg.canvas.height, 768.0);
-        // Остальные группы получили умолчаниеы.
+        // Остальные группы получили значения по умолчанию.
         assert_eq!(cfg.canvas.frame_delay_cs, 50);
         assert_eq!(cfg.legend.width, 190.0);
     }

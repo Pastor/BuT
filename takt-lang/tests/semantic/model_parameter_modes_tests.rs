@@ -71,7 +71,7 @@ fn out_dir(tag: &str) -> std::path::PathBuf {
 /// Компилирует вход целью `target` и возвращает код диагностики при отказе.
 ///
 /// Цели-потребители адресов (`c-hal`/`st-at`/`sv-mmio`) зовутся своими входами: у
-/// исправлениетуры портов нет, поэтому карта адресов пуста и разрешать нечего.
+/// фикстуры портов нет, поэтому карта адресов пуста и разрешать нечего.
 fn try_target(target: &str, src: &str, specialize: bool) -> Result<(), String> {
     let tag = format!("{target}-{}", if specialize { "spec" } else { "assign" });
     let dir = out_dir(&tag);

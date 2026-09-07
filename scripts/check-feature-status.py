@@ -92,7 +92,10 @@ def registry_statuses(text):
         # Колонок стало четыре: номер, название, статус, вердикт.
         # Статус - третья ячейка, а не последняя: последняя теперь вердикт
         # тестирования.
-        match = re.match(r"\|\s*\[(\d{4})\]\([^)]*\)\s*\|[^|]*\|([^|]*)\|[^|]*\|", line)
+        # Номер берётся из адреса карточки: текстом ссылки служит её название.
+        match = re.match(
+            r"\|\s*\[[^\]]*\]\((?:\./)?(\d{4})[^)]*\)\s*\|[^|]*\|([^|]*)\|[^|]*\|", line
+        )
         if match:
             cell = match.group(2)
             result[match.group(1)] = (cell.strip(), status_token(cell))
@@ -115,7 +118,8 @@ def card_statuses(paths):
 
 def showcase_numbers(text):
     """Номера фич, стоящих в таблице витрины FEATURES.md."""
-    return set(re.findall(r"\|\s*\[(\d{4})\]\(docs/features/", text))
+    # Номер стоит в адресе карточки: текстом ссылки служит её название.
+    return set(re.findall(r"\|\s*\[.*?\]\(docs/features/(\d{4})", text))
 
 
 def run_checks(registry_text, cards, showcase_text):

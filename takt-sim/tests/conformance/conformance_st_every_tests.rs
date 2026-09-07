@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const FIXTURE: &str = "tests/data/eval/conformance_every.takt";
-/// Корень исправлениетуры в C-символах iec2c (верхний регистр от `stevery`).
+/// Корень фикстуры в C-символах iec2c (верхний регистр от `stevery`).
 const ROOT: &str = "STEVERY";
 /// Путь к наблюдаемому порту: под-FB `BLINKER0`, поле `LED`.
 const PORT: &str = "BLINKER0.LED";
@@ -152,7 +152,7 @@ fn every_clock_profile_fires_periodically_in_generated_st() {
 #[allow(clippy::field_reassign_with_default)]
 fn every_ticks_profile_generates_valid_st() {
     let source = std::fs::read_to_string(FIXTURE).expect("фикстура");
-    // Профиль "такты" требует объявленной частоты либо `--tick-hz`; исправлениетура `clock` не
+    // Профиль "такты" требует объявленной частоты либо `--tick-hz`; фикстура `clock` не
     // объявляет, поэтому добавляем её к тексту для этого теста.
     let ticks_source = source.replace("model Blinker {", "model Blinker {\n    clock 1kHz;");
     let dir = tempfile::tempdir().expect("каталог");

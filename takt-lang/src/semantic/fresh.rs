@@ -21,7 +21,7 @@ use crate::semantic::{
     FunctionDefinitionNode, ModelNode, NamedCodeBlockDefinitionNode, StateNode, StatementNode,
 };
 
-/// Счётчик свежих имён с заданным преисправлением.
+/// Счётчик свежих имён с заданным префиксом.
 pub(crate) struct Fresh<'a> {
     prefix: &'static str,
     counter: usize,

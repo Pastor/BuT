@@ -10,7 +10,7 @@
 
 use takt_lang::GenerateOptions;
 
-/// Каталог исправлениетур.
+/// Каталог фикстур.
 const DIR: &str = "tests/data/cdiag0212";
 
 fn fixture(name: &str) -> (String, String) {
@@ -35,7 +35,7 @@ fn out_dir(tag: &str) -> String {
     )
 }
 
-/// Компилирует исправлениетуру целью `c` и возвращает ошибку.
+/// Компилирует фикстуру целью `c` и возвращает ошибку.
 fn refusal(name: &str) -> takt_lang::diagnostics::Diagnostic {
     let (path, source) = fixture(name);
     let search: [String; 0] = [];

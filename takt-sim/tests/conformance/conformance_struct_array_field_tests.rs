@@ -140,7 +140,7 @@ fn reference_values_are_named() {
 /// Порождённый RTL считает то же, что эталон.
 ///
 /// Порядок элементов в упакованной конкатенации обратный, и ошибка в нём зеркалит
-/// значения: `first` и `last` в исправлениетуре разные именно ради этого.
+/// значения: `first` и `last` в фикстуре разные именно ради этого.
 #[test]
 fn struct_array_field_matches_generated_sv() {
     if !tool_available("verilator") {

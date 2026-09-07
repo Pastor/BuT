@@ -90,7 +90,7 @@ enum Emitted {
 ///
 /// `--bounds-check` заводит выходной порт `bounds_fault`, а целям с адресами адрес
 /// обязателен каждому порту - автор задаёт его картой, и именно это здесь и проверяется
-/// (сам отказ без карты тестат тесты 0433).
+/// (сам отказ без карты проверяют тесты 0433).
 fn needs_fault_address(target: &str, scenario: &Scenario) -> bool {
     matches!(target, "c-hal" | "st-at") && scenario.flags.contains(&"--bounds-check")
 }

@@ -43,7 +43,7 @@ const PARALLEL_TICKS: usize = 6;
 const CHAIN_FIXTURE: &str = "tests/data/eval/conformance_fsm_table_chain.takt";
 const CHAIN_UNIT: &str = "conformance_fsm_table_chain";
 const CHAIN_TICKS: usize = 9;
-/// Порты исправлениетуры цепочки: фаза каждого шага наблюдается своим портом.
+/// Порты фикстуры цепочки: фаза каждого шага наблюдается своим портом.
 const CHAIN_PORTS: [&str; 3] = ["first_probe", "second_probe", "line_probe"];
 
 fn tool(bin: &str) -> bool {
@@ -174,7 +174,7 @@ fn camel(unit: &str) -> String {
 
 /// Владелец перечислителя порта `probe` в порождённом C.
 ///
-/// Имя перечислителя квалифицировано моделью-владельцем, и у двух исправлениетур владельцы
+/// Имя перечислителя квалифицировано моделью-владельцем, и у двух фикстур владельцы
 /// разные: `Worker` и `Pair`.
 fn probe_port_owner(unit: &str) -> String {
     let owner = if unit == PARALLEL_UNIT {

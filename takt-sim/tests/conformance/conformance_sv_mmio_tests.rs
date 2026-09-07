@@ -19,7 +19,7 @@ use std::process::Command;
 use takt_lang::semantic::tree::construct_model;
 use takt_sim::{TickResult, Unit, Value, build_unit};
 
-/// Опорная исправлениетура: выходные порты `counter` (`0x10`) и `flag` (`0x20`) эволюционируют
+/// Опорная фикстура: выходные порты `counter` (`0x10`) и `flag` (`0x20`) эволюционируют
 /// по тактам (автономно, без входов).
 const MMIO_FIXTURE: &str = "tests/data/eval/conformance_mmio.takt";
 
@@ -82,7 +82,7 @@ fn build_dir(tag: &str) -> PathBuf {
     dir
 }
 
-/// Компилирует исправлениетуру целью `sv-mmio` в каталог `dir` (без внешней карты).
+/// Компилирует фикстуру целью `sv-mmio` в каталог `dir` (без внешней карты).
 fn compile_mmio(dir: &Path, fixture: &str, basename: &str) {
     let source = std::fs::read_to_string(fixture).expect("фикстура читается");
     takt_lang::compile_to_sv_mmio(

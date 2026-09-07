@@ -10,7 +10,7 @@
 //!
 //! Исправлениетура - **та же**, что у целей `c` и `rust` (`conformance_duration_value.takt`):
 //! сопоставимость трёх целей важнее единообразия с `sv`, которая ту же запись не берёт
-//! вовсе (`SV-002` на `as`, своя исправлениетура - `conformance_sv_duration_tests.rs`).
+//! вовсе (`SV-002` на `as`, своя фикстура - `conformance_sv_duration_tests.rs`).
 //!
 //! Время выполненияа у ST нет: `iec2c` транслирует в C, драйвер вызывает `_body__` и читает поля
 //! структуры (образец - `conformance_st_every_tests.rs`).
@@ -23,7 +23,7 @@ use std::process::Command;
 const FIXTURE: &str = "tests/data/eval/conformance_duration_value.takt";
 /// Имя входа для порождения: корень ST берёт имя из имени файла.
 const UNIT: &str = "stdurvalue.takt";
-/// Корень исправлениетуры в C-символах `iec2c` (верхний регистр от `stdurvalue`).
+/// Корень фикстуры в C-символах `iec2c` (верхний регистр от `stdurvalue`).
 const ROOT: &str = "STDURVALUE";
 /// Путь к наблюдаемым полям: под-FB `TIMERS0`, поля `MS` и `LATE`.
 const PORT_MS: &str = "TIMERS0.MS";

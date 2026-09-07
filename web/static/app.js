@@ -141,7 +141,7 @@ export async function main() {
   wire();
 
   // Учётная запись и проекты. Корень API берётся от пути страницы: за прокси она стоит
-  // под преисправлением, а на `/p/<id>` относительный адрес увёл бы запрос под неё саму.
+  // под префиксом, а на `/p/<id>` относительный адрес увёл бы запрос под неё саму.
   api.configure({ root: project.apiRoot(location.pathname), storage: localStorage });
   account.attach(dom, {
     source: () => state.editor.value(),

@@ -141,7 +141,7 @@ fn sv_guard_output_is_accepted_by_both_tools() {
 #[test]
 fn sv_guard_disable_suppresses_assertions() {
     // Поле `SvMap::guard_enable` существовало с самого генератора, но ни один печатник его
-    // не читал - заготовка без потребителя. Фича делает его живым, и тест тестыт оба
+    // не читал - заготовка без потребителя. Фича делает его живым, и тест проверяет оба
     // состояния: иначе флаг снова станет мёртвым молча.
     let dir = tmp("disabled");
     let code = compile_sv(&dir, &GenerateOptions::new(false));

@@ -315,7 +315,7 @@ fn unique_model_name(model: Rc<RefCell<ModelNode>>) -> String {
     if let Some(upper) = model.borrow().upper.as_ref() {
         // Weak может быть невалиден, если родительский Rc уже дропнут (например, для
         // моделей из импортированных файлов). В этом случае используем локальное имя
-        // без преисправления.
+        // без префикса.
         if let Some(parent) = upper.upgrade() {
             let model_name = unique_model_name(parent);
             if model_name.is_empty() {
@@ -338,8 +338,8 @@ fn unique_state_name(local_name: &str, model: Rc<RefCell<ModelNode>>) -> String 
 /// Ищет модель по уникальному имени вида `"Root:Child:Grandchild"`.
 ///
 /// Рекурсивно отсекает первый сегмент, разделённый `':'`:
-/// - если текущая модель совпадает с преисправлением - углубляемся внутрь неё;
-/// - иначе - ищем дочернюю модель с именем-преисправлением и рекурсируем в неё.
+/// - если текущая модель совпадает с префиксом - углубляемся внутрь неё;
+/// - иначе - ищем дочернюю модель с именем-префиксом и рекурсируем в неё.
 ///
 /// Работает с именами произвольной длины.
 fn model_by_unique_name(
@@ -350,7 +350,7 @@ fn model_by_unique_name(
         let (prefix, rest) = model_name.split_at(index);
         let rest = &rest[1..]; // Отсекаем разделитель ':'
         if owned.borrow().name() == prefix {
-            // Текущий узел совпадает с преисправлением - рекурсируем внутрь
+            // Текущий узел совпадает с префиксом - рекурсируем внутрь
             return model_by_unique_name(rest, owned);
         } else if let Some(child) = owned.borrow().search_model(prefix) {
             // Нашли дочернюю модель - рекурсируем в неё
@@ -705,7 +705,7 @@ mod tests {
 
     /// Snapshot::create регистрирует модели из выражений реализации.
     ///
-    /// После compact_extend модель A регистрируется под именем "EntryA" (преисправление
+    /// После compact_extend модель A регистрируется под именем "EntryA" (префикс
     /// состояния + исходное имя модели).
     #[test]
     fn test_snapshot_create_with_extend() {

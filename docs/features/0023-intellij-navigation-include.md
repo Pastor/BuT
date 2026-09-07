@@ -1,9 +1,9 @@
-# Фича 0023: Плагин IntelliJ IDEA — навигация к декларации и include
+# Фича: Плагин IntelliJ IDEA — навигация к декларации и include
 
 - **Номер:** 0023
 - **Статус:** ГОТОВО
-- **Зависит от:** нет (надстройка над готовой фичей [0022](0022-intellij-syntax-highlight.md);
-  связь с [0011](0011-lsp-server.md) `lam-lsp` — необязательная, навигация автономна)
+- **Зависит от:** нет (надстройка над готовой фичей [плагин IntelliJ IDEA — подсветка синтаксиса Lam](0022-intellij-syntax-highlight.md);
+  связь с [lSP-сервер lam-lsp](0011-lsp-server.md) `lam-lsp` — необязательная, навигация автономна)
 - **Связанные issue (анализ):** новая фича (из блока «Кандидаты» `FEATURES.md`:
   «Расширение плагина IntelliJ до навигации/инспекций»)
 - **Крейт/подпроект:** существующий подпроект `extensions/intellij-lam/`
@@ -18,7 +18,7 @@
 
 ## Краткое описание
 
-Расширение плагина IntelliJ IDEA для Lam (задел фичи [0022](0022-intellij-syntax-highlight.md))
+Расширение плагина IntelliJ IDEA для Lam (задел [плагин IntelliJ IDEA — подсветка синтаксиса Lam](0022-intellij-syntax-highlight.md))
 двумя навигационными возможностями:
 
 1. **Переход к декларации** (Go to Declaration, `Ctrl/⌘+Click`, `Ctrl/⌘+B`) —
@@ -41,8 +41,8 @@ PSI-парсера. Фича аддитивна: синтаксис/семант
 - **Status:** Accepted
 - **Date:** 2026-07-13
 - **Authors:** Архитектор + Лид разработки
-- **Related issues:** [Фича 0023](0023-intellij-navigation-include.md); развивает
-  [ADR 0022](0022-intellij-syntax-highlight.md#архитектура-adr)
+- **Related issues:** [Фича](0023-intellij-navigation-include.md); развивает
+  [ADR](0022-intellij-syntax-highlight.md#архитектура-adr)
 
 ### Context
 
@@ -128,7 +128,7 @@ Ref --> Imp : import "path" -> VirtualFile
 - Единый источник семантики (сервер), переиспользование логики компилятора.
 
 **Cons:**
-- Платформенный LSP API — Ultimate-only / сторонний LSP4IJ (как отмечено в ADR 0022);
+- Платформенный LSP API — Ultimate-only / сторонний LSP4IJ (как отмечено в ADR);
   зависимость от установленного и запущенного `lam-lsp`. Ломает автономность плагина.
 
 ### Decision
@@ -177,7 +177,7 @@ Ref --> Imp : import "path" -> VirtualFile
 ### Зависимости фичи (правило 17/19)
 
 - **Зависит от:** нет. Фича — аддитивная надстройка над закрытой ([ГОТОВО](0022-intellij-syntax-highlight.md#отчёт-о-тестировании))
-  фичей 0022; переиспользует `LamLexer`/`LamTokenTypes`. Связь с 0011 (`lam-lsp`)
+  фичей; переиспользует `LamLexer`/`LamTokenTypes`. Связь с 0011 (`lam-lsp`)
   необязательная (навигация автономна). Обратная совместимость полная: языковой
   синтаксис/семантика и версия языка не затрагиваются (правило 22 неприменим).
 - **Влияние на порядок разработки:** фича независима, разблокировок не даёт;
@@ -256,7 +256,7 @@ Ref --> Imp : import "path" -> VirtualFile
 
 ## Разработка
 
-### Задача 0023-01
+### Задача
 
 #### Что было
 
@@ -406,7 +406,7 @@ internal/experimental API:
 
 Настройка verifyPlugin и попутно исправленный дефект дескриптора (пустой
 `until-build` из 0022-01 → атрибут убран; латинское начало описания; версия
-плагина `0.2.0 → 0.2.1`) — фикс [0023-01](../fixes/0023-01-verifyplugin-descriptor.md).
+плагина `0.2.0 → 0.2.1`) — [проверка совместимости с новыми IDE (verifyPlugin) + валидность дескриптора](../fixes/0023-01-verifyplugin-descriptor.md).
 
 ### Выводы и дальнейшие шаги
 
@@ -421,7 +421,7 @@ internal/experimental API:
 Реализован **Option A** (ADR): навигация в плагине `extensions/intellij-lam`
 поверх лексера 0022, **без** полноценного PSI-парсера. Аддитивно: `grammar`/
 `simulation`, синтаксис/семантика и **версия языка** не тронуты (правило 22
-неприменим). Версия плагина `0.1.1 → 0.2.0`. Одна задача — [0023-01](0023-intellij-navigation-include.md#разработка).
+неприменим). Версия плагина `0.1.1 → 0.2.0`. Одна задача — [плагин IntelliJ IDEA — навигация к декларации и include](0023-intellij-navigation-include.md#разработка).
 
 - **Плоский PSI:** `LamParserDefinition` + `LamParser` + `LamFile` — токены
   лексера кладутся листьями под корень; даёт реальные `PsiElement` под кареткой
@@ -438,7 +438,7 @@ internal/experimental API:
 **Проверка:** `./gradlew --offline clean buildPlugin test` → BUILD SUCCESSFUL,
 **47/47 тестов зелёные** (27 регресс 0022 + 20 новых: сканер 9, переход 6,
 импорт 5). **Совместимость с новыми IDE** подтверждена IntelliJ Plugin Verifier —
-**Compatible** для IC 2024.3 / 2025.1 / 2025.2 (фикс [0023-01](../fixes/0023-01-verifyplugin-descriptor.md):
+**Compatible** для IC 2024.3 / 2025.1 / 2025.2 ([проверка совместимости с новыми IDE (verifyPlugin) + валидность дескриптора](../fixes/0023-01-verifyplugin-descriptor.md):
 настройка `verifyPlugin`, снят невалидный пустой `until-build`, версия плагина
 `0.2.0 → 0.2.1`). Остаточные пункты (find-usages/rename/структура/инспекции,
 настоящие `PsiReference` для путей, кросс-файловое разрешение имён, визуальная

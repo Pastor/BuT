@@ -140,8 +140,7 @@ enum Cmd {
 <именование>
 Форма имени — #strong[канон], и инструмент её проверяет:
 
-#table(
-    columns: (33.33%, 33.33%, 33.33%),
+#table(columns: (33.33%, 33.33%, 33.33%),
     align: (auto,auto,auto,),
     table.header([Что], [Форма], [Пример],),
     [Модели, состояния, типы, перечисления,
@@ -151,8 +150,7 @@ enum Cmd {
     `invariant`], [`UpperCamelCase`], [`Overheated`, `SafeMove`],
     [Переменные, порты, функции,
     параметры], [`snake_case`], [`target_floor`, `read_sensor`],
-    [Константы], [`UPPER_SNAKE_CASE`], [`MAX_LEVEL`, `LIMIT`],
-  )
+    [Константы], [`UPPER_SNAKE_CASE`], [`MAX_LEVEL`, `LIMIT`],)
 
 Отступление от канона даёт #strong[предупреждение] `CS-001` — при
 форматировании и в редакторе:

@@ -35,7 +35,7 @@ use crate::semantic::{ExpressionNode, ModelNode, StatementNode, VariableNode};
 
 use super::port_split::{LeafCells, Step};
 
-/// Преисправление имени временной. Обязан быть допустимым идентификатором **целевых** языков -
+/// Префикс имени временной. Обязан быть допустимым идентификатором **целевых** языков -
 /// C, IEC, Rust, SystemVerilog.
 const PREFIX: &str = "takt_port_";
 

@@ -25,7 +25,7 @@ fn out_dir(tag: &str) -> PathBuf {
     dir
 }
 
-/// Компилирует исправлениетуру целью и возвращает stderr (исправлениетуры непереводимы).
+/// Компилирует фикстуру целью и возвращает stderr (фикстуры непереводимы).
 fn refusal(fixture: &str, target: &str) -> String {
     let dir = out_dir(&format!("{}_{target}", fixture.trim_end_matches(".takt")));
     let out = Command::new(env!("CARGO_BIN_EXE_taktc"))
@@ -43,7 +43,7 @@ fn refusal(fixture: &str, target: &str) -> String {
 
 /// Предмет: срез в теле состояния - координата оператора у трёх целей.
 ///
-/// Строка 16 исправлениетуры - `res := mem[1:2];`; строка 7 - объявление `mem`, откуда
+/// Строка 16 фикстуры - `res := mem[1:2];`; строка 7 - объявление `mem`, откуда
 /// координату брал бы вывод по операнду.
 #[test]
 fn slice_in_statement_points_at_the_statement() {
@@ -62,7 +62,7 @@ fn slice_in_statement_points_at_the_statement() {
 /// бы предмет. Взят срез: его не переводит ни одна цель, и на нём же проверяется
 /// координата у `c`, `rust` и `st` выше.
 ///
-/// Отдельная исправлениетура для `sv` больше не нужна: агрегат массива она переводит с, то
+/// Отдельная фикстура для `sv` больше не нужна: агрегат массива она переводит с, то
 /// есть до среза доходит.
 #[test]
 fn slice_in_statement_points_at_the_statement_for_sv() {

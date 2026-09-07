@@ -42,7 +42,7 @@ COVERAGE_DEBT = Path(
     os.environ.get("TAKT_DIAG_COVERAGE_DEBT", ROOT / "scripts/diagnostic-coverage-baseline.txt")
 )
 
-# Преисправления, которые печатает `taktc compile`. Прочие - область других
+# Префикса, которые печатает `taktc compile`. Прочие - область других
 # инструментов (см. шапку).
 COMPILER_PREFIXES = ("LE", "SY", "SE", "CC", "RS", "SV", "ST", "AM", "DF", "PU")
 

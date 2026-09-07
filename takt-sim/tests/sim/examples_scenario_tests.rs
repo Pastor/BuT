@@ -182,7 +182,7 @@ fn examples_dir() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../examples")
 }
 
-/// Минимальные исправлениетуры контрпримеров и примера (T6-T8) - не копии примера: они
+/// Минимальные фикстуры контрпримеров и примера (T6-T8) - не копии примера: они
 /// изолируют **класс** ошибки проектирования и переживут любую его переделку.
 fn fixture_path(file: &str) -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

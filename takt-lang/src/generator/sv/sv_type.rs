@@ -212,7 +212,7 @@ fn packed_array_field(
     let dim = format!("[{}:0]", i64::from(*size) - 1);
     let decl = match prefix.find('[') {
         Some(at) => format!("{}{}{}", &prefix[..at], dim, &prefix[at..]),
-        // У элемента-структуры разрядов в преисправлении нет - размерность приписывается к
+        // У элемента-структуры разрядов в префиксе нет - размерность приписывается к
         // имени типа.
         None => format!("{prefix} {dim}"),
     };
@@ -512,14 +512,14 @@ mod tests {
         assert_eq!(ty100.declare("wide"), "logic [99:0] wide");
     }
 
-    /// **T11:** перечисление отображается в именованный тип с суфисправлением `_e`.
+    /// **T11:** перечисление отображается в именованный тип с суффиксом `_e`.
     #[test]
     fn enum_maps_to_named_type() {
         let ty = sv_type(&TypeNode::Enum("Action".to_string()), "тест").unwrap();
         assert_eq!(ty.prefix, "action_e");
     }
 
-    /// **T12:** структура отображается в именованный тип с суфисправлением `_t`.
+    /// **T12:** структура отображается в именованный тип с суффиксом `_t`.
     #[test]
     fn struct_maps_to_named_type() {
         let ty = sv_type(&TypeNode::Struct("Point".to_string()), "тест").unwrap();

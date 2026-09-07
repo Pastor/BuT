@@ -126,7 +126,7 @@ start Root = Machine;
         let position = cursor_on(SRC, "speed");
         let renamed = apply(SRC, position, "velocity");
 
-        // Все вхождения `speed` в исправлениетуре принадлежат одному символу, поэтому сплошная
+        // Все вхождения `speed` в фикстуре принадлежат одному символу, поэтому сплошная
         // текстовая замена - законный эталон.
         let reference = SRC.replace("speed", "velocity");
         assert_eq!(

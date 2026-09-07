@@ -201,7 +201,7 @@ fn clippy_available() -> bool {
         .unwrap_or(false)
 }
 
-/// Все шесть исправлениетур принимаются `clippy -D warnings`.
+/// Все шесть фикстур принимаются `clippy -D warnings`.
 #[test]
 fn generated_modules_pass_clippy_gate() {
     if !clippy_available() {

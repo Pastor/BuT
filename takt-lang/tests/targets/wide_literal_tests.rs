@@ -30,7 +30,7 @@ use takt_lang::generator::GenerateOptions;
 /// Широкое значение, читаемое в условии: годится для проверок `st` и `rust`.
 ///
 /// Без чтения `rustc -D warnings` отверг бы вывод за "присваивание поля самому себе" -
-/// то есть за конструкцию исправлениетуры, а не за литерал.
+/// то есть за конструкцию фикстуры, а не за литерал.
 const WIDE_READ: &str = "model M { \
                          var top: u64 := 18446744073709551615; \
                          var seen: u8 := 0; \
@@ -100,7 +100,7 @@ fn generate_sv(tag: &str, source: &str) -> (std::path::PathBuf, String) {
 
 // -- Слой 1: эмиссия ----------------------------------------------------------
 
-/// Цель `c`: значение выше `LLONG_MAX` печатается с суфисправлением `ULL`.
+/// Цель `c`: значение выше `LLONG_MAX` печатается с суффиксом `ULL`.
 #[test]
 fn c_prints_unsigned_suffix_beyond_signed_range() {
     let (_dir, text) = generate_c("wide", WIDE);

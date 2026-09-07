@@ -53,7 +53,7 @@ def main() -> None:
     config = CONFIG.read_text(encoding="utf-8")
     lexer = LEXER.read_text(encoding="utf-8")
 
-    # Z1 - суфисправление файла.
+    # Z1 - суффикс файла.
     suffixes = re.search(r"path_suffixes\s*=\s*\[([^\]]*)\]", config)
     if not suffixes or "takt" not in suffixes.group(1):
         fail("Z1: `path_suffixes` не содержит расширения 'takt' — редактор не "

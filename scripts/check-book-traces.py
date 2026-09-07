@@ -59,7 +59,7 @@ CHAPTERS = os.path.join(ROOT, "book", "src")
 BASELINE = os.path.join(ROOT, "scripts", "book-traces-baseline.txt")
 
 EXCLUDED = ("appendix-",)
-# "Шаг 12 ( 3ms): [A, B] in:x=1 vars:y=2" - время и преисправления вида `vars:`
+# "Шаг 12 ( 3ms): [A, B] in:x=1 vars:y=2" - время и префикса вида `vars:`
 # принадлежат печати симулятора, документ их опускает.
 STEP_RE = re.compile(r"^\s*Шаг\s+(\d+)\s*(?:\([^)]*\))?\s*:\s*(.*)$")
 STATES_RE = re.compile(r"\s*\[([^\]]*)\]\s*(.*)$")

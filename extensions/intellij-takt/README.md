@@ -8,11 +8,11 @@
 **автоматного подхода к разработке**; при этом он применим и **промышленно** —
 отсюда строгость его семантики.
 Часть монорепозитория проекта Takt (фичи
-[`0022`](../../docs/features/0022-intellij-syntax-highlight.md),
-[`0023`](../../docs/features/0023-intellij-navigation-include.md),
-[`0038`](../../docs/features/0038-intellij-semantic-tokens.md),
-[`0039`](../../docs/features/0039-intellij-reformat.md),
-[`0067`](../../docs/features/0067-intellij-rename-psi-import.md)).
+[плагин IntelliJ IDEA — подсветка синтаксиса Lam](../../docs/features/0022-intellij-syntax-highlight.md),
+[плагин IntelliJ IDEA — навигация к декларации и include](../../docs/features/0023-intellij-navigation-include.md),
+[семантическая подсветка Lam в IntelliJ через lam-lsp](../../docs/features/0038-intellij-semantic-tokens.md),
+[действие Reformat Code в плагине IntelliJ](../../docs/features/0039-intellij-reformat.md),
+[rename и `PsiReference` для `import` в плагине IntelliJ](../../docs/features/0067-intellij-rename-psi-import.md)).
 
 ## Возможности
 

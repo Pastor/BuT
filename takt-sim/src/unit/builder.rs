@@ -26,7 +26,7 @@ pub(crate) fn var_expr(var: &VariableNode) -> &ExpressionNode {
         // поле, и симулятор брал адрес за начальное значение - `in P: bit := 0x100;`
         // стартовал со значением 0x100. Здесь это и есть выставление значения "до
         // первого такта": эталону нечего эмитить, он им стартует. Совпадение с целями
-        // тестыт потактовая сверка `takt-sim/tests/conformance_port_init_tests.rs` -
+        // проверяет потактовая сверка `takt-sim/tests/conformance_port_init_tests.rs` -
         // трасса начинается с состояния порта до такта.
         VariableNode::Port { init, .. } => init,
         VariableNode::Unresolved => &ExpressionNode::None,

@@ -6,7 +6,7 @@
 use takt_lang::collect_compile_diagnostics;
 use takt_lang::diagnostics::{Diagnostic, Location, normalize};
 
-/// Читает исправлениетуру каталога `tests/data/diagnostics0130/`.
+/// Читает фикстуру каталога `tests/data/diagnostics0130/`.
 fn fixture(name: &str) -> (String, String) {
     let path = format!("tests/data/diagnostics0130/{name}");
     let source =
@@ -96,7 +96,7 @@ fn exact_duplicates_are_collapsed() {
 
 /// A3: проверки высказываются все, а не только первая.
 ///
-/// В исправлениетуре две независимые ошибки: два начальных состояния (`SE-011`) и значение `5`
+/// В фикстуре две независимые ошибки: два начальных состояния (`SE-011`) и значение `5`
 /// у переменной типа `bit` (`SE-035`).
 #[test]
 fn all_validation_errors_are_reported() {

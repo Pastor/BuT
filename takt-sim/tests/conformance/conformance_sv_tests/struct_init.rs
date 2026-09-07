@@ -8,7 +8,7 @@
 
 use super::*;
 
-/// Та же исправлениетура, что у сверки цели `st`: наблюдаемая `sum = kp + ki`.
+/// Та же фикстура, что у сверки цели `st`: наблюдаемая `sum = kp + ki`.
 const SRC: &str = include_str!("../../data/eval/conformance_struct_init.takt");
 
 #[test]

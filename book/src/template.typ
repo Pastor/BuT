@@ -1,4 +1,4 @@
-// Шаблон документа «Язык Takt — описание» (фича 0240).
+// Шаблон документа «Язык Takt — описание».
 //
 // Заменяет собой прежнее устройство сборки: метаданные и опции вывода жили в
 // `book/book.toml`, вёрстка — семнадцатью строками `header-includes` на LaTeX
@@ -11,13 +11,13 @@
 //   #code(read("…"), "c")   — фрагмент на другом языке из внешнего файла
 //   врезка                  — обычная цитата Markdown-происхождения (`#quote`)
 //
-// ⚠️ `read()` разрешает путь относительно ФАЙЛА, ГДЕ ЗАПИСАН ВЫЗОВ, поэтому
+// `read()` разрешает путь относительно Файла, Где Записан Вызов, поэтому
 // чтение примера обязано стоять в файле раздела (`#example(read("examples/x.takt"))`),
 // а не внутри функции шаблона: спрятав `read` в `example`, мы получили бы поиск
 // примеров рядом с этим шаблоном.
 
 // ── Метаданные документа ───────────────────────────────────────────────────
-// Прежде жили в `book/book.toml` (поля `title`/`authors`/`description`); гейт
+// Прежде жили в `book/book.toml` (поля `title`/`authors`/`description`); проверка
 // символов (`scripts/check-book-glyphs.py`) читает их отсюда — они попадают на
 // титульный лист и в свойства PDF.
 #let doc-title = "Язык Takt — описание"
@@ -26,7 +26,7 @@
 
 // ── Слова, выделяемые в инлайн-коде ────────────────────────────────────────
 // Список читается из `book/takt-keywords.txt` — одного файла на весь документ
-// (сторож против таблицы `KEYWORDS` лексера — `scripts/check-book-keywords.py`).
+// (контроль против таблицы `KEYWORDS` лексера — `scripts/check-book-keywords.py`).
 #let _keyword-file = read("/takt-keywords.txt")
 
 #let _section-words(name) = {
@@ -45,12 +45,10 @@
   words
 }
 
-// Ключевые слова печатаются цветом и ЖИРНЫМ, имена типов — тем же цветом без
+// Ключевые слова печатаются цветом и Жирным, имена типов — тем же цветом без
 // жирного: так же различал их lua-фильтр `keywords.lua` прежней сборки (роли
 // `\KeywordTok` и `\DataTypeTok` палитры tango).
-#let takt-keywords = (
-  _section-words("keywords") + _section-words("constants") + _section-words("extra")
-)
+#let takt-keywords = (_section-words("keywords") + _section-words("constants") + _section-words("extra"))
 #let takt-types = _section-words("types")
 
 // Цвет ключевого слова — `KeywordTok` палитры tango (та же, что в подсветке
@@ -124,22 +122,18 @@
 // вёрстка добивалась того же переопределением `\chaptermark` и стиля `plain`
 // класса report.
 //
-// ⚠️ Колонтитулы объявлены ОТДЕЛЬНО и подставляются в каждый `set page`: правила
+// Колонтитулы объявлены Отдельно и подставляются в каждый `set page`: правила
 // `set` накапливаются, поэтому титульный лист, выключающий колонтитул
 // (`header: none`), гасил бы его до конца документа — восстановить его
 // последующим `set page(numbering: …)` нельзя, там речь о другом поле. Именно
 // так колонтитул пропал во всём документе при первой сборке.
 #let _running-head = context {
   let this-page = here().page()
-  let chapters = query(heading.where(level: 1)).filter(h => (
-    h.location().page() <= this-page
-  ))
+  let chapters = query(heading.where(level: 1)).filter(h => (h.location().page() <= this-page))
   if chapters.len() == 0 { return }
   let last = chapters.last()
   if last.location().page() == this-page { return }
-  let parts = query(label("part-marker")).filter(p => (
-    p.location().page() == this-page
-  ))
+  let parts = query(label("part-marker")).filter(p => (p.location().page() == this-page))
   if parts.len() > 0 { return }
   set text(size: 8pt)
   align(right)[#last.body]
@@ -156,13 +150,11 @@
   set document(title: doc-title, author: doc-authors, description: doc-description)
 
   // Страница: A4, поля 1.5 см со всех сторон, номер страницы снизу по центру.
-  set page(
-    paper: "a4",
+  set page(paper: "a4",
     margin: 1.5cm,
     numbering: "1",
     header: _running-head,
-    footer: _page-number,
-  )
+    footer: _page-number,)
 
   // Текст: Fira Code 10 pt, русские переносы, выключка по формату.
   set text(font: "Fira Code", size: 10pt, lang: "ru", hyphenate: true)
@@ -200,19 +192,15 @@
   // Подсветка блоков кода: определение синтаксиса Takt и палитра tango — те же
   // роли, что играли `takt.kate.xml` и `highlight-style` в прежней сборке.
   // Определений три: язык проекта и два целевых/метаязыка, которых нет у
-  // syntect (фича 0269) — Structured Text и EBNF. Без них блоки ```st и
+  // syntect — Structured Text и EBNF. Без них блоки ```st и
   // ```ebnf печатались чёрным, тогда как соседний ```c подсвечен.
-  set raw(
-    syntaxes: ("/takt.sublime-syntax", "/st.sublime-syntax", "/ebnf.sublime-syntax"),
-    theme: "/takt.tmTheme",
-  )
-  show raw.where(block: true): it => block(
-    width: 100%,
+  set raw(syntaxes: ("/takt.sublime-syntax", "/st.sublime-syntax", "/ebnf.sublime-syntax"),
+    theme: "/takt.tmTheme",)
+  show raw.where(block: true): it => block(width: 100%,
     above: 1.1em,
     below: 1.1em,
     breakable: true,
-    text(size: 9pt, it),
-  )
+    text(size: 9pt, it),)
   // Инлайн-код, равный ключевому слову или имени типа, выделяется — роль
   // `keywords.lua`. Одиночные `X`/`F`/`G`/`U`/`R` и `_` не выделяются намеренно:
   // в прозе они значат не операторы LTL (то же решение было в прежнем фильтре).
@@ -225,11 +213,9 @@
   }
 
   // Таблицы — «booktabs»: линии сверху, под заголовком и снизу, без вертикальных.
-  set table(
-    stroke: (_, y) => if y == 1 { (top: 0.5pt) } else { none },
+  set table(stroke: (_, y) => if y == 1 { (top: 0.5pt) } else { none },
     inset: (x: 5pt, y: 3.5pt),
-    align: left + top,
-  )
+    align: left + top,)
   show table: it => block(width: 100%, above: 1.1em, below: 1.1em)[
     #line(length: 100%, stroke: 0.6pt)
     #text(size: 9pt, it)
@@ -239,12 +225,10 @@
 
   // Врезка (в исходниках Markdown это была цитата `>`): отступ слева, без рамки —
   // как печатал прежний конвейер.
-  show quote.where(block: true): it => block(
-    inset: (left: 1.2em, rest: 0pt),
+  show quote.where(block: true): it => block(inset: (left: 1.2em, rest: 0pt),
     above: 1.1em,
     below: 1.1em,
-    it.body,
-  )
+    it.body,)
 
   set list(indent: 0.8em, spacing: 0.7em)
   set enum(indent: 0.8em, spacing: 0.7em)

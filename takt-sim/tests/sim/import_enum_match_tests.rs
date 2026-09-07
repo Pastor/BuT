@@ -2,7 +2,7 @@
 
 use takt_sim::{TickResult, Value};
 
-/// Каталог исправлениетур: импорт ищет файл рядом с импортирующим.
+/// Каталог фикстур: импорт ищет файл рядом с импортирующим.
 const FIXTURE_DIR: &str = "tests/data/eval";
 const APP: &str = "import_enum_app.takt";
 

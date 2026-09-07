@@ -429,7 +429,7 @@ async fn the_configured_platforms_are_listed_in_order() {
         .iter()
         .map(|item| item["label"].as_str().expect("подпись").to_string())
         .collect();
-    // Порядок задаёт сервер и он исправлениеирован: Яндекс, ВКонтакте, Mail.
+    // Порядок задаёт сервер и он фиксирован: Яндекс, ВКонтакте, Mail.
     assert_eq!(ids, vec!["oauth.yandex", "oauth.vk", "oauth.mail"]);
     // Подпись - Ключ словаря, а не текст: текст переводится страницей.
     assert!(ids.iter().all(|key| key.starts_with("oauth.")));

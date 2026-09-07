@@ -42,7 +42,7 @@ fn build(src: &str) -> Result<takt_lang::semantic::ModelNode, takt_lang::diagnos
     construct_model(&tree, None, &[]).map(|m| m.take())
 }
 
-/// Читает исправлениетуру и строит дерево.
+/// Читает фикстуру и строит дерево.
 fn build_file(
     path: &str,
 ) -> Result<takt_lang::semantic::ModelNode, takt_lang::diagnostics::Diagnostic> {
@@ -67,7 +67,7 @@ fn parameter_is_a_keyword() {
     );
 }
 
-/// Ломающее лексическое изменение заисправлениеировано: `parameter` больше не годится в
+/// Ломающее лексическое изменение зафиксировано: `parameter` больше не годится в
 /// качестве имени. Проверка нужна, чтобы отказ был **осознанным** контрактом, а не
 /// побочным следствием, замеченным пользователем.
 #[test]

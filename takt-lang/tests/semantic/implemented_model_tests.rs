@@ -12,7 +12,7 @@
 use takt_lang::diagnostics::{Location, line_column};
 use takt_lang::{GenerateOptions, collect_compile_diagnostics};
 
-/// Каталог исправлениетур (он же путь поиска импорта).
+/// Каталог фикстур (он же путь поиска импорта).
 const DIR: &str = "tests/data/implemented0211";
 
 fn fixture(name: &str) -> (String, String) {
@@ -22,7 +22,7 @@ fn fixture(name: &str) -> (String, String) {
     (path, source)
 }
 
-/// Диагностики исправлениетуры: `(код, сообщение, строка, колонка)`.
+/// Диагностики фикстуры: `(код, сообщение, строка, колонка)`.
 ///
 /// Координата - та, что видит пользователь: строка и колонка **в символах** (в `.takt`
 /// есть кириллица).
@@ -45,7 +45,7 @@ fn diagnostics(name: &str) -> Vec<(String, String, usize, usize)> {
         .collect()
 }
 
-/// Возвращает `SE-106` исправлениетуры (ожидая ровно одну).
+/// Возвращает `SE-106` фикстуры (ожидая ровно одну).
 fn single_se106(name: &str) -> (String, usize, usize) {
     let found = diagnostics(name);
     let mut se106 = found.iter().filter(|(code, ..)| code == "SE-106");
@@ -61,7 +61,7 @@ fn single_se106(name: &str) -> (String, usize, usize) {
 
 // -- R1/R2: все формы реализации отвечают одинаково ---------------------------
 
-/// Формы реализации перечислены **списком**: исправлениетура, имя пустой модели и позиция её
+/// Формы реализации перечислены **списком**: фикстура, имя пустой модели и позиция её
 /// **использования** (координаты сняты зондом `taktc`, а не угаданы - правило проекта о
 /// новых тестах).
 const FORMS: [(&str, &str, usize, usize); 5] = [

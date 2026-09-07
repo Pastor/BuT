@@ -69,7 +69,7 @@ fn out_dir(tag: &str) -> std::path::PathBuf {
     dir
 }
 
-/// Компилирует исправлениетуру целью и возвращает текст вывода.
+/// Компилирует фикстуру целью и возвращает текст вывода.
 fn generate(tag: &str, target: &str) -> String {
     let dir = out_dir(tag);
     let path = dir.to_str().expect("путь");
@@ -135,7 +135,7 @@ fn c_access_matches_contract() {
     );
 }
 
-/// Цель `c-hal` отличается таблицей адресов и умолчаниеным HAL, но **не** формой доступа:
+/// Цель `c-hal` отличается таблицей адресов и принятым по умолчанию HAL, но **не** формой доступа:
 /// те же колбэки.
 #[test]
 fn c_hal_access_matches_contract() {

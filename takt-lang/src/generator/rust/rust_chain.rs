@@ -29,7 +29,7 @@ pub(crate) struct ConcatStep {
     /// Узел шага - по нему печать спускается вглубь (шаг сам может нести параллель со
     /// своей цепочкой).
     pub(crate) node: StateExtend,
-    /// Преисправление полей шага - та же формула, что в [`collect_instances`].
+    /// Префикс полей шага - та же формула, что в [`collect_instances`].
     pub(crate) prefix: String,
 }
 
@@ -48,7 +48,7 @@ pub(crate) fn step_variant(step: &StateExtend, idx: usize) -> Result<String, Dia
     })
 }
 
-/// Преисправление полей элемента композиции - та же формула, что в [`collect_instances`]: поля
+/// Префикс полей элемента композиции - та же формула, что в [`collect_instances`]: поля
 /// `struct` и печать такта обязаны смотреть на одни и те же имена.
 pub(crate) fn step_prefix(prefix: &str, step: &StateExtend, idx: usize) -> String {
     match step {
@@ -61,7 +61,7 @@ pub(crate) fn step_prefix(prefix: &str, step: &StateExtend, idx: usize) -> Strin
 
 /// Разбирает последовательную композицию на шаги.
 ///
-/// Преисправления полей строятся **той же** формулой, что и в [`collect_instances`], через
+/// Префикса полей строятся **той же** формулой, что и в [`collect_instances`], через
 /// общий [`step_prefix`].
 ///
 /// # Ошибки
@@ -159,7 +159,7 @@ impl Chain {
 /// Все последовательные композиции модели - включая вложенные, любой глубины.
 ///
 /// Обход - тот же, что у [`chain_site::chains`]: сначала сам узел, затем его элементы
-/// слева направо. Здесь он идёт по дереву **вместе с преисправлением** полей, потому что
+/// слева направо. Здесь он идёт по дереву **вместе с префиксом** полей, потому что
 /// шагам нужны имена экземпляров.
 pub(crate) fn model_concats(map: &RustMap, states: &[Name]) -> Result<Vec<Chain>, Diagnostic> {
     let mut out = Vec::new();

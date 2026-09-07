@@ -129,7 +129,7 @@ pub fn router() -> Router<Arc<AppState>> {
 async fn providers(State(state): State<Arc<AppState>>) -> Response {
     let mut out = Vec::new();
     let config = &state.config.oauth;
-    // Порядок задаёт сервер и он же исправлениеирован: Яндекс, ВКонтакте, Mail.
+    // Порядок задаёт сервер и он же фиксирован: Яндекс, ВКонтакте, Mail.
     if config.has_yandex() {
         out.push(ProviderJson {
             id: "yandex",
@@ -652,7 +652,7 @@ async fn user_subject(
 
 /// Адрес возврата, зарегистрированный у площадки.
 ///
-/// Строится только из настроенного внешнего адреса и преисправления - никогда из заголовка
+/// Строится только из настроенного внешнего адреса и префикса - никогда из заголовка
 /// `Host`: площадка сверяет его с зарегистрированным, а `Host` приходит от клиента.
 pub fn redirect_uri(state: &AppState, provider: &str) -> String {
     let base = state.config.public_url.trim_end_matches('/');

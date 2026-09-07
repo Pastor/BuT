@@ -325,7 +325,7 @@ pub(crate) fn eval_condition(
             ),
         )
         .with_code("SIM-013")),
-        // `Value` не представляет строки - пробел заисправлениеирован анализом.
+        // `Value` не представляет строки - пробел зафиксирован анализом.
         ConditionNode::String(_) => Err(Diagnostic::error(
             Location::Builtin,
             "строки не поддерживаются симулятором".to_string(),

@@ -129,7 +129,7 @@ fn refusal_shape_carries_path_line_column_and_code() {
     assert_eq!(code, 1, "отказ — это код 1");
 }
 
-/// **`--stdin`:** код и текст есть, преисправления пути нет - файла не существует.
+/// **`--stdin`:** код и текст есть, префикса пути нет - файла не существует.
 #[test]
 fn stdin_refusal_has_code_but_no_path_prefix() {
     use std::io::Write;

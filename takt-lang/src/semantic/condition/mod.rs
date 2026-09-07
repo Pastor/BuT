@@ -16,7 +16,7 @@
 /// (1553 строки) и расти не имеет права, а предмет вычислителя - частный случай разбора
 /// условия, то есть его законное место здесь.
 mod after_const;
-/// База постисправлениеной индексации в условии.
+/// База постфиксной индексации в условии.
 mod base;
 use base::{cond_base_is_array, cond_base_label};
 
@@ -166,7 +166,7 @@ pub fn resolve_condition(
         ast::Condition::AfterExpr(_, inner) => {
             after_const::resolve_after_expr(inner, model.clone())
         }
-        // Индексация - постисправление над выражением: `b.data[1]` в условии прежде не
+        // Индексация - постфикс над выражением: `b.data[1]` в условии прежде не
         // разбирался вовсе.
         ast::Condition::ArraySubscript(loc, base_cond, idx_cond) => {
             let base = resolve_condition(base_cond, model.clone())?;

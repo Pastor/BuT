@@ -1,10 +1,10 @@
-# Исправление 0098-01: форматирование дефолтного HAL цели c-hal
+# Исправление: форматирование принятого по умолчанию HAL цели c-hal
 
-> Фича: [../features/0098-port-bit-range-safe-hal.md](../features/0098-port-bit-range-safe-hal.md) (дефолтный HAL вынесен в `generator/c/c_hal.rs`)
+> Фича: [../features/0098-port-bit-range-safe-hal.md](../features/0098-port-bit-range-safe-hal.md) (принятый по умолчанию HAL вынесен в `generator/c/c_hal.rs`)
 
 ## Проблема
 
-Дефолтные функции HAL цели `c-hal` (`{Root}_default_read_bit`/`write_bit`/
+Принятые по умолчанию функции HAL цели `c-hal` (`{Root}_default_read_bit`/`write_bit`/
 `read_numeric`/`write_numeric`/`read_float`/`write_float`) генерировались **одной
 длинной строкой** (до ~800 символов): всё тело функции — объявления, `switch`,
 `case`-блоки — без переносов и отступов. В общем файле остальной порождённый C
@@ -29,9 +29,9 @@
 
 - `taktc compile -t c-hal lift.takt` — функции многострочные, отступы как в общем
   файле; самая длинная строка `.h` упала с ~800 до 93 символов.
-- `cc -c` порождённого c-hal — компилируется (гейт `precheck.sh`).
+- `cc -c` порождённого c-hal — компилируется (проверка `precheck.sh`).
 - Приложение «Порождённый код примера» (`book/src/17-showcase/generated/c-hal/`)
   перегенерировано.
 - Поведение цели не изменилось (только форматирование) — потактовые сверки
-  `conformance_c_*` в силе; `./scripts/precheck.sh` зелёный (вкл. гейт детерминизма
+  `conformance_c_*` в силе; `./scripts/precheck.sh` зелёный (вкл. проверка детерминизма
   кодогенерации: вывод по-прежнему воспроизводим побайтно).

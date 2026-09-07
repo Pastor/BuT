@@ -64,7 +64,7 @@ pub(super) fn parallel_access(state_local: &str, idx: usize) -> String {
     format!("model->{state_local}_parallel{idx}")
 }
 
-/// Преисправление перечислителей вложенной параллели шага.
+/// Префикс перечислителей вложенной параллели шага.
 pub(super) fn parallel_upper(state_unique_upper: &str, idx: usize) -> String {
     format!("{state_unique_upper}_PARALLEL{idx}")
 }

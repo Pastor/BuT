@@ -11,7 +11,7 @@ use takt_lang::lsp::{
     rename_in_workspace,
 };
 
-/// Каталог исправлениетур фичи.
+/// Каталог фикстур фичи.
 fn fixture(sub: &str) -> String {
     format!("{}/tests/data/ws0153/{sub}", env!("CARGO_MANIFEST_DIR"))
 }

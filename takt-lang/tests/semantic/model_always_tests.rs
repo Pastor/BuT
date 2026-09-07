@@ -147,7 +147,7 @@ fn sv_emits_model_level_always_before_case() {
     )
     .expect("порождение sv");
     let code = std::fs::read_to_string(dir.join("ma.sv")).expect(".sv");
-    // В always_comb инкремент идёт над `_next`; сигнал преисправленийан именем модуля.
+    // В always_comb инкремент идёт над `_next`; сигнал префиксован именем модуля.
     assert_before(
         &code,
         "ma_counter_n_next = (ma_counter_n_next + 1);",

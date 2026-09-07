@@ -220,7 +220,7 @@ pub(crate) fn eval_expression(
         ExpressionNode::Assign(_, _) => {
             Err(unsupported("присваивание внутри выражения", expr.loc()))
         }
-        // `Value` не представляет строки - пробел заисправлениеирован анализом.
+        // `Value` не представляет строки - пробел зафиксирован анализом.
         ExpressionNode::String(_) => Err(unsupported("строки", expr.loc())),
         ExpressionNode::Type(_) => Err(unsupported("тип как выражение", expr.loc())),
         ExpressionNode::Model(_) => Err(unsupported("модель как выражение", expr.loc())),

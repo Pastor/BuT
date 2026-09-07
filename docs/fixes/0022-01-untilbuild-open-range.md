@@ -1,4 +1,4 @@
-# Исправление 0022-01: открытый верхний диапазон совместимости IDE
+# Исправление: открытый верхний диапазон совместимости IDE
 
 > Фича: [../features/0022-intellij-syntax-highlight.md](../features/0022-intellij-syntax-highlight.md) · анализ: [../features/0022-intellij-syntax-highlight.md#анализ](../features/0022-intellij-syntax-highlight.md#анализ) · отчёт: [../features/0022-intellij-syntax-highlight.md#отчёт-о-тестировании](../features/0022-intellij-syntax-highlight.md#отчёт-о-тестировании)
 

@@ -1,6 +1,6 @@
-# Исправление 0023-01: проверка совместимости с новыми IDE (verifyPlugin) + валидность дескриптора
+# Исправление: проверка совместимости с новыми IDE (verifyPlugin) + валидность дескриптора
 
-> Фича: [../features/0023-intellij-navigation-include.md](../features/0023-intellij-navigation-include.md) · отчёт: [../features/0023-intellij-navigation-include.md#отчёт-о-тестировании](../features/0023-intellij-navigation-include.md#отчёт-о-тестировании) · связан с фиксом [0022-01](0022-01-untilbuild-open-range.md)
+> Фича: [../features/0023-intellij-navigation-include.md](../features/0023-intellij-navigation-include.md) · отчёт: [../features/0023-intellij-navigation-include.md#отчёт-о-тестировании](../features/0023-intellij-navigation-include.md#отчёт-о-тестировании) · связан с исправлением [открытый верхний диапазон совместимости IDE](0022-01-untilbuild-open-range.md)
 
 ## Проблема
 
@@ -15,7 +15,7 @@
 2. **Невалидный `until-build`.** Собранный дескриптор содержал
    `<idea-version since-build="241" until-build="" />` — пустой атрибут. Plugin
    Verifier забраковал его: *«The `<until-build>` attribute with only a branch
-   number () is not valid»*. Источник — приём фикса [0022-01](0022-01-untilbuild-open-range.md):
+   number () is not valid»*. Источник — приём [открытый верхний диапазон совместимости IDE](0022-01-untilbuild-open-range.md):
    `untilBuild = …orElse("")` эмитит **пустую строку** вместо отсутствия атрибута.
    При установке из файла это проходило (RustRover 261), но формально дескриптор
    невалиден (и был бы отклонён Marketplace/verifier).
@@ -30,7 +30,7 @@
   При пустом значении провайдер становится «отсутствующим», и атрибут `until-build`
   **не эмитится вовсе** → `<idea-version since-build="241" />`. Это валидно и для
   verifier, и для установки в любые новые IDE (истинно открытый верхний диапазон).
-  Уточняет подход [0022-01](0022-01-untilbuild-open-range.md).
+  Уточняет подход [открытый верхний диапазон совместимости IDE](0022-01-untilbuild-open-range.md).
 - **Настройка verifyPlugin:** в `dependencies { intellijPlatform { … } }` добавлен
   `pluginVerifier()` (CLI); блок `pluginVerification { ides { … } }` с явным
   спредом свежих релизов IC **строковой** нотацией (важно: `ide(type, version)`

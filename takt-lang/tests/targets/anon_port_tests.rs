@@ -72,7 +72,7 @@ fn diagnostics(src: &str) -> Vec<takt_lang::diagnostics::Diagnostic> {
     takt_lang::collect_compile_diagnostics("probe", src, &[], false)
 }
 
-/// Код первой диагностики с указанным преисправлением, если она есть.
+/// Код первой диагностики с указанным префиксом, если она есть.
 fn has_code(src: &str, code: &str) -> bool {
     diagnostics(src)
         .iter()

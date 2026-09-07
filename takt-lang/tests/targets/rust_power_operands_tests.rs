@@ -51,7 +51,7 @@ fn generate_rust(tag: &str, source: &str) -> (PathBuf, String) {
 
 /// **T1.** База-литерал получает тип приёмника СУФИсправлением, а не приведением.
 ///
-/// Суфисправление, а не `as`: `2 as u32` - это `clippy::unnecessary_cast`, то есть обмен
+/// Суффикс, а не `as`: `2 as u32` - это `clippy::unnecessary_cast`, то есть обмен
 /// одного отказа проверки на другой.
 #[test]
 fn literal_base_takes_the_target_type() {

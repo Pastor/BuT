@@ -18,10 +18,10 @@
 use std::path::Path;
 use std::process::Command;
 
-/// Каталог исправлениетур.
+/// Каталог фикстур.
 const FIXTURE_DIR: &str = "tests/data/eval";
 const MODEL: &str = "invariant_scope.takt";
-/// Имя порождаемой единицы - по имени корневой модели исправлениетуры.
+/// Имя порождаемой единицы - по имени корневой модели фикстуры.
 const UNIT: &str = "invariant_scope";
 /// Сколько тактов сверяем: два шага в `Go` и один в `Done`.
 const TICKS: usize = 3;

@@ -51,7 +51,7 @@ fn alias_may_reference_struct_declared_below() {
 /// Псевдоним ссылается на псевдоним, объявленный ниже.
 ///
 /// Значение псевдонима - уже разрешённый тип, поэтому одного прохода мало: проверка
-/// тестыт разрешение **до неподвижной точки**.
+/// проверяет разрешение **до неподвижной точки**.
 #[test]
 fn alias_may_reference_alias_declared_below() {
     build("type A = B; type B = u8; var x: A := 3; start Run { always { } }")

@@ -114,7 +114,7 @@ fn collect_transition_completeness(model: &Rc<RefCell<ModelNode>>, out: &mut Vec
     let model_name = borrowed.name.clone().unwrap_or_default();
     let model_loc = borrowed.loc;
 
-    // Строит преисправление для сообщений: "модель 'M'" или пустую строку для корня
+    // Строит префикс для сообщений: "модель 'M'" или пустую строку для корня
     let model_prefix = if model_name.is_empty() {
         String::new()
     } else {

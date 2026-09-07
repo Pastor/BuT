@@ -7,7 +7,7 @@ use std::process::Command;
 
 const DIR: &str = "tests/data/diag54";
 
-/// Запускает симулятор на исправлениетуре и возвращает stderr (исправлениетуры ошибочны).
+/// Запускает симулятор на фикстуре и возвращает stderr (фикстуры ошибочны).
 fn stderr_of(fixture: &str) -> String {
     let out = Command::new(env!("CARGO_BIN_EXE_takt-sim"))
         .args([&format!("{DIR}/{fixture}"), "-I", DIR, "--steps", "3"])

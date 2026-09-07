@@ -10,7 +10,7 @@
 use crate::semantic::bit_vector::{self, BitVectorLayout};
 use crate::semantic::{ExpressionNode, VariableNode};
 
-/// Маска одного разряда. Суфисправление `ull` обязателен: без него литерал - 32-битный
+/// Маска одного разряда. Суффикс `ull` обязателен: без него литерал - 32-битный
 /// `unsigned int`, и разряд >= 32 даёт `shift count >= width of type`.
 pub(in crate::generator::c) const ONE: &str = "1ull";
 

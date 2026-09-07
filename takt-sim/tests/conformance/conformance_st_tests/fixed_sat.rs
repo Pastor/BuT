@@ -23,7 +23,7 @@ const OBSERVED_SAT: &[(&str, &str)] = &[
     ("neg", "FIXED_SAT_W120.NEG"),
 ];
 
-/// Трасса представлений исправлениетуры насыщения (та же, что у целей `c` и `sv`: тестовые
+/// Трасса представлений фикстуры насыщения (та же, что у целей `c` и `sv`: тестовые
 /// файлы - разные крейты, общего модуля у них нет).
 fn expected_sat_w12() -> Vec<Vec<i128>> {
     vec![
@@ -186,7 +186,7 @@ fn fixed_saturation_matches_generated_st() {
         eprintln!("cc недоступен — сверка насыщения ST пропущена");
         return;
     }
-    // Имя каталога уникально по исправлениетуре и процессу - как у соседних сверок ST.
+    // Имя каталога уникально по фикстуре и процессу - как у соседних сверок ST.
     let dir = std::env::temp_dir().join(format!("st_conf_fixed_sat_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("рабочий каталог");

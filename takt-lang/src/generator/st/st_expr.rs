@@ -39,7 +39,7 @@
 //! преобразование делается **в месте операции**, а не в объявлении.
 
 // Тип операнда живёт своим модулем; имена доступны отсюда - их зовут печатники
-// выражений, операторов и исправлениеированной точки.
+// выражений, операторов и фиксированной точки.
 use crate::generator::st::st_operand_type::variable_type;
 pub(crate) use crate::generator::st::st_operand_type::{inner_expr_type, inner_expr_type_in};
 
@@ -351,7 +351,7 @@ pub(crate) fn variable_ident(var: &VariableNode) -> String {
     variable_name(var)
 }
 
-/// преисправления - автор искал место сам.
+/// префикса - автор искал место сам.
 pub(crate) fn unsupported(what: &str) -> Diagnostic {
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
@@ -598,7 +598,7 @@ fn shift(
 
 /// Знаково ли выражение - по объявленному типу либо явному приведению.
 ///
-/// Признак отестен: не узнав знака, отвечает `false`, и печатается прежняя форма
+/// Признак осторожен: не узнав знака, отвечает `false`, и печатается прежняя форма
 /// через битовую строку. Ошибка - в сторону прежнего поведения.
 fn is_signed_expr(expr: &ExpressionNode) -> bool {
     matches!(

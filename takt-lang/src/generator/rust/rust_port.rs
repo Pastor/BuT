@@ -42,7 +42,7 @@ use crate::semantic::type_node::TypeNode;
 /// получает трейт из двух методов, а не "на все случаи жизни".
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct PortClass {
-    /// Суфисправление имён (`Bit` -> `InBitPort`/`OutBitPort`, `read_bit`/`write_bit`).
+    /// Суффикс имён (`Bit` -> `InBitPort`/`OutBitPort`, `read_bit`/`write_bit`).
     tag: String,
     /// Тип значения порта в Rust (`bool`, `u8`, `f64`).
     value_type: String,

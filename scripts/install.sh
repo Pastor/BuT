@@ -8,14 +8,14 @@
 #
 # Использование:
 # scripts/install.sh # собрать и поставить в ~/.local/bin
-#   scripts/install.sh --prefix /usr/local # другой преисправление (bin/ внутри него)
+#   scripts/install.sh --prefix /usr/local # другой префикс (bin/ внутри него)
 # scripts/install.sh --no-lsp # без языкового сервера
 # scripts/install.sh --build-only # только собрать, не устанавливать
 # scripts/install.sh --check # проверить установленное и выйти
 # scripts/install.sh --dry-run # показать, что было бы сделано
 #
 # Переменные окружения:
-# TAKT_PREFIX преисправление установки (по умолчанию ~/.local)
+# TAKT_PREFIX префикс установки (по умолчанию ~/.local)
 # CARGO_TARGET_DIR каталог сборки (по умолчанию <репозиторий>/target/install)
 #
 # Каталог сборки по умолчанию - Свой (`target/install`), а не общий `target`.

@@ -157,7 +157,7 @@ fn array_values_match_generated_sv() {
 ///
 /// С такой вход отсекает **семантика** (`SE-123`) - раньше, чем цель до него доходит:
 /// длину агрегата сверяют теперь все девять потребителей, а не одна цель. Проверка цели
-/// осталась страховкой и тестытся здесь по коду: `SV-002` она вернуть уже не
+/// осталась страховкой и проверяется здесь по коду: `SV-002` она вернуть уже не
 /// успевает.
 #[test]
 fn aggregate_size_mismatch_is_refused() {
@@ -181,7 +181,7 @@ fn aggregate_size_mismatch_is_refused() {
 const INDEX_FIXTURE: &str = "tests/data/eval/conformance_sv_array_index.takt";
 const INDEX_UNIT: &str = "svarrayindex";
 
-/// Трасса эталона по исправлениетуре 0365: `(probe, picked, spare)`.
+/// Трасса эталона по фикстуре 0365: `(probe, picked, spare)`.
 fn index_simulator_trace() -> Vec<(i128, i128, i128)> {
     let source = std::fs::read_to_string(INDEX_FIXTURE).expect("фикстура читается");
     let (ast, _) = takt_lang::parse(&source, 0).expect("разбор фикстуры");
@@ -199,7 +199,7 @@ fn index_simulator_trace() -> Vec<(i128, i128, i128)> {
     trace
 }
 
-/// Трасса порождённого RTL по исправлениетуре 0365.
+/// Трасса порождённого RTL по фикстуре 0365.
 fn index_generated_sv_trace(dir: &Path) -> Vec<(i128, i128, i128)> {
     let source = std::fs::read_to_string(INDEX_FIXTURE).expect("фикстура читается");
     takt_lang::compile_to_sv(
@@ -313,7 +313,7 @@ fn unpacked_array_reset_and_variable_index_match_generated_sv() {
 ///
 /// Сверка значений выше этого не доказывает: тестбенч собирается с `-Wno-fatal`,
 /// поэтому `WIDTHTRUNC` её не роняет (проверено мутацией "не сужать индекс" - трасса
-/// совпадала). Сужение индекса тестыт только линт, а проверка цели считает предупреждение
+/// совпадала). Сужение индекса проверяет только линт, а проверка цели считает предупреждение
 /// ошибкой.
 #[test]
 fn unpacked_array_passes_target_lint() {
@@ -355,7 +355,7 @@ fn unpacked_array_passes_target_lint() {
 const STRUCT_FIXTURE: &str = "tests/data/eval/conformance_sv_struct_array.takt";
 const STRUCT_UNIT: &str = "svstructarray";
 
-/// Трасса эталона по исправлениетуре 0367: `(head, tail, spare)`.
+/// Трасса эталона по фикстуре 0367: `(head, tail, spare)`.
 fn struct_simulator_trace() -> Vec<(i128, i128, i128)> {
     let source = std::fs::read_to_string(STRUCT_FIXTURE).expect("фикстура читается");
     let (ast, _) = takt_lang::parse(&source, 0).expect("разбор фикстуры");
@@ -373,7 +373,7 @@ fn struct_simulator_trace() -> Vec<(i128, i128, i128)> {
     trace
 }
 
-/// Трасса порождённого RTL по исправлениетуре 0367.
+/// Трасса порождённого RTL по фикстуре 0367.
 fn struct_generated_sv_trace(dir: &Path) -> Vec<(i128, i128, i128)> {
     let source = std::fs::read_to_string(STRUCT_FIXTURE).expect("фикстура читается");
     takt_lang::compile_to_sv(
@@ -524,7 +524,7 @@ fn struct_array_is_synthesizable() {
 const PARAM_FIXTURE: &str = "tests/data/eval/conformance_sv_array_param.takt";
 const PARAM_UNIT: &str = "svarrayparam";
 
-/// Трасса эталона по исправлениетуре 0369: `(low, high, sum)`.
+/// Трасса эталона по фикстуре 0369: `(low, high, sum)`.
 fn param_simulator_trace() -> Vec<(i128, i128, i128)> {
     let source = std::fs::read_to_string(PARAM_FIXTURE).expect("фикстура читается");
     let (ast, _) = takt_lang::parse(&source, 0).expect("разбор фикстуры");
@@ -542,7 +542,7 @@ fn param_simulator_trace() -> Vec<(i128, i128, i128)> {
     trace
 }
 
-/// Трасса порождённого RTL по исправлениетуре 0369.
+/// Трасса порождённого RTL по фикстуре 0369.
 fn param_generated_sv_trace(dir: &Path) -> Vec<(i128, i128, i128)> {
     let source = std::fs::read_to_string(PARAM_FIXTURE).expect("фикстура читается");
     takt_lang::compile_to_sv(

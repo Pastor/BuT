@@ -427,7 +427,7 @@ fn array_subscript_on_non_array_is_error() {
 }
 
 // Тесты `var_type_simple`/`var_type_unresolved` сняты вместе с функцией: тип базы
-// постисправления даёт теперь общий носитель `semantic::validate::base_type`, а тип
+// постфикса даёт теперь общий носитель `semantic::validate::base_type`, а тип
 // переменной читается её собственным `ty()`. Тест без своего предмета - декорация.
 
 /// `check_slice_bounds`: допустимый срез [1:6] для массива size=8 - ок.

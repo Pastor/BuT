@@ -1,5 +1,5 @@
 //! Интеграционные тесты верификации LTL: вердикт `taktc verify` через публичный API на
-//! исправлениетурах `tests/data/verify/`.
+//! фикстурах `tests/data/verify/`.
 //!
 //! Тесты - **на вердикт и контрпример**, а не на структуру автомата/произведения
 //! (капкан: зелёные тесты на структуру при неверной семантике; риск Р7 анализа).
@@ -21,7 +21,7 @@ fn model_of(fixture: &str) -> Rc<RefCell<takt_lang::semantic::ModelNode>> {
     construct_model(&ast, None, &[]).unwrap_or_else(|d| panic!("{path}: семантика — {d:?}"))
 }
 
-/// Единственный вердикт исправлениетуры (в каждой ровно одна `: [LTL] φ;`).
+/// Единственный вердикт фикстуры (в каждой ровно одна `: [LTL] φ;`).
 fn verdict_of(fixture: &str) -> Verdict {
     let results = takt_lang::verify_all(model_of(fixture));
     assert_eq!(
@@ -508,7 +508,7 @@ fn formula_in_state_named_block_is_scoped_to_the_state() {
 // Тесты - на вердикт и на состав пропущенного, а не на поле `origin`: признак в дереве -
 // средство, а пользователь видит код возврата.
 
-/// Модель из `import` с исправлениетурами-импортами (нужны search_paths).
+/// Модель из `import` с фикстурами-импортами (нужны search_paths).
 fn model_with_imports(fixture: &str) -> Rc<RefCell<takt_lang::semantic::ModelNode>> {
     let path = format!("tests/data/verify/{fixture}");
     let source = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));

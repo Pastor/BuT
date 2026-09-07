@@ -228,7 +228,7 @@ const AGG_FIXTURE: &str = "tests/data/eval/st_nested_aggregate.takt";
 const AGG_ROOT: &str = "STNESTEDAGGREGATE";
 const AGG_OBSERVED: &[(&str, &str)] = &[("n", "GRID0.N"), ("a", "GRID0.A"), ("b", "GRID0.B")];
 
-/// Трасса эталона по исправлениетуре вложенного агрегата.
+/// Трасса эталона по фикстуре вложенного агрегата.
 fn aggregate_simulate_trace() -> Vec<Vec<i128>> {
     let source = std::fs::read_to_string(AGG_FIXTURE).expect("фикстура читается");
     let (ast, _) = takt_lang::parse(&source, 0).expect("разбор");
@@ -251,7 +251,7 @@ fn aggregate_simulate_trace() -> Vec<Vec<i128>> {
     trace
 }
 
-/// Трасса цели `st` по той же исправлениетуре.
+/// Трасса цели `st` по той же фикстуре.
 fn aggregate_st_trace(dir: &Path, iec2c: &Path, lib: &Path) -> Vec<Vec<i128>> {
     let source = std::fs::read_to_string(AGG_FIXTURE).expect("фикстура читается");
     let st_dir = dir.join("st");

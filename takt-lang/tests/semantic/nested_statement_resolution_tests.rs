@@ -17,7 +17,7 @@
 
 use takt_lang::collect_compile_diagnostics;
 
-/// Читает исправлениетуру каталога `tests/data/nested0155/`.
+/// Читает фикстуру каталога `tests/data/nested0155/`.
 fn fixture(name: &str) -> (String, String) {
     let path = format!("tests/data/nested0155/{name}");
     let source =
@@ -25,7 +25,7 @@ fn fixture(name: &str) -> (String, String) {
     (path, source)
 }
 
-/// Коды диагностик, выданных на исправлениетуре.
+/// Коды диагностик, выданных на фикстуре.
 fn codes(name: &str) -> Vec<String> {
     let (path, source) = fixture(name);
     collect_compile_diagnostics(&path, &source, &[], false)
@@ -34,7 +34,7 @@ fn codes(name: &str) -> Vec<String> {
         .collect()
 }
 
-/// Проверяет, что исправлениетура даёт `SE-003` с указанием потерянного имени.
+/// Проверяет, что фикстура даёт `SE-003` с указанием потерянного имени.
 fn expect_unknown_identifier(name: &str) {
     let (path, source) = fixture(name);
     let diagnostics = collect_compile_diagnostics(&path, &source, &[], false);
@@ -75,7 +75,7 @@ fn unknown_identifier_in_while_body_is_diagnosed() {
 #[test]
 fn unknown_identifier_in_loop_body_is_diagnosed() {
     // `loop` и `while` - синонимы (одна ветка АСД), но точка глотания одна на обе: тест
-    // исправлениеирует, что синоним не имеет своей лазейки.
+    // фиксирует, что синоним не имеет своей лазейки.
     expect_unknown_identifier("loop_body_unknown.takt");
 }
 
@@ -111,7 +111,7 @@ fn unknown_identifier_nested_in_match_arm_is_diagnosed() {
 fn resolution_error_in_inline_guard_is_diagnosed() {
     // Шестая точка глотания - `filter_map(|c| resolve_condition(c, ...).ok())`:
     // формула, чьё условие не разрешилось, молча выпадала из списка, и тест
-    // переставал тестыть, не сказав ни слова.
+    // переставал проверять, не сказав ни слова.
     //
     // Проверяется ошибка **разрешения**, а не неизвестное имя: для неизвестного имени
     // `resolve_condition` возвращает `Ok(Unresolved(...))` - это инвариант рёбер `ref`, -

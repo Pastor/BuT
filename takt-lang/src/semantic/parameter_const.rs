@@ -190,7 +190,7 @@ fn scan_element(element: &ast::ModelElement, scan: &mut Scan) {
         }
         ast::ModelElement::Function(def) => {
             // Тело функции обходится независимо от того, зовут ли её: неверный ответ
-            // "константа" дороже лишней отестности.
+            // "константа" дороже лишней осторожности.
             if let Some(body) = &def.body {
                 scan_statement(body, scan);
             }

@@ -79,7 +79,7 @@ fn sorted_entries(resolution: &AddressResolution) -> Vec<&ResolvedAddress> {
 ///
 /// Адрес - `0x` + 8 hex-цифр с ведущими нулями (`{:#010x}`): типовая ширина MMIO-адреса
 /// и совпадает с примерами формата. Круговой рейс не зависит от ширины (парсер
-/// принимает любую), но исправлениеированная ширина делает `diff` осмысленным.
+/// принимает любую), но фиксированная ширина делает `diff` осмысленным.
 fn write_map_line(out: &mut String, name: &str, addr: i64, bit: Option<i64>) {
     match bit {
         Some(b) => {

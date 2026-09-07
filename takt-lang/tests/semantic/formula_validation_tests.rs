@@ -3,7 +3,7 @@
 //! ## Что здесь ловится
 //!
 //! `validate` не обходил формулы вовсе: `: [Guard] levl < 3;` (опечатка в имени)
-//! принималось **молча**. Средство безопасности переставало тестыть, а автор об этом
+//! принималось **молча**. Средство безопасности переставало проверять, а автор об этом
 //! не узнавал: цель `c` печатала `assert( < 3);` - и отказ приходил от чужого
 //! инструмента (`cc: expected expression`), цель `rust` отвечала `RS-011`, цели
 //! `st`/`sv` формулу не печатали вовсе, а симулятор падал `SIM-016` **в такте**. Один
@@ -11,7 +11,7 @@
 
 use takt_lang::collect_compile_diagnostics;
 
-/// Читает исправлениетуру каталога `tests/data/formula0203/`.
+/// Читает фикстуру каталога `tests/data/formula0203/`.
 fn fixture(name: &str) -> (String, String) {
     let path = format!("tests/data/formula0203/{name}");
     let source =
@@ -19,7 +19,7 @@ fn fixture(name: &str) -> (String, String) {
     (path, source)
 }
 
-/// Диагностики исправлениетуры: пары "код - сообщение".
+/// Диагностики фикстуры: пары "код - сообщение".
 fn diagnostics(name: &str) -> Vec<(String, String)> {
     let (path, source) = fixture(name);
     collect_compile_diagnostics(&path, &source, &[], false)

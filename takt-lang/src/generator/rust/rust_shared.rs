@@ -89,7 +89,7 @@ pub(crate) fn shared_union(map: &RustMap) -> Vec<(String, TypeNode)> {
 /// Имя типа `Shared` корня: `<Root>Shared`.
 ///
 /// Тип **один на корень** (а не голое `Shared`): в плоском модуле цели `rust` модели
-/// соседствуют, и `Shared` без преисправления столкнулось бы. Уточнение реализации к (тот
+/// соседствуют, и `Shared` без префикса столкнулось бы. Уточнение реализации к (тот
 /// приводил имя `Shared` условно).
 pub(crate) fn shared_type_name(map: &RustMap) -> String {
     format!("{}Shared", map.root_name().unique_camelcase())

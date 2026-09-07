@@ -1,4 +1,4 @@
-//! База постисправлениеной индексации в условии.
+//! База постфиксной индексации в условии.
 //!
 //! Условие - своё дерево (`ConditionNode`), и общий носитель типа
 //! (`semantic::validate::base_type`) работает по `ExpressionNode`. Поэтому знание о
@@ -13,7 +13,7 @@ use super::*;
 /// Как назвать базу условия в диагностике.
 ///
 /// Имя переменной, когда оно есть: диагностика обязана называть предмет, а не говорить
-/// о "значении" (тест `diagnostic_code_presence_tests` тестыт это).
+/// о "значении" (тест `diagnostic_code_presence_tests` проверяет это).
 pub(super) fn cond_base_label(base: &ConditionNode) -> String {
     match base {
         ConditionNode::Variable(var, _) => format!("'{}'", var.borrow().name()),

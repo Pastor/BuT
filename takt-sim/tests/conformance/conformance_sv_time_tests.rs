@@ -42,7 +42,7 @@ fn sim_value(unit: &Unit, name: &str) -> i128 {
 /// Каталог сборки под конкретный тест.
 ///
 /// Имя потока обязательно: тесты идут параллельно, каждый помощник начинает с
-/// `remove_dir_all`, а преисправление `takt_conformance_sv_` тот же, что у
+/// `remove_dir_all`, а префикс `takt_conformance_sv_` тот же, что у
 /// `conformance_sv_tests` - совпади теги, тесты сносили бы каталог друг у друга.
 fn build_dir(tag: &str) -> std::path::PathBuf {
     let thread = std::thread::current()

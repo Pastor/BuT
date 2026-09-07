@@ -25,7 +25,7 @@ use crate::semantic::{ModelNode, StateNode};
 /// Экземпляр под-`FUNCTION_BLOCK` внутри родительского FB.
 ///
 /// Аналог поля `StackerCommandReceiver command_receiver0;` в структуре цели `c` (Ф6).
-/// Числовой суфисправление обязателен: одна и та же модель может входить в композицию
+/// Числовой суффикс обязателен: одна и та же модель может входить в композицию
 /// **несколько раз** (`elevator.takt:198` включает `Engine` пять раз).
 #[derive(Debug)]
 pub(crate) struct Instance {
@@ -395,7 +395,7 @@ fn emit_instance(
     prefix: &str,
     out: &mut BodyOutput,
 ) -> Result<String, Diagnostic> {
-    // Числовой суфисправление - по образцу цели `c` (`start_a0`, `start_b1`): одна и та же
+    // Числовой суффикс - по образцу цели `c` (`start_a0`, `start_b1`): одна и та же
     // модель может входить в композицию несколько раз.
     let index = out.instances.len();
     let inst = format!(

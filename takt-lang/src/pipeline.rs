@@ -67,7 +67,7 @@ pub(crate) fn parse_and_construct(
             d.notes.push(diagnostics::Note {
                 // Позиции у подсказки нет по существу: она говорит о другом файле, и
                 // координата в своём была бы ложью. `Location::Codegen` печатается без
-                // преисправления - на файл указывает сам текст заметки.
+                // префикса - на файл указывает сам текст заметки.
                 loc: diagnostics::Location::Codegen,
                 message: note,
             });

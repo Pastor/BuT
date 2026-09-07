@@ -430,7 +430,7 @@ fn test_bit_access_port_read_in_condition() {
 /// Чтение бита переменной в блоке `always`: `x = flags.3` -> `((model->flags >> 3) &
 /// 1ull)`
 ///
-/// Суфисправление маски - `ull` с: литерал `1u` есть 32-битный `unsigned int`, и та же форма
+/// Суффикс маски - `ull` с: литерал `1u` есть 32-битный `unsigned int`, и та же форма
 /// при разряде >= 32 давала `shift count >= width of type` даже у скалярного `u64`.
 #[test]
 fn test_bit_access_var_read_in_always() {

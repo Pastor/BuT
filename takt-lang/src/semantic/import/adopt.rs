@@ -291,7 +291,7 @@ pub(in crate::semantic) fn adopt_whole_file(
     // библиотеки (`functions.clear()`), и обход её поддерева их не видит. Без этого
     // ячейки вызовов внутри них оставались привязанными к прежнему владельцу, и при
     // Транзитивном импорте цели `c` и `st` печатали определение и вызов с разными
-    // преисправлениями - "call to undeclared function" при нулевом коде возврата `taktc`.
+    // префиксами - "call to undeclared function" при нулевом коде возврата `taktc`.
     for name in &moved {
         let mut taken = importer.borrow_mut().functions.remove(name);
         if let Some(f) = taken.as_mut() {

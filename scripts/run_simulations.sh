@@ -30,10 +30,10 @@ for sim_file in "$SIM_DIR"/*.json; do
   # Имя файла без пути и расширения: stacker_loading
   base="$(basename "$sim_file" .json)"
 
-  # Имя модели - самый длинный преисправление `base` (по `_`), для которого есть.takt.
+  # Имя модели - самый длинный префикс `base` (по `_`), для которого есть.takt.
   # Прежде бралась часть до первого `_` (`${base%%_*}`), что ломалось на именах
   # моделей с подчёркиванием: `elevator_mini_floor2` -> `elevator` вместо
-  # `elevator_mini`. Отсекаем суфисправление справа, пока не найдём.takt.
+  # `elevator_mini`. Отсекаем суффикс справа, пока не найдём.takt.
   candidate="$base"
   takt_file=""
   model="$candidate"

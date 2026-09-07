@@ -34,7 +34,7 @@ else
     exit 1
 fi
 
-# 2. Пропавший суфисправление ловится (Z1).
+# 2. Пропавший суффикс ловится (Z1).
 CASE="$TMP/z1"
 copy_tree "$CASE"
 sed -i.bak 's/path_suffixes = \["takt"\]/path_suffixes = ["other"]/' \

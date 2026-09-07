@@ -69,7 +69,7 @@ fn variable_typed_through_reference_runs_and_counts() {
 ///
 /// До фичи форма работала **в обход типа**: вычислитель выдержки трактовал
 /// `Inference`/`Unsupported` как "вывод сюда не дошёл" и решал по значению. Тест
-/// тестыт, что появившийся тип ничего не сдвинул.
+/// проверяет, что появившийся тип ничего не сдвинул.
 #[test]
 fn dwell_through_reference_matches_literal_form() {
     let by_ref = dwell_tick(DWELL_REF);

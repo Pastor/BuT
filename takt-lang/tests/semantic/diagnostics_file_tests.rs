@@ -6,7 +6,7 @@ use takt_lang::diagnostics::{FileTable, Location, line_column};
 
 const DIR: &str = "tests/data/diag53";
 
-/// Компилирует исправлениетуру и возвращает диагностику (исправлениетуры заведомо ошибочны).
+/// Компилирует фикстуру и возвращает диагностику (фикстуры заведомо ошибочны).
 fn error_of(fixture: &str) -> takt_lang::diagnostics::Diagnostic {
     let path = format!("{DIR}/{fixture}");
     let source = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));

@@ -100,7 +100,7 @@ fn constant_value(
         // значение к моменту сброса не определено.
         ExpressionNode::Variable(var) => match &*var.borrow() {
             // Имя печатается тем же правилом, что и в выражениях
-            // (`sv_expr::const_signal`): константа-параметр несёт преисправление владельца,
+            // (`sv_expr::const_signal`): константа-параметр несёт префикс владельца,
             // иначе ветвь сброса ссылалась бы на localparam соседа.
             VariableNode::Const { upper, name, .. } => Ok(
                 crate::generator::sv::sv_names::const_signal(upper.as_ref(), name),

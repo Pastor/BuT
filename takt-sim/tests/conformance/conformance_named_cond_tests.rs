@@ -164,7 +164,7 @@ fn generated_c_inlines_named_condition() {
     .expect("порождение C");
     let text = std::fs::read_to_string(dir.join(format!("{UNIT}.c"))).expect("чтение вывода");
     // Ищется использование макроса (`if (COND...`), а не подстрока `COND_`: имя модели
-    // исправлениетуры само содержит `COND` (`CONFORMANCE_NAMED_COND_...`), и наивная проверка
+    // фикстуры само содержит `COND` (`CONFORMANCE_NAMED_COND_...`), и наивная проверка
     // падала на верном выводе.
     assert!(
         !text.contains("if (COND"),

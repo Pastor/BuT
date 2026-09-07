@@ -13,7 +13,7 @@ use std::process::Command;
 
 const DIR: &str = "tests/data/bitrange";
 
-/// Запускает симулятор на исправлениетуре; `ok` - ожидается ли успех.
+/// Запускает симулятор на фикстуре; `ok` - ожидается ли успех.
 fn run(fixture: &str, ok: bool) -> String {
     let out = Command::new(env!("CARGO_BIN_EXE_takt-sim"))
         .args([&format!("{DIR}/{fixture}"), "--steps", "2"])

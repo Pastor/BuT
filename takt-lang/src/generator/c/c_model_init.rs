@@ -426,7 +426,7 @@ fn generate_wide_bits_init(
 /// Генерирует вызовы `_init` для элементов параллельного блока (рекурсивно).
 ///
 /// * `parent_access` - путь к полю-структуре параллели (например, `"model->start"`).
-/// * `parent_unique_upper` - уникальный преисправление enum в UPPER_SNAKE_CASE
+/// * `parent_unique_upper` - уникальный префикс enum в UPPER_SNAKE_CASE
 ///   (например, `"EXTEND_COMPLEX_C_START"`), используется для формирования имён
 ///   enum-вариантов вложенных параллелей.
 fn generate_parallel_items_init(
@@ -551,7 +551,7 @@ fn variant_of(
 /// соответствующий вариант enum `{state_local}_state`.
 ///
 /// * `state_local` - локальное имя состояния в lowercase_snake_case (например, `"start"`).
-/// * `state_unique_upper` - уникальный преисправление enum в UPPER_SNAKE_CASE
+/// * `state_unique_upper` - уникальный префикс enum в UPPER_SNAKE_CASE
 ///   (например, `"EXTEND_COMPLEX_START"`).
 pub(super) fn generate_concat_item_init(
     printer: &mut Printer,

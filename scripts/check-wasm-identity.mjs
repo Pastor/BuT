@@ -286,7 +286,7 @@ async function main() {
     .sort();
   let traced = 0;
   for (const name of scenarios) {
-    // Имя модели - самый длинный преисправление сценария, для которого есть `.takt`
+    // Имя модели - самый длинный префикс сценария, для которого есть `.takt`
     // (то же правило, что у `scripts/run_simulations.sh`).
     let candidate = basename(name, ".json");
     let modelFile = null;

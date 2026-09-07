@@ -41,7 +41,7 @@ pub(crate) struct HoistedLocal {
     pub(crate) name: String,
     /// Объявление типа, уже отображённое в SystemVerilog.
     pub(crate) decl: String,
-    /// Нулевые умолчания: `(суффикс пути, значение)`; пустой суфисправление - целиком.
+    /// Нулевые умолчания: `(суффикс пути, значение)`; пустой суффикс - целиком.
     pub(crate) defaults: Vec<(String, String)>,
 }
 
