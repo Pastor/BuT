@@ -15,5 +15,5 @@
 - Семантика: `semantic/struct_node.rs`.
 - C-генерация: `typedef struct` в `generator/c/c_header.rs`, `generator/c/c_map.rs`.
 
-> Ретроспективная карточка (правило 17). Источники: `STATUS.md` (задача 6),
+> Ретроспективная карточка. Источники: `STATUS.md` (задача 6),
 > коммит `ae0ec57`, `CHANGES.md`.

@@ -15,5 +15,5 @@
 - `simulation/src/state_io.rs`; CLI-флаги `--save-state`/`--load-state`
   (`bin/simulation.rs`, `lib.rs`).
 
-> Ретроспективная карточка (правило 17). Источники: `STATUS.md` (TASKS §2),
+> Ретроспективная карточка. Источники: `STATUS.md` (TASKS §2),
 > `CHANGES.md`.

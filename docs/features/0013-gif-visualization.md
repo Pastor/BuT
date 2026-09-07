@@ -21,5 +21,5 @@
   `--gif-config`/`--graphics-config`; примеры в `examples/gif-configs/`
   (default, dark, compact, large, monochrome).
 
-> Ретроспективная карточка (правило 17). Источники: `STATUS.md` (TASKS §1, §3, §4),
+> Ретроспективная карточка. Источники: `STATUS.md` (TASKS §1, §3, §4),
 > коммиты `f732903`, `78fad36`, `cffc921`, `dfcfb40`, `CHANGES.md`.

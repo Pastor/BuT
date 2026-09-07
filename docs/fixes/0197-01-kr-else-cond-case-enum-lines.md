@@ -1,6 +1,6 @@
 # Исправление: канон стиля — K&R `else`, заглавные имена `cond`/`invariant`, перечисление по варианту на строке
 
-> Фича: [../features/0197-language-code-style.md](../features/0197-language-code-style.md) · ADR: [../features/0197-language-code-style.md#архитектура-adr](../features/0197-language-code-style.md#архитектура-adr) · смежно: [канонический форматтер .lam (lamc fmt)](../features/0024-lam-formatter.md) (форматтер), [канон именования — предупреждение в fmt и LSP](../features/0226-naming-convention-warning.md) (канон именования)
+> Фича: [../features/0197-language-code-style.md](../features/0197-language-code-style.md) · ADR: [../features/0197-language-code-style.md#архитектура-adr](../features/0197-language-code-style.md#архитектура-adr) · смежно: [канонический форматтер.lam (lamc fmt)](../features/0024-lam-formatter.md) (форматтер), [канон именования — предупреждение в fmt и LSP](../features/0226-naming-convention-warning.md) (канон именования)
 
 - **Статус:** **ИСПРАВЛЕН** (2026-08-14), заведён в тот же день.
 - **Обнаружено:** требованием заказчика 2026-08-14 — пересмотр трёх правил
@@ -91,7 +91,7 @@ Takt-код внутри строковых литералов Rust привед
 имён дополнена строкой `cond`/`invariant` (там же и в
 `book/src/appendix-errors/index.typ`).
 
-**Правило 29 (редакторский слой).** Правок **не требует**, и это проверено:
+**(редакторский слой).** Правок **не требует**, и это проверено:
 лексика, синтаксис и семантика не менялись, а LSP зовёт те же `format_source`
 и `naming_warnings`, что и `taktc fmt`. Плагины
 IntelliJ и Zed собственных правил стиля не ведут; их Kotlin-фикстуры с

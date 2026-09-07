@@ -20,5 +20,5 @@
   `ParameterTypeExpr`).
 - Фикстуры: `type_alias_inference.lam`, `fn_array_param.lam`.
 
-> Ретроспективная карточка (правило 17). Источники: `STATUS.md` (задачи 4+5),
+> Ретроспективная карточка. Источники: `STATUS.md` (задачи 4+5),
 > память проекта (FE2, FE6), `CHANGES.md`.

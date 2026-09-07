@@ -17,5 +17,5 @@
   (`Statement`, `MatchPattern`), `semantic/statement.rs`, `generator/c/c_expr.rs`.
 - Фикстура `if_while_for.lam`.
 
-> Ретроспективная карточка (правило 17). Источники: `STATUS.md` (задачи 8, 10),
+> Ретроспективная карточка. Источники: `STATUS.md` (задачи 8, 10),
 > коммиты `a49fcfd`, `b703e74`, `CHANGES.md`.

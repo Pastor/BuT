@@ -34,5 +34,5 @@
 - Фикстуры `unused_variable.lam`, `nondeterministic_warn.lam`, `implicit_bool_*.lam`,
   `doc_comments.lam`; контрпример `double_next.lam`.
 
-> Ретроспективная карточка (правило 17). Источники: `STATUS.md` (задачи 14, 16, 17, 18),
+> Ретроспективная карточка. Источники: `STATUS.md` (задачи 14, 16, 17, 18),
 > память проекта (FE3, FE4), `CHANGES.md`.

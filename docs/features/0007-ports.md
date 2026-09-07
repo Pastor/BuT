@@ -21,5 +21,5 @@
 - Фикстуры: `array_access.lam`; контрпримеры `array_out_of_bounds.lam`,
   `non_array_subscript.lam`.
 
-> Ретроспективная карточка (правило 17). Источники: `STATUS.md` (задачи 3, 12),
+> Ретроспективная карточка. Источники: `STATUS.md` (задачи 3, 12),
 > `CHANGES.md`.

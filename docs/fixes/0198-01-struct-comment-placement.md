@@ -1,6 +1,6 @@
 # Исправление: печать структуры теряет место комментария
 
-> Фича: [../features/0198-formatter-comment-in-block.md](../features/0198-formatter-comment-in-block.md) · ADR: [../features/0198-formatter-comment-in-block.md#архитектура-adr](../features/0198-formatter-comment-in-block.md#архитектура-adr) · анализ: [../features/0198-formatter-comment-in-block.md#анализ](../features/0198-formatter-comment-in-block.md#анализ) · отчёт: [../features/0198-formatter-comment-in-block.md#отчёт-о-тестировании](../features/0198-formatter-comment-in-block.md#отчёт-о-тестировании) · смежно: [канонический форматтер .lam (lamc fmt)](../features/0024-lam-formatter.md) (форматтер), исправление [канон стиля — K&R `else`, заглавные имена `cond`/`invariant`, перечисление по варианту на строке](0197-01-kr-else-cond-case-enum-lines.md) (тот же класс у перечисления)
+> Фича: [../features/0198-formatter-comment-in-block.md](../features/0198-formatter-comment-in-block.md) · ADR: [../features/0198-formatter-comment-in-block.md#архитектура-adr](../features/0198-formatter-comment-in-block.md#архитектура-adr) · анализ: [../features/0198-formatter-comment-in-block.md#анализ](../features/0198-formatter-comment-in-block.md#анализ) · отчёт: [../features/0198-formatter-comment-in-block.md#отчёт-о-тестировании](../features/0198-formatter-comment-in-block.md#отчёт-о-тестировании) · смежно: [канонический форматтер.lam (lamc fmt)](../features/0024-lam-formatter.md) (форматтер), исправление [канон стиля — K&R `else`, заглавные имена `cond`/`invariant`, перечисление по варианту на строке](0197-01-kr-else-cond-case-enum-lines.md) (тот же класс у перечисления)
 
 - **Статус:** **ИСПРАВЛЕН** (2026-08-14), заведён в тот же день.
 - **Обнаружено:** ревью заказчика 2026-08-14 — после исправления перечисление
@@ -96,7 +96,7 @@ var x: u8 := 0;
 
 **Канон печати не изменился** (по полю на строке — так было и до правки),
 поэтому свод `book/src/21-code-style/` правок не требует, и корпус не сдвинулся
-ни на строку. **Правило 29 (редакторский слой) не задействовано:** лексика,
+ни на строку. **(редакторский слой) не задействовано:** лексика,
 синтаксис и семантика не менялись, а LSP зовёт тот же `format_source`.
 
 ## Проверки

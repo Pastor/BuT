@@ -5,3 +5,6 @@
 docs/CODE.md D2
 # Обозначение клавиши Command в описании горячих клавиш редактора.
 docs/features/0023-intellij-navigation-include.md D1
+# Собственная нумерация правил модели времени внутри карточки: это структура
+# раздела, а не ссылка на свод.
+docs/features/0134-language-time-model.md D4

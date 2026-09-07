@@ -17,4 +17,4 @@
 - Фикстуры: `composition.lam`, `rename_import.lam`; контрпримеры
   `rename_import_missing.lam`, `cycle_a.lam`/`cycle_b.lam`.
 
-> Ретроспективная карточка (правило 17). Детали — в истории git и `CHANGES.md`.
+> Ретроспективная карточка. Детали — в истории git и `CHANGES.md`.
