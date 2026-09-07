@@ -7,7 +7,7 @@ import org.takt.intellij.highlight.TaktSyntaxHighlighter
 import org.takt.intellij.lexer.TaktLexer
 
 /**
- * Проверки страницы настройки цветов (задача 0022-03; требование R4, критерий A5).
+ * Проверки страницы настройки цветов.
  */
 class TaktColorSettingsPageTest : BasePlatformTestCase() {
 

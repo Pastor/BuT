@@ -4,7 +4,7 @@ import com.intellij.psi.TokenType
 import com.intellij.psi.tree.TokenSet
 
 /**
- * Наборы токенов для [org.takt.intellij.parser.TaktParserDefinition] (фича 0023).
+ * Наборы токенов для [org.takt.intellij.parser.TaktParserDefinition].
  *
  * Комментарии/строки/пробелы объявляются платформе, чтобы флаговый PSI-разбор
  * корректно относил их к тривиям и строковым литералам (важно для навигации и

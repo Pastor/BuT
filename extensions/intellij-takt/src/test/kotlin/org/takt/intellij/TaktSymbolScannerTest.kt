@@ -4,7 +4,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.takt.intellij.navigation.TaktSymbolScanner
 
 /**
- * Проверки сканера деклараций (фича 0023, критерий A1).
+ * Проверки сканера деклараций.
  *
  * Формы деклараций сверяются с грамматикой `takt-lang/src/grammar.lalrpop`
  * (`model`/`state`/`start`/`type`/`enum`/`cond`/`var`/`const`/`fn` и `import`).

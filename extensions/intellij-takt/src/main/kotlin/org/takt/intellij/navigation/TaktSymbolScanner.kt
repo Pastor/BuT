@@ -10,14 +10,14 @@ import org.takt.intellij.psi.TaktTokenTypes
 data class TaktDeclaration(val name: String, val range: TextRange, val kind: String)
 
 /**
- * Сканер деклараций Takt поверх [TaktLexer] (фича 0023, задача 0023-01).
+ * Сканер деклараций Takt поверх [TaktLexer].
  *
  * Источник истины по формам деклараций - грамматика `takt-lang/src/grammar.lalrpop`
  * (правила `model`/`state`/`start`/`type`/`cond`/`var`/`const`/`fn` вида
  * `kw <Id>`; порты `in`/`out`/`inout <Id>`; правило `EnumDefine` с константами-
  * вариантами в `{ ... }`; правило `Import` с `as`-переименованиями). Разрешение
  * имён - эвристика по токенам одного файла без областей видимости (осознанное
- * ограничение Option A, ADR 0023).
+ * названная граница разбора).
  */
 object TaktSymbolScanner {
 
@@ -147,7 +147,7 @@ object TaktSymbolScanner {
         return j
     }
 
-    /** Значимые токены (без пробелов и комментариев). */
+    /** Значимые токены: без пробельных и без комментариев. */
     private fun tokenize(text: CharSequence): List<Tok> {
         val lexer = TaktLexer()
         lexer.start(text)

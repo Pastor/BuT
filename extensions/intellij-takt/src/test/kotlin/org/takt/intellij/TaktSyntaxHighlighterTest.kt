@@ -7,7 +7,7 @@ import org.takt.intellij.highlight.TaktSyntaxHighlighter
 import org.takt.intellij.psi.TaktTokenTypes
 
 /**
- * Проверки маппинга токен -> цветовой ключ (задача 0022-02; критерий A2).
+ * Проверки отображения токена в цветовой ключ.
  */
 class TaktSyntaxHighlighterTest : BasePlatformTestCase() {
 

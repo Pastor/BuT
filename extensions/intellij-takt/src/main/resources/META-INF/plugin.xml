@@ -23,24 +23,24 @@
 
     <depends>com.intellij.modules.platform</depends>
 
-    <!-- 0038: опциональная интеграция LSP4IJ (семантическая подсветка через
+    <!-- Опциональная интеграция LSP4IJ (семантическая подсветка через
          takt-lsp). Без установленного LSP4IJ плагин грузится и работает как
          лексический (0022) — отсутствие зависимости не срывает загрузку. -->
     <depends optional="true" config-file="takt-lsp4ij.xml">com.redhat.devtools.lsp4ij</depends>
 
     <extensions defaultExtensionNs="com.intellij">
-        <!-- 0038: настройки LSP-слоя (путь к `takt-lsp`). Класс не зависит от
+        <!-- Настройки LSP-слоя (путь к `takt-lsp`). Класс не зависит от
              LSP4IJ, поэтому сервис регистрируется всегда (не в опциональном
              config-file) — путь можно хранить независимо от наличия LSP4IJ. -->
         <applicationService serviceImplementation="org.takt.intellij.lsp.TaktLspSettings"/>
-        <!-- 0038: страница настроек "Takt Language Server" (путь к takt-lsp). -->
+        <!-- Страница настроек "Takt Language Server" (путь к takt-lsp). -->
         <applicationConfigurable
                 parentId="tools"
                 instance="org.takt.intellij.lsp.TaktLspConfigurable"
                 id="org.takt.intellij.lsp.TaktLspConfigurable"
                 displayName="Takt Language Server"/>
 
-        <!-- 0022-01: регистрация типа файла `.takt` -> язык Takt (R1, A1). -->
+        <!-- Регистрация типа файла `.takt` -> язык Takt. -->
         <fileType
                 name="Takt"
                 implementationClass="org.takt.intellij.TaktFileType"
@@ -48,15 +48,15 @@
                 language="Takt"
                 extensions="takt"/>
 
-        <!-- 0022-02: лексическая подсветка синтаксиса. -->
+        <!-- Лексическая подсветка синтаксиса. -->
         <lang.syntaxHighlighterFactory
                 language="Takt"
                 implementationClass="org.takt.intellij.highlight.TaktSyntaxHighlighterFactory"/>
 
-        <!-- 0022-03: страница настройки цветов, commenter, brace matcher. -->
+        <!-- Страница настройки цветов, commenter, brace matcher. -->
         <colorSettingsPage implementation="org.takt.intellij.highlight.TaktColorSettingsPage"/>
 
-        <!-- Фикс 0196-01: цвет имён типов по умолчанию. Ключ TAKT_TYPE наследует
+        <!-- Цвет имён типов по умолчанию. Ключ TAKT_TYPE наследует
              платформенный CLASS_REFERENCE, у которого собственного цвета в
              схемах нет, — классификация работала, а разницы пользователь не
              видел. Значения перекрываются настройкой пользователя. -->
@@ -65,17 +65,17 @@
         <lang.commenter language="Takt" implementationClass="org.takt.intellij.editor.TaktCommenter"/>
         <lang.braceMatcher language="Takt" implementationClass="org.takt.intellij.editor.TaktBraceMatcher"/>
 
-        <!-- 0023: плоский PSI-разбор - даёт реальные PsiElement под кареткой
+        <!-- Плоский PSI-разбор - даёт реальные PsiElement под кареткой
              (нужны навигации и ссылкам; ADR 0023, Option A). -->
         <lang.parserDefinition
                 language="Takt"
                 implementationClass="org.takt.intellij.parser.TaktParserDefinition"/>
 
-        <!-- 0023: переход к декларации (Go to Declaration) и к файлам `import`. -->
+        <!-- Переход к декларации (Go to Declaration) и к файлам `import`. -->
         <gotoDeclarationHandler
                 implementation="org.takt.intellij.navigation.TaktGotoDeclarationHandler"/>
 
-        <!-- 0067 (R5): манипулятор текста узла IMPORT_PATH - нужен, чтобы
+        <!-- Манипулятор текста узла IMPORT_PATH - нужен, чтобы
              FileReference (rename-on-move) мог переписать строку-путь при
              переименовании/перемещении целевого файла средствами IDEA. Сам
              узел TaktImportPath несёт ссылку через getReferences() (композит, а
@@ -84,13 +84,13 @@
                 forClass="org.takt.intellij.psi.TaktImportPath"
                 implementationClass="org.takt.intellij.psi.TaktImportPathManipulator"/>
 
-        <!-- 0067 (R3): валидатор имён (отвергает ключевые слова Takt). Точка
+        <!-- Валидатор имён (отвергает ключевые слова Takt). Точка
              расширения ЯЗЫКА: её спрашивает инфраструктура рефакторинга при
              вводе нового имени, поэтому валидатор пережил фичу 0154.
              ⚠️ 0154: узлы имён (NAME_DECL/NAME_REF) строит парсер и они остаются
              ради навигации, но декларация БОЛЬШЕ НЕ PsiNamedElement —
              переименование делает сервер (см. TaktNameElements.kt). -->
-        <!-- 0158: запуск taktc/takt-sim из IDE. Один тип, две фабрики
+        <!-- Запуск taktc и takt-sim из IDE. Один тип, две фабрики
              (Compile/Simulate); сборка командной строки — чистая функция
              TaktCommandLine, проверяемая без окна IDE. -->
         <configurationType

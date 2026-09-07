@@ -7,8 +7,8 @@ import org.takt.intellij.lexer.TaktLexer
 import org.takt.intellij.psi.TaktTokenTypes
 
 /**
- * Проверки лексера Takt (задача 0022-02; требования R2, критерии A2/A4).
- * Ключевой контрпример - `==` подсвечивается как BAD_CHARACTER (0021).
+ * Проверки лексера Takt.
+ * Ключевой контрпример - `==` подсвечивается как BAD_CHARACTER.
  */
 class TaktLexerTest : BasePlatformTestCase() {
 
@@ -50,14 +50,14 @@ class TaktLexerTest : BasePlatformTestCase() {
     }
 
     fun testDoubleEqualsIsBadCharacter() {
-        // Контрпример CT1: `==` выведен из языка в 0021 - не валидный оператор.
+        // Контрпример: `==` выведено из языка - это не валидный оператор.
         val bad = lex("x == y").filter { it.first == TokenType.BAD_CHARACTER }
         assertEquals(1, bad.size)
         assertEquals("==", bad[0].second)
     }
 
     fun testArbitraryNonAlphaIsBadCharacter() {
-        // CT3 (0022, остаточная проверка 0089): произвольный неалфавитный символ
+        // Произвольный неалфавитный символ
         // вне операторов/пунктуации языка - BAD_CHARACTER. Лексер покрывает весь
         // ввод, не "проглатывая" чужой символ (инвариант подсветки).
         for (ch in listOf("@", "$", "`", "\\", "№")) {

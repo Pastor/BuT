@@ -7,7 +7,7 @@ import com.intellij.psi.tree.IElementType
 import org.takt.intellij.psi.TaktTokenTypes
 
 /**
- * Подсветка парных скобок Takt: `{}`, `()`, `[]` (задача 0022-03).
+ * Подсветка парных скобок Takt: `{}`, `()`, `[]`.
  * Фигурные скобки - структурные (влияют на навигацию по блокам).
  */
 class TaktBraceMatcher : PairedBraceMatcher {

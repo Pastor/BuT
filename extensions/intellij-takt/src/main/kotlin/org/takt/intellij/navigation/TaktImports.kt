@@ -9,11 +9,11 @@ import org.takt.intellij.psi.TaktElementTypes
 import org.takt.intellij.psi.TaktTokenTypes
 
 /**
- * Разрешение путей в директивах `import` (фича 0023, задача 0023-01; уточнена
- * фичей 0067).
+ * Разрешение путей в директивах `import`.
  *
- * С фичи 0067 строка-путь `import` оборачивается парсером в композит
- * [TaktElementTypes.IMPORT_PATH] (носитель настоящей `PsiReference`, R5). Ctrl+Click
+ *
+ * Строка-путь `import` оборачивается парсером в композит
+ * [TaktElementTypes.IMPORT_PATH] - носитель настоящей `PsiReference`. Ctrl+Click
  * работает и через ссылку, и через `GotoDeclarationHandler`
  * ([TaktGotoDeclarationHandler]) - платформа дедуплицирует одинаковую цель-файл.
  * `TaktImports` остаётся источником резолва пути для обоих путей.
@@ -21,7 +21,7 @@ import org.takt.intellij.psi.TaktTokenTypes
 object TaktImports {
 
     /**
-     * Является ли элемент строкой-путём `import`. После 0067 признак структурный:
+     * Является ли элемент строкой-путём `import`. Признак структурный:
      * листовой токен `STRING`, чей родитель - [TaktElementTypes.IMPORT_PATH]
      * (парсер оборачивает только пути `import`/`from`, поэтому строка в `formula`
      * родителя-`IMPORT_PATH` не имеет).

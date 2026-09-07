@@ -6,7 +6,7 @@ import java.io.File
 
 /**
  * Регресс-тест соответствия набора ключевых слов плагина источнику истины -
- * таблице `KEYWORDS` в `takt-lang/src/parser/lexer.rs` (требование R3, критерий A3).
+ * таблице `KEYWORDS` в `takt-lang/src/parser/lexer.rs`.
  *
  * Тест читает Rust-лексер (относительно корня репозитория) и извлекает ключевые
  * слова из блока `static KEYWORDS: phf::Map<...> = phf_map! { ... };`, затем сверяет

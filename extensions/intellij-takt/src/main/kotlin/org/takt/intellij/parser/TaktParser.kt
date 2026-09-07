@@ -9,13 +9,13 @@ import org.takt.intellij.psi.TaktElementTypes
 import org.takt.intellij.psi.TaktTokenTypes
 
 /**
- * Почти плоский разборщик Takt (фича 0023 + 0067, Option B ADR 0067).
+ * Почти плоский разборщик Takt.
  *
  * Все токены - листья под корнем, **кроме** одиночных токенов, несущих ссылки/имена:
  * - строка-путь `import` (предыдущий значимый токен - `import`/`from`) -> композит
- *   [TaktElementTypes.IMPORT_PATH] (файловая `PsiReference`, R5);
- * - идентификатор-**декларация** -> [TaktElementTypes.NAME_DECL] (цель навигации; переименование - у сервера, 0154);
- * - идентификатор-**использование** -> [TaktElementTypes.NAME_REF] (`PsiReference`, R3).
+ *   [TaktElementTypes.IMPORT_PATH] (файловая `PsiReference`);
+ * - идентификатор-**декларация** -> [TaktElementTypes.NAME_DECL] (цель навигации; переименование - у сервера);
+ * - идентификатор-**использование** -> [TaktElementTypes.NAME_REF] (носитель `PsiReference`).
  *
  * Декларации отличаются от использований **эвристикой `TaktSymbolScanner`** (единый
  * источник форм `kw <Id>`/`Import`/`enum`) - множество стартовых смещений деклараций

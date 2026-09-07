@@ -1,10 +1,10 @@
 package org.takt.intellij.psi
 
 /**
- * Категории лексических токенов Takt для подсветки (задача 0022-02).
+ * Категории лексических токенов Takt для подсветки.
  *
  * Источник истины по набору ключевых слов и операторов - Rust-лексер
- * `takt-lang/src/parser/lexer.rs` (таблица `KEYWORDS`) и операторы фичи 0021
+ * `takt-lang/src/parser/lexer.rs` (таблица `KEYWORDS`) и операторы языка
  * (`:=` присваивание, `=` сравнение, `<=` реляционный; `==` выведен из языка -
  * подсвечивается как `BAD_CHARACTER`). Соответствие [KEYWORDS] эталону из
  * `parser/lexer.rs` проверяется регресс-тестом `TaktKeywordSyncTest`.
@@ -20,7 +20,7 @@ object TaktTokenTypes {
     @JvmField val DOC_COMMENT = TaktTokenType("DOC_COMMENT")
     @JvmField val BLOCK_COMMENT = TaktTokenType("BLOCK_COMMENT")
 
-    // Операторы фичи 0021 - различимы для тестов (T3-T5); все раскрашиваются
+    // Операторы языка - различимы для тестов; все раскрашиваются
     // как "знак операции".
     @JvmField val OP_ASSIGN = TaktTokenType("OP_ASSIGN") // :=
     @JvmField val OP_EQ = TaktTokenType("OP_EQ")         // =

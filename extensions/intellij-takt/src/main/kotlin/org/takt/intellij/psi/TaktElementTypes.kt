@@ -1,21 +1,21 @@
 package org.takt.intellij.psi
 
 /**
- * Композитные узлы PSI-дерева Takt (фича 0067, Option B ADR 0067).
+ * Композитные узлы PSI-дерева Takt.
  *
- * Дерево остаётся **почти плоским** (ADR 0023): в композиты оборачиваются
+ * Дерево остаётся **почти плоским**: в композиты оборачиваются
  * **только** те одиночные токены, что несут ссылки/имена - иначе `PsiReference`
- * и `PsiNamedElement` невозможны (проба 0067 доказала: контрибьютор/ссылка не
+ * и `PsiNamedElement` невозможны: контрибьютор и ссылка не
  * привязываются к листовому `LeafPsiElement`). Выражения/условия/типы/приоритеты
  * не оборачиваются и грамматику не дублируют.
  */
 object TaktElementTypes {
-    /** Строка-путь директивы `import` (носитель файловой `PsiReference`, R5). */
+    /** Строка-путь директивы `import` (носитель файловой `PsiReference`). */
     @JvmField val IMPORT_PATH = TaktElementType("IMPORT_PATH")
 
-    /** Идентификатор-**декларация** имени Takt (цель навигации; с 0154 - не `PsiNamedElement`). */
+    /** Идентификатор-**декларация** имени Takt (цель навигации; не `PsiNamedElement`). */
     @JvmField val NAME_DECL = TaktElementType("NAME_DECL")
 
-    /** Идентификатор-**использование** имени Takt (носитель `PsiReference`, R3). */
+    /** Идентификатор-**использование** имени Takt (носитель `PsiReference`). */
     @JvmField val NAME_REF = TaktElementType("NAME_REF")
 }

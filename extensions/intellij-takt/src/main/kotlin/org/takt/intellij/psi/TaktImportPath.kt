@@ -7,16 +7,16 @@ import com.intellij.psi.PsiReference
 import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReferenceSet
 
 /**
- * Композитный PSI-узел строки-пути `import` (фича 0067, R5).
+ * Композитный PSI-узел строки-пути `import`.
  *
  * Несёт настоящую файловую ссылку [FileReferenceSet] прямо через
- * [getReferences] - на плоском листе это невозможно (проба 0067). Даёт
+ * [getReferences] - на плоском листе это невозможно. Даёт
  * `Ctrl+Click` к файлу и **rename-on-move**: при переименовании/перемещении
  * целевого файла средствами IDEA путь в `.takt` обновляется (через
  * `TaktImportPathManipulator`, регистрируемый в `plugin.xml`).
  *
  * Резолв пути - штатным `FileReferenceSet` относительно каталога импортирующего
- * файла (паритет с ядром 0055 "рядом с импортирующим").
+ * файла (паритет с ядром: импорт ищется рядом с импортирующим).
  */
 class TaktImportPath(node: ASTNode) : ASTWrapperPsiElement(node) {
 
@@ -39,7 +39,7 @@ class TaktImportPath(node: ASTNode) : ASTWrapperPsiElement(node) {
 
 /**
  * `FileReferenceSet`, резолвящий путь `import` от каталога **импортирующего**
- * файла (ядро 0055), а не от корней контента по умолчанию.
+ * файла, как в ядре, а не от корней контента по умолчанию.
  */
 private class TaktImportFileReferenceSet(str: String, element: TaktImportPath) :
     FileReferenceSet(str, element, 1, null, true) {

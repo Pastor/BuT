@@ -4,7 +4,7 @@ import junit.framework.TestCase
 import org.takt.intellij.run.TaktOutputFilter
 
 /**
- * Пересчёт колонки диагностики в смещение документа (фича 0158).
+ * Пересчёт колонки диагностики в смещение документа.
  *
  * Ловушка, названная ещё в карточке фичи: колонка Takt считается в
  * **символах**, а не в байтах, - в `.takt` законна кириллица. Документ IDEA
@@ -43,7 +43,7 @@ class TaktOutputFilterTest : TestCase() {
      */
     fun testAstralCharacterTakesTwoUnits() {
         val line = "// 🔧 наладка"
-        // Шестой символ - `н`. Наивное `column - 1` дало бы 5 (пробел), потому
+        // Шестой символ - `н`. Наивное `column - 1` дало бы 5, то есть пропуск, потому
         // что эмодзи занимает две кодовые единицы UTF-16.
         val offset = TaktOutputFilter.charColumnToOffset(line, 6)
         assertEquals(6, offset)

@@ -5,11 +5,11 @@ import com.intellij.openapi.editor.HighlighterColors
 import com.intellij.openapi.editor.colors.TextAttributesKey
 
 /**
- * Ключи атрибутов текста для подсветки Takt (задача 0022-02).
+ * Ключи атрибутов текста для подсветки Takt.
  *
  * Каждый ключ наследует цвет от стандартного [DefaultLanguageHighlighterColors],
  * поэтому подсветка работает в любой цветовой схеме "из коробки". Страница
- * настройки цветов (`TaktColorSettingsPage`, задача 0022-03) переиспользует эти
+ * настройки цветов (`TaktColorSettingsPage`) переиспользует эти
  * же ключи, давая пользователю переопределять цвета по группам.
  */
 object TaktHighlighterColors {

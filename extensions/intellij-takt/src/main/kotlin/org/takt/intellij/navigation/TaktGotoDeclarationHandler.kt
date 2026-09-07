@@ -7,7 +7,7 @@ import org.takt.intellij.psi.TaktFile
 import org.takt.intellij.psi.TaktTokenTypes
 
 /**
- * Переход к декларации имени Takt (фича 0023, задача 0023-01).
+ * Переход к декларации имени Takt.
  *
  * По идентификатору под кареткой ищет одноимённое объявление
  * ([TaktSymbolScanner]) в том же файле и отдаёт платформе его листовой элемент

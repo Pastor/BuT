@@ -7,7 +7,7 @@ import javax.swing.Icon
  * Тип файла Takt - связывает расширение `.takt` с [TaktLanguage].
  *
  * Регистрируется в `plugin.xml` (`com.intellij.fileType`), после чего IDE
- * распознаёт `*.takt` как язык Takt (критерий приёмки A1, требование R1).
+ * распознаёт `*.takt` как язык Takt.
  */
 object TaktFileType : LanguageFileType(TaktLanguage) {
     override fun getName(): String = "Takt"

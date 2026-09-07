@@ -4,7 +4,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.junit.Assert.assertNotEquals
 
 /**
- * Проверки каркаса 0022-01 (требование R1, критерий приёмки A1):
+ * Проверки каркаса плагина:
  * тип файла `.takt` заведён и корректно связан с языком Takt.
  */
 class TaktFileTypeTest : BasePlatformTestCase() {

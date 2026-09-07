@@ -4,7 +4,7 @@ import junit.framework.TestCase
 import org.takt.intellij.lsp.TaktLspSettings
 
 /**
- * Тесты состояния настроек инструментов (фича 0125).
+ * Тесты состояния настроек инструментов.
  *
  * Без GUI/платформы: используем прямой конструктор [TaktLspSettings] (не
  * `getInstance`, требующий `ApplicationManager`). Проверяем, что новые поля

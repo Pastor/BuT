@@ -5,7 +5,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.takt.intellij.navigation.TaktGotoDeclarationHandler
 
 /**
- * Проверки перехода к декларации (фича 0023, критерии A2/A3).
+ * Проверки перехода к декларации.
  */
 class TaktGotoDeclarationTest : BasePlatformTestCase() {
 

@@ -7,11 +7,11 @@ import org.takt.intellij.TaktFileType
 import org.takt.intellij.TaktLanguage
 
 /**
- * PSI-файл языка Takt (фича 0023).
+ * PSI-файл языка Takt.
  *
  * Дерево - "плоское" (см. [org.takt.intellij.parser.TaktParserDefinition]): все
  * токены лексера становятся листьями под корнем. Полноценного синтаксического
- * дерева нет (осознанное решение ADR 0023, Option A) - его достаточно, чтобы у
+ * дерева нет - его достаточно, чтобы у
  * элементов под кареткой были реальные `PsiElement` для навигации к декларации
  * и ссылок на файлы `import`.
  */

@@ -6,15 +6,15 @@ import com.intellij.psi.tree.IElementType
 import org.takt.intellij.psi.TaktTokenTypes
 
 /**
- * Лексер языка Takt для подсветки синтаксиса (задача 0022-02).
+ * Лексер языка Takt для подсветки синтаксиса.
  *
  * Рукописная реализация [LexerBase], точно зеркалящая правила Rust-лексера
- * `takt-lang/src/parser/lexer.rs` (операторы фичи 0021, числа, строки,
+ * `takt-lang/src/parser/lexer.rs` (операторы языка, числа, строки,
  * комментарии). JFlex/grammarkit-кодогенерация сознательно не используется -
  * чтобы сборка плагина была самодостаточной (без внешнего генератора лексеров),
- * см. карточку задачи 0022-02.
+ * см. `takt-lang/src/parser/lexer.rs`.
  *
- * Особенности пост-0021:
+ * Особенности:
  * - `:=` -> [TaktTokenTypes.OP_ASSIGN] (присваивание);
  * - `=` -> [TaktTokenTypes.OP_EQ] (сравнение на равенство);
  * - `<=`/`>=` -> реляционные; `==` -> [TokenType.BAD_CHARACTER] (оператор выведен

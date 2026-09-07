@@ -6,7 +6,7 @@ import org.takt.intellij.editor.TaktCommenter
 import org.takt.intellij.psi.TaktTokenTypes
 
 /**
- * Проверки эргономики редактора (задача 0022-03; требование R5, критерий A6):
+ * Проверки эргономики редактора:
  * комментирование и парные скобки.
  */
 class TaktEditorSupportTest : BasePlatformTestCase() {

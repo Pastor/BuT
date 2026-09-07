@@ -5,14 +5,14 @@ import org.takt.intellij.lsp.TaktSemanticTokensColorsProvider
 import java.io.File
 
 /**
- * Полнота маппинга типов семантических токенов в цвета (фича 0038, задача 0038-02,
- * критерии A4/A5).
+ * Полнота отображения типов семантических токенов в цвета.
  *
- * A4 - каждый из 10 типов легенды получает `TextAttributesKey` (нет `null`).
- * A5 - набор маппинга **синхронизирован** с источником истины
+ *
+ * Каждый из 10 типов легенды получает `TextAttributesKey` (нет `null`).
+ * Набор отображения **синхронизирован** с источником истины
  * `takt-lang/src/lsp/keywords.rs` (`SEMANTIC_TOKEN_TYPES`): тест читает Rust-исходник,
  * извлекает имена типов и краснеет, если в легенду добавили тип без маппинга (тот
- * молча потерял бы цвет). Приём - как у `TaktKeywordSyncTest` (0022).
+ * молча потерял бы цвет). Приём - как у `TaktKeywordSyncTest`.
  */
 class TaktSemanticTokensColorsTest : TestCase() {
 
@@ -22,7 +22,7 @@ class TaktSemanticTokensColorsTest : TestCase() {
         "string", "number", "comment", "operator", "class",
     )
 
-    /** A4: каждый тип легенды сопоставлен ключу цвета (нет несопоставленных). */
+    /** Каждый тип легенды сопоставлен ключу цвета (нет несопоставленных). */
     fun testEveryLegendTypeHasKey() {
         for (t in legend) {
             assertNotNull("тип токена '$t' обязан иметь ключ цвета", TaktSemanticTokensColorsProvider.keyFor(t))
@@ -36,9 +36,9 @@ class TaktSemanticTokensColorsTest : TestCase() {
     }
 
     /**
-     * A5: набор типов маппинга совпадает с `SEMANTIC_TOKEN_TYPES` из Rust. Если
+     * Набор типов отображения совпадает с `SEMANTIC_TOKEN_TYPES` из Rust. Если
      * Rust-исходник недоступен (сборка вне монорепозитория) - сверка пропускается,
-     * но локальный набор всё равно проверен (A4 выше).
+     * но локальный набор всё равно проверен выше.
      */
     fun testLegendMatchesRustSource() {
         val keywordsFile = findRustFile("takt-lang/src/lsp/keywords.rs")

@@ -5,7 +5,7 @@ import com.intellij.psi.AbstractElementManipulator
 import com.intellij.psi.impl.source.tree.LeafElement
 
 /**
- * Манипулятор текста узла [TaktImportPath] (фича 0067, R5).
+ * Манипулятор текста узла [TaktImportPath].
  *
  * `FileReference.rename`/`bindToElement` меняет путь через
  * `ElementManipulators.getManipulator(element).handleContentChange(...)` - без

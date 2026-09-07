@@ -10,7 +10,7 @@ import org.takt.intellij.psi.TaktTokenTypes
 
 /**
  * Подсветка синтаксиса Takt: сопоставляет токены [TaktLexer] цветовым ключам
- * [TaktHighlighterColors] (задача 0022-02).
+ * [TaktHighlighterColors].
  */
 class TaktSyntaxHighlighter : SyntaxHighlighterBase() {
 

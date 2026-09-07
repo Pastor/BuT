@@ -21,12 +21,12 @@ import org.takt.intellij.lsp.TaktLspSettings
 import javax.swing.Icon
 
 /**
- * Конфигурация запуска инструментов Takt (фича 0158).
+ * Конфигурация запуска инструментов Takt.
  *
  * Один тип, две фабрики - **Compile** (`taktc compile`) и **Simulate**
  * (`takt-sim`): инструменты братья и делят половину полей (файл, `-I`, выходной
  * каталог), поэтому два независимых типа означали бы описывать общее дважды
- * (ADR 0158, Option C).
+ * плагина.
  *
  * Вся логика сборки команды живёт в [TaktCommandLine] - чистой функции без
  * GUI: плагин вне `precheck.sh`, и проверяемо здесь ровно то, что не требует
@@ -61,7 +61,7 @@ class TaktRunConfiguration(
         extraArgs = options.extraArgs,
     )
 
-    /** Пути к инструментам и каталоги импортов - из общих настроек плагина (0125). */
+    /** Пути к инструментам и каталоги импортов - из общих настроек плагина. */
     private fun tools(): TaktCommandLine.Tools {
         val settings = TaktLspSettings.getInstance()
         return TaktCommandLine.Tools(

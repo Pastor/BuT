@@ -6,17 +6,17 @@ import com.redhat.devtools.lsp4ij.features.semanticTokens.SemanticTokensColorsPr
 import org.takt.intellij.highlight.TaktHighlighterColors
 
 /**
- * Маппинг типов семантических токенов `takt-lsp` в цвета редактора (фича 0038,
- * задача 0038-02).
+ * Отображение типов семантических токенов `takt-lsp` в цвета редактора.
+ *
  *
  * Сервер отдаёт токены с типами из легенды `takt_lang::lsp::SEMANTIC_TOKEN_TYPES`
  * (10 типов). Провайдер сопоставляет **каждый** тип ключу [TaktHighlighterColors],
- * чтобы семантический слой уважал палитру и настройки цветов пользователя (0022) и
- * не спорил с лексическим по цвету (R4/R5). Наслаивается **поверх** лексики: цвет
+ * чтобы семантический слой уважал палитру и настройки цветов пользователя и
+ * не спорил с лексическим по цвету. Наслаивается **поверх** лексики: цвет
  * меняется только у идентификаторов, которые лексер красит одинаково.
  *
  * Набор ключей обязан покрывать легенду **целиком**: тип без маппинга молча
- * потеряет цвет. Сторож - `TaktSemanticTokensColorsProviderTest`, читающий
+ * потеряет цвет. Контроль - `TaktSemanticTokensColorsProviderTest`, читающий
  * `SEMANTIC_TOKEN_TYPES` из Rust-исходника (приём `TaktKeywordSyncTest`).
  */
 class TaktSemanticTokensColorsProvider : SemanticTokensColorsProvider {

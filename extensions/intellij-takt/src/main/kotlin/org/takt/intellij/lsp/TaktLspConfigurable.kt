@@ -13,13 +13,13 @@ import javax.swing.JTextArea
 import javax.swing.JTextField
 
 /**
- * Страница настроек инструментов Takt (фичи 0038, 0125).
+ * Страница настроек инструментов Takt.
  *
  * Settings -> Tools -> **Takt Language Server**. Поля:
- *  - путь к `takt-lsp` (0038; пусто ⇒ автопоиск в `PATH`, [TaktLspBinary.resolve]);
- *  - путь к компилятору `taktc` и симулятору `takt-sim` (0125; задел под действия);
+ *  - путь к `takt-lsp` (пусто - автопоиск в `PATH`, [TaktLspBinary.resolve]);
+ *  - путь к компилятору `taktc` и симулятору `takt-sim` (задел под действия);
  *  - каталоги импортов (`-I`, по одному на строку) - прокидываются в LSP как
- *    `searchPaths` ([TaktInitOptions], 0072);
+ *    `searchPaths` ([TaktInitOptions]);
  *  - дополнительные параметры компилятора (свободные флаги; задел);
  *  - выходная директория генерации (задел).
  *

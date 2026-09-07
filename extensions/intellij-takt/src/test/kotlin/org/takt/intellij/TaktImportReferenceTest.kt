@@ -5,7 +5,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import org.takt.intellij.navigation.TaktGotoDeclarationHandler
 
 /**
- * Проверки навигации по директивам `import` к файлу (фича 0023, критерии A4/A5).
+ * Проверки навигации по директивам `import` к файлу.
  *
  * Навигация ведётся `GotoDeclarationHandler` (см. [org.takt.intellij.navigation.TaktImports]).
  */

@@ -4,9 +4,9 @@ import com.intellij.psi.PsiFile
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 /**
- * Проверки настоящей `PsiReference` на строке-пути `import` (фича 0067, R5).
+ * Проверки настоящей `PsiReference` на строке-пути `import`.
  *
- * В отличие от навигации через `GotoDeclarationHandler` (0023, тест
+ * В отличие от навигации через `GotoDeclarationHandler` (тест
  * [TaktImportReferenceTest]), здесь проверяется именно **ссылка**: `resolve()` во
  * всех формах `import` и **rename-on-move** (переименование файла обновляет путь).
  */
@@ -41,7 +41,7 @@ class TaktImportPsiReferenceTest : BasePlatformTestCase() {
         assertNotNull(f); assertEquals("shared.takt", f!!.name)
     }
 
-    /** R5.2: переименование целевого файла обновляет строку-путь в тексте import. */
+    /** Переименование целевого файла обновляет строку-путь в тексте import. */
     fun testRenameTargetFileUpdatesImportPath() {
         val target = myFixture.addFileToProject("shared.takt", "model SharedModel { }\n")
         myFixture.configureByText("main.takt", """import "sha<caret>red.takt";""")
@@ -54,13 +54,13 @@ class TaktImportPsiReferenceTest : BasePlatformTestCase() {
             text.contains("""import "renamed.takt";"""))
     }
 
-    /** R5.3: битый путь - resolve() == null, без исключений. */
+    /** Битый путь - resolve() == null, без исключений. */
     fun testMissingFileResolvesToNull() {
         val f = refResolvesTo("""import "no_su<caret>ch.takt";""", addShared = false)
         assertNull(f)
     }
 
-    /** Контрпример: строка вне import (в formula) ссылки не несёт (регресс 0023). */
+    /** Контрпример: строка вне import (в formula) ссылки не несёт. */
     fun testNonImportStringHasNoReference() {
         myFixture.addFileToProject("shared.takt", "model SharedModel { }\n")
         myFixture.configureByText(
