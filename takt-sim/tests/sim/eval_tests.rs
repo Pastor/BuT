@@ -170,7 +170,7 @@ fn t5_enter_of_start_state_runs_exactly_once() {
 
 #[test]
 fn t11_division_by_zero_fails_loudly() {
-    // R5: ошибка вычисления обязана быть отличима от "ничего не произошло".
+    // Ошибка вычисления обязана быть отличима от "ничего не произошло".
     let (_, result) = run("div_zero.takt", 1);
     match result {
         TickResult::Failed(details) => {
@@ -219,7 +219,7 @@ fn fn_composition_is_evaluated() {
 
 // --: инварианты и assert в симуляторе ------------------------------
 
-/// T14/T15: нарушение инварианта модели останавливает прогон с SIM-025 и именем
+/// Нарушение инварианта модели останавливает прогон с SIM-025 и именем
 /// 'P'. Значение `c == 1` - проверка сработала до `always` второго такта (эталон C:
 /// assert до switch), а не после.
 #[test]
@@ -233,7 +233,7 @@ fn invariant_model_violation_stops_with_sim025() {
     assert_eq!(num(&unit, "c"), 1, "остановка ДО always второго такта");
 }
 
-/// T19: истинный инвариант прогону не мешает.
+/// Истинный инвариант прогону не мешает.
 #[test]
 fn invariant_holds_does_not_interfere() {
     let (unit, last) = run("invariant_holds.takt", 3);
@@ -244,7 +244,7 @@ fn invariant_holds_does_not_interfere() {
     assert_eq!(num(&unit, "c"), 2, "c растёт нормально");
 }
 
-/// T16: инвариант состояния Q нарушается (проверяется, пока автомат в A).
+/// Инвариант состояния Q нарушается (проверяется, пока автомат в A).
 #[test]
 fn invariant_state_violation_stops_with_name() {
     let (_unit, last) = run("invariant_state_violated.takt", 5);
@@ -278,7 +278,7 @@ fn run_soft(fixture: &str, steps: usize) -> (Unit, Vec<(usize, String)>, TickRes
     (unit, violations, last)
 }
 
-/// A2: мягкий режим не останавливает прогон на нарушении инварианта - записывает
+/// Мягкий режим не останавливает прогон на нарушении инварианта - записывает
 /// нарушение и идёт дальше. `invariant_violated.takt`: P = c = 0 ложно со 2-го такта,
 /// автомат осциллирует A↔B (не терминирует).
 #[test]
@@ -302,7 +302,7 @@ fn invariant_soft_records_and_continues() {
     assert!(num(&unit, "c") > 1, "c продолжил расти в мягком режиме");
 }
 
-/// A3: ошибка вычисления условия инварианта (индекс за границей массива, SIM-010) -
+/// Ошибка вычисления условия инварианта (индекс за границей массива, SIM-010) -
 /// `Failed` даже в мягком режиме. Мягкий режим глушит только "инвариант ложен"
 /// (SIM-025), не "условие не вычислилось".
 #[test]
@@ -321,7 +321,7 @@ fn invariant_soft_does_not_swallow_eval_error() {
     );
 }
 
-/// A4: нарушение инварианта в под-модели композиции всплывает в мягком режиме
+/// Нарушение инварианта в под-модели композиции всплывает в мягком режиме
 /// (рекурсивный слив по дереву Unit).
 #[test]
 fn invariant_soft_collects_from_composition() {
@@ -336,7 +336,7 @@ fn invariant_soft_collects_from_composition() {
     );
 }
 
-/// T17: `: c;` (assert языка Takt) в блоке нарушается - так же, как invariant.
+/// `: c;` (assert языка Takt) в блоке нарушается - так же, как invariant.
 #[test]
 fn assert_in_block_violation_stops() {
     let (_unit, last) = run("assert_in_block.takt", 3);

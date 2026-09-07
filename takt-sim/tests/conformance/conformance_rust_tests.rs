@@ -446,7 +446,7 @@ fn fixed_wrap_to_width_matches_generated_rust() {
     );
 }
 
-/// A4/A5/A6 (цель rust): насыщение `q(6, 6) sat` прижимает к границам **формата** на
+/// Насыщение `q(6, 6) sat` прижимает к границам **формата** на
 /// обеих границах.
 ///
 /// Наблюдаемое - float-порт, а не поле: поля цели `rust` приватны, а q-порта у неё нет
@@ -486,7 +486,7 @@ fn fixed_saturation_matches_generated_rust() {
     );
 }
 
-/// T10/A4 (цель rust): побитовая потактовая сверка Q-арифметики с симулятором - включая
+/// Побитовая потактовая сверка Q-арифметики с симулятором - включая
 /// отрицательные и floor к −∞ у `*` (S2: repr −2, т.е. −0.0078125).
 #[test]
 fn fixed_point_arithmetic_matches_generated_rust() {
@@ -542,7 +542,7 @@ fn float_embedded_opts(m: u8, n: u8) -> takt_lang::generator::GenerateOptions {
     o
 }
 
-/// T6/A4 (цель rust, embedded): `float` под `--float-embedded` даёт байт-В-Байт тот же
+/// `float` под `--float-embedded` даёт байт-В-Байт тот же
 /// rust, что явный `q(8, 8)`. Одинаковый basename -> символы совпадают, а содержимое -
 /// только если трансформация даёт ровно проверенный q-кодоген.
 #[test]
@@ -582,7 +582,7 @@ fn float_embedded_matches_explicit_q_rust() {
     );
 }
 
-/// A3/T5 (цель rust native по умолчанию): `--float-as-q` без `--float-embedded`
+/// `--float-as-q` без `--float-embedded`
 /// оставляет `float` нативным `f64`. Проверка переключения: с `--float-embedded` - `i16`.
 /// Молчаливого Q быть не должно.
 #[test]

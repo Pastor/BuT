@@ -41,7 +41,7 @@ class TaktImportReferenceTest : BasePlatformTestCase() {
     }
 
     fun testMissingFileHasNoTarget() {
-        // Файла нет — цели нет, без исключений.
+        // Файла нет - цели нет, без исключений.
         val file = importTargetAtCaret("""import "no_su<caret>ch.takt";""", addShared = false)
         assertNull(file)
     }

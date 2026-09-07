@@ -8,7 +8,7 @@ import java.io.File
  * Тесты резолвинга пути к `takt-lsp` (фича 0038, задача 0038-01, критерий A7).
  *
  * Чистая логика без GUI (драйвер 5 ADR): проверяем приоритет источников и тихую
- * деградацию (не найден → `null`, без исключений). Живой запуск сервера — только
+ * деградацию (не найден -> `null`, без исключений). Живой запуск сервера - только
  * визуально в `runIde` (A11), в CI недостижим.
  */
 class TaktLspBinaryTest : TestCase() {
@@ -40,20 +40,20 @@ class TaktLspBinaryTest : TestCase() {
         return f
     }
 
-    /** Явная настройка на существующий исполняемый файл → он и возвращается. */
+    /** Явная настройка на существующий исполняемый файл -> он и возвращается. */
     fun testExplicitPathResolves() {
         val exe = makeExecutable(tempDir, "takt-lsp")
         val resolved = TaktLspBinary.resolve(exe.absolutePath, pathEnv = null)
         assertEquals(exe.absolutePath, resolved?.absolutePath)
     }
 
-    /** Явный путь на несуществующий файл → `null` (деградация, без исключения). */
+    /** Явный путь на несуществующий файл -> `null` (деградация, без исключения). */
     fun testExplicitMissingPathIsNull() {
         val missing = File(tempDir, "nope").absolutePath
         assertNull(TaktLspBinary.resolve(missing, pathEnv = null))
     }
 
-    /** Явный путь на неисполняемый файл → `null`. */
+    /** Явный путь на неисполняемый файл -> `null`. */
     fun testExplicitNonExecutableIsNull() {
         val f = File(tempDir, "takt-lsp")
         f.writeText("not executable")
@@ -61,14 +61,14 @@ class TaktLspBinaryTest : TestCase() {
         assertNull(TaktLspBinary.resolve(f.absolutePath, pathEnv = null))
     }
 
-    /** Пустая настройка + бинарник в `PATH` → находится автопоиском. */
+    /** Пустая настройка + бинарник в `PATH` -> находится автопоиском. */
     fun testAutodiscoveryOnPath() {
         val exe = makeExecutable(tempDir, TaktLspBinary.EXECUTABLE)
         val resolved = TaktLspBinary.resolve(configuredPath = "", pathEnv = tempDir.absolutePath)
         assertEquals(exe.absolutePath, resolved?.absolutePath)
     }
 
-    /** Пустая настройка + бинарника в `PATH` нет → `null`. */
+    /** Пустая настройка + бинарника в `PATH` нет -> `null`. */
     fun testAutodiscoveryMissingIsNull() {
         assertNull(TaktLspBinary.resolve(configuredPath = null, pathEnv = tempDir.absolutePath))
     }

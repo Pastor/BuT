@@ -4,7 +4,7 @@
 // Переменная dir имеет тип Direction и инициализируется допустимым вариантом.
 //
 // Ожидаемое поведение: разбирается без ошибок;
-// тип переменной dir → TypeNode::Enum("Direction").
+// тип переменной dir -> TypeNode::Enum("Direction").
 
 enum Direction {
     North = 0,

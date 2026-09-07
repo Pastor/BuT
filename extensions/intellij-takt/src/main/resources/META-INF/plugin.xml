@@ -33,14 +33,14 @@
              LSP4IJ, поэтому сервис регистрируется всегда (не в опциональном
              config-file) — путь можно хранить независимо от наличия LSP4IJ. -->
         <applicationService serviceImplementation="org.takt.intellij.lsp.TaktLspSettings"/>
-        <!-- 0038: страница настроек «Takt Language Server» (путь к takt-lsp). -->
+        <!-- 0038: страница настроек "Takt Language Server" (путь к takt-lsp). -->
         <applicationConfigurable
                 parentId="tools"
                 instance="org.takt.intellij.lsp.TaktLspConfigurable"
                 id="org.takt.intellij.lsp.TaktLspConfigurable"
                 displayName="Takt Language Server"/>
 
-        <!-- 0022-01: регистрация типа файла `.takt` → язык Takt (R1, A1). -->
+        <!-- 0022-01: регистрация типа файла `.takt` -> язык Takt (R1, A1). -->
         <fileType
                 name="Takt"
                 implementationClass="org.takt.intellij.TaktFileType"
@@ -56,7 +56,7 @@
         <!-- 0022-03: страница настройки цветов, commenter, brace matcher. -->
         <colorSettingsPage implementation="org.takt.intellij.highlight.TaktColorSettingsPage"/>
 
-        <!-- Фикс 0196-01: цвет ИМЁН ТИПОВ по умолчанию. Ключ TAKT_TYPE наследует
+        <!-- Фикс 0196-01: цвет имён типов по умолчанию. Ключ TAKT_TYPE наследует
              платформенный CLASS_REFERENCE, у которого собственного цвета в
              схемах нет, — классификация работала, а разницы пользователь не
              видел. Значения перекрываются настройкой пользователя. -->
@@ -65,7 +65,7 @@
         <lang.commenter language="Takt" implementationClass="org.takt.intellij.editor.TaktCommenter"/>
         <lang.braceMatcher language="Takt" implementationClass="org.takt.intellij.editor.TaktBraceMatcher"/>
 
-        <!-- 0023: плоский PSI-разбор — даёт реальные PsiElement под кареткой
+        <!-- 0023: плоский PSI-разбор - даёт реальные PsiElement под кареткой
              (нужны навигации и ссылкам; ADR 0023, Option A). -->
         <lang.parserDefinition
                 language="Takt"
@@ -75,7 +75,7 @@
         <gotoDeclarationHandler
                 implementation="org.takt.intellij.navigation.TaktGotoDeclarationHandler"/>
 
-        <!-- 0067 (R5): манипулятор текста узла IMPORT_PATH — нужен, чтобы
+        <!-- 0067 (R5): манипулятор текста узла IMPORT_PATH - нужен, чтобы
              FileReference (rename-on-move) мог переписать строку-путь при
              переименовании/перемещении целевого файла средствами IDEA. Сам
              узел TaktImportPath несёт ссылку через getReferences() (композит, а

@@ -61,7 +61,7 @@ fn per_file(refs: &[takt_lang::lsp::FileReference]) -> Vec<(String, usize)> {
     out
 }
 
-/// A1: вхождения символа библиотеки видны во всех файлах области, а не только в
+/// Вхождения символа библиотеки видны во всех файлах области, а не только в
 /// открытом.
 #[test]
 fn references_cross_files_from_declaration() {
@@ -87,7 +87,7 @@ fn references_cross_files_from_declaration() {
     );
 }
 
-/// A1: тот же ответ, если курсор стоит у потребителя, а не в библиотеке.
+/// Тот же ответ, если курсор стоит у потребителя, а не в библиотеке.
 #[test]
 fn references_cross_files_from_consumer() {
     let user = path_in("ok", "uses_plain.takt");
@@ -112,7 +112,7 @@ fn references_cross_files_from_consumer() {
     );
 }
 
-/// A6: до фичи `references` на импортированном имени отвечал `None` - не полуправдой, а
+/// До фичи `references` на импортированном имени отвечал `None` - не полуправдой, а
 /// молчанием. Тест на сам факт ответа.
 #[test]
 fn references_on_imported_name_is_not_silence() {
@@ -129,7 +129,7 @@ fn references_on_imported_name_is_not_silence() {
     assert!(!refs.is_empty());
 }
 
-/// A4: локальное объявление затеняет импортированное - файл `shadow.takt` в ответе не
+/// Локальное объявление затеняет импортированное - файл `shadow.takt` в ответе не
 /// появляется, хотя имя там то же.
 #[test]
 fn local_declaration_shadows_imported_symbol() {
@@ -149,7 +149,7 @@ fn local_declaration_shadows_imported_symbol() {
     );
 }
 
-/// A2: `rename` правит все файлы области, где символ употреблён.
+/// `rename` правит все файлы области, где символ употреблён.
 #[test]
 fn rename_edits_every_consumer() {
     let lib = path_in("ok", "lib.takt");
@@ -187,7 +187,7 @@ fn rename_edits_every_consumer() {
     );
 }
 
-/// A2: применённые правки оставляют файлы разбираемыми - правка встала на имена, а не в
+/// Применённые правки оставляют файлы разбираемыми - правка встала на имена, а не в
 /// произвольные места.
 #[test]
 fn renamed_files_still_parse() {
@@ -222,7 +222,7 @@ fn renamed_files_still_parse() {
     }
 }
 
-/// A3 (контрпример): имя, введённое `import "файл";`, получено из имени файла и с
+/// Имя, введённое `import "файл";`, получено из имени файла и с
 /// объявлением внутри библиотеки не связано.
 ///
 /// Фикстура `goto56`: файл `helper.takt` объявляет `model Helper`, импортёр пишет
@@ -247,7 +247,7 @@ fn file_derived_model_name_is_not_bound_to_library_model() {
     );
 }
 
-/// A3: и обратно - переименовать такое имя у импортёра нельзя: оно ни с чем не связано,
+/// И обратно - переименовать такое имя у импортёра нельзя: оно ни с чем не связано,
 /// а правка одного вхождения оторвала бы его от имени файла.
 #[test]
 fn renaming_file_derived_name_is_refused() {
@@ -264,7 +264,7 @@ fn renaming_file_derived_name_is_refused() {
     assert_eq!(refusal, RenameRefusal::ForeignDeclaration);
 }
 
-/// A5: файл области, который не разбирается и потребляет символ, - отказ.
+/// Файл области, который не разбирается и потребляет символ, - отказ.
 #[test]
 fn unparsable_consumer_refuses_rename() {
     let lib = path_in("broken", "lib.takt");
@@ -280,7 +280,7 @@ fn unparsable_consumer_refuses_rename() {
     assert_eq!(refusal, RenameRefusal::UnparsableConsumer);
 }
 
-/// A5: имя, объявленное сразу двумя подключёнными файлами, - отказ.
+/// Имя, объявленное сразу двумя подключёнными файлами, - отказ.
 #[test]
 fn ambiguous_import_refuses_rename() {
     let user = path_in("ambig", "user.takt");
@@ -296,7 +296,7 @@ fn ambiguous_import_refuses_rename() {
     assert_eq!(refusal, RenameRefusal::AmbiguousImport);
 }
 
-/// A5: новое имя уже занято в затрагиваемом файле - отказ.
+/// Новое имя уже занято в затрагиваемом файле - отказ.
 ///
 /// Проверка появилась вместе с кросс-файловой правкой: пока правился один файл,
 /// столкновение видел автор.
@@ -315,7 +315,7 @@ fn taken_name_refuses_rename() {
     assert_eq!(refusal, RenameRefusal::NameTaken);
 }
 
-/// A7: область - одно знание: слой видит ровно `.takt` своих корней, и оба запроса
+/// Область - одно знание: слой видит ровно `.takt` своих корней, и оба запроса
 /// работают поверх него.
 #[test]
 fn workspace_sees_every_takt_of_its_roots() {

@@ -18,7 +18,7 @@ fn se036_names(src: &str) -> Vec<String> {
         .collect()
 }
 
-/// A1: переменная только в LTL-формуле состояния (`: [LTL] G flag;`) - не мёртвая.
+/// Переменная только в LTL-формуле состояния (`: [LTL] G flag;`) - не мёртвая.
 #[test]
 fn var_used_only_in_ltl_formula_no_unused_warning() {
     let names = se036_names(
@@ -37,7 +37,7 @@ fn var_used_only_in_ltl_formula_no_unused_warning() {
     );
 }
 
-/// A2: переменная только в `invariant` (Guard-формуле уровня модели) - не мёртвая.
+/// Переменная только в `invariant` (Guard-формуле уровня модели) - не мёртвая.
 #[test]
 fn var_used_only_in_invariant_no_unused_warning() {
     let names = se036_names(
@@ -54,7 +54,7 @@ fn var_used_only_in_invariant_no_unused_warning() {
     );
 }
 
-/// A3 (**негативный тест**): реально неиспользуемая переменная по-прежнему даёт
+/// Реально неиспользуемая переменная по-прежнему даёт
 /// `SE-036` - обход формул не глушит настоящие находки.
 #[test]
 fn truly_unused_var_still_warns_after_formula_traversal() {

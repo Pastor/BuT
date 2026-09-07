@@ -54,13 +54,13 @@ class TaktImportPsiReferenceTest : BasePlatformTestCase() {
             text.contains("""import "renamed.takt";"""))
     }
 
-    /** R5.3: битый путь — resolve() == null, без исключений. */
+    /** R5.3: битый путь - resolve() == null, без исключений. */
     fun testMissingFileResolvesToNull() {
         val f = refResolvesTo("""import "no_su<caret>ch.takt";""", addShared = false)
         assertNull(f)
     }
 
-    /** Контрпример: строка вне import (в formula) ссылки НЕ несёт (регресс 0023). */
+    /** Контрпример: строка вне import (в formula) ссылки не несёт (регресс 0023). */
     fun testNonImportStringHasNoReference() {
         myFixture.addFileToProject("shared.takt", "model SharedModel { }\n")
         myFixture.configureByText(

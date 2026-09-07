@@ -130,7 +130,7 @@ int main(void) {{
         .collect()
 }
 
-/// **A3: разряд ложится в своё слово - и у эталона, и в прошивке.**
+/// **Разряд ложится в своё слово - и у эталона, и в прошивке.**
 #[test]
 fn wide_bit_vector_trace_matches_generated_c() {
     let sim = simulator_trace();

@@ -1,6 +1,6 @@
 # Message catalogue: English (feature 0532).
 #
-# Format and substitutions — see `ru.txt`, the base catalogue. The set of keys
+# Format and substitutions - see `ru.txt`, the base catalogue. The set of keys
 # and the set of `{placeholders}` in every key must match the base exactly;
 # `scripts/check-messages.py` fails with a list otherwise.
 

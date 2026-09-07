@@ -46,7 +46,7 @@ fn workspace() -> std::path::PathBuf {
     dir
 }
 
-/// **A3: эталон печатает заметку так же, как компилятор.**
+/// **Эталон печатает заметку так же, как компилятор.**
 #[test]
 fn simulator_prints_diagnostic_notes() {
     let dir = workspace();

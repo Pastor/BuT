@@ -33,7 +33,7 @@ fn verdict_of(fixture: &str) -> Verdict {
     results.into_iter().next().unwrap().verdict
 }
 
-// --- A2: живость "после сбоя - возврат в Idle" --------------------------------
+// --- Живость "после сбоя - возврат в Idle" --------------------------------
 
 /// Пример: из Fault все пути ведут в Idle - свойство держится.
 #[test]
@@ -58,7 +58,7 @@ fn response_property_violated_with_lasso() {
     );
 }
 
-// --- A3: достижимость ---------------------------------------------------------
+// --- Достижимость ---------------------------------------------------------
 
 /// Пример: Done достижимо и неизбежно - `F Done` держится.
 #[test]
@@ -79,7 +79,7 @@ fn reachability_violated_when_state_is_unreachable() {
     );
 }
 
-// --- A4: честная граница абстракции -------------------------------------------
+// --- Честная граница абстракции -------------------------------------------
 
 /// Атом-переменная не проверяется молча: Unsupported с именем атома.
 #[test]
@@ -94,7 +94,7 @@ fn data_atom_is_reported_as_unsupported() {
     );
 }
 
-// --- A6: детерминизм вердикта (проверка 0048) -------------------------------------
+// --- Детерминизм вердикта (проверка 0048) -------------------------------------
 
 #[test]
 fn verdicts_are_deterministic() {
@@ -395,7 +395,7 @@ fn model_without_formulas_yields_no_results() {
     assert!(takt_lang::verify_all(model).is_empty());
 }
 
-// --- A5: проверка завершается на корпусе examples/ ----------------------------
+// --- Проверка завершается на корпусе examples/ ----------------------------
 
 /// Верификация завершается на всех примерах корпуса (конечность Крипке).
 ///
@@ -517,7 +517,7 @@ fn model_with_imports(fixture: &str) -> Rc<RefCell<takt_lang::semantic::ModelNod
         .unwrap_or_else(|d| panic!("{path}: семантика — {d:?}"))
 }
 
-/// A1: `import "файл";` - нарушитель из импорта не попадает в вердикт файла.
+/// `import "файл";` - нарушитель из импорта не попадает в вердикт файла.
 #[test]
 fn plain_import_is_out_of_scope_by_default() {
     let outcome = takt_lang::verify_all_scoped(
@@ -533,7 +533,7 @@ fn plain_import_is_out_of_scope_by_default() {
     assert_eq!(outcome.skipped, vec!["Badlib".to_string()]);
 }
 
-/// A1: `--scope all` возвращает поведение 0049 дословно.
+/// `--scope all` возвращает поведение 0049 дословно.
 #[test]
 fn plain_import_is_verified_with_scope_all() {
     let outcome = takt_lang::verify_all_scoped(

@@ -25,7 +25,7 @@ impl zed::Extension for LamExtension {
 /// Находит исполняемый файл `takt-lsp`, последовательно проверяя:
 ///
 /// 1. Директории переменной окружения `PATH` (через [`zed::Worktree::which`]).
-/// 2. `$HOME/.cargo/bin/takt-lsp` — стандартное место установки через `cargo install`.
+/// 2. `$HOME/.cargo/bin/takt-lsp` - стандартное место установки через `cargo install`.
 ///
 /// Возвращает полный путь к бинарнику или ошибку с описанием проблемы.
 fn find_lam_lsp(worktree: &zed::Worktree) -> Result<String> {

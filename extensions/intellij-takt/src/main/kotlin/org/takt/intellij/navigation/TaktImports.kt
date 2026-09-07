@@ -15,14 +15,14 @@ import org.takt.intellij.psi.TaktTokenTypes
  * С фичи 0067 строка-путь `import` оборачивается парсером в композит
  * [TaktElementTypes.IMPORT_PATH] (носитель настоящей `PsiReference`, R5). Ctrl+Click
  * работает и через ссылку, и через `GotoDeclarationHandler`
- * ([TaktGotoDeclarationHandler]) — платформа дедуплицирует одинаковую цель-файл.
+ * ([TaktGotoDeclarationHandler]) - платформа дедуплицирует одинаковую цель-файл.
  * `TaktImports` остаётся источником резолва пути для обоих путей.
  */
 object TaktImports {
 
     /**
      * Является ли элемент строкой-путём `import`. После 0067 признак структурный:
-     * листовой токен `STRING`, чей родитель — [TaktElementTypes.IMPORT_PATH]
+     * листовой токен `STRING`, чей родитель - [TaktElementTypes.IMPORT_PATH]
      * (парсер оборачивает только пути `import`/`from`, поэтому строка в `formula`
      * родителя-`IMPORT_PATH` не имеет).
      */

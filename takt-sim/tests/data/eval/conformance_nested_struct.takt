@@ -1,14 +1,14 @@
-// Сверка ВЛОЖЕННОЙ структуры (фича 0341).
+// Сверка вложенной структуры.
 //
-// `struct Line { a: Point, b: Point }` — структура, содержащая структуру.
-// Прежде один вход давал ЧЕТЫРЕ отказа чужих инструментов при нулевом коде
-// возврата `taktc`: `cc` «unknown type name 'Point'», `iec2c` «invalid
-// specification in structure element declaration», verilator «Reference to
-// 'point_t' before declaration» — все три оттого, что структуры печатались
-// ПО АЛФАВИТУ, а `Line` стоит раньше `Point`; цель `rust` отвечала `RS-011`
-// «значение 7 не представимо в bool», считая доступ к полю логическим.
+// `struct Line { a: Point, b: Point }` - структура, содержащая структуру.
+// Прежде один вход давал четыре отказа чужих инструментов при нулевом коде
+// возврата `taktc`: `cc` "unknown type name 'Point'", `iec2c` "invalid
+// specification in structure element declaration", verilator "Reference to
+// 'point_t' before declaration" - все три оттого, что структуры печатались
+// по алфавиту, а `Line` стоит раньше `Point`; цель `rust` отвечала `RS-011`
+// "значение 7 не представимо в bool", считая доступ к полю логическим.
 //
-// ⚠️ `flat` — контрольный вход: плоская структура. Она работала всегда.
+// `flat` - контрольный вход: плоская структура. Она работала всегда.
 struct Point { x: u8, y: u8 }
 struct Line { a: Point, b: Point }
 

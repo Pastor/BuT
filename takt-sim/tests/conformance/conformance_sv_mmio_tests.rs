@@ -230,7 +230,7 @@ fn build_and_run(dir: &Path, basename: &str) -> String {
     String::from_utf8_lossy(&run.stdout).into_owned()
 }
 
-/// **T4/A4 (основной критерий): трасса `sv-mmio` через регистры = трасса
+/// **Трасса `sv-mmio` через регистры = трасса
 /// симулятора на каждом такте.**
 #[test]
 fn per_tick_trace_matches_generated_sv_mmio() {
@@ -288,7 +288,7 @@ fn per_tick_trace_matches_generated_sv_mmio() {
     );
 }
 
-/// **T6/T7: запись шиной в бит `out` игнорируется; чтение бита `in`
+/// **Запись шиной в бит `out` игнорируется; чтение бита `in`
 /// возвращает записанное.** Тестбенч самопроверяющийся (`$fatal`).
 #[test]
 fn bus_write_ignored_for_out_and_readback_for_in() {
@@ -327,7 +327,7 @@ fn bus_write_ignored_for_out_and_readback_for_in() {
         @(posedge clk);
         rst_n <= 1'b1;
         #1;
-        // T7: пишем cmd=1 по адресу 0x1, читаем обратно.
+        // Пишем cmd=1 по адресу 0x1, читаем обратно.
         bus_write(2'h1, 1'b1);
         reg_addr = 2'h1; #1;
         if (reg_rdata[0] !== 1'b1) $fatal(1, "T7: чтение in-бита не вернуло записанное шиной");
@@ -335,7 +335,7 @@ fn bus_write_ignored_for_out_and_readback_for_in() {
         @(posedge clk); #1;
         reg_addr = 2'h2; #1;
         if (reg_rdata[0] !== 1'b1) $fatal(1, "вход не дошёл до автомата: echo != cmd");
-        // T6: пишем 0 по адресу out-бита echo - запись обязана игнорироваться.
+        // Пишем 0 по адресу out-бита echo - запись обязана игнорироваться.
         bus_write(2'h2, 1'b0);
         reg_addr = 2'h2; #1;
         if (reg_rdata[0] !== 1'b1) $fatal(1, "T6: запись шиной в out-бит не проигнорирована");

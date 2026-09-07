@@ -1,10 +1,10 @@
 // Контр-пример: импорт без указания пути поиска завершается ошибкой.
 //
 // Этот файл использует `import "std.takt"`. Если не указать -I, компилятор
-// выдаст ошибку: «Файл импорта не найден: std.takt. Пути поиска: []»
+// выдаст ошибку: "Файл импорта не найден: std.takt. Пути поиска: []"
 //
 // Демонстрация ошибки:
-//   taktc compile cli_import_no_search_path.takt   # → ошибка!
+//   taktc compile cli_import_no_search_path.takt   # -> ошибка!
 //
 // Правильный вызов:
 //   taktc compile -I takt-lang/tests/data/include cli_import_no_search_path.takt

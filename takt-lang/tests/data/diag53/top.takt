@@ -1,4 +1,4 @@
-// top → mid → deep_bad: назван обязан быть deep_bad.takt (самый внутренний),
+// top -> mid -> deep_bad: назван обязан быть deep_bad.takt (самый внутренний),
 // а не mid.takt и не top.takt.
 import "mid.takt";
 start Top { ref TopDone; }

@@ -58,7 +58,7 @@ mod references {
         );
     }
 
-    /// A3: ответ содержит вхождения из тел блоков и функции - то, чего `SemanticIndex`
+    /// Ответ содержит вхождения из тел блоков и функции - то, чего `SemanticIndex`
     /// не видел.
     #[test]
     fn references_include_block_and_function_bodies() {
@@ -106,7 +106,7 @@ mod references {
         );
     }
 
-    /// A4: одноимённая переменная другой модели в ответ не попадает.
+    /// Одноимённая переменная другой модели в ответ не попадает.
     #[test]
     fn same_name_in_other_model_is_not_returned() {
         const TWO: &str = r#"model A {

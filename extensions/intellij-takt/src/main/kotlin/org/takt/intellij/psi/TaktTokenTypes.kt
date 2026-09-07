@@ -3,9 +3,9 @@ package org.takt.intellij.psi
 /**
  * Категории лексических токенов Takt для подсветки (задача 0022-02).
  *
- * Источник истины по набору ключевых слов и операторов — Rust-лексер
+ * Источник истины по набору ключевых слов и операторов - Rust-лексер
  * `takt-lang/src/parser/lexer.rs` (таблица `KEYWORDS`) и операторы фичи 0021
- * (`:=` присваивание, `=` сравнение, `<=` реляционный; `==` выведен из языка —
+ * (`:=` присваивание, `=` сравнение, `<=` реляционный; `==` выведен из языка -
  * подсвечивается как `BAD_CHARACTER`). Соответствие [KEYWORDS] эталону из
  * `parser/lexer.rs` проверяется регресс-тестом `TaktKeywordSyncTest`.
  */
@@ -20,8 +20,8 @@ object TaktTokenTypes {
     @JvmField val DOC_COMMENT = TaktTokenType("DOC_COMMENT")
     @JvmField val BLOCK_COMMENT = TaktTokenType("BLOCK_COMMENT")
 
-    // Операторы фичи 0021 — различимы для тестов (T3–T5); все раскрашиваются
-    // как «знак операции».
+    // Операторы фичи 0021 - различимы для тестов (T3-T5); все раскрашиваются
+    // как "знак операции".
     @JvmField val OP_ASSIGN = TaktTokenType("OP_ASSIGN") // :=
     @JvmField val OP_EQ = TaktTokenType("OP_EQ")         // =
     @JvmField val OP_LE = TaktTokenType("OP_LE")         // <=
@@ -37,8 +37,8 @@ object TaktTokenTypes {
     @JvmField val DOT = TaktTokenType("DOT")
     @JvmField val COLON = TaktTokenType("COLON")
 
-    // Скобки — раздельные типы для открывающих/закрывающих, чтобы работал
-    // подсветчик парных скобок (`TaktBraceMatcher`, задача 0022-03).
+    // Скобки - раздельные типы для открывающих/закрывающих, чтобы работал
+    // подсветчик парных скобок (`TaktBraceMatcher`).
     @JvmField val LPAREN = TaktTokenType("LPAREN")     // (
     @JvmField val RPAREN = TaktTokenType("RPAREN")     // )
     @JvmField val LBRACE = TaktTokenType("LBRACE")     // {
@@ -47,8 +47,8 @@ object TaktTokenTypes {
     @JvmField val RBRACKET = TaktTokenType("RBRACKET") // ]
 
     /**
-     * Ключевые слова Takt — зеркало таблицы `KEYWORDS` из
-     * `takt-lang/src/parser/lexer.rs` (правило: источник истины — лексер языка).
+     * Ключевые слова Takt - зеркало таблицы `KEYWORDS` из
+     * `takt-lang/src/parser/lexer.rs` (правило: источник истины - лексер языка).
      * При добавлении/удалении ключевого слова в языке этот набор обязан
      * измениться синхронно (ловится `TaktKeywordSyncTest`).
      */
@@ -59,16 +59,16 @@ object TaktTokenTypes {
         "assembly", "formula", "in", "out", "inout", "address", "model", "state",
         "start", "ref", "cond", "var", "next", "extern", "enum",
         "struct", "from", "X", "F", "G", "U", "R", "LTL", "Guard",
-        // `invariant` — сахар над `cond`+Guard (фича 0044); был пропущен в плагине.
+        // `invariant` - сахар над `cond`+Guard; был пропущен в плагине.
         "invariant",
-        // Ключевые слова времени (фича 0134): объявление частоты и выдержки.
+        // Ключевые слова времени: объявление частоты и выдержки.
         "clock", "after", "every",
-        // Параметр модели (фича 0185) — третья форма объявления наряду с
+        // Параметр модели - третья форма объявления наряду с
         // `var` и `const`.
         "parameter",
-        // Размещение порта (фича 0187): `out led: bit at 0x40:2 := 0;`. Слово
-        // необязательное — адрес может прийти оператором `address` или внешней
-        // картой, — но ключевое: переменная с именем `at` незаконна.
+        // Размещение порта: `out led: bit at 0x40:2 := 0;`. Слово
+        // необязательное - адрес может прийти оператором `address` или внешней
+        // картой, - но ключевое: переменная с именем `at` незаконна.
         "at",
     )
 }

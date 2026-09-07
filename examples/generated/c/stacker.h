@@ -42,7 +42,7 @@ typedef enum {
 
 // Отслеживает поступление задания от сус и фиксирует принятие на исполнение.
 // Устанавливает cmd_ack=1 в момент приёма, сохраняет параметры в tgt_*.
-// Переходит в TaskActive (busy=1) до момента завершения задания (busy→0).
+// Переходит в TaskActive (busy=1) до момента завершения задания (busy->0).
 struct StackerCommandReceiver {
     enum {
         STACKER_COMMAND_RECEIVER_INIT,

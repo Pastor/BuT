@@ -10,13 +10,13 @@ import com.intellij.psi.impl.source.resolve.reference.impl.providers.FileReferen
  * Композитный PSI-узел строки-пути `import` (фича 0067, R5).
  *
  * Несёт настоящую файловую ссылку [FileReferenceSet] прямо через
- * [getReferences] — на плоском листе это невозможно (проба 0067). Даёт
+ * [getReferences] - на плоском листе это невозможно (проба 0067). Даёт
  * `Ctrl+Click` к файлу и **rename-on-move**: при переименовании/перемещении
  * целевого файла средствами IDEA путь в `.takt` обновляется (через
  * `TaktImportPathManipulator`, регистрируемый в `plugin.xml`).
  *
- * Резолв пути — штатным `FileReferenceSet` относительно каталога импортирующего
- * файла (паритет с ядром 0055 «рядом с импортирующим»).
+ * Резолв пути - штатным `FileReferenceSet` относительно каталога импортирующего
+ * файла (паритет с ядром 0055 "рядом с импортирующим").
  */
 class TaktImportPath(node: ASTNode) : ASTWrapperPsiElement(node) {
 
@@ -31,7 +31,7 @@ class TaktImportPath(node: ASTNode) : ASTWrapperPsiElement(node) {
 
     override fun getReferences(): Array<PsiReference> {
         val content = pathContent() ?: return PsiReference.EMPTY_ARRAY
-        // startInElement = 1 — сразу за открывающей кавычкой.
+        // startInElement = 1 - сразу за открывающей кавычкой.
         @Suppress("UNCHECKED_CAST")
         return TaktImportFileReferenceSet(content, this).allReferences as Array<PsiReference>
     }

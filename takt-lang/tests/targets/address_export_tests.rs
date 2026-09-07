@@ -35,7 +35,7 @@ fn resolve_fixture(
 
 // -- Библиотечный уровень: эмиттер map (T2-T5) --------------------------------
 
-/// T2/T3/T5: три источника адреса на модели-пробе. Ожидание - из пробы: inline (`SW`),
+/// Три источника адреса на модели-пробе. Ожидание - из пробы: inline (`SW`),
 /// оператор `address` (`LED`), формат `0x` + 8 цифр, бит сохранён.
 ///
 /// У `LED` (однобитный порт) позиция бита в исходнике не написана, и с слой адресов
@@ -49,7 +49,7 @@ fn map_export_three_sources_probe() {
     );
 }
 
-/// T4: внешняя карта бьёт модель - `BTN` берётся из карты (`0x40000000`), не из inline
+/// Внешняя карта бьёт модель - `BTN` берётся из карты (`0x40000000`), не из inline
 /// (`0x00200000`). Приоритет источников.
 #[test]
 fn map_export_external_overrides_model() {
@@ -67,7 +67,7 @@ fn map_export_external_overrides_model() {
 
 // -- Библиотечный уровень: круговой рейс (T6-T8) ------------------------------
 
-/// T6: выгрузка разбирается `parse_address_map` без диагностик `AM-*` (замыкание).
+/// Выгрузка разбирается `parse_address_map` без диагностик `AM-*` (замыкание).
 #[test]
 fn round_trip_reparses_without_diagnostics() {
     let res = resolve_fixture("probe.takt", Some("BTN = 0x40000000;\n"), &[]);
@@ -75,7 +75,7 @@ fn round_trip_reparses_without_diagnostics() {
     parse_address_map(&text, 0).expect("выгрузка обязана разбираться без AM-*");
 }
 
-/// T7: `export -> parse -> export` - второй текст **побайтово равен** первому.
+/// `export -> parse -> export` - второй текст **побайтово равен** первому.
 /// Идемпотентность - свойство общего печатника (`write_map_line`).
 #[test]
 fn round_trip_is_byte_identical() {
@@ -91,7 +91,7 @@ fn round_trip_is_byte_identical() {
 
 // -- Библиотечный уровень: json (T10-T12) -------------------------------------
 
-/// T10/T11/T12: `json` валиден (`serde_json` разбирает), полон (имя/адрес/бит/
+/// `json` валиден (`serde_json` разбирает), полон (имя/адрес/бит/
 /// источник/тип/направление) и версионирован.
 #[test]
 fn json_export_is_valid_complete_and_versioned() {
@@ -99,7 +99,7 @@ fn json_export_is_valid_complete_and_versioned() {
     let text = export_address_map_json(&res);
     let v: serde_json::Value = serde_json::from_str(&text).expect("json валиден (T10)");
 
-    // T12: версия формата присутствует.
+    // Версия формата присутствует.
     assert_eq!(
         v["format_version"], 1,
         "версия формата обязана присутствовать"
@@ -109,7 +109,7 @@ fn json_export_is_valid_complete_and_versioned() {
     let ports = v["ports"].as_array().expect("массив портов");
     assert_eq!(ports.len(), 3, "три порта пробы");
 
-    // T11: полнота - на каждый порт все поля. Проверяем BTN (из карты) детально.
+    // Полнота - на каждый порт все поля. Проверяем BTN (из карты) детально.
     let btn = ports.iter().find(|p| p["name"] == "BTN").expect("BTN есть");
     assert_eq!(btn["type"], "[bit;8]");
     assert_eq!(btn["direction"], "in");
@@ -187,7 +187,7 @@ fn flat_key_collision_last_wins() {
 
 // -- Библиотечный уровень: сверка адресов с c-hal  ------------------------
 
-/// T9: адреса выгрузки = адреса таблицы `__ADDR[]` цели `c-hal`. Значения сверены живой
+/// Адреса выгрузки = адреса таблицы `__ADDR[]` цели `c-hal`. Значения сверены живой
 /// пробой 2026-07-19 (`-t c-hal --address-map plat.map`): `PROBE_BTN=0x40000000`,
 /// `PROBE_LED=0x200004`, `PROBE_SW=0x300000:3`.
 #[test]
@@ -209,7 +209,7 @@ fn export_addresses_match_chal_table() {
 
 // -- Библиотечный уровень: корпусный круговой рейс  -----------------------
 
-/// T20: для каждого `examples/*.takt`, разрешающегося без ошибок, круговой рейс `export ->
+/// Для каждого `examples/*.takt`, разрешающегося без ошибок, круговой рейс `export ->
 /// parse -> export` = тождество. Примеры с достижимым портом без адреса (SE-052)
 /// пропускаются - у них нет полной карты для выгрузки.
 #[test]
@@ -265,7 +265,7 @@ fn taktc() -> Command {
     Command::new(env!("CARGO_BIN_EXE_taktc"))
 }
 
-/// T1: разбор флагов подкоманды; `--emit` по умолчанию `map`. Проверяем прогоном без
+/// Разбор флагов подкоманды; `--emit` по умолчанию `map`. Проверяем прогоном без
 /// `--emit` - выгрузка в формате `map`.
 #[test]
 fn cli_default_emit_is_map() {
@@ -280,7 +280,7 @@ fn cli_default_emit_is_map() {
     );
 }
 
-/// T16/T17: предупреждения (SE-050/051) идут в **stderr**, а **stdout** - чистая
+/// Предупреждения (SE-050/051) идут в **stderr**, а **stdout** - чистая
 /// выгрузка, целиком разбираемая `parse_address_map`.
 #[test]
 fn cli_warnings_go_to_stderr_not_stdout() {
@@ -339,7 +339,7 @@ fn cli_unknown_format_is_rejected() {
     );
 }
 
-/// T19: вывод в файл (`-o`) - содержимое совпадает со stdout-вариантом.
+/// Вывод в файл (`-o`) - содержимое совпадает со stdout-вариантом.
 #[test]
 fn cli_output_to_file_matches_stdout() {
     let stdout_run = taktc()

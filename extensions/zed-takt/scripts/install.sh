@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install.sh — Install the Takt Zed extension (language files only).
+# install.sh - Install the Takt Zed extension (language files only).
 #
 # Syntax highlighting, outline, and hover are provided by the takt-lsp server.
 # Tree-sitter takt-lang is NOT used.

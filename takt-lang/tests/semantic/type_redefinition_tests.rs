@@ -28,7 +28,7 @@ fn accept(src: &str) {
 
 // -- SE-107: имя занято языком ------------------------------------------------
 
-/// **T1.** Псевдоним с именем встроенного типа отвергается.
+/// Псевдоним с именем встроенного типа отвергается.
 #[test]
 fn alias_over_builtin_is_refused() {
     let d = refuse("type u8 = i64; start S;");
@@ -36,21 +36,21 @@ fn alias_over_builtin_is_refused() {
     assert!(d.message.contains("u8"), "текст обязан называть имя: {d:?}");
 }
 
-/// **T2.** Структура с именем встроенного типа отвергается.
+/// Структура с именем встроенного типа отвергается.
 #[test]
 fn struct_over_builtin_is_refused() {
     let d = refuse("struct u8 { a: u16 } start S;");
     assert_eq!(d.code.as_deref(), Some("SE-107"), "{d:?}");
 }
 
-/// **T3.** Перечисление с именем встроенного типа отвергается.
+/// Перечисление с именем встроенного типа отвергается.
 #[test]
 fn enum_over_builtin_is_refused() {
     let d = refuse("enum bool { Off, On } start S;");
     assert_eq!(d.code.as_deref(), Some("SE-107"), "{d:?}");
 }
 
-/// **T4.** Позиция указывает на **имя** в объявлении, а не на начало файла.
+/// Позиция указывает на **имя** в объявлении, а не на начало файла.
 #[test]
 fn refusal_carries_position_of_the_name() {
     let d = refuse("type u8 = i64; start S;");
@@ -61,7 +61,7 @@ fn refusal_carries_position_of_the_name() {
     );
 }
 
-/// **T5.** `u128` встроенным не является - объявлять его законно.
+/// `u128` встроенным не является - объявлять его законно.
 ///
 /// Контр-пример к запрету: список имён берётся у `builtin_type_by_name`, и своя копия в
 /// проверке разошлась бы с ним именно здесь.
@@ -72,7 +72,7 @@ fn non_builtin_width_is_still_allowed() {
 
 // -- SE-108: имя уже занято ---------------------------------------------------
 
-/// **T6.** Повторный псевдоним отвергается и называет первое объявление.
+/// Повторный псевдоним отвергается и называет первое объявление.
 #[test]
 fn duplicate_alias_is_refused_with_first_position() {
     let d = refuse("type Level = u8; type Level = i64; start S;");
@@ -85,7 +85,7 @@ fn duplicate_alias_is_refused_with_first_position() {
     );
 }
 
-/// **T7.** Повторная структура отвергается - вместо прежней `SE-061` о поле.
+/// Повторная структура отвергается - вместо прежней `SE-061` о поле.
 ///
 /// Именно этот вход давал диагностику о следствии: второе объявление затирало первое, и
 /// автор читал "структура 'S' не содержит поля 'a'".
@@ -95,14 +95,14 @@ fn duplicate_struct_is_refused_instead_of_missing_field() {
     assert_eq!(d.code.as_deref(), Some("SE-108"), "{d:?}");
 }
 
-/// **T8.** Столкновение видов объявления: структура против перечисления.
+/// Столкновение видов объявления: структура против перечисления.
 #[test]
 fn duplicate_across_declaration_kinds_is_refused() {
     let d = refuse("struct Mode { a: u8 } enum Mode { Off, On } start S;");
     assert_eq!(d.code.as_deref(), Some("SE-108"), "{d:?}");
 }
 
-/// **T9.** Разные имена по-прежнему принимаются.
+/// Разные имена по-прежнему принимаются.
 #[test]
 fn distinct_names_are_accepted() {
     accept("type Byte = [bit;8]; struct Point { x: u8 } enum Mode { Off, On } start S;");

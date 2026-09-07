@@ -69,7 +69,7 @@ fn run(src: &str, scenario: &str, steps: usize) -> Result<RunResult, String> {
     runner.run()
 }
 
-/// A1: именованный вход задаёт названный порт и не трогает соседний.
+/// Именованный вход задаёт названный порт и не трогает соседний.
 #[test]
 fn named_input_sets_only_the_named_port() {
     let outcome = run(
@@ -80,7 +80,7 @@ fn named_input_sets_only_the_named_port() {
     assert!(outcome.is_ok(), "прогон должен пройти: {outcome:?}");
 }
 
-/// A2: `guard.out` в объектной форме ловит расхождение.
+/// `guard.out` в объектной форме ловит расхождение.
 #[test]
 fn named_guard_detects_mismatch() {
     let outcome = run(
@@ -97,7 +97,7 @@ fn named_guard_detects_mismatch() {
     );
 }
 
-/// A3: позиционная форма продолжает работать дословно.
+/// Позиционная форма продолжает работать дословно.
 ///
 /// Порядок портов - алфавитный: `start_btn`, `stop_btn`.
 #[test]
@@ -113,7 +113,7 @@ fn positional_form_still_works() {
     );
 }
 
-/// A4: опечатка в имени - ошибка `SIM-030`, а не тихий пропуск.
+/// Опечатка в имени - ошибка `SIM-030`, а не тихий пропуск.
 #[test]
 fn unknown_port_name_is_an_error() {
     let outcome = run(SIMPLE, r#"[{"in_ports": {"start_bttn": 1}}]"#, 1);
@@ -124,7 +124,7 @@ fn unknown_port_name_is_an_error() {
     assert!(message.contains("start_bttn"), "{message}");
 }
 
-/// A4: имя порта **другого направления** - тоже ошибка.
+/// Имя порта **другого направления** - тоже ошибка.
 ///
 /// Задать выход из сценария нельзя; прежде такая запись молча не делала ничего.
 #[test]
@@ -136,7 +136,7 @@ fn wrong_direction_port_is_an_error() {
     assert!(message.contains("SIM-030"), "{message}");
 }
 
-/// A5: голое имя, объявленное двумя моделями, - ошибка `SIM-031` с перечислением
+/// Голое имя, объявленное двумя моделями, - ошибка `SIM-031` с перечислением
 /// вариантов.
 #[test]
 fn ambiguous_bare_name_is_an_error() {
@@ -151,7 +151,7 @@ fn ambiguous_bare_name_is_an_error() {
     );
 }
 
-/// A5: квалифицированное имя адресует **одну** ветвь композиции.
+/// Квалифицированное имя адресует **одну** ветвь композиции.
 #[test]
 fn qualified_name_addresses_single_branch() {
     let outcome = run(
@@ -166,7 +166,7 @@ fn qualified_name_addresses_single_branch() {
     );
 }
 
-/// A5: квалифицированное имя несуществующей модели - ошибка.
+/// Квалифицированное имя несуществующей модели - ошибка.
 #[test]
 fn qualified_name_of_unknown_model_is_an_error() {
     let outcome = run(AMBIGUOUS, r#"[{"in_ports": {"Middle::sensor": 1}}]"#, 1);
@@ -202,7 +202,7 @@ fn named_input_reaches_the_port() {
     assert_eq!(unit.variable("start_btn"), Some(Value::Number(1)));
 }
 
-/// A6: позиционный массив неверной длины даёт предупреждение `SIM-032`, но прогон
+/// Позиционный массив неверной длины даёт предупреждение `SIM-032`, но прогон
 /// продолжается.
 ///
 /// Проверяется сквозным прогоном: предупреждение печатается пользователю, и именно это
@@ -251,7 +251,7 @@ fn named_scenario_runs_through_the_binary() {
     );
 }
 
-/// A1: позиционная форма даёт `SIM-037` - и **ровно один раз**, сколько бы шагов её ни
+/// Позиционная форма даёт `SIM-037` - и **ровно один раз**, сколько бы шагов её ни
 /// использовало.
 ///
 /// Счёт вхождений здесь существеннее самого факта: предупреждение на каждый шаг
@@ -281,7 +281,7 @@ fn positional_form_warns_once_per_run() {
     );
 }
 
-/// A2: именованная форма молчит - новое предупреждение её не задевает.
+/// Именованная форма молчит - новое предупреждение её не задевает.
 #[test]
 fn named_form_does_not_warn_about_deprecation() {
     let out = std::process::Command::new(env!("CARGO_BIN_EXE_takt-sim"))
@@ -301,7 +301,7 @@ fn named_form_does_not_warn_about_deprecation() {
     );
 }
 
-/// A3: `SIM-032` не поглощён новым кодом - они о разном.
+/// `SIM-032` не поглощён новым кодом - они о разном.
 ///
 /// `SIM-037` - о **форме** (массив вместо имён), `SIM-032` - о **длине**
 /// (значений меньше, чем портов). Вход, где верно и то и другое, обязан дать

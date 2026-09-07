@@ -194,7 +194,7 @@ fn codes_of(r: &takt_lang::AddressResolution) -> Vec<&str> {
         .collect()
 }
 
-/// T3: символ из `const` модели - **без** `--define`.
+/// Символ из `const` модели - **без** `--define`.
 #[test]
 fn eval_symbol_from_model_const() {
     let model = model_of(
@@ -206,7 +206,7 @@ fn eval_symbol_from_model_const() {
     assert_eq!(a.source, AddressSource::Operator);
 }
 
-/// T2: свёртка арифметики.
+/// Свёртка арифметики.
 #[test]
 fn eval_folds_arithmetic() {
     let model = model_of("out LED: bit; address LED = 0x00200000 + 4; start Idle;");
@@ -214,7 +214,7 @@ fn eval_folds_arithmetic() {
     assert_eq!(find_addr(&r, "LED").expect("адрес").addr, 0x0020_0004);
 }
 
-/// T1: define подставляется в выражение адреса.
+/// Define подставляется в выражение адреса.
 #[test]
 fn eval_symbol_from_define() {
     let model = model_of("out LED: bit; address LED = BTN_ADDR; start Idle;");
@@ -223,7 +223,7 @@ fn eval_symbol_from_define() {
     assert_eq!(find_addr(&r, "LED").expect("адрес").addr, 0x0020_0000);
 }
 
-/// T2: `-D BASE=...` + арифметика в модели - платформа даёт базу, модель раскладку.
+/// `-D BASE=...` + арифметика в модели - платформа даёт базу, модель раскладку.
 #[test]
 fn eval_define_plus_arithmetic() {
     let model = model_of("out LED: bit; address LED = BASE + 4; start Idle;");
@@ -232,7 +232,7 @@ fn eval_define_plus_arithmetic() {
     assert_eq!(find_addr(&r, "LED").expect("адрес").addr, 0x0020_0004);
 }
 
-/// T5: форма `адрес:бит` в значении define - та же грамматика, что у карты.
+/// Форма `адрес:бит` в значении define - та же грамматика, что у карты.
 #[test]
 fn eval_define_carries_bit() {
     let model = model_of("out LED: bit; address LED = PIN; start Idle;");
@@ -242,7 +242,7 @@ fn eval_define_carries_bit() {
     assert_eq!((a.addr, a.bit), (0x0020_0000, Some(3)));
 }
 
-/// T8: define перекрывает одноимённую `const` -> адрес define'а + `SE-053`.
+/// Define перекрывает одноимённую `const` -> адрес define'а + `SE-053`.
 ///
 /// Симметрия с `SE-050`: платформенный слой главнее модели, но заметен.
 #[test]
@@ -264,7 +264,7 @@ fn eval_define_overrides_const_with_warning() {
     );
 }
 
-/// T10: висячий символ -> `SE-054` **с именем**, а не `SE-052` "нет адреса".
+/// Висячий символ -> `SE-054` **с именем**, а не `SE-052` "нет адреса".
 ///
 /// `SE-052` рядом быть не должно: причина названа, вторая диагностика о следствии
 /// только запутает - ровно от неё фича и уходит.
@@ -290,7 +290,7 @@ fn eval_dangling_symbol_names_the_cause() {
     );
 }
 
-/// T11: неконстантное выражение (ссылка на `var`) -> `SE-055`, не молчание.
+/// Неконстантное выражение (ссылка на `var`) -> `SE-055`, не молчание.
 #[test]
 fn eval_non_constant_expression_is_reported() {
     let model = model_of("var x: u32 := 5; out LED: bit; address LED = x; start Idle;");
@@ -298,7 +298,7 @@ fn eval_non_constant_expression_is_reported() {
     assert!(codes_of(&r).contains(&"SE-055"), "{:?}", codes_of(&r));
 }
 
-/// T12: цикл `const A := B; const B := A;` -> `SE-055`, а не зависание.
+/// Цикл `const A := B; const B := A;` -> `SE-055`, а не зависание.
 #[test]
 fn eval_const_cycle_terminates_with_diagnostic() {
     let model = model_of(
@@ -308,7 +308,7 @@ fn eval_const_cycle_terminates_with_diagnostic() {
     assert!(codes_of(&r).contains(&"SE-055"), "{:?}", codes_of(&r));
 }
 
-/// T14: ** не тронут** - карта бьёт `address` с define'ом.
+/// ** не тронут** - карта бьёт `address` с define'ом.
 ///
 /// Define не источник адреса  и приоритет слоя не повышает.
 #[test]
@@ -326,7 +326,7 @@ fn define_does_not_raise_layer_priority() {
     assert!(codes_of(&r).contains(&"SE-050"));
 }
 
-/// T16: define сам по себе адреса **не создаёт**.
+/// Define сам по себе адреса **не создаёт**.
 ///
 /// Он снабжает значением выражение, а выражения нет -> `SE-052` (как в 0020) плюс
 /// `DF-004` (символ никем не спрошен).
@@ -344,7 +344,7 @@ fn define_alone_is_not_an_address_source() {
     assert!(codes.contains(&"DF-004"), "{codes:?}");
 }
 
-/// T13: неиспользованный define -> `DF-004` (ловит опечатку в имени).
+/// Неиспользованный define -> `DF-004` (ловит опечатку в имени).
 #[test]
 fn unused_define_is_reported() {
     let model = model_of("out LED: bit; address LED = 0x00200000; start Idle;");
@@ -364,7 +364,7 @@ fn used_define_is_silent() {
 
 // ------------------------- Разбор аргумента --define -------------------------
 
-/// T13: `DF-001` - нет `=` либо негодное имя.
+/// `DF-001` - нет `=` либо негодное имя.
 #[test]
 fn parse_defines_rejects_bad_format() {
     for bad in ["BTN_ADDR", "=0x1", "1BAD=0x1", "a-b=0x1"] {
@@ -375,14 +375,14 @@ fn parse_defines_rejects_bad_format() {
     }
 }
 
-/// T13: `DF-002` - негодный литерал значения.
+/// `DF-002` - негодный литерал значения.
 #[test]
 fn parse_defines_rejects_bad_value() {
     let diags = takt_lang::parse_defines(&["N=0xZZ".to_string()]).expect_err("отказ");
     assert_eq!(diags[0].code.as_deref(), Some("DF-002"));
 }
 
-/// T13: `DF-003` - повтор имени.
+/// `DF-003` - повтор имени.
 ///
 /// Ошибка, а не "побеждает последний": молчаливое затирание сделало бы адрес зависящим
 /// от порядка флагов (симметрия с `AM-006`).
@@ -393,7 +393,7 @@ fn parse_defines_rejects_duplicate() {
     assert_eq!(diags[0].code.as_deref(), Some("DF-003"));
 }
 
-/// T7: флаг повторяем - оба символа доступны.
+/// Флаг повторяем - оба символа доступны.
 #[test]
 fn parse_defines_accepts_several_symbols() {
     let model = model_of("out A: bit; out B: bit; address A = X; address B = Y; start Idle;");

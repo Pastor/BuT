@@ -8,7 +8,7 @@ use super::*;
 
 const FIXTURE: &str = "tests/data/eval/conformance_composition_always.takt";
 
-/// **R1/R2/R5:** тело `always` модели-композиции исполняется ровно
+/// Тело `always` модели-композиции исполняется ровно
 /// раз за такт и потактово совпадает с целью `c`.
 #[test]
 fn composition_model_always_matches_generated_c() {

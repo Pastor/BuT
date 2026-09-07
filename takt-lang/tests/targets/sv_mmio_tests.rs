@@ -51,7 +51,7 @@ fn compile_err(tag: &str, source: &str) -> takt_lang::diagnostics::Diagnostic {
     .expect_err("ожидалась ошибка")
 }
 
-/// **A1:** адресованные порты дают регистровый интерфейс и мультиплексор чтения
+/// Адресованные порты дают регистровый интерфейс и мультиплексор чтения
 /// по их адресам.
 #[test]
 fn addressed_ports_form_register_file() {
@@ -84,7 +84,7 @@ fn addressed_ports_form_register_file() {
     );
 }
 
-/// **A7:** порт **без** адреса остаётся портом модуля; **с** адресом - бит регистра.
+/// Порт **без** адреса остаётся портом модуля; **с** адресом - бит регистра.
 #[test]
 fn port_without_address_stays_module_port() {
     // `plain_in` без размещения -> адреса нет; `reg_out at 0x200:0` - адрес. (после
@@ -108,7 +108,7 @@ fn port_without_address_stays_module_port() {
     assert!(sv.contains("'h200"), "нет адреса reg_out:\n{sv}");
 }
 
-/// **A5:** одно слово несёт биты обоих направлений - читаются все, пишется
+/// Одно слово несёт биты обоих направлений - читаются все, пишется
 /// только `in` (-5 ). `extend_complex` без `extern fn`.
 #[test]
 fn mixed_direction_word_reads_all_writes_only_in() {
@@ -141,7 +141,7 @@ fn mixed_direction_word_reads_all_writes_only_in() {
     );
 }
 
-/// **T12 (не угадываем):** бит адреса вне `[0, 63]` -> `SE-060` (не молчаливый
+/// Бит адреса вне `[0, 63]` -> `SE-060` (не молчаливый
 /// выбор ширины слова).
 #[test]
 fn bit_out_of_range_is_se060_not_guessed() {
@@ -185,7 +185,7 @@ fn reg_interface_name_collision_is_sv014() {
     );
 }
 
-/// **T9/A8:** внешняя карта адресов (`--address-map`) принимается целью `sv-mmio`
+/// Внешняя карта адресов (`--address-map`) принимается целью `sv-mmio`
 /// и переопределяет адрес модели (SE-050 - предупреждение наложения, не ошибка).
 #[test]
 fn external_address_map_is_accepted() {

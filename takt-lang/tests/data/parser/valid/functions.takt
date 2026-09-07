@@ -15,7 +15,7 @@ model M {
     var result: u8 := 0;
     start S {
         always {
-            // Вызов функции внутри always — только выражения
+            // Вызов функции внутри always - только выражения
             debug(42);
             result := add(1, 2);
         }

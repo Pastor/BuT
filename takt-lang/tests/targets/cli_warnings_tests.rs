@@ -38,7 +38,7 @@ fn compile_stderr(fixture: &str, tag: &str, extra: &[&str]) -> String {
     String::from_utf8_lossy(&out.stderr).into_owned()
 }
 
-/// T1: неиспользуемая переменная (`Ce13`) доезжает до пользователя как `SE-036`.
+/// Неиспользуемая переменная (`Ce13`) доезжает до пользователя как `SE-036`.
 #[test]
 fn unused_variable_warning_is_printed() {
     let stderr = compile_stderr("unused_variable.takt", "unused", &[]);
@@ -52,7 +52,7 @@ fn unused_variable_warning_is_printed() {
     );
 }
 
-/// T2: недетерминированные переходы (`Ce14`) доезжают как `SE-037`.
+/// Недетерминированные переходы (`Ce14`) доезжают как `SE-037`.
 #[test]
 fn nondeterministic_transition_warning_is_printed() {
     let stderr = compile_stderr("nondeterministic_warn.takt", "nondet", &[]);
@@ -62,7 +62,7 @@ fn nondeterministic_transition_warning_is_printed() {
     );
 }
 
-/// T3: `--quiet` глушит предупреждения (симметрия с существующим поведением).
+/// `--quiet` глушит предупреждения (симметрия с существующим поведением).
 #[test]
 fn quiet_suppresses_warnings() {
     let stderr = compile_stderr("unused_variable.takt", "quiet", &["--quiet"]);
@@ -72,7 +72,7 @@ fn quiet_suppresses_warnings() {
     );
 }
 
-/// T4: чистый файл предупреждений не даёт (нет ложных срабатываний).
+/// Чистый файл предупреждений не даёт (нет ложных срабатываний).
 #[test]
 fn clean_model_has_no_warnings() {
     let stderr = compile_stderr("all_vars_used.takt", "clean", &[]);

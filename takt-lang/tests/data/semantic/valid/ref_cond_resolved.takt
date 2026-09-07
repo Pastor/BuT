@@ -4,10 +4,10 @@
 /// разрешёнными аналогами (Variable, Bool, Equal и т.д.).
 ///
 /// Проверяет:
-/// 1. Переменная типа `bit` в ref-условии → `Condition::Variable`.
-/// 2. Именованное условие (`cond`) → разрешённое значение.
-/// 3. Булев литерал → `Condition::Bool`.
-/// 4. Сравнение → `Condition::Equal`.
+/// 1. Переменная типа `bit` в ref-условии -> `Condition::Variable`.
+/// 2. Именованное условие (`cond`) -> разрешённое значение.
+/// 3. Булев литерал -> `Condition::Bool`.
+/// 4. Сравнение -> `Condition::Equal`.
 
 var flag: bit := false;
 var counter: [bit;8] := 0;

@@ -203,7 +203,7 @@ int main(void) {{
         .collect()
 }
 
-/// **T3/A3 - Основная.** Трасса порождённого ST совпадает с симулятором на
+/// **Основная.** Трасса порождённого ST совпадает с симулятором на
 /// фикстуре одноимённых `fn`: модель `B` обязана дать `wb = 3` (своей функцией
 /// `x+2`), а не `2` (склейка с телом модели `A`).
 ///
@@ -495,7 +495,7 @@ fn fixed_wrap_to_width_matches_generated_st() {
     );
 }
 
-/// T10/A4 (цель st): побитовая потактовая сверка Q-арифметики с симулятором - floor к
+/// Побитовая потактовая сверка Q-арифметики с симулятором - floor к
 /// −∞ у `*` строится `TAKT_Q_FLOORDIV` (сдвигов над числами в IEC нет).
 #[test]
 fn fixed_point_arithmetic_matches_generated_st() {
@@ -553,7 +553,7 @@ fn float_embedded_opts(m: u8, n: u8) -> takt_lang::generator::GenerateOptions {
     o
 }
 
-/// T6/A4 (цель st, embedded): `float` под `--float-embedded` даёт байт-В-Байт тот же
+/// `float` под `--float-embedded` даёт байт-В-Байт тот же
 /// ST, что явный `q(8, 8)`. Одинаковый basename -> символы совпадают, а содержимое -
 /// только если трансформация даёт ровно проверенный q-кодоген.
 #[test]
@@ -594,7 +594,7 @@ fn float_embedded_matches_explicit_q_st() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// A3/T5 (цель st native по умолчанию): `--float-as-q` без `--float-embedded` оставляет
+/// `--float-as-q` без `--float-embedded` оставляет
 /// `float` нативным `LREAL`. Проверка переключения: с `--float-embedded` - `INT`.
 /// Молчаливого Q быть не должно.
 #[test]

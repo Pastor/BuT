@@ -4,7 +4,7 @@ import com.intellij.openapi.fileTypes.LanguageFileType
 import javax.swing.Icon
 
 /**
- * Тип файла Takt — связывает расширение `.takt` с [TaktLanguage].
+ * Тип файла Takt - связывает расширение `.takt` с [TaktLanguage].
  *
  * Регистрируется в `plugin.xml` (`com.intellij.fileType`), после чего IDE
  * распознаёт `*.takt` как язык Takt (критерий приёмки A1, требование R1).

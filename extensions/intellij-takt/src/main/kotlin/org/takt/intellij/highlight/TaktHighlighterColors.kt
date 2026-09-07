@@ -8,7 +8,7 @@ import com.intellij.openapi.editor.colors.TextAttributesKey
  * Ключи атрибутов текста для подсветки Takt (задача 0022-02).
  *
  * Каждый ключ наследует цвет от стандартного [DefaultLanguageHighlighterColors],
- * поэтому подсветка работает в любой цветовой схеме «из коробки». Страница
+ * поэтому подсветка работает в любой цветовой схеме "из коробки". Страница
  * настройки цветов (`TaktColorSettingsPage`, задача 0022-03) переиспользует эти
  * же ключи, давая пользователю переопределять цвета по группам.
  */
@@ -32,7 +32,7 @@ object TaktHighlighterColors {
     @JvmField val BRACKETS = key("TAKT_BRACKETS", DefaultLanguageHighlighterColors.BRACKETS)
     @JvmField val BAD_CHARACTER = key("TAKT_BAD_CHARACTER", HighlighterColors.BAD_CHARACTER)
 
-    // ── Семантические ключи (фича 0038): различают имена по СМЫСЛУ, чего
+    // ── Семантические ключи: различают имена по смыслу, чего
     // лексический слой дать не может (лексер видит любое имя как IDENTIFIER).
     // Накладываются поверх лексики LSP4IJ-слоем (TaktSemanticTokensColorsProvider),
     // наследуют цвет от стандартных семантических категорий платформы.

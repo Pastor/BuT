@@ -1,9 +1,9 @@
 %YAML 1.2
 ---
-# Подсветка синтаксиса языка Takt для документа book/ (фича 0240).
+# Подсветка синтаксиса языка Takt для документа book/.
 #
-# Формат — Sublime Text syntax (его понимает syntect, движок подсветки Typst).
-# Подключается в book/src/template.typ опцией `#set raw(syntaxes: …)`; блоки
+# Формат - Sublime Text syntax (его понимает syntect, движок подсветки Typst).
+# Подключается в book/src/template.typ опцией `#set raw(syntaxes: ...)`; блоки
 # ```takt в разделах документа подсвечиваются согласно этому файлу.
 #
 # ⚠️ ЭТО ВТОРОЙ СПИСОК КЛЮЧЕВЫХ СЛОВ (первый — `book/takt-keywords.txt`, откуда

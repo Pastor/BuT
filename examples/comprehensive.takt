@@ -1,8 +1,8 @@
 /// Всесторонний пример: демонстрирует возможности языка Takt.
 ///
-/// Модель — контроллер термоциклирования испытательной камеры: прогреть объект
+/// Модель - контроллер термоциклирования испытательной камеры: прогреть объект
 /// до MAX_TEMP, охладить до нуля, повторить MAX_COUNT раз, завершить работу.
-/// Заявленный сценарий: Idle → Heating → Cooling → … ×MAX_COUNT → Done;
+/// Заявленный сценарий: Idle -> Heating -> Cooling -> ... MAX_COUNT раз -> Done;
 /// он проверяется прогоном (`takt-sim/tests/sim/examples_scenario_tests.rs`).
 ///
 /// Использует: переменные, константы, перечисления, внешние функции,
@@ -31,9 +31,9 @@ model Controller {
     const COOL_STEP: u8 := 3;
     const WARMUP_TEMP: u8 := 10;
 
-    /// Объект прогрет до порога — пора охлаждать
+    /// Объект прогрет до порога - пора охлаждать
     cond Overheated = temperature >= MAX_TEMP;
-    /// Объект охлаждён до нуля — цикл завершён
+    /// Объект охлаждён до нуля - цикл завершён
     cond Cooled = temperature = 0;
     /// Программа испытаний выполнена
     cond CyclesDone = count >= MAX_COUNT;
@@ -62,7 +62,7 @@ model Controller {
         return remaining;
     }
 
-    /// Телеметрия: сколько ступеней охлаждения осталось до нуля (loop ≡ while)
+    /// Телеметрия: сколько ступеней охлаждения осталось до нуля (loop == while)
     fn steps_to_zero(value: u8) -> u8 {
         var remaining: u8 := 0;
         var v: u8 := value;
@@ -77,7 +77,7 @@ model Controller {
         return remaining;
     }
 
-    /// Начальное состояние: подготовка камеры — прогрев до рабочего порога.
+    /// Начальное состояние: подготовка камеры - прогрев до рабочего порога.
     /// Выход считает начатый цикл испытаний.
     start Idle {
         enter {
@@ -94,7 +94,7 @@ model Controller {
         ref Heating: temperature > WARMUP_TEMP;
     }
 
-    /// Состояние нагрева — демонстрация while (в телеметрии) и match
+    /// Состояние нагрева - демонстрация while (в телеметрии) и match
     state Heating {
         always {
             temperature := clamp_temp(temperature + HEAT_STEP);
@@ -113,7 +113,7 @@ model Controller {
         ref Cooling: Overheated;
     }
 
-    /// Состояние охлаждения — удерживает управление до конца охлаждения
+    /// Состояние охлаждения - удерживает управление до конца охлаждения
     state Cooling {
         always {
             for var i: u8 := 0; i < COOL_STEP; i := i + 1 {
@@ -127,7 +127,7 @@ model Controller {
         ref Idle: Cooled & !CyclesDone;
     }
 
-    /// Конечное состояние — программа испытаний выполнена (нет переходов)
+    /// Конечное состояние - программа испытаний выполнена (нет переходов)
     state Done {
         enter {
             temperature := 0;

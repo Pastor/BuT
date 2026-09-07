@@ -11,7 +11,7 @@ start S {
             var x: bit := false;
             x := false;
         }
-        // Здесь x — снова ссылка на model-level x
+        // Здесь x - снова ссылка на model-level x
         x := true;
     }
 }

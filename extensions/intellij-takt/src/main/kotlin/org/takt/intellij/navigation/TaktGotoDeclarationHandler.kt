@@ -11,11 +11,11 @@ import org.takt.intellij.psi.TaktTokenTypes
  *
  * По идентификатору под кареткой ищет одноимённое объявление
  * ([TaktSymbolScanner]) в том же файле и отдаёт платформе его листовой элемент
- * как цель `Go to Declaration` (`Ctrl/⌘+B`, `Ctrl/⌘+Click`). На самой
+ * как цель `Go to Declaration` (`Ctrl/Cmd+B`, `Ctrl/Cmd+Click`). На самой
  * декларации и на не-идентификаторах молчит, не мешая штатному поведению.
  *
  * Дополнительно обрабатывает строки-пути директив `import` ([TaktImports]):
- * `Ctrl/⌘+Click` по пути открывает соответствующий файл `.takt`.
+ * `Ctrl/Cmd+Click` по пути открывает соответствующий файл `.takt`.
  */
 class TaktGotoDeclarationHandler : GotoDeclarationHandler {
 
@@ -26,7 +26,7 @@ class TaktGotoDeclarationHandler : GotoDeclarationHandler {
     ): Array<PsiElement>? {
         val element = sourceElement ?: return null
 
-        // Путь import → сам файл.
+        // Путь import -> сам файл.
         if (element.node?.elementType == TaktTokenTypes.STRING) {
             val path = TaktImports.pathOf(element) ?: return null
             val target = TaktImports.resolve(element, path) ?: return null

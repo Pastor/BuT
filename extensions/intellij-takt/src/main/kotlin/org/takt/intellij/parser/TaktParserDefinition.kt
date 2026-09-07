@@ -25,7 +25,7 @@ import org.takt.intellij.psi.TaktTokenSets
  *
  * Разбор **плоский** ([TaktParser]): токены [TaktLexer] складываются листьями под
  * единственным корневым узлом [FILE]. Полноценного PSI-дерева нет (ADR 0023,
- * Option A) — цель лишь дать платформе реальные `PsiElement` под кареткой, чтобы
+ * Option A) - цель лишь дать платформе реальные `PsiElement` под кареткой, чтобы
  * заработали `GotoDeclarationHandler` и `PsiReferenceContributor`. Подсветка
  * (0022) от этого не зависит и продолжает работать через `SyntaxHighlighter`.
  */
@@ -42,8 +42,8 @@ class TaktParserDefinition : ParserDefinition {
 
     override fun getWhitespaceTokens(): TokenSet = TaktTokenSets.WHITESPACES
 
-    // Композит IMPORT_PATH (0067) → узел-носитель файловой ссылки; прочие
-    // (если появятся) — безопасная обёртка. FILE обрабатывается createFile.
+    // Композит IMPORT_PATH (0067) -> узел-носитель файловой ссылки; прочие
+    // (если появятся) - безопасная обёртка. FILE обрабатывается createFile.
     override fun createElement(node: ASTNode): PsiElement = when (node.elementType) {
         TaktElementTypes.IMPORT_PATH -> TaktImportPath(node)
         TaktElementTypes.NAME_DECL -> TaktNameDecl(node)

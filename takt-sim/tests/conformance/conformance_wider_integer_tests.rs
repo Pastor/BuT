@@ -119,7 +119,7 @@ int main(void) {{
         .collect()
 }
 
-/// **A3: знак объявленного типа доезжает до значения - и до прошивки.**
+/// **Знак объявленного типа доезжает до значения - и до прошивки.**
 #[test]
 fn signed_inferred_const_trace_matches_generated_c() {
     let sim = simulator_trace();

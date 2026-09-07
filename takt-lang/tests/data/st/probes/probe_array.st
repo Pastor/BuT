@@ -1,4 +1,4 @@
-(* П5. ARRAY в VAR блока FB — подтверждает T12. *)
+(* П5. ARRAY в VAR блока FB - подтверждает T12. *)
 FUNCTION_BLOCK Demo
 VAR
     data : ARRAY [0..3] OF USINT;

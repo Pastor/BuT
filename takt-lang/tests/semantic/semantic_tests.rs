@@ -454,7 +454,7 @@ fn port_address_dangling_reference_is_error() {
 
 // ---: fixed-point q(m, n) - смешение  и приведение  ---------
 
-/// T6: неявное смешение `q(8, 8)` с `u8` в арифметике -> ошибка SE-059, а не молчаливая
+/// Неявное смешение `q(8, 8)` с `u8` в арифметике -> ошибка SE-059, а не молчаливая
 /// потеря точности.
 #[test]
 fn fixed_mixing_with_integer_is_se059() {
@@ -467,7 +467,7 @@ fn fixed_mixing_with_integer_is_se059() {
     );
 }
 
-/// T6: два разных формата `q` - тоже смешение (SE-059).
+/// Два разных формата `q` - тоже смешение (SE-059).
 #[test]
 fn fixed_mixing_different_formats_is_se059() {
     let err = build_from_src(
@@ -483,7 +483,7 @@ fn fixed_mixing_different_formats_is_se059() {
     );
 }
 
-/// T6: `q + q` одного формата - допустимо (тот же тип, не смешение).
+/// `q + q` одного формата - допустимо (тот же тип, не смешение).
 #[test]
 fn fixed_same_format_addition_is_valid() {
     let node = build_from_src(
@@ -497,7 +497,7 @@ fn fixed_same_format_addition_is_valid() {
     );
 }
 
-/// T7: явное приведение `u8 as q(8, 8)` снимает смешение.
+/// Явное приведение `u8 as q(8, 8)` снимает смешение.
 #[test]
 fn fixed_cast_resolves_mixing() {
     let node = build_file("tests/data/semantic/valid/fixed_cast.takt");

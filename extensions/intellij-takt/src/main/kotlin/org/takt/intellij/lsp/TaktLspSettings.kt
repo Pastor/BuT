@@ -8,20 +8,20 @@ import com.intellij.openapi.components.Storage
 /**
  * Настройки инструментов Takt в плагине (фичи 0038, 0125).
  *
- * Хранилище — [PersistentStateComponent] уровня приложения (пути к бинарникам
+ * Хранилище - [PersistentStateComponent] уровня приложения (пути к бинарникам
  * общие для всех проектов). Поля:
- *  - `serverPath` — путь к `takt-lsp` (0038; пусто ⇒ автопоиск в `PATH`,
+ *  - `serverPath` - путь к `takt-lsp` (0038; пусто ⇒ автопоиск в `PATH`,
  *    [TaktLspBinary.resolve]);
- *  - `compilerPath`/`simulatorPath` — пути к компилятору `taktc`/симулятору
- *    `takt-sim` (0125; **хранятся как задел** под действия компиляции/симуляции —
+ *  - `compilerPath`/`simulatorPath` - пути к компилятору `taktc`/симулятору
+ *    `takt-sim` (0125; **хранятся как задел** под действия компиляции/симуляции -
  *    фича-преемник; сама 0125 их не исполняет);
- *  - `includeDirs` — каталоги импортов (`-I`); **прокидываются в LSP-сервер** как
- *    `initializationOptions.searchPaths` (0072) — см. [TaktInitOptions];
- *  - `compilerArgs` — дополнительные параметры компилятора (свободные флаги,
+ *  - `includeDirs` - каталоги импортов (`-I`); **прокидываются в LSP-сервер** как
+ *    `initializationOptions.searchPaths` (0072) - см. [TaktInitOptions];
+ *  - `compilerArgs` - дополнительные параметры компилятора (свободные флаги,
  *    задел под действия);
- *  - `outputDir` — выходная директория генерации (задел под действия).
+ *  - `outputDir` - выходная директория генерации (задел под действия).
  *
- * Логика сборки `searchPaths` из [includeDirs] вынесена в [TaktInitOptions] —
+ * Логика сборки `searchPaths` из [includeDirs] вынесена в [TaktInitOptions] -
  * чистая, тестируемая без GUI (драйвер 5 ADR 0038).
  */
 @State(name = "TaktLspSettings", storages = [Storage("takt.xml")])
@@ -86,7 +86,7 @@ class TaktLspSettings : PersistentStateComponent<TaktLspSettings.State> {
             state.simulatorPath = value
         }
 
-    /** Каталоги импортов (`-I`) → `searchPaths` LSP. */
+    /** Каталоги импортов (`-I`) -> `searchPaths` LSP. */
     var includeDirs: MutableList<String>
         get() = state.includeDirs
         set(value) {

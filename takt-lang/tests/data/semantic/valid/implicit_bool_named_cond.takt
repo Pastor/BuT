@@ -4,7 +4,7 @@
 
 var counter: [bit;8] := 0;
 
-// Именованные условия — результатом всегда является булево значение
+// Именованные условия - результатом всегда является булево значение
 cond MaxReached   = counter = 255;
 cond NotZero      = counter != 0;
 cond HalfFull     = counter > 127;

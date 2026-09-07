@@ -9,7 +9,7 @@ import org.takt.intellij.TaktIcons
 import javax.swing.Icon
 
 /**
- * Страница «Settings → Editor → Color Scheme → Takt» (задача 0022-03, R4/A5).
+ * Страница "Settings -> Editor -> Color Scheme -> Takt" (задача 0022-03, R4/A5).
  *
  * Даёт пользователю переопределять цвета по группам и показывает результат на
  * демонстрационном фрагменте Takt (пост-0021 синтаксис `:=`/`=`/`<=`).
@@ -48,9 +48,9 @@ class TaktColorSettingsPage : ColorSettingsPage {
             AttributesDescriptor("Квадратные скобки", TaktHighlighterColors.BRACKETS),
             AttributesDescriptor("Некорректный символ", TaktHighlighterColors.BAD_CHARACTER),
             // Семантические ключи (фича 0038; выведены сюда фиксом 0196-01).
-            // ⚠️ Без них пользователь не может ни увидеть, ни настроить цвет
+            // Без них пользователь не может ни увидеть, ни настроить цвет
             // имени типа: ключ есть, цвет наследуется от платформенной
-            // категории без собственного значения, а в панели его нет — то
+            // категории без собственного значения, а в панели его нет - то
             // есть подсветка типов существует только на бумаге.
             AttributesDescriptor("Имя типа", TaktHighlighterColors.TYPE),
             AttributesDescriptor("Имя функции", TaktHighlighterColors.FUNCTION),

@@ -15,8 +15,8 @@ import org.takt.intellij.highlight.TaktHighlighterColors
  * не спорил с лексическим по цвету (R4/R5). Наслаивается **поверх** лексики: цвет
  * меняется только у идентификаторов, которые лексер красит одинаково.
  *
- * ⚠️ Набор ключей обязан покрывать легенду **целиком**: тип без маппинга молча
- * потеряет цвет. Сторож — `TaktSemanticTokensColorsProviderTest`, читающий
+ * Набор ключей обязан покрывать легенду **целиком**: тип без маппинга молча
+ * потеряет цвет. Сторож - `TaktSemanticTokensColorsProviderTest`, читающий
  * `SEMANTIC_TOKEN_TYPES` из Rust-исходника (приём `TaktKeywordSyncTest`).
  */
 class TaktSemanticTokensColorsProvider : SemanticTokensColorsProvider {
@@ -29,8 +29,8 @@ class TaktSemanticTokensColorsProvider : SemanticTokensColorsProvider {
 
     companion object {
         /**
-         * Ключ цвета для типа токена легенды LSP (имена — как в
-         * `lsp_types::SemanticTokenType`). `null` — тип вне легенды (цвет не
+         * Ключ цвета для типа токена легенды LSP (имена - как в
+         * `lsp_types::SemanticTokenType`). `null` - тип вне легенды (цвет не
          * навязывается).
          */
         fun keyFor(tokenType: String): TextAttributesKey? = when (tokenType) {

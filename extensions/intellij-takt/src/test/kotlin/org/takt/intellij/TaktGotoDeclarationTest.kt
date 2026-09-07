@@ -28,7 +28,7 @@ class TaktGotoDeclarationTest : BasePlatformTestCase() {
         assertNotNull(targets)
         val target = targets!!.single()
         assertEquals("Producer", target.text)
-        // Цель — имя в объявлении `model Producer`, т.е. первое вхождение.
+        // Цель - имя в объявлении `model Producer`, т.е. первое вхождение.
         assertTrue(target.textRange.startOffset < myFixture.caretOffset)
     }
 

@@ -63,7 +63,7 @@ fn generate(tag: &str, source: &str) -> (PathBuf, String) {
     (dir, text)
 }
 
-/// **T1.** Поглотитель печатается в обоих местах.
+/// Поглотитель печатается в обоих местах.
 #[test]
 fn loop_variable_gets_a_sink() {
     for (tag, src) in [("state", IN_STATE), ("function", IN_FUNCTION)] {
@@ -76,7 +76,7 @@ fn loop_variable_gets_a_sink() {
     }
 }
 
-/// **T2.** Вывод принимается `verilator -Wall` - флагами проверки цели.
+/// Вывод принимается `verilator -Wall` - флагами проверки цели.
 #[test]
 fn generated_sv_passes_lint() {
     let available = Command::new("verilator")

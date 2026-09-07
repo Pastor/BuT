@@ -28,14 +28,14 @@ fn reason_of(src: &str, phi_src: &str) -> Option<UnsupportedReason> {
     }
 }
 
-/// A1: опечатка в имени атома - `UnknownAtom`.
+/// Опечатка в имени атома - `UnknownAtom`.
 #[test]
 fn typo_in_atom_is_unknown_atom() {
     let r = reason_of("start A { ref A; }", "G nosuch");
     assert_eq!(r, Some(UnsupportedReason::UnknownAtom));
 }
 
-/// A2: предикат с арифметикой - `PredicateOutsideSubset`.
+/// Предикат с арифметикой - `PredicateOutsideSubset`.
 ///
 /// Тем же путём уходят `float`, `q`, массив и структура: неперечислимый тип отсекается
 /// **подмножеством предикатов**, а не проверкой домена. Ветвь
@@ -50,7 +50,7 @@ fn arithmetic_predicate_is_outside_subset() {
     );
 }
 
-/// A2: `float` в предикате приходит той же причиной - подмножеством.
+/// `float` в предикате приходит той же причиной - подмножеством.
 #[test]
 fn float_predicate_is_outside_subset() {
     let src = "var x: float := 0.0; cond P = x <= 1.0; start A { ref A; }";
@@ -60,7 +60,7 @@ fn float_predicate_is_outside_subset() {
     );
 }
 
-/// A3: три `u8` - `SizeOverLimit` (потолок считается по рёбрам).
+/// Три `u8` - `SizeOverLimit` (потолок считается по рёбрам).
 ///
 /// Именно этот вход прежде получал ложную первую строку: атомы здесь отслеживаемые, а
 /// сообщение говорило обратное.
@@ -74,7 +74,7 @@ fn three_u8_is_size_over_limit() {
     );
 }
 
-/// A4: `InitialValueUnknown` стала **недостижимой** - и это проверяется.
+/// `InitialValueUnknown` стала **недостижимой** - и это проверяется.
 ///
 /// отвергает его **семантикой** (`SE-084`): значение `extern` при компиляции неизвестно
 /// по определению, и прежде потребители расходились на нём молча (эталон - ноль, `st` -
@@ -93,7 +93,7 @@ fn extern_call_initializer_is_rejected_before_verification() {
     assert_eq!(diagnostic.code.as_deref(), Some("SE-084"), "{diagnostic:?}");
 }
 
-/// A5 (**контроль**): проверяемое свойство причины не получает вовсе.
+/// Проверяемое свойство причины не получает вовсе.
 ///
 /// Без контроля "причина такая-то" доказывало бы лишь, что вердикт всегда
 /// `Unsupported`.
@@ -103,7 +103,7 @@ fn checkable_property_has_no_reason() {
     assert_eq!(reason_of(src, "G P"), None, "свойство над `bit` проверяемо");
 }
 
-/// A6: тексты причин различны и не пусты - иначе называть причину бессмысленно.
+/// Тексты причин различны и не пусты - иначе называть причину бессмысленно.
 #[test]
 fn reason_texts_are_distinct_and_nonempty() {
     let all = [

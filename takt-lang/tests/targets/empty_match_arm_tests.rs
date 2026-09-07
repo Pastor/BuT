@@ -81,7 +81,7 @@ fn generate(tag: &str, target: &str, source: &str) -> (PathBuf, String) {
     (dir, text)
 }
 
-/// **T1.** Цель `rust`: пустая `_`-ветвь не печатается.
+/// Цель `rust`: пустая `_`-ветвь не печатается.
 #[test]
 fn rust_drops_empty_default_arm() {
     let (_d, text) = generate("empty_def", "rust", EMPTY_DEFAULT);
@@ -95,7 +95,7 @@ fn rust_drops_empty_default_arm() {
     );
 }
 
-/// **T2.** Цель `st`: пустая `_`-ветвь не даёт `ELSE`.
+/// Цель `st`: пустая `_`-ветвь не даёт `ELSE`.
 #[test]
 fn st_drops_empty_default_arm() {
     let (_d, text) = generate("empty_def", "st", EMPTY_DEFAULT);
@@ -109,7 +109,7 @@ fn st_drops_empty_default_arm() {
     );
 }
 
-/// **T3.** Цель `st`: пустая ветвь образца опускается вместе со своим `IF`.
+/// Цель `st`: пустая ветвь образца опускается вместе со своим `IF`.
 #[test]
 fn st_drops_empty_pattern_arm() {
     let (_d, text) = generate("empty_arm", "st", EMPTY_ARM);
@@ -123,7 +123,7 @@ fn st_drops_empty_pattern_arm() {
     );
 }
 
-/// **T4. Контроль:** непустая ветвь по умолчанию печатается как прежде.
+/// **Контроль:** непустая ветвь по умолчанию печатается как прежде.
 #[test]
 fn non_empty_default_arm_is_kept() {
     let (_d, rust) = generate("full_def", "rust", FULL_DEFAULT);
@@ -132,7 +132,7 @@ fn non_empty_default_arm_is_kept() {
     assert!(st.contains("ELSE"), "ветвь непуста:\n{st}");
 }
 
-/// **T5.** При дубле образца недостижимая ветвь исчезает вместе с пустой.
+/// При дубле образца недостижимая ветвь исчезает вместе с пустой.
 ///
 /// До пустая ветвь при дубле сохранялась: опустить её значило отдать совпадение нижней
 /// ветви, то есть поменять автомат. С 0514 нижняя ветвь не печатается вовсе (она
@@ -151,7 +151,7 @@ fn duplicate_pattern_drops_both_arms() {
     );
 }
 
-/// **T6. Контроль:** цели `c` и `sv` не затронуты - их вывод принимали и до.
+/// **Контроль:** цели `c` и `sv` не затронуты - их вывод принимали и до.
 #[test]
 fn c_and_sv_are_untouched() {
     let (_d, c) = generate("empty_def", "c", EMPTY_DEFAULT);
@@ -163,7 +163,7 @@ fn c_and_sv_are_untouched() {
     );
 }
 
-/// **T7.** Порождённое принимают инструменты проверок.
+/// Порождённое принимают инструменты проверок.
 #[test]
 fn generated_output_passes_target_tools() {
     let clippy = Proc::new("clippy-driver")
@@ -234,7 +234,7 @@ fn generated_output_passes_target_tools() {
     }
 }
 
-/// **T8.** Недостижимая ветвь не печатается целями `c`, `rust`, `sv`.
+/// Недостижимая ветвь не печатается целями `c`, `rust`, `sv`.
 ///
 /// `match` берёт первое совпадение, поэтому ветвь с повторяющимся образцом не сработает
 /// никогда.

@@ -122,7 +122,7 @@ fn generate_rust(
 
 // -- Слой 1: эмиссия ----------------------------------------------------------
 
-/// **T1.** Цель `c`: разряд адресуется своим словом, маска - 64-битная.
+/// Цель `c`: разряд адресуется своим словом, маска - 64-битная.
 #[test]
 fn c_addresses_the_right_word() {
     let (_dir, text) = generate_c("wide_c", WIDE).expect("порождение C");
@@ -140,7 +140,7 @@ fn c_addresses_the_right_word() {
     );
 }
 
-/// **T2.** Цель `c`: инициализация и копирование идут по словам.
+/// Цель `c`: инициализация и копирование идут по словам.
 #[test]
 fn c_initialises_and_copies_word_by_word() {
     let (_dir, init) = generate_c("wide_c_init", WIDE).expect("порождение C");
@@ -155,7 +155,7 @@ fn c_initialises_and_copies_word_by_word() {
     );
 }
 
-/// **T3.** Цель `rust`: тип, умолчание и разряд согласованы между собой.
+/// Цель `rust`: тип, умолчание и разряд согласованы между собой.
 #[test]
 fn rust_keeps_word_array_everywhere() {
     let (_dir, text) = generate_rust("wide_rs", WIDE).expect("порождение Rust");
@@ -174,7 +174,7 @@ fn rust_keeps_word_array_everywhere() {
     );
 }
 
-/// **T4. Контроль: скалярный носитель не превратился в массив.**
+/// **Контроль: скалярный носитель не превратился в массив.**
 ///
 /// `[bit;64]` и уже - по-прежнему скаляр; меняется только суффикс маски.
 #[test]
@@ -190,7 +190,7 @@ fn scalar_carrier_is_untouched() {
     );
 }
 
-/// **T5.** Операция над словами отвергается обеими целями - с причиной.
+/// Операция над словами отвергается обеими целями - с причиной.
 #[test]
 fn arithmetic_over_words_is_refused_with_reason() {
     let c = generate_c("arith_c", ARITH).expect_err("цель `c` обязана отказать");
@@ -214,7 +214,7 @@ const BEYOND: &str = "var w: [bit;96] := 0;\n\
                       var seen: u8 := 0;\n\
                       start Run { always { w.200 := 1; } ref Run; }\n";
 
-/// **T9.** Разряд за объявленной шириной отвергается **семантикой**.
+/// Разряд за объявленной шириной отвергается **семантикой**.
 ///
 /// Прежде здесь проверялись отказы **целей** (`CC-022` у `c`, `RS-011` у `rust`). С
 /// вход отсекает `SE-125` - то есть **раньше** генерации, и одинаково для всех восьми
@@ -255,7 +255,7 @@ fn tool_available(tool: &str) -> bool {
         .unwrap_or(false)
 }
 
-/// **T6.** Порождённый C принимается `cc` под флагами проверки - все три формы.
+/// Порождённый C принимается `cc` под флагами проверки - все три формы.
 #[test]
 fn generated_c_compiles_under_gate_flags() {
     if !tool_available("cc") {
@@ -284,7 +284,7 @@ fn generated_c_compiles_under_gate_flags() {
     }
 }
 
-/// **T7.** Порождённый Rust принимается `clippy -D warnings` - как в проверке.
+/// Порождённый Rust принимается `clippy -D warnings` - как в проверке.
 #[test]
 fn generated_rust_passes_clippy_gate() {
     if !tool_available("clippy-driver") {

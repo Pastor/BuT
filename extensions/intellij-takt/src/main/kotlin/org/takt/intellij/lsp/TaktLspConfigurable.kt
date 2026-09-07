@@ -15,15 +15,15 @@ import javax.swing.JTextField
 /**
  * Страница настроек инструментов Takt (фичи 0038, 0125).
  *
- * Settings → Tools → **Takt Language Server**. Поля:
+ * Settings -> Tools -> **Takt Language Server**. Поля:
  *  - путь к `takt-lsp` (0038; пусто ⇒ автопоиск в `PATH`, [TaktLspBinary.resolve]);
  *  - путь к компилятору `taktc` и симулятору `takt-sim` (0125; задел под действия);
- *  - каталоги импортов (`-I`, по одному на строку) — прокидываются в LSP как
+ *  - каталоги импортов (`-I`, по одному на строку) - прокидываются в LSP как
  *    `searchPaths` ([TaktInitOptions], 0072);
  *  - дополнительные параметры компилятора (свободные флаги; задел);
  *  - выходная директория генерации (задел).
  *
- * Ручной Swing на `GridBagLayout` (без UI-DSL) — минимальная зависимость от
+ * Ручной Swing на `GridBagLayout` (без UI-DSL) - минимальная зависимость от
  * версии платформенного API (диапазон совместимости открыт, `untilBuild` пуст).
  */
 class TaktLspConfigurable : Configurable {
@@ -45,7 +45,7 @@ class TaktLspConfigurable : Configurable {
         compilerPathField = addPathRow(panel, row++, "Путь к компилятору taktc: ")
         simulatorPathField = addPathRow(panel, row++, "Путь к симулятору takt-sim: ")
 
-        // Каталоги импортов (-I) — многострочное поле (по одному пути на строку).
+        // Каталоги импортов (-I) - многострочное поле (по одному пути на строку).
         val area = JTextArea(4, 30)
         includeDirsArea = area
         addAreaRow(panel, row++, "Каталоги импортов (-I, по одному на строку): ", area)
@@ -56,7 +56,7 @@ class TaktLspConfigurable : Configurable {
 
         outputDirField = addPathRow(panel, row++, "Выходная директория генерации: ")
 
-        // Растягивающая «пружина» снизу — прижимает строки к верху.
+        // Растягивающая "пружина" снизу - прижимает строки к верху.
         val filler = GridBagConstraints().apply {
             gridx = 0
             gridy = row
@@ -69,20 +69,20 @@ class TaktLspConfigurable : Configurable {
         return panel
     }
 
-    /** Строка «метка + [TextFieldWithBrowseButton]». */
+    /** Строка "метка + [TextFieldWithBrowseButton]". */
     private fun addPathRow(panel: JPanel, row: Int, label: String): TextFieldWithBrowseButton {
         val field = TextFieldWithBrowseButton()
         addComponentRow(panel, row, label, field)
         return field
     }
 
-    /** Строка «метка + произвольный компонент» (поле растягивается по ширине). */
+    /** Строка "метка + произвольный компонент" (поле растягивается по ширине). */
     private fun addComponentRow(panel: JPanel, row: Int, label: String, component: JComponent) {
         panel.add(JLabel(label), labelConstraints(row))
         panel.add(component, fieldConstraints(row))
     }
 
-    /** Строка «метка сверху + прокручиваемая область» (для многострочного `-I`). */
+    /** Строка "метка сверху + прокручиваемая область" (для многострочного `-I`). */
     private fun addAreaRow(panel: JPanel, row: Int, label: String, area: JTextArea) {
         panel.add(JLabel(label), labelConstraints(row))
         val scroll = JScrollPane(area)

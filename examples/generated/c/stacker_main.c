@@ -1,5 +1,5 @@
 /**
- * stacker_main.c — Симулятор автоматизированного штабелятора.
+ * stacker_main.c - Симулятор автоматизированного штабелятора.
  *
  * Физика: штабелятор движется по 1 единице/такт на каждой оси к cmd_target_*.
  * Вилы: sense_loaded меняется через такт после выдвижения cmd_fork=1,
@@ -8,17 +8,17 @@
  * Сценарии
  * ────────
  * SIM1 [POSITIVE] Приёмка: задание type=0, ячейка [3,2,8].
- *   Ожидаемо: cmd_ack=1 → паллет взят на приёмке → паллет уложен → cmd_done=1.
+ *   Ожидаемо: cmd_ack=1 -> паллет взят на приёмке -> паллет уложен -> cmd_done=1.
  *
  * SIM2 [POSITIVE] Отгрузка: задание type=1, ячейка [5,4,12].
- *   Ожидаемо: cmd_ack=1 → паллет взят из ячейки → доставлен на выдачу → cmd_done=1.
+ *   Ожидаемо: cmd_ack=1 -> паллет взят из ячейки -> доставлен на выдачу -> cmd_done=1.
  *
  * SIM3 [NEGATIVE] Аварийная зарядка: батарея садится в ходе движения.
- *   Ожидаемо: задание прерывается, cmd_done НЕ выдаётся, штабелятор уходит
+ *   Ожидаемо: задание прерывается, cmd_done не выдаётся, штабелятор уходит
  *             на зарядку и возвращается в MovementIdle.
  *
  * SIM4 [NEGATIVE] Задание при разряженной батарее.
- *   Ожидаемо: cmd_ack и cmd_done НЕ выдаются, busy остаётся 0.
+ *   Ожидаемо: cmd_ack и cmd_done не выдаются, busy остаётся 0.
  *
  * SIM5 [POSITIVE] 20 заданий подряд: чередование приёмки и отгрузки.
  *   Ожидаемо: каждое задание получает cmd_ack и cmd_done; после всех заданий
@@ -56,7 +56,7 @@ typedef struct {
     /* Выходные числовые порты */
     uint8_t cmd_target_stack, cmd_target_row, cmd_target_section;
 
-    /* Флаги событий — поднимаются при write_bit(val=true) */
+    /* Флаги событий - поднимаются при write_bit(val=true) */
     bool ack_seen;
     bool done_seen;
 
@@ -66,8 +66,8 @@ typedef struct {
 
     /* Учёт ячеек склада [stack 0..11][row 0..10][section 0..20].
      * true = ячейка занята паллетом.
-     * Зона приёмки (0,1,1) — бесконечный источник, не отслеживается.
-     * Зона выдачи (11,1,1) — бесконечный приёмник, не отслеживается. */
+     * Зона приёмки (0,1,1) - бесконечный источник, не отслеживается.
+     * Зона выдачи (11,1,1) - бесконечный приёмник, не отслеживается. */
     bool cells[12][11][21];
 } SimState;
 
@@ -140,7 +140,7 @@ static uint8_t step_toward(uint8_t cur, uint8_t tgt) {
     return cur;
 }
 
-/* Вызывается ПЕРЕД Stacker_tick(): движение, датчик зарядки, вилы. */
+/* Вызывается перед Stacker_tick(): движение, датчик зарядки, вилы. */
 static void sim_update_physics(SimState *s, const Stacker *fsm) {
     s->pos_stack   = step_toward(s->pos_stack,   s->cmd_target_stack);
     s->pos_row     = step_toward(s->pos_row,     s->cmd_target_row);
@@ -149,8 +149,8 @@ static void sim_update_physics(SimState *s, const Stacker *fsm) {
     s->sense_at_charge = (s->pos_stack == 0 && s->pos_row == 0 && s->pos_section == 0);
 
     /* Реакция на вилы: один паллет за раз.
-     * Захват: приёмка — бесконечный источник; ячейка — только если занята.
-     * Укладка: выдача — бесконечный приёмник; ячейка помечается занятой. */
+     * Захват: приёмка - бесконечный источник; ячейка - только если занята.
+     * Укладка: выдача - бесконечный приёмник; ячейка помечается занятой. */
     if (s->cmd_fork && fsm->lift_request) {
         bool at_pickup  = (s->pos_stack ==  0 && s->pos_row == 1 && s->pos_section == 1);
         bool at_dropoff = (s->pos_stack == 11 && s->pos_row == 1 && s->pos_section == 1);
@@ -270,7 +270,7 @@ static void stacker_setup(Stacker *fsm, SimState *sim) {
     Stacker_init(fsm);
 }
 
-/* Один шаг: физика → тик FSM → вывод. */
+/* Один шаг: физика -> тик FSM -> вывод. */
 static void sim_step(int tick, SimState *sim, Stacker *fsm) {
     sim_update_physics(sim, fsm);
     Stacker_tick(fsm);
@@ -316,7 +316,7 @@ static int run_sim1(void) {
             printf("  >> cmd_done=1 обнаружен на такте %d\n", t);
             done_tick = t;
         }
-        /* дополнительный такт для перехода Completing → Idle */
+        /* дополнительный такт для перехода Completing -> Idle */
         if (done_tick > 0 && t >= done_tick + 1) break;
     }
 
@@ -577,7 +577,7 @@ static int run_sim5(void) {
             task_idx++;
 
             if (done_count == 20) {
-                /* Дополнительный такт для перехода Completing → Idle */
+                /* Дополнительный такт для перехода Completing -> Idle */
                 sim_step(t + 1, &sim, &fsm);
                 break;
             }

@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NonNls
  * Базовый тип лексического токена языка Takt.
  *
  * Конкретные токены (ключевые слова, операторы `:=`/`=`/`<=`, литералы,
- * комментарии) объявляются в задаче 0022-02 — источник истины по набору
+ * комментарии) объявляются в задаче 0022-02 - источник истины по набору
  * см. `takt-lang/src/parser/lexer.rs` (таблица `KEYWORDS`) и фичу 0021.
  */
 class TaktTokenType(@NonNls debugName: String) : IElementType(debugName, TaktLanguage) {

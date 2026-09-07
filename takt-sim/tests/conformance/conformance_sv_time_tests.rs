@@ -281,7 +281,7 @@ fn every_period_matches_generated_sv() {
     );
 }
 
-/// Тест A7: порождённый RTL никогда не несёт `#`-задержек и `$time` - их
+/// Порождённый RTL никогда не несёт `#`-задержек и `$time` - их
 /// yosys/verilator пропускают молча, а в железе они означают иное.
 #[test]
 fn generated_sv_has_no_physical_time() {

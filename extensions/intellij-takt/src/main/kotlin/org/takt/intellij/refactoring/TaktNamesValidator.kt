@@ -7,8 +7,8 @@ import org.takt.intellij.psi.TaktTokenTypes
 /**
  * Валидатор имён для rename Takt (фича 0067, R3).
  *
- * Отвергает ключевые слова Takt как имена (в т.ч. жёсткое `address`) — набор
- * берётся из [TaktTokenTypes.KEYWORDS] (сторож синхронизации с лексером языка —
+ * Отвергает ключевые слова Takt как имена (в т.ч. жёсткое `address`) - набор
+ * берётся из [TaktTokenTypes.KEYWORDS] (сторож синхронизации с лексером языка -
  * `TaktKeywordSyncTest`). Идентификатор: буква/`_` в начале, далее буквы/цифры/`_`.
  */
 class TaktNamesValidator : NamesValidator {

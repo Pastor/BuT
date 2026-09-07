@@ -84,7 +84,7 @@ fn generate_rust(tag: &str, source: &str) -> (PathBuf, String) {
     (dir, text)
 }
 
-/// **T1.** Сравнение с числом печатается вариантом, а не числом.
+/// Сравнение с числом печатается вариантом, а не числом.
 #[test]
 fn comparison_with_number_prints_variant() {
     let (_dir, text) = generate_rust("cmp_num", BY_NUMBER);
@@ -98,7 +98,7 @@ fn comparison_with_number_prints_variant() {
     );
 }
 
-/// **T2.** Неравенство и обратный порядок операндов - та же форма.
+/// Неравенство и обратный порядок операндов - та же форма.
 #[test]
 fn not_equal_and_reversed_operands_work_too() {
     let (_dir, text) = generate_rust("cmp_ne", NOT_EQUAL);
@@ -112,7 +112,7 @@ fn not_equal_and_reversed_operands_work_too() {
     );
 }
 
-/// **T3. Контроль: сравнение с именем варианта не изменилось.**
+/// **Контроль: сравнение с именем варианта не изменилось.**
 #[test]
 fn comparison_by_variant_name_is_untouched() {
     let (_dir, text) = generate_rust("cmp_name", BY_NAME);
@@ -122,7 +122,7 @@ fn comparison_by_variant_name_is_untouched() {
     );
 }
 
-/// **T4.** Присваивание и сравнение зовут один носитель имени варианта.
+/// Присваивание и сравнение зовут один носитель имени варианта.
 ///
 /// Разъезд этих двух путей и был дефектом: присваивание вариант восстанавливало,
 /// сравнение - нет.
@@ -135,7 +135,7 @@ fn assignment_and_comparison_agree() {
     );
 }
 
-/// **T5.** Порождённый модуль принимается `rustc` и `clippy -D warnings`.
+/// Порождённый модуль принимается `rustc` и `clippy -D warnings`.
 #[test]
 fn generated_rust_compiles_and_passes_clippy() {
     let available = Proc::new("clippy-driver")
@@ -177,7 +177,7 @@ fn generated_rust_compiles_and_passes_clippy() {
     }
 }
 
-/// **T6.** Значение вне набора вариантов - честный отказ, а не догадка.
+/// Значение вне набора вариантов - честный отказ, а не догадка.
 #[test]
 fn value_outside_variants_is_refused() {
     const OUTSIDE: &str = "enum Command { Stop = 0, Go = 1 }\n\

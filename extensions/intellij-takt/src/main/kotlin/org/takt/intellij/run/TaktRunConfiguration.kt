@@ -23,12 +23,12 @@ import javax.swing.Icon
 /**
  * Конфигурация запуска инструментов Takt (фича 0158).
  *
- * Один тип, две фабрики — **Compile** (`taktc compile`) и **Simulate**
+ * Один тип, две фабрики - **Compile** (`taktc compile`) и **Simulate**
  * (`takt-sim`): инструменты братья и делят половину полей (файл, `-I`, выходной
  * каталог), поэтому два независимых типа означали бы описывать общее дважды
  * (ADR 0158, Option C).
  *
- * ⚠️ Вся логика сборки команды живёт в [TaktCommandLine] — чистой функции без
+ * Вся логика сборки команды живёт в [TaktCommandLine] - чистой функции без
  * GUI: плагин вне `precheck.sh`, и проверяемо здесь ровно то, что не требует
  * окна IDE.
  */
@@ -61,7 +61,7 @@ class TaktRunConfiguration(
         extraArgs = options.extraArgs,
     )
 
-    /** Пути к инструментам и каталоги импортов — из общих настроек плагина (0125). */
+    /** Пути к инструментам и каталоги импортов - из общих настроек плагина (0125). */
     private fun tools(): TaktCommandLine.Tools {
         val settings = TaktLspSettings.getInstance()
         return TaktCommandLine.Tools(
@@ -121,7 +121,7 @@ class TaktRunConfigurationType : ConfigurationType {
         arrayOf(CompileFactory(this), SimulateFactory(this))
 }
 
-/** Фабрика «Compile» — `taktc compile`. */
+/** Фабрика "Compile" - `taktc compile`. */
 class CompileFactory(type: ConfigurationType) : ConfigurationFactory(type) {
     override fun getId(): String = "Compile"
     override fun getName(): @NlsActions.ActionText String = "Compile"
@@ -129,7 +129,7 @@ class CompileFactory(type: ConfigurationType) : ConfigurationFactory(type) {
         TaktRunConfiguration(project, this, "Takt Compile", TaktCommandLine.Mode.COMPILE)
 }
 
-/** Фабрика «Simulate» — `takt-sim`. */
+/** Фабрика "Simulate" - `takt-sim`. */
 class SimulateFactory(type: ConfigurationType) : ConfigurationFactory(type) {
     override fun getId(): String = "Simulate"
     override fun getName(): @NlsActions.ActionText String = "Simulate"

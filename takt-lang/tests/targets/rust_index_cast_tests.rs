@@ -69,7 +69,7 @@ fn generate_rust(tag: &str, source: &str) -> (PathBuf, String) {
     (dir, text)
 }
 
-/// **T1.** Литеральный индекс печатается без приведения, переменная - с ним.
+/// Литеральный индекс печатается без приведения, переменная - с ним.
 #[test]
 fn literal_index_has_no_cast_variable_keeps_it() {
     let (_dir, text) = generate_rust("idx", BOTH);
@@ -87,7 +87,7 @@ fn literal_index_has_no_cast_variable_keeps_it() {
     );
 }
 
-/// **T2.** Печатник условий подчиняется тому же правилу.
+/// Печатник условий подчиняется тому же правилу.
 ///
 /// У него было своё `as usize`; носитель теперь один на обоих (`subscript`), иначе
 /// правило разъехалось бы - /0193/0195.
@@ -104,7 +104,7 @@ fn condition_printer_follows_the_same_rule() {
     );
 }
 
-/// **T3.** Порождённый модуль принимается `clippy -D warnings` - как в проверке.
+/// Порождённый модуль принимается `clippy -D warnings` - как в проверке.
 #[test]
 fn generated_rust_passes_clippy_gate() {
     let available = Command::new("clippy-driver")

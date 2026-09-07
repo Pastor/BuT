@@ -12,25 +12,25 @@ data class TaktDeclaration(val name: String, val range: TextRange, val kind: Str
 /**
  * Сканер деклараций Takt поверх [TaktLexer] (фича 0023, задача 0023-01).
  *
- * Источник истины по формам деклараций — грамматика `takt-lang/src/grammar.lalrpop`
+ * Источник истины по формам деклараций - грамматика `takt-lang/src/grammar.lalrpop`
  * (правила `model`/`state`/`start`/`type`/`cond`/`var`/`const`/`fn` вида
  * `kw <Id>`; порты `in`/`out`/`inout <Id>`; правило `EnumDefine` с константами-
- * вариантами в `{ … }`; правило `Import` с `as`-переименованиями). Разрешение
- * имён — эвристика по токенам одного файла без областей видимости (осознанное
+ * вариантами в `{ ... }`; правило `Import` с `as`-переименованиями). Разрешение
+ * имён - эвристика по токенам одного файла без областей видимости (осознанное
  * ограничение Option A, ADR 0023).
  */
 object TaktSymbolScanner {
 
     /**
      * Ключевые слова, за которыми идёт имя объявляемого символа: `kw <Id>`.
-     * Порты `in`/`out`/`inout` объявляют имя так же (`in name: Type := …;`), поэтому
-     * их использования (в т.ч. как часть `port.N` — `BitAccess`) резолвятся к порту.
+     * Порты `in`/`out`/`inout` объявляют имя так же (`in name: Type := ...;`), поэтому
+     * их использования (в т.ч. как часть `port.N` - `BitAccess`) резолвятся к порту.
      */
     private val SIMPLE_DECL_KEYWORDS = setOf(
         "model", "state", "start", "type", "cond", "var", "const", "fn",
         "in", "out", "inout",
-        // Параметр модели (фича 0185): `parameter <Id>: Тип := значение;` —
-        // та же форма «слово, затем имя объявляемого символа».
+        // Параметр модели: `parameter <Id>: Тип := значение;` -
+        // та же форма "слово, затем имя объявляемого символа".
         "parameter",
     )
 
@@ -68,7 +68,7 @@ object TaktSymbolScanner {
 
     /**
      * Разбирает `import`-выражение от индекса `from` (токен `import`) до `;`.
-     * Собирает **локально введённые** имена: алиасы после `as` и «голые» имена в
+     * Собирает **локально введённые** имена: алиасы после `as` и "голые" имена в
      * фигурных скобках `{ A, B }`. Возвращает индекс токена сразу за `;`.
      */
     private fun scanImport(toks: List<Tok>, from: Int, decls: MutableList<TaktDeclaration>): Int {
@@ -91,7 +91,7 @@ object TaktSymbolScanner {
                         }
                     }
                 TaktTokenTypes.IDENTIFIER ->
-                    // Голое имя в списке `{ A, B }` вводится под своим именем —
+                    // Голое имя в списке `{ A, B }` вводится под своим именем -
                     // если оно не источник переименования (`A as C`) и не сам алиас.
                     if (braceDepth > 0) {
                         val prev = toks.getOrNull(j - 1)
@@ -110,9 +110,9 @@ object TaktSymbolScanner {
     }
 
     /**
-     * Разбирает `enum <Name> { V1 = n, V2, … }` от индекса `from` (токен `enum`).
+     * Разбирает `enum <Name> { V1 = n, V2, ... }` от индекса `from` (токен `enum`).
      * Записывает имя перечисления и имена его констант-вариантов, чтобы переход к
-     * декларации работал и от использования варианта (`… := Closing;`). Возвращает
+     * декларации работал и от использования варианта (`... := Closing;`). Возвращает
      * индекс токена сразу за закрывающей `}` (или конец при неполной структуре).
      */
     private fun scanEnum(toks: List<Tok>, from: Int, decls: MutableList<TaktDeclaration>): Int {
@@ -122,11 +122,11 @@ object TaktSymbolScanner {
             decls.add(TaktDeclaration(nameTok.text, TextRange(nameTok.start, nameTok.end), "enum"))
             j++
         }
-        // Без тела `{ … }` вариантов нет.
+        // Без тела `{ ... }` вариантов нет.
         if (toks.getOrNull(j)?.type != TaktTokenTypes.LBRACE) return j
         j++
         var depth = 1
-        // Вариант начинается сразу после `{` или `,`; значение `= n` — это NUMBER,
+        // Вариант начинается сразу после `{` или `,`; значение `= n` - это NUMBER,
         // а не идентификатор, поэтому за вариант не принимается.
         var atVariantStart = true
         while (j < toks.size && depth > 0) {

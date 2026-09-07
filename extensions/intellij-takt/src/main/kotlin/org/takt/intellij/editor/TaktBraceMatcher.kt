@@ -8,7 +8,7 @@ import org.takt.intellij.psi.TaktTokenTypes
 
 /**
  * Подсветка парных скобок Takt: `{}`, `()`, `[]` (задача 0022-03).
- * Фигурные скобки — структурные (влияют на навигацию по блокам).
+ * Фигурные скобки - структурные (влияют на навигацию по блокам).
  */
 class TaktBraceMatcher : PairedBraceMatcher {
     override fun getPairs(): Array<BracePair> = PAIRS

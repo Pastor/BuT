@@ -172,7 +172,7 @@ start Root = Machine;
         );
     }
 
-    /// A7: имя модели переименовать нельзя - оно видно за пределами файла.
+    /// Имя модели переименовать нельзя - оно видно за пределами файла.
     #[test]
     fn model_name_is_refused() {
         let position = cursor_on(SRC, "Machine");
@@ -186,7 +186,7 @@ start Root = Machine;
         );
     }
 
-    /// A7: символ, объявленный вне открытого документа, переименовать нельзя.
+    /// Символ, объявленный вне открытого документа, переименовать нельзя.
     #[test]
     fn foreign_symbol_is_refused() {
         const IMPORTING: &str = r#"import "helper.takt" as Helper;
@@ -203,7 +203,7 @@ model M {
         );
     }
 
-    /// A7: новое имя обязано быть идентификатором.
+    /// Новое имя обязано быть идентификатором.
     #[test]
     fn non_identifier_new_name_is_refused() {
         let position = cursor_on(SRC, "speed");
@@ -216,7 +216,7 @@ model M {
         }
     }
 
-    /// A7: ключевое слово новым именем быть не может.
+    /// Ключевое слово новым именем быть не может.
     #[test]
     fn keyword_new_name_is_refused() {
         let position = cursor_on(SRC, "speed");

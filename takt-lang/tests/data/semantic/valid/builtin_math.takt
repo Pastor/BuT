@@ -8,19 +8,19 @@ var a: bit := true;
 var b: bit := false;
 
 // Вызов min: возвращает минимум двух значений
-// min(a, b) → минимальное из a и b
+// min(a, b) -> минимальное из a и b
 var min_result: bit := min(a, b);
 
 // Вызов max: возвращает максимум двух значений
-// max(a, b) → максимальное из a и b
+// max(a, b) -> максимальное из a и b
 var max_result: bit := max(a, b);
 
 // Вызов abs: возвращает абсолютное значение
-// abs(x) → |x|
+// abs(x) -> |x|
 var abs_result: bit := abs(a);
 
 // Вызов clamp: ограничение значения в диапазон [lo, hi]
-// clamp(x, lo, hi) → x если lo ≤ x ≤ hi; иначе lo или hi
+// clamp(x, lo, hi) -> x если lo <= x <= hi; иначе lo или hi
 var clamp_result: bit := clamp(a, b, a);
 
 // Конечный автомат с использованием встроенных функций

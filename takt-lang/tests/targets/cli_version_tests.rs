@@ -17,7 +17,7 @@ fn run(args: &[&str]) -> (String, i32) {
     )
 }
 
-/// A1: подкоманда печатает обе версии и завершается успехом.
+/// Подкоманда печатает обе версии и завершается успехом.
 #[test]
 fn version_subcommand_prints_both_versions() {
     let (stdout, code) = run(&["version"]);
@@ -32,7 +32,7 @@ fn version_subcommand_prints_both_versions() {
     );
 }
 
-/// A2: три входа - один вывод.
+/// Три входа - один вывод.
 ///
 /// Проверяется **равенство**, а не "каждый что-то печатает": синоним, разошедшийся с
 /// подкомандой, - это две реализации одного ответа, и они расходятся молча.
@@ -50,7 +50,7 @@ fn all_three_entries_agree() {
     assert_eq!(short_code, 0);
 }
 
-/// A5: справка называет подкоманду - иначе о ней узнают только из документа.
+/// Справка называет подкоманду - иначе о ней узнают только из документа.
 #[test]
 fn usage_mentions_version_subcommand() {
     let out = Command::new(env!("CARGO_BIN_EXE_taktc"))
@@ -68,7 +68,7 @@ fn usage_mentions_version_subcommand() {
     );
 }
 
-/// A6: текст "неизвестная команда" перечисляет доступные - и новую в том числе.
+/// Текст "неизвестная команда" перечисляет доступные - и новую в том числе.
 #[test]
 fn unknown_command_message_lists_version() {
     let out = Command::new(env!("CARGO_BIN_EXE_taktc"))

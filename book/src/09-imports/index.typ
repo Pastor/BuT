@@ -270,7 +270,7 @@ start Entry = Press | Feeder {
 // motor.takt
 model Motor {
     clock 1kHz;
-    // …
+    // ...
 }
 ```
 

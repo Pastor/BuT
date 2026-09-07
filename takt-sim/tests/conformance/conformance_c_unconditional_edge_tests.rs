@@ -126,7 +126,7 @@ int main(void) {{
         .collect()
 }
 
-/// **A3: изъятие недостижимого кода поведение не меняет.**
+/// **Изъятие недостижимого кода поведение не меняет.**
 #[test]
 fn unconditional_edge_trace_matches_generated_c() {
     let sim = simulator_trace();

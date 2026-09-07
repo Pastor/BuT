@@ -63,7 +63,7 @@ fn generate_sv(tag: &str, source: &str) -> String {
 
 // -- Слой 1: состав объявлений ------------------------------------------------
 
-/// **R1 (цель `rust`):** одноимённые константы дают два объявления, и каждая
+/// Одноимённые константы дают два объявления, и каждая
 /// модель читает своё.
 #[test]
 fn rust_emits_both_constants_and_each_model_reads_its_own() {
@@ -82,7 +82,7 @@ fn rust_emits_both_constants_and_each_model_reads_its_own() {
     );
 }
 
-/// **R1 (цель `sv`):** то же для `localparam` уплощённого модуля.
+/// То же для `localparam` уплощённого модуля.
 #[test]
 fn sv_emits_both_localparams_and_each_model_reads_its_own() {
     let text = generate_sv("svdup", DUP);
@@ -98,7 +98,7 @@ fn sv_emits_both_localparams_and_each_model_reads_its_own() {
     );
 }
 
-/// **R2:** имя объявления и имя в выражении - одно и то же имя.
+/// Имя объявления и имя в выражении - одно и то же имя.
 ///
 /// Разъехавшись, они дают либо потерянное объявление, либо ссылку в пустоту; именно
 /// поэтому печать и дедупликация обязаны идти одной функцией.
@@ -113,7 +113,7 @@ fn declaration_and_reference_use_the_same_name() {
     }
 }
 
-/// **R3:** неиспользуемая тёзка не печатается.
+/// Неиспользуемая тёзка не печатается.
 #[test]
 fn unused_namesake_constant_is_not_emitted() {
     let (_dir, text) = generate_rust("rsunused", DUP_ONE_UNUSED);
@@ -138,7 +138,7 @@ fn clippy_available() -> bool {
         .unwrap_or(false)
 }
 
-/// **A3:** вывод на входе с неиспользуемой тёзкой принимается `clippy -D warnings`.
+/// Вывод на входе с неиспользуемой тёзкой принимается `clippy -D warnings`.
 ///
 /// Первый слой ловит регресс дёшево, этот доказывает, что ловим мы **настоящее**
 /// правило линта, а не своё представление о нём (образец - 0174).

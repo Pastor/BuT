@@ -78,7 +78,7 @@ fn compile_mmio(tag: &str, name: &str, source: &str, bus: Option<Bus>) -> PathBu
     dir
 }
 
-/// A1: без флага адаптера нет - вывод прежний.
+/// Без флага адаптера нет - вывод прежний.
 #[test]
 fn without_the_flag_no_adapter_is_emitted() {
     let dir = compile_mmio("plain", "dev", ADDRESSED, None);
@@ -89,7 +89,7 @@ fn without_the_flag_no_adapter_is_emitted() {
     );
 }
 
-/// A1: с флагом рядом с ядром появляется обёртка.
+/// С флагом рядом с ядром появляется обёртка.
 #[test]
 fn the_flag_emits_the_adapter_next_to_the_core() {
     let dir = compile_mmio("apb", "dev", ADDRESSED, Some(Bus::Apb));
@@ -105,7 +105,7 @@ fn the_flag_emits_the_adapter_next_to_the_core() {
     );
 }
 
-/// A1/R2: сигналы APB на месте, а `pready`/`pslverr` - константы контракта.
+/// Сигналы APB на месте, а `pready`/`pslverr` - константы контракта.
 #[test]
 fn apb_signals_and_contract_constants() {
     let dir = compile_mmio("signals", "dev", ADDRESSED, Some(Bus::Apb));
@@ -132,7 +132,7 @@ fn apb_signals_and_contract_constants() {
     );
 }
 
-/// R3: адресация **напрямую**: адрес шины равен адресу из `at`, без сдвига на слово.
+/// Адресация **напрямую**: адрес шины равен адресу из `at`, без сдвига на слово.
 #[test]
 fn address_maps_straight_through() {
     let dir = compile_mmio("addr", "dev", ADDRESSED, Some(Bus::Apb));
@@ -143,7 +143,7 @@ fn address_maps_straight_through() {
     );
 }
 
-/// A1: ширины **точные**, а не канонические 32-битные.
+/// Ширины **точные**, а не канонические 32-битные.
 ///
 /// Это не вкус: проба показала, что 32-битные `paddr`/`pwdata` дают `UNUSEDSIGNAL` и
 /// проверка проекта (`verilator -Wall`) отвергает такой модуль. Спецификация APB ширину
@@ -168,7 +168,7 @@ fn widths_are_exact_not_canonical_32() {
     );
 }
 
-/// A5: модель без адресованных портов + `--bus` -> `SV-019` с названной причиной.
+/// Модель без адресованных портов + `--bus` -> `SV-019` с названной причиной.
 #[test]
 fn bus_without_registers_is_refused() {
     let dir = tmp("no_regs");
@@ -190,7 +190,7 @@ fn bus_without_registers_is_refused() {
     );
 }
 
-/// A5: та же диагностика у цели `sv` - но с **другим** текстом.
+/// Та же диагностика у цели `sv` - но с **другим** текстом.
 ///
 /// Один код, два повода: сообщение "у модели нет портов с адресом" было бы ложью - у
 /// входа они есть, регистрового файла нет у самой цели.

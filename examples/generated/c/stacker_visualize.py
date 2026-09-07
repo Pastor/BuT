@@ -22,7 +22,7 @@ from pathlib import Path
 
 # ── Log format (from print_tick in stacker_main.c) ───────────────────────────
 #
-# T%3d | pos(%2u,%2u,%2u)→(%2u,%2u,%2u)
+# T%3d | pos(%2u,%2u,%2u)->(%2u,%2u,%2u)
 #  | task[t=%d s=%u r=%u y=%u v=%d]
 #  | fork=%d load=%d chrg=%d batt=%d
 #  | ack=%d done=%d eta=%u
@@ -171,7 +171,7 @@ def _draw_frame(tick, idx, all_ticks, sim_name, label):
             ha='center', va='center',
             fontsize=8, color='white', fontweight='bold', zorder=8)
 
-    # Fork frame — yellow border when active
+    # Fork frame - yellow border when active
     if tick['fork']:
         ax.add_patch(mpatches.FancyBboxPatch(
             (ps - 0.48, py - 0.48), 0.96, 0.96,
@@ -179,7 +179,7 @@ def _draw_frame(tick, idx, all_ticks, sim_name, label):
             facecolor='none', edgecolor='#ffd740', linewidth=2.5, zorder=9
         ))
 
-    # Loaded cargo — orange rectangle below the stacker body
+    # Loaded cargo - orange rectangle below the stacker body
     if tick['loaded']:
         ax.add_patch(mpatches.FancyBboxPatch(
             (ps - 0.22, py - 0.62), 0.44, 0.18,
@@ -188,7 +188,7 @@ def _draw_frame(tick, idx, all_ticks, sim_name, label):
             linewidth=1, zorder=9
         ))
 
-    # Battery low warning — dashed red border
+    # Battery low warning - dashed red border
     if tick['batt_low']:
         ax.add_patch(mpatches.FancyBboxPatch(
             (ps - 0.56, py - 0.56), 1.12, 1.12,

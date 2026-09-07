@@ -1,6 +1,6 @@
 // Файл b.takt для проверки обнаружения циклических импортов.
 //
-// Замыкает цикл: b.takt импортирует a.takt, создавая a.takt → b.takt → a.takt.
+// Замыкает цикл: b.takt импортирует a.takt, создавая a.takt -> b.takt -> a.takt.
 
 import "cycle_a.takt";
 

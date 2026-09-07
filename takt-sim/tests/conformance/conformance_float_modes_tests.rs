@@ -27,7 +27,7 @@ fn float_as_q_only(m: u8, n: u8) -> takt_lang::generator::GenerateOptions {
     o
 }
 
-/// T8/T9/R7: эталон двухрежимен. Без трансформации `acc` - вещественное (`Value::Real`,
+/// Эталон двухрежимен. Без трансформации `acc` - вещественное (`Value::Real`,
 /// native `f64`); с трансформацией - `Value::Fixed` (repr q(8,8)). Разные представления
 /// ⇒ сверка ведётся внутри режима, а не между ними.
 #[test]
@@ -57,7 +57,7 @@ fn float_native_and_q_modes_differ() {
     );
 }
 
-/// T5/A3 (цель C native по умолчанию): `--float-as-q` без `--float-embedded` ->
+/// `--float-as-q` без `--float-embedded` ->
 /// `double` (Q-путь только со вторым флагом).
 #[test]
 fn float_as_q_without_embedded_is_native_c() {

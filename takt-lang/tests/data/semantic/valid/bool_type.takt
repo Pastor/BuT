@@ -1,14 +1,14 @@
 // Пример: использование типа bool.
 //
-// Тип bool — булев тип для значений true/false.
+// Тип bool - булев тип для значений true/false.
 // Отличается от bit: bit принимает только 0/1/true/false,
-// bool — исключительно булев тип.
+// bool - исключительно булев тип.
 
 // Явные аннотации bool
 var ready: bool := true;
 var done: bool := false;
 
-// Вывод типа из булева литерала → bool
+// Вывод типа из булева литерала -> bool
 var inferred_true := true;
 var inferred_false := false;
 

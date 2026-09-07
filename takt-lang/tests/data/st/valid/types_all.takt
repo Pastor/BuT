@@ -1,7 +1,7 @@
-// 0041-02 (A4.3, A4.4, A3.1): все скалярные типы Takt разом.
+// Все скалярные типы Takt разом.
 //
-// Ожидаемое отображение: bit/bool → BOOL, float → LREAL (не REAL),
-// u8/i16/u32/i64 → USINT/INT/UDINT/LINT.
+// Ожидаемое отображение: bit/bool -> BOOL, float -> LREAL (не REAL),
+// u8/i16/u32/i64 -> USINT/INT/UDINT/LINT.
 
 var flag: bit := 1;
 var ready: bool := 0;

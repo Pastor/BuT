@@ -106,7 +106,7 @@ fn both(tag: &str, ext: &str, generate: Generate) -> (String, String) {
     (read(&named_dir), read(&literal_dir))
 }
 
-/// A1: цель `c` - вывод тождествен литеральной форме.
+/// Цель `c` - вывод тождествен литеральной форме.
 #[test]
 fn c_output_identical_to_literal() {
     let (named, literal) = both("c", "c", compile_to_c);
@@ -124,7 +124,7 @@ fn c_output_identical_to_literal() {
     );
 }
 
-/// A1: цель `rust` - вывод тождествен литеральной форме.
+/// Цель `rust` - вывод тождествен литеральной форме.
 #[test]
 fn rust_output_identical_to_literal() {
     let (named, literal) = both("rust", "rs", compile_to_rust);
@@ -135,14 +135,14 @@ fn rust_output_identical_to_literal() {
     );
 }
 
-/// A1: цель `st` - вывод тождествен литеральной форме.
+/// Цель `st` - вывод тождествен литеральной форме.
 #[test]
 fn st_output_identical_to_literal() {
     let (named, literal) = both("st", "st", compile_to_st);
     assert_eq!(named, literal, "цель st: вывод расходится с литеральным");
 }
 
-/// A1: цель `sv` - вывод тождествен литеральной форме.
+/// Цель `sv` - вывод тождествен литеральной форме.
 #[test]
 fn sv_output_identical_to_literal() {
     let (named, literal) = both("sv", "sv", compile_to_sv);
@@ -203,7 +203,7 @@ start Entry = Fan;
     );
 }
 
-/// A5: форматтер печатает именную выдержку и круговой рейс устойчив.
+/// Форматтер печатает именную выдержку и круговой рейс устойчив.
 ///
 /// Печать нового узла АСД - обязанность форматтера (иначе `format_source`
 /// **отказывает**, а не печатает приблизительно); проверяется и то, что имя
@@ -235,7 +235,7 @@ fn formatter_prints_named_dwell_and_is_stable() {
     assert_eq!(printed, again, "круговой рейс на выражении неустойчив");
 }
 
-/// A6: имя внутри `after` - использование константы, а не безымянный литерал.
+/// Имя внутри `after` - использование константы, а не безымянный литерал.
 ///
 /// Без этого переименование константы испортило бы исходник: выдержка осталась бы со
 /// старым именем и перестала компилироваться.

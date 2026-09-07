@@ -9,7 +9,7 @@ import org.takt.intellij.lsp.TaktLspSettings
  * Без GUI/платформы: используем прямой конструктор [TaktLspSettings] (не
  * `getInstance`, требующий `ApplicationManager`). Проверяем, что новые поля
  * (`compilerPath`/`simulatorPath`/`includeDirs`/`compilerArgs`/`outputDir`)
- * читаются/пишутся через аксессоры и переносятся `loadState` — иначе настройки
+ * читаются/пишутся через аксессоры и переносятся `loadState` - иначе настройки
  * не сериализовались бы `PersistentStateComponent`.
  */
 class TaktLspSettingsTest : TestCase() {
@@ -25,7 +25,7 @@ class TaktLspSettingsTest : TestCase() {
         assertEquals("", s.outputDir)
     }
 
-    /** Все новые поля переживают перенос состояния `getState` → `loadState`. */
+    /** Все новые поля переживают перенос состояния `getState` -> `loadState`. */
     fun testStateRoundTrip() {
         val src = TaktLspSettings()
         src.serverPath = "/bin/takt-lsp"

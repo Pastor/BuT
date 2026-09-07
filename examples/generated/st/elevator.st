@@ -143,11 +143,11 @@ END_FUNCTION_BLOCK
 
 (*
  * Схема адресации портов:
- * 0x10000000..0x10000008 — sensors_1..sensors_9
- * 0x10000009             — sensors_cab
- * 0x20000000..0x20000008 — btns_floor_1..btns_floor_9
- * 0x30000000             — btns_cab_lo
- * 0x30000001             — btns_cab_hi
+ * 0x10000000..0x10000008 - sensors_1..sensors_9
+ * 0x10000009             - sensors_cab
+ * 0x20000000..0x20000008 - btns_floor_1..btns_floor_9
+ * 0x30000000             - btns_cab_lo
+ * 0x30000001             - btns_cab_hi
  * ══ порты датчиков положения кабины (1 порт на этаж, 2 бита) ════════════════
  *)
 FUNCTION_BLOCK Elevator

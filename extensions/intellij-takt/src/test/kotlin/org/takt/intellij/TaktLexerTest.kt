@@ -8,7 +8,7 @@ import org.takt.intellij.psi.TaktTokenTypes
 
 /**
  * Проверки лексера Takt (задача 0022-02; требования R2, критерии A2/A4).
- * Ключевой контрпример — `==` подсвечивается как BAD_CHARACTER (0021).
+ * Ключевой контрпример - `==` подсвечивается как BAD_CHARACTER (0021).
  */
 class TaktLexerTest : BasePlatformTestCase() {
 
@@ -37,7 +37,7 @@ class TaktLexerTest : BasePlatformTestCase() {
     }
 
     fun testEqualityOperator() {
-        // `cond C = x = y;` — оба `=` это сравнение (OP_EQ), а не присваивание.
+        // `cond C = x = y;` - оба `=` это сравнение (OP_EQ), а не присваивание.
         val eq = lex("a = b").filter { it.first == TaktTokenTypes.OP_EQ }
         assertEquals(1, eq.size)
         assertEquals("=", eq[0].second)
@@ -50,7 +50,7 @@ class TaktLexerTest : BasePlatformTestCase() {
     }
 
     fun testDoubleEqualsIsBadCharacter() {
-        // Контрпример CT1: `==` выведен из языка в 0021 — не валидный оператор.
+        // Контрпример CT1: `==` выведен из языка в 0021 - не валидный оператор.
         val bad = lex("x == y").filter { it.first == TokenType.BAD_CHARACTER }
         assertEquals(1, bad.size)
         assertEquals("==", bad[0].second)
@@ -58,8 +58,8 @@ class TaktLexerTest : BasePlatformTestCase() {
 
     fun testArbitraryNonAlphaIsBadCharacter() {
         // CT3 (0022, остаточная проверка 0089): произвольный неалфавитный символ
-        // вне операторов/пунктуации языка — BAD_CHARACTER. Лексер покрывает весь
-        // ввод, не «проглатывая» чужой символ (инвариант подсветки).
+        // вне операторов/пунктуации языка - BAD_CHARACTER. Лексер покрывает весь
+        // ввод, не "проглатывая" чужой символ (инвариант подсветки).
         for (ch in listOf("@", "$", "`", "\\", "№")) {
             val bad = lex(ch).filter { it.first == TokenType.BAD_CHARACTER }
             assertEquals("символ '$ch' должен быть BAD_CHARACTER", 1, bad.size)
@@ -73,7 +73,7 @@ class TaktLexerTest : BasePlatformTestCase() {
     }
 
     fun testLtlKeywords() {
-        // Односимвольные LTL-операторы X F G U R и LTL/Guard — ключевые слова.
+        // Односимвольные LTL-операторы X F G U R и LTL/Guard - ключевые слова.
         assertTrue(types("X F G U R LTL Guard").all { it == TaktTokenTypes.KEYWORD })
     }
 

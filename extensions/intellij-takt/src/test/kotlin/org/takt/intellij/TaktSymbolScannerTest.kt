@@ -30,12 +30,12 @@ class TaktSymbolScannerTest : BasePlatformTestCase() {
     }
 
     fun testEnumVariantsAreDeclarations() {
-        // Константы enum индексируются — переход к декларации от их использования.
+        // Константы enum индексируются - переход к декларации от их использования.
         val n = names("enum Color { Red, Green = 5, Blue }")
         assertTrue(n.contains("Red"))
         assertTrue(n.contains("Green"))
         assertTrue(n.contains("Blue"))
-        // Значение `= 5` — число, не имя варианта.
+        // Значение `= 5` - число, не имя варианта.
         assertEquals(4, n.count { it in setOf("Color", "Red", "Green", "Blue") })
     }
 
@@ -46,7 +46,7 @@ class TaktSymbolScannerTest : BasePlatformTestCase() {
     }
 
     fun testPortDeclarations() {
-        // Порты in/out/inout объявляют имя — используются как `port.N`.
+        // Порты in/out/inout объявляют имя - используются как `port.N`.
         assertTrue(names("in sensors_cab: u8 := 0x10000009;").contains("sensors_cab"))
         assertTrue(names("out relay: bit := 0;").contains("relay"))
         assertTrue(names("inout bus: u8;").contains("bus"))

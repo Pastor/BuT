@@ -19,7 +19,7 @@ use takt_lang::semantic::index::SemanticIndex;
 use takt_lang::semantic::tree::construct_model;
 use takt_lang::semantic::usages::collect_usages;
 
-/// Цепочка из `states` состояний: `S0 → S1 → … → S{n-1}`.
+/// Цепочка из `states` состояний: `S0 -> S1 -> ... -> S{n-1}`.
 ///
 /// Линейная модель выбрана намеренно: у неё известен размер и предсказуема
 /// сложность обходов, поэтому смена класса (линия -> квадрат) становится видна

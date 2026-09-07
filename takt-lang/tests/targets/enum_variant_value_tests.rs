@@ -68,7 +68,7 @@ fn generate(tag: &str, target: &str, source: &str) -> (PathBuf, String) {
     (dir, text)
 }
 
-/// **T1.** Цель `rust`: имя варианта печатается значением.
+/// Цель `rust`: имя варианта печатается значением.
 #[test]
 fn rust_prints_variant_value_against_integer() {
     let (_d, text) = generate("int_name", "rust", INT_VS_NAME);
@@ -82,7 +82,7 @@ fn rust_prints_variant_value_against_integer() {
     );
 }
 
-/// **T2.** Цель `sv`: то же, иначе `WIDTHEXPAND` роняет проверка цели.
+/// Цель `sv`: то же, иначе `WIDTHEXPAND` роняет проверка цели.
 #[test]
 fn sv_prints_variant_value_against_integer() {
     let (_d, text) = generate("int_name", "sv", INT_VS_NAME);
@@ -96,7 +96,7 @@ fn sv_prints_variant_value_against_integer() {
     );
 }
 
-/// **T3.** Обратный порядок операндов и неравенство - та же пара.
+/// Обратный порядок операндов и неравенство - та же пара.
 #[test]
 fn reversed_operands_are_the_same_pair() {
     let (_d, rust) = generate("name_int", "rust", NAME_VS_INT);
@@ -108,7 +108,7 @@ fn reversed_operands_are_the_same_pair() {
     assert!(sv.contains("(3 !="), "то же у цели `sv`:\n{sv}");
 }
 
-/// **T4. Контроль:** перечислимая переменная сравнивается именем.
+/// **Контроль:** перечислимая переменная сравнивается именем.
 ///
 /// Без этой проверки правку нельзя отличить от "печатать значение всегда", а это ровно
 /// тот дефект, который чинила 0281, - с обратным знаком.
@@ -126,7 +126,7 @@ fn enum_variable_still_compares_by_name() {
     );
 }
 
-/// **T5. Контроль:** цель `c` не затронута - её вывод принимали и до.
+/// **Контроль:** цель `c` не затронута - её вывод принимали и до.
 ///
 /// В C перечисление есть целое, мнемонику читает человек, и объявление константы цель
 /// печатает всегда - `cc` такой вход принимает.
@@ -139,7 +139,7 @@ fn c_is_untouched() {
     );
 }
 
-/// **T6.** Порождённое принимают инструменты проверок.
+/// Порождённое принимают инструменты проверок.
 #[test]
 fn generated_output_passes_target_tools() {
     let clippy = Proc::new("clippy-driver")
@@ -198,7 +198,7 @@ fn generated_output_passes_target_tools() {
     );
 }
 
-/// **T7.** Цель `st`: имя варианта рядом с целым - тоже значение.
+/// Цель `st`: имя варианта рядом с целым - тоже значение.
 ///
 /// У `st` мнемонику объявляет `VAR CONSTANT` того же POU. Но перечисление, пришедшее из
 /// библиотеки вместе С моделью и не названное в списке импорта, до дерева импортёра не

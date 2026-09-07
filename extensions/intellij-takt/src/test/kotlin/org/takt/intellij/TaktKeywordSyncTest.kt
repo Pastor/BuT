@@ -5,16 +5,16 @@ import org.takt.intellij.psi.TaktTokenTypes
 import java.io.File
 
 /**
- * Регресс-тест соответствия набора ключевых слов плагина источнику истины —
+ * Регресс-тест соответствия набора ключевых слов плагина источнику истины -
  * таблице `KEYWORDS` в `takt-lang/src/parser/lexer.rs` (требование R3, критерий A3).
  *
  * Тест читает Rust-лексер (относительно корня репозитория) и извлекает ключевые
- * слова из блока `static KEYWORDS: phf::Map<…> = phf_map! { … };`, затем сверяет
+ * слова из блока `static KEYWORDS: phf::Map<...> = phf_map! { ... };`, затем сверяет
  * их с [TaktTokenTypes.KEYWORDS]. При добавлении/удалении ключевого слова в языке,
  * не отражённом в плагине, тест краснеет.
  *
  * Если Rust-исходник недоступен (плагин собирается вне монорепозитория), тест
- * не падает, а помечается пропущенным (assumption) — набор всё равно проверяется
+ * не падает, а помечается пропущенным (assumption) - набор всё равно проверяется
  * на непустоту.
  */
 class TaktKeywordSyncTest : TestCase() {
@@ -51,7 +51,7 @@ class TaktKeywordSyncTest : TestCase() {
         return null
     }
 
-    /** Извлекает ключи `"word" => …` из блока `phf_map! { … }` таблицы KEYWORDS. */
+    /** Извлекает ключи `"word" => ...` из блока `phf_map! { ... }` таблицы KEYWORDS. */
     private fun extractKeywords(source: String): Set<String> {
         val blockStart = source.indexOf("static KEYWORDS")
         if (blockStart < 0) return emptySet()

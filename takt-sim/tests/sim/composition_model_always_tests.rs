@@ -76,7 +76,7 @@ fn one_per_tick(len: usize) -> Vec<i128> {
     (1..=len as i128).collect()
 }
 
-/// **R1/R2/R3:** анонимный корень-композиция `|`.
+/// Анонимный корень-композиция `|`.
 #[test]
 fn anonymous_root_parallel_runs_body_once_per_tick() {
     let got = trace(ANON_PARALLEL);
@@ -89,7 +89,7 @@ fn anonymous_root_parallel_runs_body_once_per_tick() {
     assert!(got.len() >= 3, "трасса слишком коротка: {got:?}");
 }
 
-/// **R1/R2/R3:** именованная модель-композиция - другая ветвь `build_impl`.
+/// Именованная модель-композиция - другая ветвь `build_impl`.
 #[test]
 fn named_composition_model_runs_body_once_per_tick() {
     let got = trace(NAMED_PARALLEL);
@@ -101,7 +101,7 @@ fn named_composition_model_runs_body_once_per_tick() {
     );
 }
 
-/// **R4:** последовательная композиция `+` - ветвь `tick_sequential`.
+/// Последовательная композиция `+` - ветвь `tick_sequential`.
 ///
 /// Отдельный тест, а не "то же самое": у `|` и `+` разные ветви такта, а вызов
 /// `execution("always")` общий - совпадение надо доказать, а не принять.
@@ -116,7 +116,7 @@ fn sequential_composition_runs_body_once_per_tick() {
     );
 }
 
-/// **R6 (контрпример):** модель со своими состояниями не задета.
+/// Модель со своими состояниями не задета.
 ///
 /// Она работала верно и до фичи; тест проверяет направление правки - чинили ветвь
 /// композиции, а не поведение `always` вообще.

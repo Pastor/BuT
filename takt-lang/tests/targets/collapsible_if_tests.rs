@@ -90,7 +90,7 @@ fn generate(tag: &str, source: &str) -> (PathBuf, String) {
     (dir, text)
 }
 
-/// **T1.** Вложенный `if` сливается с внешним.
+/// Вложенный `if` сливается с внешним.
 #[test]
 fn nested_if_is_collapsed() {
     let (_d, text) = generate("nested", NESTED);
@@ -100,7 +100,7 @@ fn nested_if_is_collapsed() {
     );
 }
 
-/// **T2. Контроль:** при `else` у внешнего форма прежняя.
+/// **Контроль:** при `else` у внешнего форма прежняя.
 #[test]
 fn outer_else_is_left_alone() {
     let (_d, text) = generate("outer_else", OUTER_ELSE);
@@ -110,7 +110,7 @@ fn outer_else_is_left_alone() {
     );
 }
 
-/// **T3.** Последняя ветвь `match` сливается со своим вложенным `if`.
+/// Последняя ветвь `match` сливается со своим вложенным `if`.
 #[test]
 fn last_match_arm_is_collapsed() {
     let (_d, text) = generate("last_arm", LAST_ARM);
@@ -120,7 +120,7 @@ fn last_match_arm_is_collapsed() {
     );
 }
 
-/// **T4. Контроль:** ветвь перед `_` не сливается.
+/// **Контроль:** ветвь перед `_` не сливается.
 ///
 /// Слияние здесь пропустило бы управление в `_`-ветвь: валидный вывод и другой автомат.
 /// Значение этого расхождения проверяет потактовая сверка
@@ -134,7 +134,7 @@ fn arm_before_default_is_not_collapsed() {
     );
 }
 
-/// **T5.** Порождённое принимает `clippy -D warnings`.
+/// Порождённое принимает `clippy -D warnings`.
 #[test]
 fn generated_output_passes_clippy() {
     let available = Proc::new("clippy-driver")

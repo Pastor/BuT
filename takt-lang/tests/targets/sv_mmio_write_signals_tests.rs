@@ -48,7 +48,7 @@ fn generate(unit: &str, source: &str, tag: &str, options: &GenerateOptions) -> S
     std::fs::read_to_string(dir.join(format!("{unit}.sv"))).expect("порождённый .sv читается")
 }
 
-/// **T1.** Без входных портов сигналы записи не эмитятся.
+/// Без входных портов сигналы записи не эмитятся.
 #[test]
 fn read_only_core_has_no_write_signals() {
     let text = generate("ro_core", ONLY_OUT, "ro", &GenerateOptions::default());
@@ -66,7 +66,7 @@ fn read_only_core_has_no_write_signals() {
     );
 }
 
-/// **T2.** При входном порте интерфейс прежний - все четыре сигнала.
+/// При входном порте интерфейс прежний - все четыре сигнала.
 #[test]
 fn writable_core_keeps_full_interface() {
     let text = generate("rw_core", WITH_IN, "rw", &GenerateOptions::default());
@@ -78,7 +78,7 @@ fn writable_core_keeps_full_interface() {
     }
 }
 
-/// **T3.** Адаптер APB не заводит проводов к несуществующим выводам ядра.
+/// Адаптер APB не заводит проводов к несуществующим выводам ядра.
 ///
 /// Прежде обёртка подключала `.reg_wdata(...)`/`.reg_wen(...)` безусловно, и на ядре
 /// без записи verilator отвечал `PINNOTFOUND` - пара "ядро + обёртка" вообще не

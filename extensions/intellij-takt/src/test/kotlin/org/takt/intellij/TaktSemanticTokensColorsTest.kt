@@ -8,11 +8,11 @@ import java.io.File
  * Полнота маппинга типов семантических токенов в цвета (фича 0038, задача 0038-02,
  * критерии A4/A5).
  *
- * A4 — каждый из 10 типов легенды получает `TextAttributesKey` (нет `null`).
- * A5 — набор маппинга **синхронизирован** с источником истины
+ * A4 - каждый из 10 типов легенды получает `TextAttributesKey` (нет `null`).
+ * A5 - набор маппинга **синхронизирован** с источником истины
  * `takt-lang/src/lsp/keywords.rs` (`SEMANTIC_TOKEN_TYPES`): тест читает Rust-исходник,
  * извлекает имена типов и краснеет, если в легенду добавили тип без маппинга (тот
- * молча потерял бы цвет). Приём — как у `TaktKeywordSyncTest` (0022).
+ * молча потерял бы цвет). Приём - как у `TaktKeywordSyncTest` (0022).
  */
 class TaktSemanticTokensColorsTest : TestCase() {
 
@@ -29,7 +29,7 @@ class TaktSemanticTokensColorsTest : TestCase() {
         }
     }
 
-    /** Неизвестный тип → `null` (цвет не навязывается). */
+    /** Неизвестный тип -> `null` (цвет не навязывается). */
     fun testUnknownTypeIsNull() {
         assertNull(TaktSemanticTokensColorsProvider.keyFor("namespace"))
         assertNull(TaktSemanticTokensColorsProvider.keyFor(""))
@@ -37,7 +37,7 @@ class TaktSemanticTokensColorsTest : TestCase() {
 
     /**
      * A5: набор типов маппинга совпадает с `SEMANTIC_TOKEN_TYPES` из Rust. Если
-     * Rust-исходник недоступен (сборка вне монорепозитория) — сверка пропускается,
+     * Rust-исходник недоступен (сборка вне монорепозитория) - сверка пропускается,
      * но локальный набор всё равно проверен (A4 выше).
      */
     fun testLegendMatchesRustSource() {
@@ -51,7 +51,7 @@ class TaktSemanticTokensColorsTest : TestCase() {
 
         // Множество совпадает с локальным.
         assertEquals("рассинхрон легенды с keywords.rs", expected.toSortedSet(), legend.toSortedSet())
-        // И каждый тип из Rust сопоставлен ключу (тип без маппинга → null → красный).
+        // И каждый тип из Rust сопоставлен ключу (тип без маппинга -> null -> красный).
         for (t in expected) {
             assertNotNull("тип '$t' из легенды Rust без маппинга цвета", TaktSemanticTokensColorsProvider.keyFor(t))
         }
@@ -70,9 +70,9 @@ class TaktSemanticTokensColorsTest : TestCase() {
 
     /**
      * Извлекает имена типов легенды из блока
-     * `SEMANTIC_TOKEN_TYPES: &[SemanticTokenType] = &[ … ];` (записи
+     * `SEMANTIC_TOKEN_TYPES: &[SemanticTokenType] = &[ ... ];` (записи
      * `SemanticTokenType::ENUM_MEMBER`) и переводит их в имена LSP
-     * (`ENUM_MEMBER` → `enumMember`).
+     * (`ENUM_MEMBER` -> `enumMember`).
      */
     private fun extractLegend(source: String): Set<String> {
         val start = source.indexOf("SEMANTIC_TOKEN_TYPES")
@@ -87,7 +87,7 @@ class TaktSemanticTokensColorsTest : TestCase() {
             .toSet()
     }
 
-    /** `ENUM_MEMBER` → `enumMember`, `KEYWORD` → `keyword`. */
+    /** `ENUM_MEMBER` -> `enumMember`, `KEYWORD` -> `keyword`. */
     private fun screamingSnakeToLowerCamel(name: String): String {
         val parts = name.lowercase().split('_')
         return parts.first() + parts.drop(1).joinToString("") { it.replaceFirstChar(Char::uppercase) }

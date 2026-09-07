@@ -131,13 +131,13 @@ fn a1_a3_corpus_report() {
             Err(FormatError::Parse(_)) => parse_failures += 1,
             Ok(once) => {
                 formatted += 1;
-                // A1: идемпотентность.
+                // Идемпотентность.
                 match format_source(&once) {
                     Ok(twice) if twice == once => {}
                     Ok(_) => idempotency_failures.push(name.clone()),
                     Err(e) => idempotency_failures.push(format!("{name}: повторный прогон: {e}")),
                 }
-                // A3: семантическая нейтральность.
+                // Семантическая нейтральность.
                 match (takt_lang::parse(&source, 0), takt_lang::parse(&once, 0)) {
                     (Ok((before, _)), Ok((after, _))) => {
                         if !ast_eq_ignoring_locations(&before, &after) {
@@ -259,7 +259,7 @@ fn idempotent_on_messy_input() {
 
 #[test]
 fn a2_comments_of_all_three_kinds_survive() {
-    // R2/A2: ни один комментарий не теряется. Три вида: `//`, `///`, `/* */`, в ведущей
+    // Ни один комментарий не теряется. Три вида: `//`, `///`, `/* */`, в ведущей
     // и хвостовой позиции.
     let source = r#"/// документация модели
 // обычный ведущий
@@ -468,7 +468,7 @@ fn r4_guard_form_is_preserved() {
     assert_eq!(out, format_source(&out).unwrap(), "идемпотентность");
 }
 
-/// A16/A17: форматтер печатает `invariant` как условие (`=`, не `:=`), сохраняя форму
+/// Форматтер печатает `invariant` как условие (`=`, не `:=`), сохраняя форму
 /// автора (не разворачивает в `cond` + `: [Guard]`), и идемпотентно.
 #[test]
 fn invariant_is_formatted_as_condition() {

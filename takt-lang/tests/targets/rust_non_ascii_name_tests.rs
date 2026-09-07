@@ -75,7 +75,7 @@ fn generate_rust(tag: &str, source: &str) -> (PathBuf, String) {
     (dir, text)
 }
 
-/// **T1.** Не-ASCII имя поднимается в верхний регистр.
+/// Не-ASCII имя поднимается в верхний регистр.
 #[test]
 fn non_ascii_name_is_capitalised() {
     let (_dir, text) = generate_rust("lower", LOWER);
@@ -89,7 +89,7 @@ fn non_ascii_name_is_capitalised() {
     );
 }
 
-/// **T2. Контроль: имена, работавшие и прежде, не изменились.**
+/// **Контроль: имена, работавшие и прежде, не изменились.**
 #[test]
 fn already_correct_names_are_untouched() {
     let (_dir, upper) = generate_rust("upper", UPPER);
@@ -98,7 +98,7 @@ fn already_correct_names_are_untouched() {
     assert!(ascii.contains("Button,"), "ASCII-имя:\n{ascii}");
 }
 
-/// **T3.** Слипание имён после приведения регистра ловит `RS-005`.
+/// Слипание имён после приведения регистра ловит `RS-005`.
 ///
 /// Механизм не новый: ту же пару `button`/`Button` он ловил и до фичи. Без этой
 /// проверки правка выглядела бы как "завела класс коллизий", которого на самом деле не
@@ -122,7 +122,7 @@ fn case_collision_is_reported() {
     );
 }
 
-/// **T4.** Порождённый модуль принимается `clippy -D warnings` - как в проверке.
+/// Порождённый модуль принимается `clippy -D warnings` - как в проверке.
 #[test]
 fn generated_rust_passes_clippy_gate() {
     let available = Command::new("clippy-driver")

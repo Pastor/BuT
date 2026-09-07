@@ -33,7 +33,7 @@ mod lsp72_init_options {
         Position::new(line, col)
     }
 
-    /// A4: без путей импорт из соседнего каталога не разрешается (только каталог
+    /// Без путей импорт из соседнего каталога не разрешается (только каталог
     /// документа, 0055) - как было до 0072.
     #[test]
     fn import_unresolved_without_search_paths() {
@@ -44,7 +44,7 @@ mod lsp72_init_options {
         );
     }
 
-    /// A4: с путями (`searchPaths=[lib]`) импорт разрешается - диагностик нет.
+    /// С путями (`searchPaths=[lib]`) импорт разрешается - диагностик нет.
     #[test]
     fn import_resolves_with_search_paths() {
         let paths = vec![LIB.to_string()];
@@ -55,7 +55,7 @@ mod lsp72_init_options {
         );
     }
 
-    /// A5: переход к декларации ведёт в файл из `searchPaths`, а не "никуда".
+    /// Переход к декларации ведёт в файл из `searchPaths`, а не "никуда".
     #[test]
     fn goto_opens_file_from_search_paths() {
         let source = doc_source();

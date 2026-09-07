@@ -10,9 +10,9 @@ import org.takt.intellij.run.TaktCommandLine.Tools
 /**
  * Сборка командной строки инструментов Takt (фича 0158).
  *
- * ⚠️ Тесты идут на **чистую функцию**, а не на диалог IDE: плагин вне
+ * Тесты идут на **чистую функцию**, а не на диалог IDE: плагин вне
  * `precheck.sh`, и проверяемо здесь ровно то, что не требует окна. Что процесс
- * действительно стартовал и вывод попал в консоль — ручная проверка (отчёт).
+ * действительно стартовал и вывод попал в консоль - ручная проверка (отчёт).
  */
 class TaktCommandLineTest : TestCase() {
 
@@ -27,7 +27,7 @@ class TaktCommandLineTest : TestCase() {
         is Result.Refused -> throw AssertionError("ожидалась команда, получен отказ: ${result.message}")
     }
 
-    /** A2: компиляция — полный список аргументов, включая порядок. */
+    /** A2: компиляция - полный список аргументов, включая порядок. */
     fun testCompileCommandLine() {
         val command = ready(
             TaktCommandLine.build(
@@ -49,7 +49,7 @@ class TaktCommandLineTest : TestCase() {
         )
     }
 
-    /** A3: симуляция — свой набор флагов. */
+    /** A3: симуляция - свой набор флагов. */
     fun testSimulateCommandLine() {
         val command = ready(
             TaktCommandLine.build(
@@ -72,10 +72,10 @@ class TaktCommandLineTest : TestCase() {
     }
 
     /**
-     * A4: незаданное поле — это отсутствие флага, а не флаг с пустой строкой.
+     * A4: незаданное поле - это отсутствие флага, а не флаг с пустой строкой.
      *
-     * ⚠️ Иначе инструмент получил бы `-o ""` и создал каталог с пустым именем
-     * либо отказал — на входе, где пользователь просто ничего не указал.
+     * Иначе инструмент получил бы `-o ""` и создал каталог с пустым именем
+     * либо отказал - на входе, где пользователь просто ничего не указал.
      */
     fun testEmptyFieldsProduceNoFlags() {
         val command = ready(
@@ -88,7 +88,7 @@ class TaktCommandLineTest : TestCase() {
     /**
      * A2: свободные флаги пользователя не разрывают пару `-o путь`.
      *
-     * Порядок закреплён намеренно: файл идёт последним, а `-o` — сразу перед
+     * Порядок закреплён намеренно: файл идёт последним, а `-o` - сразу перед
      * ним, чтобы вставка чужих флагов не оказалась между флагом и его значением.
      */
     fun testExtraArgsDoNotBreakOutputPair() {
@@ -105,7 +105,7 @@ class TaktCommandLineTest : TestCase() {
         )
     }
 
-    /** A5: путь к инструменту не задан — сообщение, а не исключение. */
+    /** A5: путь к инструменту не задан - сообщение, а не исключение. */
     fun testMissingBinaryIsRefusedWithMessage() {
         val result = TaktCommandLine.build(Mode.COMPILE, Params(filePath = "/p/m.takt"), Tools())
         assertTrue("ожидался отказ", result is Result.Refused)
@@ -123,7 +123,7 @@ class TaktCommandLineTest : TestCase() {
         assertTrue("отказ обязан называть симулятор: $message", message.contains("takt-sim"))
     }
 
-    /** Файл не выбран — тоже внятный отказ, а не пустой аргумент. */
+    /** Файл не выбран - тоже внятный отказ, а не пустой аргумент. */
     fun testMissingFileIsRefused() {
         val result = TaktCommandLine.build(Mode.COMPILE, Params(filePath = "  "), tools)
         assertTrue(result is Result.Refused)
