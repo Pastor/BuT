@@ -1,8 +1,7 @@
 //! Построение ориентированного графа из [`Unit`] и оптимизация раскладки узлов.
 //!
-//! Вынесено из `viewport.rs`: подмодуль `graph` самодостаточен (зависит только от
-//! `super::Positions` и типов крейта). Публичные пути неизменны -
-//! `viewport::graph::{unit_to_graph, calculate_graph}`.
+//! Подмодуль самодостаточен: он зависит только от `super::Positions` и типов крейта.
+//! Публичные пути - `viewport::graph::{unit_to_graph, calculate_graph}`.
 
 use petgraph::graph::{Graph, NodeIndex};
 use petgraph::visit::EdgeRef;

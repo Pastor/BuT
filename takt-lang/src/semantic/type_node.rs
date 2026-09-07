@@ -144,8 +144,8 @@ pub(crate) fn construct_type(
 #[cfg(test)]
 mod tests {
     use super::*;
-    // Функции fixed-point живут в подмодуле `type_fixed` (рефакторинг 0170): тесты
-    // зовут их оттуда, а не через `super::*`.
+    // Функции fixed-point живут в подмодуле `type_fixed`: тесты зовут их оттуда, а не
+    // через `super::*`.
     use super::type_fixed::{fixed_repr_range, fixed_storage_bits, lower_fixed_literal};
     use crate::diagnostics::Location;
     use crate::parser::ast::{Identifier, Type};
@@ -555,7 +555,7 @@ mod tests {
         );
     }
 
-    /// Конструктор не `q` -> `SE-057` (иных параметрических типов нет, T17-смежно).
+    /// Конструктор, отличный от `q`, даёт `SE-057`: иных параметрических типов нет.
     #[test]
     fn fixed_non_q_constructor_is_rejected() {
         let err = fixed("foo", 8, 8).unwrap_err();
@@ -585,8 +585,8 @@ mod tests {
 
     /// Показатель степени в тексте литерала учитывается.
     ///
-    /// Текст рационального литерала хранится как написан и с 0144 может нести
-    /// показатель (`2.5e2`).
+    /// Текст рационального литерала хранится как написан и может нести показатель
+    /// (`2.5e2`).
     #[test]
     fn fixed_literal_with_exponent() {
         // 2.5e2 = 250 -> 250·2⁸ = 64000.

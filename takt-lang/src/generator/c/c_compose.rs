@@ -29,8 +29,8 @@ fn generate_nested_chain_tick(
     let state_field = format!("{}.state", parent_access);
     for (idx, item) in items.iter().enumerate() {
         let StateExtend::Model(name, _) = item else {
-            // Вложенная параллель внутри вложенной цепочки в объём фичи не входит:
-            // названная граница, а не пропуск (см. карточку 0426).
+            // Вложенная параллель внутри вложенной цепочки - названная граница, а не
+            // пропуск.
             continue;
         };
         let variant = format!(
@@ -176,11 +176,9 @@ pub(in crate::generator::c) fn generate_parallel_items_tick(
                     done_exprs.push(format!("({})", inner_done.join(" && ")));
                 }
             }
-            // Вложенная последовательность внутри параллели.
-            //
-            // Прежде эта ветвь была `_ => {}`: цепочка `A + B` внутри `| C` не тикала
-            // Вовсе - прошивка исполняла половину автомата, а `cc` ловил это лишь
-            // косвенно, по `unused-function`.
+            // Вложенная последовательность внутри параллели. Без этой ветви цепочка
+            // `A + B` внутри `| C` не тикает вовсе: прошивка исполняет половину
+            // автомата, а `cc` ловит это лишь косвенно, по `unused-function`.
             StateExtend::Concatenation(inner) => {
                 let nested_access = format!("{}.concat{}", parent_access, idx);
                 let nested_upper = format!("{}_CONCAT{}", parent_unique_upper, idx);

@@ -41,8 +41,8 @@ pub(in crate::generator::c) fn generate_formula_check(
             }
         }
         Formula::LTL(_, _) => {
-            // 0035: цель `c` LTL не верифицирует (эмиссия не меняется, R6). Это не
-            // тихая потеря: предупреждение SE-055 выдаёт `takt_lang::ltl_warnings`
+            // Цель `c` LTL не верифицирует и в вывод её не печатает. Это не тихая
+            // потеря: предупреждение `SE-055` выдаёт `takt_lang::ltl_warnings`
             // (`semantic/ltl_check.rs`) на каждую LTL-формулу любого уровня.
         }
     }
@@ -167,7 +167,7 @@ pub(in crate::generator::c) fn generate_code_block(
                 return Ok(());
             }
             // Объявляем место оператора: отказы печати выражений своей позиции не имеют
-            // (решение 0056) и берут её отсюда.
+            // и берут её отсюда.
             crate::generator::site::enter(*loc);
             // Генерируем во временный буфер, чтобы пропустить встроенные функции
             // отладки (`debug`, `S`) без порчи вывода.
@@ -369,8 +369,8 @@ pub(in crate::generator::c) fn generate_code_block(
         }
 
         StatementNode::Variable(name, ty, init, loc) => {
-            // Объявление тела объявляет своё место: позиция у него есть с 0386, а отказ
-            // печати типа или инициализатора приходил без координаты.
+            // Объявление тела объявляет своё место: без него отказ печати типа или
+            // инициализатора приходит без координаты.
             crate::generator::site::enter(*loc);
             let model = map.raw_model_at(owner.name())?;
             let model_ref = model.borrow();

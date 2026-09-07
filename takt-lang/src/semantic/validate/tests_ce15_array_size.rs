@@ -1,4 +1,4 @@
-//! Тесты модуля `validate` (перенесены из `validate.rs`).
+//! Тесты предела размера массива в модуле `validate`.
 
 use super::types::{MAX_ARRAY_SIZE, check_type_array_size};
 use crate::diagnostics::Location;

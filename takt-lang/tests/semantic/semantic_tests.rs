@@ -256,7 +256,7 @@ fn implement_single_model_resolves() {
 /// `Extend::Concatenation` со списком элементов.
 ///
 /// Упаковки в синтетическую модель со ступенями `Step0...StepN` нет: путь отвергнут
-/// решением (безусловный `next` между ступенями давал бы неверный тайминг), разбор -.
+/// решением (безусловный `next` между ступенями давал бы неверный тайминг), разбор.
 #[test]
 fn implement_add_composition_resolves() {
     let node = build("start Entry = M1 + M2; model M1 { start S; } model M2 { start T; }");

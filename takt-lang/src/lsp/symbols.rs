@@ -177,8 +177,8 @@ fn symbols_from_model(model: &crate::parser::ast::Model, source: &str) -> Vec<Do
                     None,
                 ));
             }
-            // 0044: инвариант индексируется как именованный символ (бонус к
-            // hover/goto).
+            // Инвариант индексируется как именованный символ: его видят наведение и
+            // переход к объявлению.
             ModelElement::Invariant(i) => {
                 let id = match i.name.as_ref() {
                     Some(id) => id,

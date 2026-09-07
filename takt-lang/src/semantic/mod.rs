@@ -679,7 +679,7 @@ pub enum StatementNode {
     Unresolved(ast::Statement),
     /// Блок операторов `{ ... }`.
     Block(Vec<StatementNode>),
-    /// Оператор-выражение и его позиция (0264; у выражения своей нет).
+    /// Оператор-выражение и его позиция: у самого выражения своей нет.
     Expression(Box<ExpressionNode>, crate::diagnostics::Location),
     /// Условный оператор `if`.
     If {
@@ -714,7 +714,7 @@ pub enum StatementNode {
         /// Позиция заголовка.
         loc: Location,
     },
-    /// Объявление: `(имя, тип, инициализатор?, позиция)` - позиция с 0386.
+    /// Объявление: `(имя, тип, инициализатор?, позиция)`.
     Variable(String, TypeNode, Option<Box<ExpressionNode>>, Location),
     /// Оператор `return [выражение]` и его позиция.
     Return(Option<Box<ExpressionNode>>, Location),
@@ -993,8 +993,8 @@ impl StateNode {
     }
 }
 
-// `ConditionNode` вынесен в `condition_node.rs` (лимит размера модуля): чистое
-// перемещение, путь `semantic::ConditionNode` держит реэкспорт ниже.
+// `ConditionNode` объявлен в `condition_node.rs`; путь `semantic::ConditionNode`
+// держит реэкспорт ниже.
 
 /// Разрешённый семантический узел выражения (заглушка - будет расширено).
 #[derive(Default, Debug, PartialEq, Eq, Clone)]

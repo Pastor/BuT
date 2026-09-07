@@ -7,7 +7,7 @@
 static PidState PidLaw_pid_compute(PidState p, double sp, double pv);
 static PidState PidLaw_pid_init(double kp, double ki, double kd, double ts, double lo, double hi);
 static PidState PidLaw_pid_reset(PidState p);
-// Сброс накопителей. Настройку НЕ трогает: после сброса контур тот же, но без
+// Сброс накопителей. Настройку не трогает: после сброса контур тот же, но без
 // памяти о прошлом — так его перезапускают при смене партии или режима.
 static PidState PidLaw_pid_reset(PidState p) {
     PidState r = p;
@@ -23,7 +23,7 @@ static PidState PidLaw_pid_reset(PidState p) {
 static PidState PidLaw_pid_compute(PidState p, double sp, double pv) {
     PidState r = p;
     double err = sp - pv;
-    // Пропорциональная составляющая и НОВОЕ значение накопителя — пока без
+    // Пропорциональная составляющая и новое значение накопителя — пока без
     // ограничений: примем его лишь тогда, когда узнаем, насытился ли выход.
     double prop = p.kp * err;
     double i_new = p.i_acc + p.ki * err * p.ts;
@@ -33,7 +33,7 @@ static PidState PidLaw_pid_compute(PidState p, double sp, double pv) {
     if (raw > p.out_max) {
         r.output = p.out_max;
         if (err <= 0.0) {
-            // Ошибка толкает выход ДАЛЬШЕ за верхний предел — накопитель замораживаем.
+            // Ошибка толкает выход дальше за верхний предел — накопитель замораживаем.
             r.i_acc = i_new;
         }
     } else if (raw < p.out_min) {

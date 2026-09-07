@@ -108,9 +108,9 @@ impl Context for BlockScope<'_> {
         }
     }
 
-    /// Реестр структур берётся из `write` - контекста модели (0032, единый источник), а
-    /// не из `outer` (им может быть `Unit`, не знающий структур): так `Unit` не
-    /// приходится растить методом `find_struct`.
+    /// Реестр структур берётся из `write` - контекста модели, единого источника, - а не
+    /// из `outer`: им может быть `Unit`, структур не знающий, и его пришлось бы растить
+    /// методом `find_struct`.
     fn find_struct(&self, name: &str) -> Option<takt_lang::semantic::StructDefinitionNode> {
         self.write.borrow().find_struct(name)
     }
@@ -335,11 +335,10 @@ pub(crate) fn exec_statement(
         }
         StatementNode::Break(_) => Ok(Flow::Break),
         StatementNode::Continue(_) => Ok(Flow::Continue),
-        // 0044: `assert` языка Takt (`: c;` / `: [Guard] c;`) в точке записи - как в
-        // порождённом C (`assert()`, эталон c_expr.rs:1693). Нарушение ->
-        // `Err(SIM-025)` -> доходит до `TickResult::Failed`. Ошибка
-        // вычисления самого условия -> существующий `SIM-0xx`. LTL - статика,
-        // явно игнорируется.
+        // `assert` языка Takt (`: c;`, `: [Guard] c;`) проверяется в точке записи - как
+        // `assert()` в порождённом C. Нарушение даёт `SIM-025` и доходит до
+        // `TickResult::Failed`; ошибка вычисления самого условия - свой код `SIM`.
+        // Темпоральная формула здесь пропускается: её проверяет `taktc verify`.
         StatementNode::InlineFormula(formulas) => {
             for f in formulas {
                 if let Formula::Guard(cond, name, _) = f {

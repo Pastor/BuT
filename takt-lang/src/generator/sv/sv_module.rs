@@ -287,8 +287,8 @@ pub(crate) fn collect_ports(
 ) -> Result<SvPorts, Diagnostic> {
     let mut ports = SvPorts::default();
     let mut seen: BTreeSet<String> = BTreeSet::new();
-    // Чтения - по всему дереву модели: порт объявлен в одной модели, а читать его может
-    // её ребёнок по вызову (носитель `semantic::unused`, 0450/0452).
+    // Чтения считаются по всему дереву модели: порт объявлен в одной модели, а читать
+    // его может её ребёнок по вызову. Носитель признака - `semantic::unused`.
     let mut reads = crate::semantic::unused::UsageSet {
         reads_only: true,
         ..Default::default()
@@ -506,7 +506,7 @@ mod tests {
             init: ExpressionNode::None,
             loc: loc(),
             // Порт теста считается читаемым: проверки заголовка смотрят на форму
-            // объявления, а не на признак чтения (он предмет 0452).
+            // объявления, а не на признак чтения.
             is_read: true,
         }
     }
@@ -588,11 +588,10 @@ mod tests {
         assert!(out.contains("module stacker ("), "нет имени модуля:\n{out}");
     }
 
-    /// **0063:** заголовок несёт вход `en` с умолчанием `1'b1`.
+    /// Заголовок несёт вход `en` с умолчанием `1'b1`.
     ///
     /// Умолчание (IEEE 1800 §23.2.2.4) делает порт необязательным: неподключённый `en`
-    /// тождествен `en=1`, поэтому существующая сверка (`en` не подключает) остаётся
-    /// зелёной.
+    /// тождествен `en = 1`, поэтому сверка, которая `en` не подключает, остаётся зелёной.
     #[test]
     fn header_carries_clock_enable_with_default() {
         let mut out = String::new();
@@ -604,7 +603,8 @@ mod tests {
         );
     }
 
-    /// **T19:** `in` -> `input logic`, `out` -> `output logic`; порядок - вход, выход.
+    /// `in` даёт `input logic`, `out` - `output logic`; порядок печати - вход, затем
+    /// выход.
     #[test]
     fn header_emits_directions_in_order() {
         let mut out = String::new();

@@ -1,4 +1,4 @@
-//! Наблюдение состояния соседа: эталон == цели `rust` и `st` -.
+//! Наблюдение состояния соседа: эталон == цели `rust` и `st`.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;

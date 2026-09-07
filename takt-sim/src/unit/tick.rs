@@ -40,11 +40,11 @@ impl Unit {
         if let Err(diagnostic) = self.enter_initial_state() {
             return TickResult::Failed(describe(&diagnostic));
         }
-        // 0044: инварианты (Guard-формулы) проверяются до `always` - как в порождённом
-        // C (`assert()` до `switch`/`always`). Жёсткий режим: нарушение -> `Failed`
-        // (стоп). Мягкий: нарушение записано, `None` -> такт продолжается. Ошибка
-        // вычисления самого условия != нарушению  - `Failed` в обоих режимах. Для
-        // композитов проверяет каждый дочерний `Node` в своём `tick_mode`.
+        // Инварианты (охранные формулы) проверяются до `always` - как `assert()` до
+        // `switch` в порождённом C. В жёстком режиме нарушение даёт `Failed` и
+        // останавливает прогон, в мягком - записывается, и такт продолжается. Ошибка
+        // вычисления самого условия нарушением не считается и даёт `Failed` в обоих
+        // режимах. У композиции проверяет каждый дочерний узел в своём `tick_mode`.
         if matches!(self.0, UnitKind::Node { .. })
             && let Some(failed) = self.check_guards(soft)
         {
@@ -126,7 +126,7 @@ impl Unit {
             return TickResult::Terminated;
         };
 
-        // Шаг 1a: реализация состояния (`state P = A + B { ... }`) -.
+        // Шаг 1a: реализация состояния (`state P = A + B { ... }`).
         //
         // Тикается до проверки переходов, и пока она не завершена, переходы не
         // проверяются вовсе. Эталон - порождённый C: `generate_extend_transition`
@@ -143,7 +143,7 @@ impl Unit {
         if let Some(inner) = implementation {
             match inner.borrow_mut().tick_mode(soft) {
                 TickResult::Processing => return TickResult::Processing,
-                // Ошибка внутри реализации - ошибка узла (R5 ).
+                // Ошибка внутри реализации есть ошибка узла.
                 failed @ TickResult::Failed(_) => return failed,
                 TickResult::Terminated => {}
             }
@@ -208,9 +208,8 @@ impl Unit {
             return TickResult::Terminated;
         }
 
-        // Шаг 3: ищем первый сработавший переход.
-        //
-        // R5: ошибка вычисления условия - **не** "условие ложно".
+        // Шаг 3: ищем первый сработавший переход. Ошибка вычисления условия не
+        // означает "условие ложно".
         let mut fired = None;
         for (name, pred) in &transitions {
             match pred.evaluate(self) {

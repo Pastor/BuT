@@ -1,4 +1,4 @@
-//! `textDocument/documentSymbol` -.
+//! `textDocument/documentSymbol`.
 //!
 //! # Что проверяется
 //!

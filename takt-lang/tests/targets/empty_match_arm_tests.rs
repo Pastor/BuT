@@ -1,4 +1,4 @@
-//! Пустая ветвь `match` -.
+//! Пустая ветвь `match`.
 
 use std::path::PathBuf;
 use std::process::Command as Proc;

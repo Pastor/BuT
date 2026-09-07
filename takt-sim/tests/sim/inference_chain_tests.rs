@@ -1,4 +1,4 @@
-//! Эталон исполняет объявление, тип которого выведен по ссылке -.
+//! Эталон исполняет объявление, тип которого выведен по ссылке.
 
 use takt_lang::semantic::tree::construct_model;
 use takt_sim::{TickResult, Unit, Value, build_unit};

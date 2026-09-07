@@ -48,13 +48,13 @@ fn shift_saturated(
     };
     let threshold = bits.max(32);
     match shift_width::literal_saturation(direction, value, amount, threshold) {
-        // Величина не литерал - насыщение считает хелпер: при
-        // компиляции она неизвестна, а `v >> n` при `n >= ширины` в C есть UB.
-        // Замер 2026-08-23 (`u32`, значение `0xFFFFFFFF`): при `n = 32`
-        // прошивка давала **4294967295**, при `n = 48` - **65535** (сдвиг по
-        // модулю 32), тогда как эталон, `rust`, `st` и `sv` дают 0; `cc -Wall
-        // -Wextra -Werror` при этом молчит, а результат одинаков на `-O0` и
-        // `-O2`. То есть расхождение значений, невидимое инструментам.
+        // Величина не литерал - насыщение считает хелпер: при компиляции она
+        // неизвестна, а `v >> n` при `n` не меньше ширины в C есть неопределённое
+        // поведение. Без хелпера `u32` со значением `0xFFFFFFFF` при `n = 32` даёт в
+        // прошивке 4294967295, а при `n = 48` - 65535 (сдвиг по модулю 32), тогда как
+        // эталон, `rust`, `st` и `sv` дают 0; `cc -Wall -Wextra -Werror` при этом
+        // молчит, а результат одинаков на `-O0` и `-O2`, то есть расхождение значений
+        // инструментам невидимо.
         shift_width::Saturation::AsIs if shift_width::literal(amount).is_none() => {
             variable_shift(
                 printer, map, owner, params, direction, value, amount, threshold,
@@ -128,9 +128,7 @@ pub(in crate::generator::c) fn generate_expr(
     has_model: bool,
 ) -> Result<(), Diagnostic> {
     // Операция над бит-вектором шире 64 бит невыразима: носитель - массив слов, и в C
-    // такое выражение означало бы арифметику указателя. Её не поддерживает и эталон
-    // (`SIM-005` в такте), поэтому отказ приходит свой, с причиной, а не от `cc` на
-    // порождённом файле.
+    // такое выражение означало бы арифметику указателя.
     if let Some(op) = crate::generator::c::c_bits::wide_operand(expr) {
         return Err(unsupported(UnsupportedNode::WideBitVector(op), expr));
     }
@@ -211,12 +209,11 @@ pub(in crate::generator::c) fn generate_expr(
             }
         }
 
-        // -- Степень -> целочисленный хелпер -------------------------
+        // -- Степень: целочисленный хелпер ---------------------------
         //
-        // Прежде печаталось `pow((double)a, (double)b)`: у `double` 53 разряда
-        // мантиссы, и `3 ** 40` давало 12157665459056928768 вместо 12157665459056928801 -
-        // прошивка расходилась с эталоном молча. Заодно исчезла зависимость от `libm`
-        // ради целой арифметики.
+        // `pow((double)a, (double)b)` здесь не годится: у `double` 53 разряда мантиссы,
+        // и `3 ** 40` даёт 12157665459056928768 вместо 12157665459056928801 - прошивка
+        // расходится с эталоном молча. Заодно целая арифметика не тянет за собой `libm`.
         ExpressionNode::Power(l, r) => {
             printer.print("takt_ipow((int64_t)(");
             generate_expr(printer, map, owner, params.clone(), l, 0, has_model)?;
@@ -407,8 +404,7 @@ pub(in crate::generator::c) fn generate_expr(
             }
         }
         ExpressionNode::Equal(l, r) => {
-            // Смешанная знаковость: равенство ломается на 64 битах так же, как `<` -
-            // первая редакция его не покрыла.
+            // Смешанная знаковость: равенство ломается на 64 битах так же, как `<`.
             if let Some(text) = mixed_sign_compare(l, "==", r, map, owner, &params, has_model)? {
                 printer.print(&text);
             } else {
@@ -418,8 +414,7 @@ pub(in crate::generator::c) fn generate_expr(
             }
         }
         ExpressionNode::NotEqual(l, r) => {
-            // Смешанная знаковость: равенство ломается на 64 битах так же, как `<` -
-            // первая редакция его не покрыла.
+            // Смешанная знаковость: неравенство ломается на 64 битах так же, как `<`.
             if let Some(text) = mixed_sign_compare(l, "!=", r, map, owner, &params, has_model)? {
                 printer.print(&text);
             } else {
@@ -677,12 +672,10 @@ pub(in crate::generator::c) fn generate_expr(
             printer.print(&var_expr);
         }
 
-        // Именованное условие подставляется, как на ребре.
-        //
-        // Прежде печаталось имя макроса `COND_...`, которого цель **нигде не
-        // определяет**: порождённый C не собирался при нулевом коде возврата `taktc`.
-        // На ребре то же условие подставлялось выражением - то есть один и тот же
-        // `cond` печатался двумя способами.
+        // Именованное условие подставляется, как на ребре. Имя макроса `COND_...` цель
+        // нигде не определяет: напечатай она его, порождённый C не собрался бы при
+        // нулевом коде возврата `taktc`, и один и тот же `cond` печатался бы двумя
+        // способами.
         ExpressionNode::Condition(cond_rc) => {
             let cond = cond_rc.borrow();
             let printed = crate::generator::c::c_expr::condition::generate_condition_expr(
@@ -734,9 +727,9 @@ pub(in crate::generator::c) fn generate_expr(
             {
                 super::fixed::cast(printer, map, owner, params, expr, typ, &type_c, has_model)?;
             } else if crate::generator::mixed_sign::operand_type_expr(expr).is_some_and(|from| {
-                // Сравниваются напечатанные типы: `duration` отображается в `uint32_t`,
-                // и типы Takt при этом различны - признак 0361 такую запись не ловил. В
-                // C лишнее приведение безвредно, но правило у трёх целей одно: у `rust`
+                // Сравниваются напечатанные типы, а не типы Takt: `duration`
+                // отображается в `uint32_t`, и по типам Takt такая пара различна. В C
+                // лишнее приведение безвредно, но правило у трёх целей одно: у `rust`
                 // та же печать есть `clippy::unnecessary_cast`, то есть отказ проверки.
                 c_type_or_diagnostic(&from, model, map.float_width(), "приведение типа")
                     .is_ok_and(|from_c| from_c == type_c)
@@ -800,9 +793,7 @@ pub(in crate::generator::c) fn generate_expr(
                                 "model"
                             };
                             match cls {
-                                // Разряд bit-порта адресуется самим вызовом (контракт
-                                // 0533): прежде номер терялся, и `src.3` читал порт
-                                // целиком.
+                                // Разряд bit-порта адресуется самим вызовом
                                 PortClass::Bit => {
                                     printer.print(&crate::generator::c::c_port_call::read_bit(
                                         ptr,

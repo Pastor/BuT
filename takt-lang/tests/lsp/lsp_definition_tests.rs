@@ -1,4 +1,4 @@
-//! `textDocument/definition` -.
+//! `textDocument/definition`.
 //!
 //! Проверяется не "функция вернула Some", а **согласие двух методов**: `definition` и
 //! `declaration` обязаны отвечать одинаково на один и тот же курсор. В Takt объявление

@@ -67,10 +67,17 @@ def read_lines(path):
 
 
 def feature_statuses():
-    """Номер фичи → статус из реестра `docs/features/README.md`."""
+    """Номер фичи → статус из реестра `docs/features/README.md`.
+
+    Номер берётся из адреса ссылки, а не из её текста: текстом первой ячейки
+    реестра служит слово, а номер живёт в имени файла карточки.
+    """
     statuses = {}
     for line in read_lines(FEATURES_REGISTRY):
-        match = re.match(r"\|\s*\[(\d{4})\]\([^)]*\)\s*\|[^|]*\|[^|]*\|([^|]*)\|", line)
+        match = re.match(
+            r"\|\s*\[[^\]]*\]\((?:\./)?(\d{4})-[^)]*\)\s*\|[^|]*\|[^|]*\|([^|]*)\|",
+            line,
+        )
         if match:
             statuses[match.group(1)] = re.sub(r"[*✅\s]", "", match.group(2))
     return statuses

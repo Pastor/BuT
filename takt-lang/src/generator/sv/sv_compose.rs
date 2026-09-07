@@ -233,10 +233,6 @@ fn inline_composed(
             Ok(done_exprs)
         }
         // Вложенная цепочка внутри параллели или внутри шага другой цепочки.
-        //
-        // Прежде здесь стоял отказ `SV-002`, советовавший обернуть цепочку в отдельную
-        // модель: конструкцию, которую исполняют эталон, `c` и `rust`, цель не
-        // переводила вовсе.
         StateExtend::Concatenation(inner) => {
             emit_chain(p, map, fsm, state_name, inner, path, ChainExit::Done)?;
             let step = step_reg_name(state_name, path);

@@ -1,8 +1,7 @@
 //! Семантический узел именованного блока кода (`enter`/`exit`/`always`/`every`...).
 //!
-//! Вынесено из `semantic/mod.rs` (лимит размера модуля, добавила вариант `Every`).
-//! Контракт держит реэкспорт `pub use` в `mod.rs` - пути потребителей
-//! (`crate::semantic::NamedCodeBlockDefinitionNode`) не меняются.
+//! Контракт держит реэкспорт `pub use` в `semantic/mod.rs`: путь потребителей
+//! `crate::semantic::NamedCodeBlockDefinitionNode` не меняется.
 
 use crate::parser::ast;
 use crate::semantic::{ModelNode, StatementNode};

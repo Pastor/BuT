@@ -29,8 +29,8 @@ pub fn default_expression(ty: &TypeNode, model: &ModelNode) -> Option<Expression
             let (_, value) = enum_default(&def.variants)?;
             Some(ExpressionNode::Number(value))
         }
-        // Массив и структура: агрегат из умолчаний элементов, в объявленном порядке -
-        // длина сверяется семантикой (`SE-123`, 0320).
+        // Массив и структура: агрегат из умолчаний элементов, в объявленном порядке;
+        // длину сверяет семантика (`SE-123`).
         TypeNode::Array(len, elem) => {
             let one = default_expression(elem, model)?;
             Some(ExpressionNode::Initializer(vec![one; *len as usize]))

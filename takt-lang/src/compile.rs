@@ -223,7 +223,7 @@ fn with_addresses(
         input.external,
         input.env.unwrap_or(&default_env),
     );
-    // Путь ставит тип, а не вызов (0212, 0467): иначе `SE-052` без координаты.
+    // Путь файла ставит тип, а не вызов: иначе `SE-052` придёт без координаты.
     if let Some(err) = pipeline::first_error(&resolution.diagnostics) {
         return Err(unit.stamp(err));
     }

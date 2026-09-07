@@ -114,7 +114,7 @@ fn assert_kind(toks: &[Tok], text: &str, expected: &str) {
 /// R6/A1 (главная сверка фичи): каждая категория **идентификатора** получает свой
 /// семантический тип. Ловит перестановку ветвей `match` по `Token::Identifier`
 /// (`lsp/semantic_tokens.rs`) - раньше её не ловил ни один тест (дыра ). Включает члены
-/// **под-модели** `Thermostat` (`scale`/`Idle`/`Done`) -: до него они деградировали в
+/// **под-модели** `Thermostat` (`scale`/`Idle`/`Done`): до него они деградировали в
 /// `variable`.
 #[test]
 fn semantic_tokens_classification() {

@@ -681,7 +681,7 @@ fn walk_formula_expr(expr: &ast::FormulaExpression, scopes: &mut Scopes, table: 
 
 /// Тип: ссылка на псевдоним/структуру/перечисление - тоже использование имени. Отмечает
 /// позицией типа **объявляемое** имя типа (`type X = ...`, `struct X { ... }`, `enum X
-/// { ... }`) -.
+/// { ... }`).
 fn mark_declared_type_name(name: Option<&ast::Identifier>, table: &mut UsageTable) {
     if let Some(name) = name
         && let Some((_, start, end)) = name_range(name.loc)

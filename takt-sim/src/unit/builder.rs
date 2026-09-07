@@ -22,12 +22,11 @@ type Executions = HashMap<String, Vec<Execution>>;
 pub(crate) fn var_expr(var: &VariableNode) -> &ExpressionNode {
     match var {
         VariableNode::Simple { expr, .. } | VariableNode::Const { expr, .. } => expr,
-        // У порта берётся **начальное значение**, а не адрес: прежде оба жили в одном
-        // поле, и симулятор брал адрес за начальное значение - `in P: bit := 0x100;`
-        // стартовал со значением 0x100. Здесь это и есть выставление значения "до
-        // первого такта": эталону нечего эмитить, он им стартует. Совпадение с целями
-        // проверяет потактовая сверка `takt-sim/tests/conformance_port_init_tests.rs` -
-        // трасса начинается с состояния порта до такта.
+        // У порта берётся начальное значение, а не адрес: возьми эталон адрес,
+        // `in P: bit := 0x100;` стартовал бы со значением 0x100. Здесь это и есть
+        // выставление значения "до первого такта": эталону нечего печатать, он им
+        // стартует. Совпадение с целями проверяет потактовая сверка - трасса начинается
+        // с состояния порта до такта.
         VariableNode::Port { init, .. } => init,
         VariableNode::Unresolved => &ExpressionNode::None,
     }
@@ -67,12 +66,11 @@ pub(crate) fn coerce_initial(value: Value, var: &VariableNode, model: &ModelNode
             crate::eval::coerce_to_type_with(value.clone(), ty, &ModelStructs(model))
                 .unwrap_or(value)
         }
-        // Массив: список-инициализатор `{...}`/`[...]` (пришёл как `Array`) приводится
-        // поэлементно к типу элемента с проверкой длины (`coerce_array`). При неудаче -
-        // значение как есть: **скалярный** инициализатор массива (`[u8;4] := 0`) не
-        // приводится и остаётся скаляром (в C он вовсе не выразим, CC-017; определить
-        // его - вопрос семантики 0078, не этой фичи). Та же консервативность, что у
-        // `Fixed`/`Struct`.
+        // Массив: список-инициализатор `{...}` либо `[...]`, пришедший узлом `Array`,
+        // приводится поэлементно к типу элемента с проверкой длины (`coerce_array`). При
+        // неудаче берётся значение как есть: скалярный инициализатор массива
+        // (`[u8;4] := 0`) не приводится и остаётся скаляром - у цели `c` он невыразим
+        // вовсе (`CC-017`). Та же осторожность, что у `Fixed` и `Struct`.
         Some(ty @ TypeNode::Array(..)) => {
             crate::eval::coerce_to_type_with(value.clone(), ty, &ModelStructs(model))
                 .unwrap_or(value)
@@ -167,11 +165,11 @@ fn build_impl(
                     } = state
                     {
                         // Свёртка допустима, только пока у состояния нет собственных
-                        // блоков: `Parallel` их не хранит, и `always`/`exit`
-                        // состояния-композиции терялись молча - замер 2026-08-23 дал
-                        // `hits = 0` против `1`/`2` у прошивки цели `c`. Со своими
-                        // блоками модель строится обычным узлом: там блоки состояния
-                        // живут в `state_executions` и работают механизмом 0181.
+                        // блоков: `Parallel` их не хранит, и `always` с `exit`
+                        // состояния-композиции потерялись бы молча - эталон дал бы ноль
+                        // срабатываний против одного и двух у прошивки цели `c`. Со
+                        // своими блоками модель строится обычным узлом: там блоки
+                        // состояния живут в `state_executions`.
                         if references.is_empty()
                             && next.is_none()
                             && state.named_blocks().is_empty()
@@ -333,9 +331,9 @@ fn build_node(
     let mut state_transitions: HashMap<String, Vec<(String, Predicate)>> = HashMap::new();
     let mut state_executions: HashMap<String, Executions> = HashMap::new();
     let mut state_every: HashMap<String, Vec<(i64, Vec<Execution>)>> = HashMap::new();
-    // 0181 (закрытие исправления ): реализации состояний-реализаций.
+    // Реализации состояний-реализаций.
     let mut state_impls: HashMap<String, Rc<RefCell<Unit>>> = HashMap::new();
-    // 0044: инварианты модели (проверяются каждый такт) и по состояниям.
+    // Инварианты модели, проверяемые каждый такт, и инварианты по состояниям.
     let mut guards = crate::unit::Guards {
         model: build_guards(&model.borrow().formulas),
         per_state: HashMap::new(),
@@ -448,15 +446,13 @@ fn build_transitions(state: &StateNode) -> Result<Vec<(String, Predicate)>, Diag
         (r.name.clone(), pred)
     };
     let mut out: Vec<(String, Predicate)> = state.references().iter().map(to_transition).collect();
-    // Переход `next` состояния-реализации. Живёт отдельным полем
-    // `StateNode::Implement::next`, а не среди `references`, и потому прежде в переходы
-    // симулятора не попадал вовсе: `start P = A + B { next Done; }` застревал в `P`
-    // навсегда.
+    // Переход `next` состояния-реализации живёт отдельным полем
+    // `StateNode::Implement::next`, а не среди `references`, и обход обязан взять его
+    // отдельно: иначе `start P = A + B { next Done; }` застрянет в `P` навсегда.
     //
-    // Идёт последним: `next` безусловен, и впереди `ref`-рёбер он затенил бы их все.
-    // Проверяется он лишь после того, как реализация состояния завершилась
-    // (`tick_node`, шаг 1a) - эталон цели `c`, где `generate_extend_transition` эмитит
-    // переход внутри ветви `is_done`.
+    // Идёт последним: `next` безусловен, и впереди рёбер `ref` он затенил бы их все.
+    // Проверяется он лишь после того, как реализация состояния завершилась, - так же,
+    // как цель `c` печатает переход внутри ветви `is_done`.
     if let StateNode::Implement { next: Some(r), .. } = state {
         out.push(to_transition(r));
     }
@@ -701,8 +697,8 @@ mod tests {
         assert!(matches!(result.get_value("x"), Some(Value::Number(5))));
     }
 
-    /// 0032: у узла нет собственной карты значений - запись через `set_value` уходит в
-    /// контекст модели и читается оттуда же (единый источник истины).
+    /// У узла нет собственной карты значений: запись через `set_value` уходит в
+    /// контекст модели и читается оттуда же.
     #[test]
     fn test_build_node_set_value_routes_to_context() {
         let (ast, _) = parse("var x: u8 := 5; start S;", 0).unwrap();

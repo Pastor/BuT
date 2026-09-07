@@ -35,13 +35,12 @@ pub(crate) fn scalar_repr(ty: &TypeNode, model: &ModelNode) -> Option<ScalarRepr
             bits: crate::semantic::type_node::type_fixed::fixed_storage_bits(m + n),
             signed: true,
         }),
-        // Бит-вектор `[bit;N]`, N <= 64 - Упакованное беззнаковое целое родной ширины:
-        // `[bit;12]` == `u16`. N > 64 - массив слов, и целым он не представим: там
+        // Бит-вектор `[bit;N]`, N <= 64 - упакованное беззнаковое целое родной ширины:
+        // `[bit;12]` есть `u16`. N > 64 - массив слов, и целым он не представим: там
         // `None` (у `rust` это `RS-016`, и отказ верен).
         //
-        // Пропуск этой ветви и был дефектом 0488: носитель обещал "скаляр", а цель
-        // `st-at` отвечала `ST-004` на порту `[bit;12]`, который прочие семь
-        // потребителей переводят.
+        // Пропусти носитель эту ветвь - и он обещает скаляр, а цель `st-at` отвечает
+        // `ST-004` на порту `[bit;12]`, который прочие семь потребителей переводят.
         ty if crate::semantic::bit_vector::is_bit_vector(ty).is_some() => {
             let n = crate::semantic::bit_vector::is_bit_vector(ty)?;
             match crate::semantic::bit_vector::layout(n) {

@@ -325,7 +325,6 @@ impl Lowering {
     /// Условное ветвление **сливается** с обёрткой (`if !done && cond`), а не
     /// вкладывается в неё: вложенная форма валидна у семи потребителей, а `clippy` под
     /// `-D warnings` отвечает `collapsible_if` - "this `if` statement can be collapsed"
-    ///
     fn guarded(&mut self, lowered: StatementNode) -> StatementNode {
         self.done_read = true;
         let not_done = ExpressionNode::Not(Box::new(self.done_ref()));

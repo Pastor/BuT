@@ -103,8 +103,7 @@ fn print_inner(out: &mut Out, statement: &ast::Statement) -> Result<(), FormatEr
         // печатается тем же приёмом: закрывающую скобку ветки `then` уже поставил
         // `block_with_head`, `join` продолжает её строку, а заголовок следующей ветки
         // печатается без отступа - блоком (`{`) или рекурсивным `print` (`if cond {`).
-        // Отдельной печати для `else if` больше не нужно: прежде она давала три строки
-        // (`}` / `else` / `if ...`).
+        // Отдельной печати для `else if` не нужно: рекурсивный `print` даёт её сам.
         S::If(_, cond, then_, else_) => {
             block_with_head(out, &format!("if {} ", expr::expression(cond)?), then_)?;
             let Some(else_) = else_ else {
@@ -190,8 +189,8 @@ fn print_inner(out: &mut Out, statement: &ast::Statement) -> Result<(), FormatEr
             out.line("}");
             Ok(())
         }
-        // 0044: `assert` языка Takt в блоке кода (`: c;` / `: [Guard] c;`). Форма
-        // автора сохраняется печатью инлайн-формулы (синонимы не канонизируются).
+        // Инлайн-формула - `assert` языка Takt в блоке кода (`: c;`, `: [Guard] c;`).
+        // Форма автора сохраняется: синонимы не канонизируются.
         S::InlineFormula(f) => {
             out.line(&expr::inline_formula(f)?);
             Ok(())
@@ -210,8 +209,8 @@ fn print_inner(out: &mut Out, statement: &ast::Statement) -> Result<(), FormatEr
             super::formula::print_block(out, dialect.as_ref(), block)
         }
         // Вынужденная ветка: перечисление `#[non_exhaustive]`. Отказ, а не молчаливая
-        // потеря оператора. Позиция и **название вида** берутся у самого узла: прежде
-        // здесь печатался `Debug`-дамп со всей внутренней структурой оператора.
+        // потеря оператора. Позиция и название вида берутся у самого узла, а не
+        // `Debug`-дампом внутренней структуры.
         other => Err(super::unsupported(other.loc(), other.kind_name())),
     }
 }

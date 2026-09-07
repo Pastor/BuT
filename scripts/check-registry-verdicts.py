@@ -61,6 +61,23 @@ def table_cells(line):
     return [cell.strip() for cell in line.strip().strip("|").split("|")]
 
 
+FEATURE_LINK = re.compile(r"\[[^\]]*\]\((?:\./)?(\d{4})-[^)]*\)")
+
+
+def feature_number(cell):
+    """Номер фичи из первой ячейки реестра; `None` - её там нет.
+
+    Номер берётся из адреса ссылки, а не из её текста: текстом служит слово, а
+    номер живёт в имени файла карточки. Голый номер принимается тоже - так
+    записаны ячейки реестров стадий.
+    """
+    match = FEATURE_LINK.search(cell)
+    if match:
+        return match.group(1)
+    cell = cell.strip()
+    return cell if re.fullmatch(r"\d{4}", cell) else None
+
+
 def feature_statuses(lines):
     """Номер фичи → нормализованный статус из реестра `docs/features/README.md`."""
     statuses = {}
@@ -68,9 +85,9 @@ def feature_statuses(lines):
         cells = table_cells(line)
         if not cells:
             continue
-        match = re.match(r"\[(\d{4})\]", cells[0])
-        if match:
-            statuses[match.group(1)] = normalize_status(cells[-2])
+        number = feature_number(cells[0])
+        if number:
+            statuses[number] = normalize_status(cells[-2])
     return statuses
 
 
@@ -81,9 +98,8 @@ def check_registry(lines, statuses, relative_path, column):
         cells = table_cells(line)
         if not cells or len(cells) < 3:
             continue
-        match = re.match(r"\[(\d{4})\]", cells[0].strip())
-        feature = match.group(1) if match else cells[0].strip()
-        if not re.fullmatch(r"\d{4}", feature):
+        feature = feature_number(cells[0])
+        if not feature:
             continue
         if normalize_status(cells[-1]) != PLACEHOLDER:
             continue

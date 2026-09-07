@@ -44,8 +44,6 @@ pub(super) fn generate_function_call(
                     .as_ref()
                     .and_then(|w| w.upgrade())
                     .ok_or_else(|| -> Diagnostic {
-                        // Воронка `CC-023`; место пропущено при закрытии той фичи -
-                        // найдено замером 0276.
                         crate::generator::c::c_unresolved::refuse(
                             crate::diagnostics::Location::Codegen,
                             crate::generator::c::c_unresolved::UnresolvedNode::Function(Some(

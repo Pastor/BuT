@@ -250,8 +250,7 @@ fn run_fmt(options: &FmtOptions) -> i32 {
 // -----------------------------------------------------------------------------
 
 // Разбор аргументов `verify` и тип графа живут в библиотеке
-// (`takt_lang::verification::{verify_cli, dot}`) - бинарник тонкий (лимит размера
-// `taktc.rs`). Здесь - только диспетчер и печать.
+// (`takt_lang::verification::{verify_cli, dot}`); здесь - диспетчер и печать.
 use takt_lang::verification::verify_cli::{VerifyOptions, parse_verify_args};
 
 /// Выполняет подкоманду `verify`; возвращает код возврата процесса.
@@ -604,7 +603,7 @@ fn main() {
         process::exit(1);
     }
 
-    // Подкоманда `compile` - вся логика в библиотеке (правило размера модуля).
+    // Подкоманда `compile` - вся логика в библиотеке.
     process::exit(takt_lang::compile_cli::run_compile(&args[2..]));
 }
 
@@ -780,7 +779,7 @@ mod tests {
         assert_eq!(joined.scope, takt_lang::VerifyScope::All);
     }
 
-    /// A5: негодная область - отказ, а не молчаливое умолчание.
+    /// Негодная область - отказ, а не молчаливое умолчание.
     #[test]
     fn verify_unknown_scope_is_rejected() {
         let err = parse_verify_args(&["--scope=al".to_string(), "m.takt".to_string()]).unwrap_err();

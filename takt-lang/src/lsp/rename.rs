@@ -1,4 +1,4 @@
-//! `textDocument/rename` и `prepareRename` -.
+//! `textDocument/rename` и `prepareRename`.
 //!
 //! ## Полнота или отказ
 //!
@@ -176,8 +176,8 @@ fn validate_new_name(new_name: &str) -> Result<(), RenameRefusal> {
 /// Диапазон имени под курсором с учётом рабочей области, либо причина отказа.
 ///
 /// Отличие от [`prepare_rename_at`] - в охвате: символ, объявленный в другом файле
-/// области, больше не даёт `ForeignDeclaration`, потому что правка доберётся до всех
-/// его вхождений (гарантия 0153: "полнота **в пределах рабочей области** или отказ").
+/// области, не даёт `ForeignDeclaration`, потому что правка доберётся до всех его
+/// вхождений. Гарантия одна: полнота в пределах рабочей области либо отказ.
 pub fn prepare_rename_in_workspace(
     path: &str,
     position: Position,

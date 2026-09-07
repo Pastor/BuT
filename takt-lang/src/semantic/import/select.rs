@@ -112,9 +112,9 @@ pub(in crate::semantic) fn apply(
                 }
                 let adopted = adopt_function(f, model_node, &alias);
                 // Прямо в узел, и это работает лишь потому, что строитель в конце
-                // обхода делает `functions.extend(...)`, а не присваивание целиком: с
-                // присваиванием вклад затирался бы, и вызов отвечал `SE-004`
-                // "неизвестная функция" (первая редакция исправления ).
+                // обхода делает `functions.extend(...)`, а не присваивание целиком:
+                // присваивание затёрло бы вклад, и вызов ответил бы `SE-004`
+                // "неизвестная функция".
                 model_node.borrow_mut().functions.insert(alias, adopted);
             } else if let Some(c) = src.conditions.get(orig) {
                 if conditions.contains_key(&alias) {

@@ -212,10 +212,9 @@ fn usage_from_var(var: &VariableNode, set: &mut UsageSet) {
 fn usage_from_expr(expr: &ExpressionNode, set: &mut UsageSet) {
     match expr {
         ExpressionNode::Variable(var_rc) => note_variable_usage(&var_rc.borrow(), set),
-        // Индекс - тоже использование: `got := mem[pc];` читает `pc`. С индекс -
-        // произвольное выражение, и умолчание стало бы неверным чаще: в нём появляются
-        // целые подвыражения. База - Выражение: обходится тем же сборщиком, что и
-        // индекс; прежде здесь стояла переменная.
+        // Индекс - тоже использование: `got := mem[pc];` читает `pc`. Индекс есть
+        // произвольное выражение, и целые подвыражения в нём читают переменные наравне.
+        // База - тоже выражение и обходится тем же сборщиком, что и индекс.
         ExpressionNode::ArraySubscript(base, index) => {
             usage_from_expr(base, set);
             usage_from_expr(index, set);
@@ -570,9 +569,8 @@ fn check_model_unused(model: Rc<RefCell<ModelNode>>, warnings: &mut Vec<Diagnost
         }
     }
 
-    // Локальные объявления тел: прежде проверялись только объявления модели, и о
-    // неиспользуемой переменной блока автор не узнавал ниоткуда - вывод целей чинит
-    // заглушка 0376, но это молчаливая правка за автора.
+    // Локальные объявления тел: без них о неиспользуемой переменной блока автор не
+    // узнает ниоткуда. Вывод целей чинит заглушка, но это молчаливая правка за автора.
     for block in &borrowed.named_blocks {
         if let Some(stmt) = block.statement() {
             check_unused_locals(stmt, warnings);

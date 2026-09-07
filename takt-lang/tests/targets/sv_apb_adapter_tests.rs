@@ -1,4 +1,4 @@
-//! Адаптер шины APB для цели `sv-mmio` -.
+//! Адаптер шины APB для цели `sv-mmio`.
 //!
 //! ## Что здесь ловится
 //!
@@ -132,7 +132,7 @@ fn apb_signals_and_contract_constants() {
     );
 }
 
-/// R3: адресация **напрямую** -: адрес шины равен адресу из `at`, без сдвига на слово.
+/// R3: адресация **напрямую**: адрес шины равен адресу из `at`, без сдвига на слово.
 #[test]
 fn address_maps_straight_through() {
     let dir = compile_mmio("addr", "dev", ADDRESSED, Some(Bus::Apb));

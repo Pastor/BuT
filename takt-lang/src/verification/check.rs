@@ -303,7 +303,7 @@ mod tests {
         assert_eq!(cycle, vec!["Fault".to_string(), "Fault".to_string()]);
     }
 
-    /// Детерминизм (проверка 0048): один и тот же контрпример на 10 прогонов.
+    /// Детерминизм: один и тот же контрпример на десяти прогонах.
     #[test]
     fn emptiness_is_deterministic() {
         let p = accepting_self_loop();

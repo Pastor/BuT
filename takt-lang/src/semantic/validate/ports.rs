@@ -97,21 +97,21 @@ fn collect_incomplete_addresses(
     }
 }
 
-/// проверки оператора `address` для одной модели.
+/// Проверки оператора `address` для одной модели.
 ///
 /// Наполнение [`address_defs`](ModelNode::address_defs) выполняет
 /// [`construct_model`](super::tree::construct_model); здесь эти привязки сверяются с
 /// объявленными портами:
 ///
-/// - **Висячая привязка (R5, SE-048).** `address` ссылается на имя, которого нет
+/// - **Висячая привязка (`SE-048`).** `address` ссылается на имя, которого нет
 ///   среди портов модели.
-/// - **Конфликт источников (R4, SE-049).** Адрес порта задан одновременно inline
+/// - **Конфликт источников (`SE-049`).** Адрес порта задан одновременно inline
 ///   (`in P: T := <addr>;`) и оператором `address`, либо несколькими операторами
 ///   `address` для одного порта.
 ///
 /// Приоритет источников (inline < `address` < внешняя карта) и построение `AddressMap`
-/// для потребителей - /. Здесь достаточно гарантировать однозначность источника адреса
-/// внутри модели.
+/// для потребителей живут в слое адресов. Здесь достаточно гарантировать однозначность
+/// источника адреса внутри модели.
 pub(super) fn check_port_addresses(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> {
     let borrowed = model.borrow();
     let mut bound_by_address: HashSet<&str> = HashSet::new();
@@ -119,7 +119,7 @@ pub(super) fn check_port_addresses(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnos
     // ошибочная не является следствием первой.
     let mut out = Vec::new();
     for def in &borrowed.address_defs {
-        // R5: адрес должен ссылаться на существующий порт.
+        // Адрес обязан ссылаться на существующий порт.
         let Some(VariableNode::Port { address, .. }) = borrowed.variables.get(&def.port) else {
             out.push(
                 Diagnostic::error(
@@ -133,7 +133,7 @@ pub(super) fn check_port_addresses(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnos
             );
             continue;
         };
-        // R4: несколько операторов `address` для одного порта.
+        // Несколько операторов `address` для одного порта.
         if !bound_by_address.insert(def.port.as_str()) {
             out.push(
                 Diagnostic::error(
@@ -147,7 +147,7 @@ pub(super) fn check_port_addresses(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnos
             );
             continue;
         }
-        // R4: адрес задан и inline-инициализатором, и оператором `address`.
+        // Адрес задан и inline-инициализатором, и оператором `address`.
         if !matches!(address, ExpressionNode::None) {
             out.push(
                 Diagnostic::error(

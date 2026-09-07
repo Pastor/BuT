@@ -37,10 +37,10 @@ fn relink_model(model: &Rc<RefCell<ModelNode>>, visited: &mut HashSet<*const Ref
     }
     model.borrow_mut().conditions = conditions;
 
-    // Тела функций уже построены (стадия 5) и держат свою копию именованного условия -
-    // ячейку `ExpressionNode::Condition`. Правки карты им мало: `if warm { ... }`
-    // внутри функции остался бы с неразрешённым вызовом. Прочие тела (блоки, рёбра)
-    // строятся позже и копируют уже исправленное.
+    // Тела функций уже построены на стадии 5 и держат свою копию именованного условия -
+    // ячейку `ExpressionNode::Condition`. Правки карты им мало: `if warm { ... }` в теле
+    // функции останется с неразрешённым вызовом. Прочие тела (блоки, рёбра) строятся
+    // после этого прохода и копируют исправленную ячейку.
     let mut functions = model.borrow().functions.clone();
     for func in functions.values_mut() {
         if let FunctionDefinitionNode::Local { body, .. } = func {

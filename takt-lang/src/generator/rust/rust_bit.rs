@@ -23,8 +23,8 @@ pub(crate) fn words_of_type(ty: &TypeNode) -> Option<u16> {
 /// Число слов носителя выражения - по объявлению переменной.
 ///
 /// Тип берётся из ячейки `ExpressionNode::Variable` - снимка, снятого при разрешении
-/// имени (засада 0204). Для объявленного типа он верен; при `Inference` печать остаётся
-/// прежней, то есть деградирует в поведение до фичи, а не в отказ.
+/// имени. Для объявленного типа он верен; при `Inference` печать остаётся скалярной, а
+/// не становится отказом.
 pub(crate) fn words_of(expr: &ExpressionNode) -> Option<u16> {
     let ExpressionNode::Variable(var_rc) = expr else {
         return None;

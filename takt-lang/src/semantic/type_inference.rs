@@ -197,9 +197,9 @@ pub(crate) fn wider_type(a: TypeNode, b: TypeNode) -> TypeNode {
             }
         }
         // Бит и логическое значение уточняют тип целого, как `Bool` уточняет `Bit`
-        // ниже: `var g := F + flag;` (`u8` + `bit`) прежде давал `Unsupported`, то есть
-        // `SIM-007` у эталона и `RS-014` у цели `rust` на записи, вычислимой без
-        // затруднений.
+        // ниже. Без этой ветви `var g := F + flag;` (`u8` и `bit`) даёт `Unsupported`,
+        // то есть `SIM-007` у эталона и `RS-014` у цели `rust` на записи, вычислимой
+        // без затруднений.
         (TypeNode::Integer { bits, signed }, TypeNode::Bit | TypeNode::Bool)
         | (TypeNode::Bit | TypeNode::Bool, TypeNode::Integer { bits, signed }) => {
             TypeNode::Integer {
@@ -226,8 +226,8 @@ pub(crate) fn wider_type(a: TypeNode, b: TypeNode) -> TypeNode {
         (TypeNode::Bit, TypeNode::Bit) => TypeNode::Bit,
         (TypeNode::Bool, TypeNode::Bool) => TypeNode::Bool,
         (TypeNode::Bool, TypeNode::Bit) | (TypeNode::Bit, TypeNode::Bool) => TypeNode::Bit,
-        // q(m,n): два одинаковых fixed-point -> тот же тип; смешение с любым другим
-        // типом (иное q, целое, float, ...) даёт `Unsupported` и ловится стражем T6
+        // q(m,n): два одинаковых fixed-point дают тот же тип; смешение с любым другим
+        // типом (иное q, целое, float) даёт `Unsupported` и ловится проверкой
         // (`validate::fixed`) - см. Признак `sat` входит в формат: `q(8,8)` и `q(8,8)
         // sat` - РАЗНЫЕ типы, их смешение даёт `Unsupported` и ловится стражем
         // (`SE-103`). Иначе выражение унаследовало бы семантику переполнения случайного
@@ -325,7 +325,7 @@ pub(crate) fn ast_type_to_node(ty: &Type) -> TypeNode {
             ..
         } => TypeNode::Array(*element_count, Box::new(ast_type_to_node(element_type))),
         // q(m, n): цель приведения `x as q(m, n)`. Границы - те же, что у объявления;
-        // нарушение даёт `Unsupported` (страж T6/T7).
+        // нарушение даёт `Unsupported`.
         Type::Fixed(_, ctor, m, n, modifier) => {
             fixed_node_or_unsupported(ctor, *m, *n, modifier.as_deref())
         }

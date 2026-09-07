@@ -65,8 +65,7 @@ pub fn goto_declaration(source: &str, position: Position) -> Option<Range> {
 /// ## Ограничения
 ///
 /// - Переход находит лишь то, что разрешает неявный путь импорта (каталог
-///   документа) и `search_paths`: LSP не читает `initializationOptions`
-///   (кандидат из 0055).
+///   документа) и `search_paths`.
 ///
 /// Возвращает `None` если:
 /// - исходный текст не компилируется,

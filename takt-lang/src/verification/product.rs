@@ -135,7 +135,7 @@ fn consistent(kripke: &Kripke, k: usize, automaton: &BuchiAutomaton, q: usize) -
 /// q'` в `A`, и пара `(k',q')` согласована.
 ///
 /// Обход - от начальных состояний в порядке `BTreeSet`, поэтому нумерация состояний
-/// произведения детерминирована (проверка 0048).
+/// произведения детерминирована.
 pub fn product(kripke: &Kripke, automaton: &BuchiAutomaton) -> Product {
     let mut states: Vec<(usize, usize)> = Vec::new();
     let mut index: BTreeMap<(usize, usize), usize> = BTreeMap::new();
@@ -262,7 +262,7 @@ mod tests {
         }
     }
 
-    /// Детерминизм (проверка 0048): построение повторяемо.
+    /// Детерминизм: построение повторяемо.
     #[test]
     fn product_is_deterministic() {
         let kripke = a_then_b();

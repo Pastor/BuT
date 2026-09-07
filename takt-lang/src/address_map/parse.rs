@@ -280,7 +280,7 @@ fn parse_int(s: &str) -> Option<i64> {
 /// - **SE-051** - запись карты для имени, которого нет среди портов модели.
 ///
 /// Проверяются порты **переданной** модели (её `variables`); понижение адреса и
-/// построение итогового `AddressMap` для генерации -.
+/// построение итогового `AddressMap` для генерации.
 pub fn address_map_overlay_warnings(
     model: Rc<RefCell<ModelNode>>,
     entries: &[AddressMapEntry],

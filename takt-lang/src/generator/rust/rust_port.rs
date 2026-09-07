@@ -26,9 +26,7 @@
 //! `userdata` **исчезает как понятие**: состояние HAL живёт в самом `H`, типобезопасно,
 //! а конструктор требует `hal` - "забыть колбэк" невозможно by construction.
 //!
-//! Карта адресов ([0020](../../../../docs/features/0020-port-address-decl.md)) здесь
-//! **не потребляется**: это аналог режима `c`, а не `c-hal`. MMIO-режим (`rust-hal`) -
-//! кандидат в расширения.
+//! Карта адресов здесь не потребляется: это аналог режима `c`, а не `c-hal`.
 
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::rust::rust_type::rust_type;
@@ -120,8 +118,7 @@ pub(crate) fn port_class(
         _ => ty,
     };
     match ty {
-        // `bit` и `bool` - одна категория: оба дают `bool` (в цели `c` - `int`, дефект
-        // 0029).
+        // `bit` и `bool` - одна категория: оба дают `bool`.
         TypeNode::Bit | TypeNode::Bool => Ok(PortClass {
             tag: "Bit".to_string(),
             value_type: "bool".to_string(),

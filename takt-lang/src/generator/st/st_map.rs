@@ -26,7 +26,7 @@ pub(crate) struct StMap {
     /// Соответствует [`GenerateOptions::hal`](crate::generator::GenerateOptions::hal);
     /// потребляется, здесь только переносится в снимок.
     at_addresses: bool,
-    /// Разрешённые адреса портов (`resolve_addresses`, приоритет 0020).
+    /// Разрешённые адреса портов: `resolve_addresses` с приоритетом источников.
     addresses: HashMap<String, ResolvedAddress>,
     /// Профиль времени: "часы" (штатный `TON`) либо "такты" (счётчик). Разрешается
     /// общим слоем `resolve_profile` в `generate` - по образцу `CMap`.

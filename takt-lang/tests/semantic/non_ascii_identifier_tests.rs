@@ -1,4 +1,4 @@
-//! Не-ASCII идентификатор и алфавиты целей -.
+//! Не-ASCII идентификатор и алфавиты целей.
 
 use std::process::Command;
 use takt_lang::generator::GenerateOptions;

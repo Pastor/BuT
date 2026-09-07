@@ -1,7 +1,7 @@
 //! Узел АСД "выражение" ([`Expression`]) языка Takt.
 //!
-//! Вынесено из `ast.rs`: чистое перемещение. Путь `parser::ast::Expression` сохранён
-//! реэкспортом в `ast.rs` - от него зависят lalrpop-грамматика, семантика и генераторы.
+//! Путь `parser::ast::Expression` сохранён реэкспортом в `ast.rs` - от него зависят
+//! lalrpop-грамматика, семантика и генераторы.
 
 use crate::diagnostics::Location;
 use crate::parser::ast::{
@@ -85,7 +85,7 @@ pub enum Expression {
     Assign(Location, Box<Expression>, Box<Expression>),
     /// Целочисленный литерал.
     Number(Location, i128),
-    /// Литерал длительности: `(позиция, наносекунды, как записано)` -.
+    /// Литерал длительности: `(позиция, наносекунды, как записано)`.
     Duration(Location, i64, String),
     /// Вещественный литерал: `(строка, отрицательный)`.
     Rational(Location, String, bool),

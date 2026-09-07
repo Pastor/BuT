@@ -55,7 +55,7 @@ enum ElevatorEngineState {
     End,
 }
 
-// ══ МОДЕЛЬ ЛИФТА ════════════════════════════════════════════════════════════
+// ══ модель лифта ════════════════════════════════════════════════════════════
 pub struct ElevatorEngine {
     state: ElevatorEngineState,
 }
@@ -169,7 +169,7 @@ struct ElevatorShared {
 // 0x20000000..0x20000008 — btns_floor_1..btns_floor_9
 // 0x30000000             — btns_cab_lo
 // 0x30000001             — btns_cab_hi
-// ══ ПОРТЫ ДАТЧИКОВ ПОЛОЖЕНИЯ КАБИНЫ (1 порт на этаж, 2 бита) ════════════════
+// ══ порты датчиков положения кабины (1 порт на этаж, 2 бита) ════════════════
 pub struct Elevator<H: Hal> {
     shared: ElevatorShared,
     state: ElevatorState,

@@ -1,4 +1,4 @@
-//! Одноимённые константы разных моделей не сливаются -.
+//! Одноимённые константы разных моделей не сливаются.
 
 use std::process::Command;
 use takt_lang::generator::GenerateOptions;

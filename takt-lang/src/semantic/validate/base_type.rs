@@ -42,7 +42,7 @@ pub(crate) fn base_type(expr: &ExpressionNode, model: &ModelNode) -> Option<Type
 ///
 /// Печатники целей носят объявления по-разному: у `st` и `rust` есть `ModelNode`, у
 /// `sv` - снимок карты. Замыкание примиряет оба, не заводя второго знания о спуске по
-/// типу (приём 0366).
+/// типу.
 pub(crate) type FieldsOf<'a> = &'a dyn Fn(&str) -> Option<Vec<(String, TypeNode)>>;
 
 /// То же, но поля структур берутся замыканием.
@@ -78,7 +78,7 @@ fn field_of(base: TypeNode, field: &str, fields_of: FieldsOf<'_>) -> Option<Type
         .map(|(_, t)| t)
 }
 
-/// Тип места в разрешённом условии (`cond`, формулы) -.
+/// Тип места в разрешённом условии (`cond`, формулы).
 ///
 /// Аналог [`base_type`] для [`ConditionNode`]: спуск тот же, отличается только
 /// представление дерева.

@@ -1,7 +1,6 @@
 //! Эмиссия именованных блоков (`enter`/`exit`/`always`) в цель Rust.
 //!
-//! Вынесено из `rust_model.rs`. Два источника блоков - состояние и **сама модель**
-//! (model-level `always`).
+//! Источников блоков два - состояние и сама модель (`always` уровня модели).
 
 use crate::diagnostics::Diagnostic;
 use crate::generator::indent::Printer;

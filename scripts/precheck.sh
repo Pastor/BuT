@@ -136,10 +136,10 @@ if require_tool python3 "проверка ссылок, правило 14; apt i
   "$(dirname "$0")/test-diagnostic-descriptions.sh"
   "$(dirname "$0")/check-diagnostic-descriptions.py"
 
-  # Комментарии исходного кода: назначение кода без истории правки, номеров
-  # и пиктограмм. Правило - `docs/CODE.md`, раздел "Комментарии".
-  # Самопроверка идёт первой.
-  echo "Комментарии исходного кода..."
+  # Комментарии всех файлов проекта, кроме docs/: назначение кода без истории
+  # правки, номеров и пиктограмм. Правило - `docs/CODE.md`, раздел
+  # "Комментарии"; долг - `scripts/comment-baseline.txt`. Самопроверка идёт первой.
+  echo "Комментарии файлов проекта..."
   "$(dirname "$0")/test-check-comments.sh"
   "$(dirname "$0")/check-comments.py"
 

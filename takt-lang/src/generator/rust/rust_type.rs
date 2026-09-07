@@ -32,10 +32,9 @@ fn rs014(what: &str, ty: &TypeNode) -> Diagnostic {
 /// снаружи невозможно (наследие ).
 pub(crate) fn rust_type(ty: &TypeNode, what: &str) -> Result<String, Diagnostic> {
     match ty {
-        // Точное соответствие. В цели `c` - `int` (дефект 0029, Д2). Тип `duration`:
-        // целое без знака в **миллисекундах** - та же единица, что у приведения `as` и
-        // у профиля "часы", поэтому граница "длительность ↔ число" не порождает
-        // арифметики.
+        // Точное соответствие. Тип `duration` - целое без знака в миллисекундах, та же
+        // единица, что у приведения `as` и у профиля "часы", поэтому граница
+        // "длительность и число" не порождает арифметики.
         TypeNode::Duration => Ok(format!("u{}", crate::semantic::duration::VALUE_BITS)),
         TypeNode::Bit => Ok("bool".to_string()),
         TypeNode::Bool => Ok("bool".to_string()),
@@ -46,7 +45,7 @@ pub(crate) fn rust_type(ty: &TypeNode, what: &str) -> Result<String, Diagnostic>
         TypeNode::Rational => Ok("f64".to_string()),
         // Fixed-point q(m, n): знаковое целое, вмещающее W = m + n бит, округлённое
         // вверх до i8/i16/i32/i64 (машинных ширин Rust; `>>` знакового в Rust определён
-        // как арифметический). Масштабирование при `*`/`/` -.
+        // как арифметический). Масштабирование при `*`/`/`.
         TypeNode::Fixed { m, n, .. } => Ok(format!(
             "i{}",
             crate::semantic::type_node::type_fixed::fixed_storage_bits(m + n)
@@ -146,10 +145,10 @@ pub(crate) fn reject_float_width(width: crate::generator::FloatWidth) -> Result<
 
 /// Совпадают ли тип операнда и цель приведения после отображения в Rust.
 ///
-/// Сравниваются **напечатанные** типы, а не типы Takt: `duration` отображается в `u32`,
-/// и `d as u32` даёт `self.d as u32` - это `clippy::unnecessary_cast`, то есть отказ
-/// проверки цели при нулевом коде возврата `taktc`. Типы Takt здесь различны, и признак
-/// 0361 такую запись не ловил.
+/// Сравниваются напечатанные типы, а не типы Takt: `duration` отображается в `u32`, и
+/// `d as u32` даёт `self.d as u32` - это `clippy::unnecessary_cast`, то есть отказ
+/// проверки цели при нулевом коде возврата `taktc`. По типам Takt такая пара различна, и
+/// признак по ним записи не поймает.
 ///
 /// Тип операнда берётся у **именованного значения**: у литерала и выражения он
 /// печатнику неизвестен, и опускать приведение там было бы догадкой.
@@ -171,7 +170,7 @@ pub(crate) fn same_printed_type(inner: &crate::semantic::ExpressionNode, ty: &Ty
 mod tests {
     use super::*;
 
-    /// **Тест против повторения дефекта 0029** (в C - `int`).
+    /// Тип `bit` отображается в `bool`, а не в целое.
     #[test]
     fn bit_maps_to_bool() {
         assert_eq!(rust_type(&TypeNode::Bit, "тест").unwrap(), "bool");
@@ -215,10 +214,9 @@ mod tests {
         }
     }
 
-    /// `[u8; 4]` -> `[u8; 4]`, а **не** `uint4_t`.
+    /// `[u8; 4]` отображается в `[u8; 4]`, а не в `uint4_t`.
     ///
-    /// Тест против дефекта 0029 (Д1): в C `Array(size, elem)` даёт `uint{size}_t`,
-    /// где `size` - число элементов, то есть несуществующий тип.
+    /// Отображение по числу элементов дало бы несуществующий тип.
     #[test]
     fn array_maps_natively_not_to_uint4_t() {
         let ty = TypeNode::Array(
@@ -279,9 +277,7 @@ mod tests {
         assert_eq!(enum_repr(&variants), "u8");
     }
 
-    /// **Ключевой тест A6:** вариант `Idle = 670` даёт `u16`, а не `u8`.
-    ///
-    /// Реальный случай корпуса - `elevator.takt:121`.
+    /// Вариант `Idle = 670` даёт `u16`, а не `u8`: ширину выбирает значение варианта.
     #[test]
     fn enum_repr_670_is_u16_not_u8() {
         let variants = vec![("Idle".to_string(), 670), ("Up".to_string(), 671)];

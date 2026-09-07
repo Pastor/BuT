@@ -514,12 +514,12 @@ fn sign_guard(lhs: &str, op: &str, rhs: &str, signed_is_left: bool) -> String {
 
 /// Совпадают ли тип операнда и цель приведения после отображения в SV.
 ///
-/// Сравниваются **напечатанные** типы, а не типы Takt: `duration` отображается в `logic
-/// [31:0]`, и типы Takt при этом различны - признак 0361 такую запись не ловил, хотя
-/// печатал `32'(x)` над 32-битным значением.
+/// Сравниваются напечатанные типы, а не типы Takt: `duration` отображается в
+/// `logic [31:0]`, и по типам Takt такая пара различна - признак по ним печатал бы
+/// `32'(x)` над 32-битным значением.
 ///
-/// Тип операнда берётся у **именованного значения**: у литерала и выражения он
-/// печатнику неизвестен.
+/// Тип операнда берётся у именованного значения: у литерала и выражения он печатнику
+/// неизвестен.
 fn same_printed_type(inner: &ExpressionNode, ty: &crate::semantic::type_node::TypeNode) -> bool {
     let Some(from) = crate::generator::mixed_sign::operand_type_expr(inner) else {
         return false;
@@ -846,7 +846,7 @@ mod tests {
         warnings.iter().filter_map(|w| w.code.as_deref()).collect()
     }
 
-    /// T1/A1: `a / b` (переменный делитель) -> `SV-009`; трансляция успешна.
+    /// Переменный делитель в `a / b` даёт `SV-009`, а трансляция продолжается.
     #[test]
     fn variable_divide_warns_sv009() {
         let node = ExpressionNode::Divide(var("a"), var("b"));
@@ -855,7 +855,7 @@ mod tests {
         assert_eq!(codes(&warnings), ["SV-009"]);
     }
 
-    /// T3/A3: `a % b` (переменный делитель) -> `SV-009`.
+    /// Переменный делитель в `a % b` даёт `SV-009`.
     #[test]
     fn variable_modulo_warns_sv009() {
         let node = ExpressionNode::Modulo(var("a"), var("b"));
@@ -864,7 +864,7 @@ mod tests {
         assert_eq!(codes(&warnings), ["SV-009"]);
     }
 
-    /// T2/A2: `a / 2` (константа - степень двойки) -> **молчание**.
+    /// Константный делитель - степень двойки (`a / 2`) предупреждения не даёт.
     #[test]
     fn constant_power_of_two_divide_is_silent() {
         let node = ExpressionNode::Divide(var("a"), Box::new(ExpressionNode::Number(2)));
@@ -875,7 +875,7 @@ mod tests {
         );
     }
 
-    /// T4/A2: `a / 3` (константа - не степень двойки) -> **молчание** (≈106 LUT).
+    /// Константный делитель, не степень двойки (`a / 3`), предупреждения не даёт.
     #[test]
     fn constant_non_power_of_two_divide_is_silent() {
         let node = ExpressionNode::Divide(var("a"), Box::new(ExpressionNode::Number(3)));
@@ -883,7 +883,7 @@ mod tests {
         assert!(warnings.is_empty(), "{warnings:?}");
     }
 
-    /// T6/A3: `a % 4` (константа) -> **молчание**.
+    /// Константный делитель в остатке (`a % 4`) предупреждения не даёт.
     #[test]
     fn constant_modulo_is_silent() {
         let node = ExpressionNode::Modulo(var("a"), Box::new(ExpressionNode::Number(4)));
@@ -902,7 +902,7 @@ mod tests {
         assert!(warnings.is_empty(), "{warnings:?}");
     }
 
-    /// T5/A4: `a * b` -> **молчание**.
+    /// Умножение предупреждения не даёт.
     #[test]
     fn multiply_is_silent() {
         let node = ExpressionNode::Multiply(var("a"), var("b"));
@@ -911,8 +911,8 @@ mod tests {
         assert!(warnings.is_empty(), "умножение молчит (DSP): {warnings:?}");
     }
 
-    /// T8/A5: текст называет причину (нет аппаратного делителя) и следствие (потолок
-    /// частоты), **без** конкретных LUT (они технологичны, action A-1).
+    /// Текст называет причину (нет аппаратного делителя) и следствие (потолок частоты),
+    /// но не число вентилей: оно зависит от технологии.
     #[test]
     fn sv009_text_names_cause_and_consequence_without_luts() {
         let msg = &sv009().message;

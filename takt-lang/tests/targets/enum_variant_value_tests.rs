@@ -1,4 +1,4 @@
-//! Имя варианта рядом с целым операндом -.
+//! Имя варианта рядом с целым операндом.
 
 use std::path::PathBuf;
 use std::process::Command as Proc;

@@ -247,9 +247,9 @@ pub(crate) fn eval_condition(
                 })?;
             Ok(element.clone())
         }
-        // `a.b`: поле структуры (`p.x`) или бит целого (`BTN.0`) - тем же ядром
-        // `eval::access`, что и адаптер выражений (симметрия обязательна: иначе два
-        // вычислителя разошлись бы - корневая причина 0025).
+        // `a.b`: поле структуры (`p.x`) либо разряд целого (`BTN.0`) - тем же ядром
+        // `eval::access`, что и адаптер выражений. Симметрия обязательна: иначе два
+        // вычислителя разойдутся.
         ConditionNode::BitAccess(inner, member) => {
             let value = eval_condition(inner, ctx)?;
             crate::eval::access::read_member(&value, member)

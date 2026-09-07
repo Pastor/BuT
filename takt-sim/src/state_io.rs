@@ -70,8 +70,8 @@ fn value_to_json(v: &Value) -> serde_json::Value {
 pub fn snapshot(unit: &Unit) -> UnitSnapshot {
     match unit.kind() {
         UnitKind::None => UnitSnapshot::None,
-        // 0032: значения берутся из контекста модели (единый источник истины) через
-        // `Context::dump`, а не из упразднённой карты узла (Д1).
+        // Значения берутся из контекста модели через `Context::dump`: он и есть единый
+        // источник истины о них.
         UnitKind::Node { state, .. } => UnitSnapshot::Node {
             current_state: state.clone(),
             variables: unit
@@ -131,10 +131,10 @@ fn restore_kind(unit: &mut Unit, snap: &UnitSnapshot) {
         ) => {
             *state = current_state.clone();
             // Возобновление: модель уже находится в этом состоянии, поэтому `enter`
-            // повторять нельзя - иначе он затрёт загруженные значения (Д5).
+            // повторять нельзя - иначе он затрёт загруженные значения.
             *entered_initial = true;
-            // 0032: восстановление идёт тем же путём, что присваивание в модели - через
-            // контекст (Д2).
+            // Восстановление идёт тем же путём, что присваивание в модели, - через
+            // контекст.
             if let Some(ctx) = context {
                 for (k, v) in vars {
                     if let Some(val) = json_to_value(v) {
@@ -197,11 +197,11 @@ mod tests {
     use crate::unit::Predicate;
     use std::collections::HashMap;
 
-    // 0032: узлы без контекста хранить значения не могут (единый источник истины -
-    // контекст модели). Тесты значений/кругового рейса переехали в интеграционный
-    // `takt-sim/tests/sim/state_io_tests.rs`, где юниты строятся из `.takt`-фикстур
-    // через `build_unit`. Здесь остаётся лишь структурная проверка снимка состояния и
-    // путей ошибок.
+    // Узлы без контекста хранить значения не могут: единый источник истины - контекст
+    // модели. Тесты значений и кругового рейса живут в интеграционном
+    // `takt-sim/tests/sim/state_io_tests.rs`, где юниты строятся из фикстур `.takt`
+    // через `build_unit`. Здесь остаётся структурная проверка снимка состояния и путей
+    // ошибок.
     fn make_node(state: &str) -> Unit {
         let mut st = HashMap::new();
         st.insert(state.to_string(), vec![]);
