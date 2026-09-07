@@ -280,10 +280,10 @@ pub(super) fn collect_model_entries(model: &Rc<RefCell<ModelNode>>, entries: &mu
 ///
 /// ```text
 /// // Условие разрешено -> записей нет
-/// Condition::Variable(var_rc)  →  (нет записей)
+/// Condition::Variable(var_rc)  ->  (нет записей)
 ///
 /// // Условие не разрешено -> запись добавляется
-/// Condition::Unresolved(ast::Variable(id@"x", loc=5..6))  →  IndexEntry("x", 5, 6)
+/// Condition::Unresolved(ast::Variable(id@"x", loc=5..6))  ->  IndexEntry("x", 5, 6)
 /// ```
 pub(super) fn collect_condition_entries(
     cond: &ConditionNode,
@@ -418,11 +418,11 @@ pub(super) fn collect_condition_entries(
 /// ```text
 /// // Переменная в условии -> запись с именем и позицией
 /// ast::Condition::Variable(id@"flag", loc=Source(0, 10, 14))
-///     → IndexEntry { start:10, end:14, name:"flag", kind:ReferenceCondition }
+///     -> IndexEntry { start:10, end:14, name:"flag", kind:ReferenceCondition }
 ///
 /// // Вызов функции -> запись для имени функции + рекурсивно по аргументам
 /// ast::Condition::Function(_, id@"check", [Variable("x")])
-///     → IndexEntry("check"), IndexEntry("x")
+///     -> IndexEntry("check"), IndexEntry("x")
 /// ```
 ///
 /// ## Контрпримеры
@@ -430,10 +430,10 @@ pub(super) fn collect_condition_entries(
 /// ```text
 /// // Переменная с Builtin-позицией -> запись не добавляется
 /// ast::Condition::Variable(Identifier { loc: Builtin, name: "built_in" })
-///     → (нет записей)
+///     -> (нет записей)
 ///
 /// // Числовой литерал -> запись не добавляется
-/// ast::Condition::Number(_, 42)  →  (нет записей)
+/// ast::Condition::Number(_, 42)  ->  (нет записей)
 /// ```
 /// Модель, о **текущем состоянии** которой говорит сторона сравнения: `S(Модель)`
 /// (встроенная `S`) или краткая форма `Модель`. Зеркало
@@ -696,11 +696,11 @@ pub(super) fn collect_semantic_expression_entries(
 /// ```text
 /// // Блок с присваиванием -> рекурсивный обход
 /// Block { stmts: [Expression(_, Assign(_, Variable("x"), Number(1)))] }
-///     → IndexEntry("x", …)
+///     -> IndexEntry("x", ...)
 ///
 /// // Оператор Return с выражением -> рекурсивный обход
 /// Return(_, Some(Variable("result")))
-///     → IndexEntry("result", …)
+///     -> IndexEntry("result", ...)
 /// ```
 pub(super) fn collect_ast_statement_entries(
     stmt: &ast::Statement,
@@ -788,25 +788,25 @@ pub(super) fn collect_ast_statement_entries(
 /// ```text
 /// // Переменная
 /// ast::Expression::Variable(Identifier { loc: Source(0, 8, 12), name: "flag" })
-///     → IndexEntry { start:8, end:12, name:"flag", kind:ReferenceCondition }
+///     -> IndexEntry { start:8, end:12, name:"flag", kind:ReferenceCondition }
 ///
 /// // Присваивание: рекурсивно обходим левую и правую части
 /// Assign(_, Variable("x"), Variable("y"))
-///     → IndexEntry("x", …), IndexEntry("y", …)
+///     -> IndexEntry("x", ...), IndexEntry("y", ...)
 ///
 /// // Вызов функции: запись для имени + рекурсивно по аргументам
 /// Function(_, id@"log", [Variable("msg")])
-///     → IndexEntry("log", …), IndexEntry("msg", …)
+///     -> IndexEntry("log", ...), IndexEntry("msg", ...)
 /// ```
 ///
 /// ## Контрпримеры
 ///
 /// ```text
 /// // Литерал -> запись не добавляется
-/// ast::Expression::Number(_, 42)  →  (нет записей)
+/// ast::Expression::Number(_, 42)  ->  (нет записей)
 ///
 /// // Переменная с Implicit/Builtin-позицией -> запись не добавляется
-/// ast::Expression::Variable(Identifier { loc: Implicit, name: "x" })  →  (нет записей)
+/// ast::Expression::Variable(Identifier { loc: Implicit, name: "x" })  ->  (нет записей)
 /// ```
 pub(super) fn collect_ast_expression_entries(
     expr: &ast::Expression,

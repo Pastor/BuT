@@ -136,7 +136,7 @@ static void on_num(ConformancePortAggregateInit_Out_NumericPort port, uint8_t in
 }}
 int main(void) {{
     ConformancePortAggregateInit m = {{0}};
-    /* Колбэки — ДО `_init`: начальное значение порта уходит наружу уже там
+    /* Колбэки - до `_init`: начальное значение порта уходит наружу уже там
        (правило 0187), и составной порт после разворота — не исключение. */
     m.write_numeric = on_num;
     m.userdata = 0;

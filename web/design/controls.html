@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Витрина контролов — Takt</title>
-<!-- ⚠️ Витрина стоит на ЖИВОМ `app.css`, а не на своей копии: третья копия
+<!-- Витрина стоит на живом `app.css`, а не на своей копии: третья копия
      правды разошлась бы со страницей молча, и книга описывала бы то, чего на
      странице нет (класс 0084). Отсюда же и то, что витрина НЕ собирается в
      `web/dist`: это документ разработчика, а не часть сервиса. -->
 <link rel="stylesheet" href="../static/app.css">
 <style>
-  /* Собственных ЦВЕТОВ и КЕГЛЕЙ у витрины нет — только раскладка: иначе она
+  /* Собственных цветов и кеглей у витрины нет - только раскладка: иначе она
      показывала бы не то оформление, которое проверяет.
      ⚠️ Обычный поток документа возвращается: страница редактора держит
      `display: flex`, `height: 100dvh` и `overflow: hidden` — прокрутка у неё
@@ -23,7 +23,7 @@
   .case-body { padding: var(--gap); display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap; }
   .swatch { display: flex; align-items: center; gap: var(--gap-half); }
   .grip-case { position: relative; transform: translateZ(0); min-height: var(--h-control); }
-  /* ⚠️ Разделитель на странице тянется во всю высоту рабочей области, а линию
+  /* Разделитель на странице тянется во всю высоту рабочей области, а линию
      ему рисует зазор сетки. В витрине то и другое подменено: высота задана
      шкалой, а зазор — рамкой вместилища. */
   .split-case { min-height: var(--h-control); border-left: 1px solid var(--border);
@@ -32,7 +32,7 @@
   .chip { display: inline-flex; align-items: center; justify-content: center;
           width: var(--h-control); height: var(--h-control);
           border-radius: var(--radius); border: 1px solid var(--border); }
-  /* ⚠️ На витрине панель показана НА МЕСТЕ: живая считается от окна
+  /* На витрине панель показана на месте: живая считается от окна
      (`position: fixed`) и уехала бы в угол. Значений это не заводит —
      переопределён только способ размещения. */
   .case-tip .tip { position: static; display: inline-block; }
@@ -49,7 +49,7 @@
   <section class="case" data-control="--pairs">
     <div class="pane-head"><span>Реестр пар</span></div>
     <div class="case-body">
-      <!-- ⚠️ Набор ОБРАЗЦОВ сверяется с реестром книги в обе стороны (гейт D3):
+      <!-- Набор образцов сверяется с реестром книги в обе стороны (проверка D3):
            витрина, отставшая от книги, показывает не то оформление, которое
            описано, — и понять это можно только сличением двух текстов. -->
       <span class="swatch" data-pair="--surface/--on-surface"><span class="chip" style="background: var(--surface); color: var(--on-surface)">Аа</span>surface</span>
@@ -96,7 +96,7 @@
   <section class="case" data-control=".modal">
     <div class="pane-head"><span>Модальное окно</span></div>
     <div class="case-body">
-      <!-- ⚠️ Показано НА МЕСТЕ: живое окно кроет страницу целиком, и витрина
+      <!-- Показано на месте: живое окно кроет страницу целиком, и витрина
            показывала бы только затемнение. -->
       <div class="modal-box" style="max-width: 22rem">
         <div class="modal-head">Войти</div>
@@ -192,7 +192,7 @@
 
   <section class="case" data-control=".grip">
     <div class="pane-head"><span>Ручка ширины оболочки</span></div>
-    <!-- ⚠️ `.grip` объявлена `position: fixed` и на странице стоит у края окна.
+    <!-- `.grip` объявлена `position: fixed` и на странице стоит у края окна.
          `transform` на вместилище делает его containing block для fixed —
          иначе ручка уехала бы из витрины к краю экрана. -->
     <div class="case-body grip-case"><div class="grip" tabindex="0" role="separator" aria-orientation="vertical" aria-label="Ширина страницы"></div></div>
@@ -200,7 +200,7 @@
 
   <section class="case" data-control=".split">
     <div class="pane-head"><span>Разделитель областей</span></div>
-    <!-- ⚠️ Разделитель — обычный элемент сетки (в отличие от `.grip`), и в
+    <!-- Разделитель - обычный элемент сетки (в отличие от `.grip`), и в
          витрине показан на полосе-заглушке: заливку ему даёт зазор сетки, а
          своей у него нет. -->
     <div class="case-body split-case"><div class="split" tabindex="0" role="separator" aria-orientation="vertical" aria-label="Ширина областей"></div></div>
@@ -224,7 +224,7 @@
 </main>
 
 <script type="module">
-  // Витрина показывает ЖИВОЙ контрол, а не его картинку: список надстраивается
+  // Витрина показывает живой контрол, а не его картинку: список надстраивается
   // тем же кодом, что на странице редактора.
   import { enhance } from "../static/pick.js";
   enhance(document.getElementById("demo-target"));

@@ -59,12 +59,12 @@ case "$NUM" in
   *) echo "Ошибка: XXXX должен быть 4 цифры (напр. 0032), получено: '$NUM'" >&2; exit 2 ;;
 esac
 case "$SLUG" in
-  *[!a-z0-9-]*|"" ) echo "Ошибка: slug — kebab-case латиницей [a-z0-9-], получено: '$SLUG'" >&2; exit 2 ;;
+  *[!a-z0-9-]*|"" ) echo "Ошибка: slug - kebab-case латиницей [a-z0-9-], получено: '$SLUG'" >&2; exit 2 ;;
   *) : ;;
 esac
 case "$SUBTASK" in
   [0-9][0-9]) : ;;
-  *) echo "Ошибка: --subtask NN — две цифры (напр. 03), получено: '$SUBTASK'" >&2; exit 2 ;;
+  *) echo "Ошибка: --subtask NN - две цифры (напр. 03), получено: '$SUBTASK'" >&2; exit 2 ;;
 esac
 case "$STAGE" in
   ""|feature|adr|analyze|dev|tests|report|fixes) : ;;

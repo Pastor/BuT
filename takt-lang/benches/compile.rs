@@ -1,4 +1,4 @@
-//! Бенчмарки конвейера компиляции — фича 0136.
+//! Бенчмарки конвейера компиляции - фича.
 //!
 //! ## Что меряется и почему именно это
 //!
@@ -6,11 +6,11 @@
 //! печатниках, а запуск `taktc` добавляет к ним старт процесса и ввод-вывод, на
 //! фоне которых полезный сигнал теряется.
 //!
-//! Вход — **синтетика известного размера** плюс пример корпуса. Синтетика даёт
-//! сигнал (видно, как время зависит от N), корпус — узнаваемость: он же гоняется
+//! Вход - **синтетика известного размера** плюс пример корпуса. Синтетика даёт
+//! сигнал (видно, как время зависит от N), корпус - узнаваемость: он же гоняется
 //! гейтами.
 //!
-//! ⚠️ **Быстро ≠ верно.** Бенч ловит замедление, а не ошибку; тот же класс
+//! **Быстро != верно.** Бенч ловит замедление, а не ошибку; тот же класс
 //! оговорки, что у покрытия (0138) и у гейтов целевых языков (0045).
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
@@ -22,8 +22,8 @@ use takt_lang::semantic::usages::collect_usages;
 /// Цепочка из `states` состояний: `S0 → S1 → … → S{n-1}`.
 ///
 /// Линейная модель выбрана намеренно: у неё известен размер и предсказуема
-/// сложность обходов, поэтому смена класса (линия → квадрат) становится видна
-/// сразу. Именно этот класс дефекта чинили фичи 0052 и 0068.
+/// сложность обходов, поэтому смена класса (линия -> квадрат) становится видна
+/// сразу. Именно этот класс дефекта чинили фичи и 0068.
 fn chain_model(states: usize) -> String {
     let mut src = String::from("model Big {\n    out flag: bit;\n");
     src.push_str("    start S0 { always { flag := 1; } ref S1; }\n");
@@ -37,7 +37,7 @@ fn chain_model(states: usize) -> String {
     src
 }
 
-/// Пример корпуса — «реальная» точка отсчёта.
+/// Пример корпуса - "реальная" точка отсчёта.
 fn corpus_example() -> String {
     std::fs::read_to_string("../examples/stacker.takt").expect("пример корпуса stacker.takt")
 }
@@ -80,8 +80,8 @@ fn bench_full_pipeline(c: &mut Criterion) {
     let out = dir.to_str().expect("путь в UTF-8").to_string();
 
     let mut group = c.benchmark_group("compile_to_c");
-    // Полный конвейер: разбор → семантика → генерация. Пишет на диск, поэтому
-    // сравнивать эти числа с `parse`/`semantics` напрямую нельзя — только с
+    // Полный конвейер: разбор -> семантика -> генерация. Пишет на диск, поэтому
+    // сравнивать эти числа с `parse`/`semantics` напрямую нельзя - только с
     // самими собой между прогонами.
     let corpus = corpus_example();
     group.bench_function("corpus/stacker", |b| {
@@ -106,11 +106,11 @@ fn bench_lsp_layers(c: &mut Criterion) {
         let (ast, _) = takt_lang::parse(&src, 0).expect("разбор");
         let model = construct_model(&ast, None, &[]).expect("семантика");
 
-        // Индекс LSP (фича 0056): строится на каждый переход к декларации.
+        // Индекс LSP: строится на каждый переход к декларации.
         group.bench_with_input(BenchmarkId::new("index/chain", states), &model, |b, m| {
             b.iter(|| SemanticIndex::build(black_box(m)));
         });
-        // Слой использований (фича 0131): строится на каждый `references`/`rename`.
+        // Слой использований: строится на каждый `references`/`rename`.
         group.bench_with_input(BenchmarkId::new("usages/chain", states), &ast, |b, ast| {
             b.iter(|| collect_usages(black_box(ast)));
         });
@@ -121,7 +121,7 @@ fn bench_lsp_layers(c: &mut Criterion) {
 fn bench_format(c: &mut Criterion) {
     let mut group = c.benchmark_group("format");
     // Форматтер гоняется по всему корпусу на каждом предкоммите и в редакторе на
-    // каждое сохранение — его стоимость видна пользователю напрямую.
+    // каждое сохранение - его стоимость видна пользователю напрямую.
     let corpus = corpus_example();
     group.bench_function("corpus/stacker", |b| {
         b.iter(|| takt_lang::format::format_source(black_box(&corpus)).expect("форматирование"));

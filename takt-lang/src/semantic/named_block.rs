@@ -142,7 +142,7 @@ mod tests {
     ///
     /// # Пример
     /// ```text
-    /// NamedCodeBlock::Unresolved("enter", stmt) → Enter { body: resolved_stmt, .. }
+    /// NamedCodeBlock::Unresolved("enter", stmt) -> Enter { body: resolved_stmt, .. }
     /// ```
     #[test]
     fn unresolved_enter_resolves_to_enter() {

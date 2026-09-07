@@ -56,7 +56,7 @@ static void write_numeric(ConformanceDefaultInit_Out_NumericPort port, uint8_t i
 }}
 
 int main(void) {{
-    /* НЕ обнуляем: умолчание обязано прийти из `_init`, и это предмет сверки. */
+    /* Не обнуляем: умолчание обязано прийти из `_init`, и это предмет сверки. */
     ConformanceDefaultInit m;
     ConformanceDefaultInit_init(&m);
     m.write_numeric = write_numeric;

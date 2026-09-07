@@ -23,4 +23,4 @@ state Heating {
     }
     ref Idle: temp >= MAX_TEMP | pressure_ok = 0;
 }
-// (3) логическое ИЛИ
+// (3) логическое или

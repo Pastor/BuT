@@ -144,7 +144,7 @@ if require_tool python3 "проверка ссылок, правило 14; apt i
   "$(dirname "$0")/check-comments.py"
 
   # Стиль документов: те же требования к тексту карточек, свода, живого
-  # контекста и описания языка. Правило - `docs/RULE.md`, правило 33.
+  # контекста и описания языка. Правило - `docs/RULE.md`, правило.
   echo "Стиль документов..."
   "$(dirname "$0")/test-check-docs-style.sh"
   "$(dirname "$0")/check-docs-style.py"
@@ -944,7 +944,7 @@ for sv_file in "$SV_OUTPUT"/*.sv; do
   [ -e "$sv_file" ] || continue
   name="$(basename "$sv_file" .sv)"
   case " $SV_TRANSLATABLE " in
-    *" $name "*) ;;  # ожидаемый — в списке обязательных
+    *" $name "*) ;;  # ожидаемый - в списке обязательных
     *)
       echo "  $name.sv → ЛИШНИЙ .sv: примера нет в SV_TRANSLATABLE, но файл есть."
       echo "    Либо это устаревший стаб (git rm $SV_OUTPUT/${name}.sv),"

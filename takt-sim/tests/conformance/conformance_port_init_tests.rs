@@ -83,7 +83,7 @@ static void wr(ConformancePortInit_Out_NumericPort port, uint8_t index, int64_t 
 
 int main(void) {{
     ConformancePortInit m = {{0}};
-    /* Колбэки — ДО `_init`: начальное значение порта уходит наружу уже там
+    /* Колбэки - до `_init`: начальное значение порта уходит наружу уже там
        (наблюдаемое следствие задачи 0187-03). */
     m.write_numeric = wr;
     ConformancePortInit_init(&m);

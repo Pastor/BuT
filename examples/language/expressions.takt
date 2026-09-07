@@ -28,7 +28,7 @@ model Expressions {
             value := -b;
             value := +value;
 
-            // Побитовые: И, ИЛИ, исключающее ИЛИ, инверсия, сдвиги.
+            // Побитовые: И, или, исключающее или, инверсия, сдвиги.
             flags := flags & MASK;
             flags := flags | 16;
             flags := flags ^ 32;

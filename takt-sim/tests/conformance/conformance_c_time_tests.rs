@@ -74,7 +74,7 @@ static void wr(ConformanceAfter_Out_BitPort port, uint8_t bit, bool v, void *ud)
 }
 
 int main(void) {
-    /* Имя корневой структуры берётся из ИМЕНИ ФАЙЛА: корневая модель анонимна. */
+    /* Имя корневой структуры берётся из имени файла: корневая модель анонимна. */
     ConformanceAfter m = {0};
     m.write_bit = wr;
     ConformanceAfter_init(&m);
@@ -236,7 +236,7 @@ int main(void) {
     ConformanceAfterClock m = {0};
     m.write_bit = wr;
     m.now_ms = clk;
-    /* Вход стартового состояния — «до такта 1»: метка латчится в _init. */
+    /* Вход стартового состояния - "до такта 1": метка латчится в _init. */
     fake_now = 0;
     ConformanceAfterClock_init(&m);
     for (int tick = 1; tick <= 12; tick++) {

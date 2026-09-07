@@ -9,10 +9,10 @@
 //! var x: u8 := 1;                        // переменная
 //!
 //! fn travel_time(to_stack: u8) -> u8 {
-//!     if pos_stack > to_stack { … }      // читает порт
+//!     if pos_stack > to_stack { ... }      // читает порт
 //! }
 //! fn is_collected(c: Constant, v: u8) -> bool {
-//!     if x.2 = 0 { … }                   // читает переменную
+//!     if x.2 = 0 { ... }                   // читает переменную
 //! }
 //! ```
 //!

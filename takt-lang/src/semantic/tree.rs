@@ -57,7 +57,7 @@ fn extract_name(id: Option<Identifier>, loc: Location) -> Result<String, Diagnos
 /// # Примеры цикла
 ///
 /// ```text
-/// Циклический импорт: /src/a.takt → /src/b.takt → /src/a.takt
+/// Циклический импорт: /src/a.takt -> /src/b.takt -> /src/a.takt
 /// ```
 fn check_import_cycle(
     import_stack: &[String],

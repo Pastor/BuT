@@ -68,7 +68,7 @@ int main(void) {{
     ConformanceEvery m = {{0}};
     m.now_ms = clk;
     m.write_numeric = wr;
-    /* Вход стартового состояния — «до такта 1»: метка латчится в _init. */
+    /* Вход стартового состояния - "до такта 1": метка латчится в _init. */
     fake_now = 0;
     ConformanceEvery_init(&m);
     for (int tick = 1; tick <= {TICKS}; tick++) {{

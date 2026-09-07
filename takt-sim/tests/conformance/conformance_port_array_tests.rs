@@ -76,7 +76,7 @@ static long long bus1 = -1;
 static void on_write(ConformancePortArray_Out_NumericPort port, uint8_t index, int64_t value, void *ud) {{
     (void)index;
     (void)ud;
-    /* ⚠️ Порт-массив — ОДИН порт, элемент выбирает индекс (фича 0533):
+    /* Порт-массив - один порт, элемент выбирает индекс:
        прежде здесь стояли листья `_0` и `_1`, и разворот по листам не выражал
        переменного индекса. */
     if (port == CONFORMANCE_PORT_ARRAY_PORT_BUS && index == 0) {{ bus0 = (long long)value; }}

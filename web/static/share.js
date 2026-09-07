@@ -17,7 +17,7 @@ export async function encodeState(state) {
   return base64UrlEncode(compressed);
 }
 
-/** Восстанавливает состояние из строки фрагмента; `null` — фрагмент не наш. */
+/** Восстанавливает состояние из строки фрагмента; `null` - фрагмент не наш. */
 export async function decodeState(fragment) {
   const text = (fragment ?? "").replace(/^#/, "");
   if (!text) return null;
@@ -85,7 +85,7 @@ async function through(bytes, transform) {
 /**
  * base64url: алфавит URL-безопасный, набивка снята.
  *
- * ⚠️ Обычный base64 в ссылке негоден: `+`, `/` и `=` там значат другое, и
+ * Обычный base64 в ссылке негоден: `+`, `/` и `=` там значат другое, и
  * половина ссылок ломалась бы при копировании через мессенджер.
  */
 function base64UrlEncode(bytes) {
