@@ -1,0 +1,326 @@
+<title>Схема Takt: бриф дизайнеру</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #EDEDE7; --raised: #FBFBF7; --sunken: #F1F2EA; --field: #FDFDFA;
+    --ink: #2E332B; --ink-soft: #5A6154; --ink-off: #B4B9AF;
+    --line: #D7DACF; --line-soft: #E1E3D9;
+    --accent: #5F6E55; --accent-ink: #FBFBF7;
+    --yes: #DFE6D5; --yes-ink: #414A39;
+    --warn-bg: #F6EFDC; --warn-ink: #6F5713;
+    --alarm-bg: #F5E7E1; --alarm-ink: #8E4A34;
+    --font: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --gap: 8px; --radius: 8px; --radius-sm: 5px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1C1F1A; --raised: #24281F; --sunken: #171A15; --field: #262B22;
+      --ink: #E3E5DC; --ink-soft: #9AA093; --ink-off: #5F6559;
+      --line: #3A3F35; --line-soft: #30352C;
+      --accent: #8FA383; --accent-ink: #1C1F1A;
+      --yes: #3A4534; --yes-ink: #DCE5D2;
+      --warn-bg: #3A3320; --warn-ink: #E4C878;
+      --alarm-bg: #3E2A24; --alarm-ink: #E7A48E;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1C1F1A; --raised: #24281F; --sunken: #171A15; --field: #262B22;
+    --ink: #E3E5DC; --ink-soft: #9AA093; --ink-off: #5F6559;
+    --line: #3A3F35; --line-soft: #30352C;
+    --accent: #8FA383; --accent-ink: #1C1F1A;
+    --yes: #3A4534; --yes-ink: #DCE5D2;
+    --warn-bg: #3A3320; --warn-ink: #E4C878;
+    --alarm-bg: #3E2A24; --alarm-ink: #E7A48E;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--font); font-size: 15px; line-height: 1.6;
+    font-variant-numeric: tabular-nums;
+  }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .wrap {
+    display: grid; grid-template-columns: 15rem minmax(0, 1fr);
+    gap: calc(var(--gap) * 5); max-width: 78rem; margin: 0 auto;
+    padding: calc(var(--gap) * 4) calc(var(--gap) * 3) calc(var(--gap) * 8);
+  }
+  nav.toc {
+    position: sticky; top: calc(var(--gap) * 3); align-self: start;
+    font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px;
+  }
+  nav.toc .eyebrow { margin-bottom: var(--gap); }
+  nav.toc a { color: var(--ink-soft); text-decoration: none; padding: 3px 0 3px var(--gap);
+    border-left: 2px solid var(--line); }
+  nav.toc a:hover { color: var(--ink); border-left-color: var(--accent); }
+  main { max-width: 72ch; }
+  .eyebrow { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+  h1 { font-size: 1.9rem; font-weight: 600; line-height: 1.2; margin: var(--gap) 0 calc(var(--gap) * 2); text-wrap: balance; }
+  h2 { font-size: 1.2rem; font-weight: 600; margin: calc(var(--gap) * 6) 0 var(--gap); padding-top: calc(var(--gap) * 2);
+    border-top: 1px solid var(--line); text-wrap: balance; }
+  h3 { font-size: 0.95rem; font-weight: 600; margin: calc(var(--gap) * 3) 0 var(--gap); }
+  p { margin: 0 0 calc(var(--gap) * 1.5); }
+  .lead { font-size: 1.05rem; color: var(--ink); }
+  ul, ol { padding-left: 1.4em; margin: 0 0 calc(var(--gap) * 1.5); }
+  li { margin-bottom: 4px; }
+  li::marker { color: var(--ink-soft); }
+  code { font-family: inherit; font-size: 0.9em; background: var(--sunken); padding: 1px 5px; border-radius: var(--radius-sm); }
+  pre { background: var(--sunken); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: calc(var(--gap) * 1.5); overflow-x: auto; font-size: 0.82rem; line-height: 1.5; }
+  pre code { background: none; padding: 0; }
+  .meta { display: grid; grid-template-columns: auto 1fr; gap: 4px calc(var(--gap) * 2); font-size: 0.85rem;
+    margin: calc(var(--gap) * 2) 0; }
+  .meta dt { color: var(--ink-soft); } .meta dd { margin: 0; }
+  .note { background: var(--warn-bg); color: var(--warn-ink); border-radius: var(--radius);
+    padding: var(--gap) calc(var(--gap) * 1.5); margin: calc(var(--gap) * 2) 0; font-size: 0.9rem; }
+  .rule { background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: calc(var(--gap) * 1.5) calc(var(--gap) * 2); margin: 0 0 var(--gap); }
+  .rule b { display: block; margin-bottom: 2px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; margin: var(--gap) 0 calc(var(--gap) * 2); }
+  .tablewrap { overflow-x: auto; }
+  th, td { text-align: left; vertical-align: top; padding: 6px var(--gap); border-bottom: 1px solid var(--line-soft); }
+  th { color: var(--ink-soft); font-weight: 500; font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: var(--gap); margin: var(--gap) 0 calc(var(--gap) * 2); }
+  .sw { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--gap); font-size: 0.78rem; line-height: 1.35; }
+  .sw span { display: block; color: inherit; opacity: 0.8; }
+  figure { margin: calc(var(--gap) * 2) 0; }
+  figure svg { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+  figcaption { font-size: 0.8rem; color: var(--ink-soft); margin-top: var(--gap); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: calc(var(--gap) * 2); }
+  .two > div { background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius); padding: calc(var(--gap) * 1.5); }
+  .two h3 { margin-top: 0; }
+  .accept { counter-reset: item; list-style: none; padding: 0; }
+  .accept li { counter-increment: item; display: grid; grid-template-columns: 2.2rem 1fr; gap: var(--gap);
+    padding: var(--gap) 0; border-bottom: 1px solid var(--line-soft); }
+  .accept li::before { content: counter(item, decimal-leading-zero); color: var(--accent); font-weight: 600; }
+  .accept b { display: block; }
+  .accept small { display: block; color: var(--ink-soft); font-size: 0.8rem; margin-top: 2px; }
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: 1fr; gap: calc(var(--gap) * 2); padding: calc(var(--gap) * 2); }
+    nav.toc { position: static; flex-direction: row; flex-wrap: wrap; gap: var(--gap); }
+    nav.toc a { border-left: 0; padding: 2px 0; }
+    nav.toc .eyebrow { display: none; }
+    .two { grid-template-columns: 1fr; }
+    h1 { font-size: 1.5rem; }
+  }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Оглавление">
+    <div class="eyebrow">Оглавление</div>
+    <a href="#brief">Задача</a>
+    <a href="#sketch">Образ цели</a>
+    <a href="#ref">Референс</a>
+    <a href="#system">Что уже задано</a>
+    <a href="#draw">Что нарисовать</a>
+    <a href="#spec">Техническое задание</a>
+    <a href="#out">Выходные требования</a>
+    <a href="#accept">Порядок приёма</a>
+  </nav>
+
+  <main>
+    <div class="eyebrow">Takt · онлайн-редактор · вкладка «Схема»</div>
+    <h1>Схема состояний и переходов модели: бриф, техническое задание и выходные требования</h1>
+    <dl class="meta">
+      <dt>Заказчик</dt><dd>проект Takt, язык спецификации конечных автоматов для промышленных систем управления</dd>
+      <dt>Аудитория схемы</dt><dd>автор модели: инженер по автоматике либо студент; ноутбук, рядом с текстом модели; телефон — только просмотр</dd>
+      <dt>Дата</dt><dd>8 сентября 2026</dd>
+      <dt>Форма результата</dt><dd>вёрстка на живом <code>web/static/app.css</code>, раздел книги оформления, токены, значки, таблицы — не картинки</dd>
+      <dt>Полная карточка</dt><dd><code>docs/features/0539-model-layout-ui.md</code>, разделы «Архитектура (ADR)» и «Анализ»</dd>
+    </dl>
+
+    <h2 id="brief">Задача</h2>
+    <p class="lead">Онлайн-редактор Takt получает вкладку «Схема»: схему состояний и переходов модели, которую автор раскладывает руками, а раскладка переживает закрытие страницы.</p>
+    <p>Схема — <b>вид</b> модели, а не второе её описание. Текст модели остаётся единственным носителем смысла: какие состояния есть, какие между ними переходы и как состояние составлено из других моделей, говорит компилятор. Автор на схеме двигает карточки и изломы рёбер, входит внутрь составных состояний и меняет форму углов. Добавлять состояния и рёбра со схемы в первой редакции нельзя.</p>
+    <p>Раскладка хранится файлом рядом с моделью (<code>elevator.takt</code> → <code>elevator.takt-ui</code>): центры состояний и точки излома рёбер. Если модель изменилась, а файл нет, схема показывает это словами, но не ломается: новое состояние ставится автоматически и помечается, лишняя запись называется в уведомлении.</p>
+
+    <h2 id="sketch">Образ цели</h2>
+    <p>Эскиз ниже собран из токенов дизайн-системы проекта. Это не макет, а ориентир: карточки, ортогональные рёбра со скруглёнными углами, петля самоперехода, подпись условия, квадрат композиции с миниатюрой, крошки уровня.</p>
+    <figure>
+      <svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Эскиз листа схемы: четыре состояния модели Engine и квадрат композиции">
+        <defs>
+          <pattern id="dots" width="24" height="24" patternUnits="userSpaceOnUse">
+            <circle cx="12" cy="12" r="1" fill="var(--ink-off)"/>
+          </pattern>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M1 1 L9 5 L1 9" fill="none" stroke="var(--ink-soft)" stroke-width="1.5" stroke-linejoin="round"/>
+          </marker>
+        </defs>
+        <rect width="720" height="360" fill="var(--paper)"/>
+        <rect width="720" height="360" fill="url(#dots)"/>
+        <!-- крошки -->
+        <text x="16" y="24" font-family="Fira Code, monospace" font-size="11" fill="var(--ink-soft)">Корень  ›  Middle  ›  <tspan fill="var(--ink)">Engine</tspan></text>
+        <!-- масштаб -->
+        <rect x="596" y="8" width="108" height="24" rx="5" fill="var(--raised)" stroke="var(--line)"/>
+        <text x="650" y="24" text-anchor="middle" font-family="Fira Code, monospace" font-size="11" fill="var(--ink-soft)">−   1.00×   +</text>
+        <!-- рёбра -->
+        <g fill="none" stroke="var(--ink-soft)" stroke-width="1.5" marker-end="url(#arrow)">
+          <path d="M148 120 H 220 A 8 8 0 0 1 228 128 V 172 A 8 8 0 0 0 236 180 H 290"/>
+          <path d="M410 180 H 470 A 8 8 0 0 1 478 188 V 232 A 8 8 0 0 0 486 240 H 530"/>
+          <path d="M350 204 V 292 A 8 8 0 0 1 342 300 H 188 A 8 8 0 0 1 180 292 V 148"/>
+          <path d="M590 216 V 76 A 8 8 0 0 0 582 68 H 150 A 8 8 0 0 0 142 76 V 96"/>
+        </g>
+        <!-- петля самоперехода -->
+        <path d="M136 96 V 84 A 6 6 0 0 1 142 78 H 166 A 6 6 0 0 1 172 84 V 96" fill="none" stroke="var(--ink-soft)" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <!-- подписи условий -->
+        <rect x="212" y="139" width="84" height="16" rx="3" fill="var(--paper)"/>
+        <text x="254" y="151" text-anchor="middle" font-family="Fira Code, monospace" font-size="10" fill="var(--ink-soft)">ShouldMove</text>
+        <rect x="454" y="199" width="82" height="16" rx="3" fill="var(--paper)"/>
+        <text x="495" y="211" text-anchor="middle" font-family="Fira Code, monospace" font-size="10" fill="var(--ink-soft)">NeedUp</text>
+        <rect x="216" y="292" width="98" height="16" rx="3" fill="var(--paper)"/>
+        <text x="265" y="304" text-anchor="middle" font-family="Fira Code, monospace" font-size="10" fill="var(--ink-soft)">Overloaded</text>
+        <!-- излом выбранного ребра -->
+        <circle cx="590" cy="76" r="4" fill="var(--raised)" stroke="var(--accent)" stroke-width="1.5"/>
+        <!-- узлы -->
+        <g font-family="Fira Code, monospace">
+          <!-- стартовое -->
+          <rect x="72" y="96" width="76" height="48" rx="8" fill="var(--raised)" stroke="var(--ink)" stroke-width="1.5"/>
+          <circle cx="60" cy="120" r="4" fill="var(--ink)"/>
+          <line x1="64" y1="120" x2="72" y2="120" stroke="var(--ink)" stroke-width="1.5"/>
+          <text x="110" y="118" text-anchor="middle" font-size="13" fill="var(--ink)">Idle</text>
+          <text x="110" y="134" text-anchor="middle" font-size="9" fill="var(--ink-soft)">старт</text>
+          <!-- обычное, выбранное -->
+          <rect x="290" y="156" width="120" height="48" rx="8" fill="var(--yes)" stroke="var(--accent)" stroke-width="2"/>
+          <text x="350" y="185" text-anchor="middle" font-size="13" fill="var(--yes-ink)">DoorClosing</text>
+          <!-- обычное -->
+          <rect x="530" y="216" width="100" height="48" rx="8" fill="var(--raised)" stroke="var(--line)" stroke-width="1.5"/>
+          <text x="580" y="245" text-anchor="middle" font-size="13" fill="var(--ink)">MovingUp</text>
+          <!-- не размещён -->
+          <rect x="530" y="290" width="112" height="48" rx="8" fill="var(--raised)" stroke="var(--ink-soft)" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <text x="586" y="313" text-anchor="middle" font-size="13" fill="var(--ink)">MovingDown</text>
+          <text x="586" y="328" text-anchor="middle" font-size="9" fill="var(--ink-soft)">не размещён</text>
+        </g>
+        <!-- квадрат композиции -->
+        <g font-family="Fira Code, monospace">
+          <rect x="72" y="200" width="96" height="96" rx="8" fill="var(--raised)" stroke="var(--line)" stroke-width="1.5"/>
+          <text x="120" y="218" text-anchor="middle" font-size="12" fill="var(--ink)">Middle</text>
+          <rect x="84" y="228" width="72" height="56" rx="4" fill="var(--sunken)"/>
+          <g fill="var(--ink-off)">
+            <rect x="90" y="250" width="10" height="7" rx="2"/><rect x="106" y="242" width="10" height="7" rx="2"/><rect x="106" y="258" width="10" height="7" rx="2"/>
+            <rect x="122" y="250" width="10" height="7" rx="2"/><rect x="138" y="250" width="10" height="7" rx="2"/>
+          </g>
+          <g stroke="var(--ink-off)" stroke-width="1"><line x1="100" y1="253" x2="106" y2="246"/><line x1="100" y1="253" x2="106" y2="261"/><line x1="116" y1="246" x2="122" y2="253"/><line x1="116" y1="261" x2="122" y2="253"/><line x1="132" y1="253" x2="138" y2="253"/></g>
+          <text x="120" y="292" text-anchor="middle" font-size="9" fill="var(--ink-soft)">войти ›</text>
+        </g>
+        <!-- миникарта -->
+        <rect x="596" y="300" width="108" height="52" rx="5" fill="var(--sunken)" stroke="var(--line)"/>
+        <g fill="var(--ink-off)"><rect x="606" y="312" width="10" height="6"/><rect x="606" y="326" width="12" height="12"/><rect x="636" y="320" width="14" height="6"/><rect x="668" y="328" width="12" height="6"/></g>
+        <rect x="602" y="306" width="60" height="38" fill="none" stroke="var(--accent)" stroke-width="1"/>
+      </svg>
+      <figcaption>Лист модели <code>Engine</code> из примера лифта. Условия на рёбрах — цитаты из текста модели; квадрат <code>Middle</code> — состояние, составленное из шести экземпляров <code>Engine</code>, внутри миниатюра листа композиции.</figcaption>
+    </figure>
+
+    <h2 id="ref">Референс: <code>archlang.dev/viewer</code></h2>
+    <p>Откройте просмотрщик, покрутите холст, выберите контейнер «Clients And Devices». Ниже — граница заимствования; всё, что не названо, не берётся.</p>
+    <div class="two">
+      <div>
+        <h3>Берём</h3>
+        <ul>
+          <li>ощущение бесконечного холста с точечной сеткой, панорамирование и масштаб колесом;</li>
+          <li>карточку-узел: скруглённый прямоугольник, имя крупно, вид мелко;</li>
+          <li>контейнер как ту же карточку крупнее с миниатюрой содержимого внутри;</li>
+          <li>миникарту, показатель масштаба, крошку уровня («Корень»), кнопку «отцентрировать»;</li>
+          <li>навигатор-дерево слева;</li>
+          <li>кольцо выделения у выбранного узла.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Не берём</h3>
+        <ul>
+          <li>тёмную тему как единственную: у нас две, основная — светлая «чертёжная бумага»;</li>
+          <li>временную шкалу и сравнение версий;</li>
+          <li>«аспекты» и фильтры видов;</li>
+          <li>значки по видам узлов: у нас видов четыре и они различаются формой;</li>
+          <li>плотность текста в карточке: у нас имя и строка вида, описания нет.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2 id="system">Что уже задано и обсуждению не подлежит</h2>
+    <p>Дизайн-система проекта живёт в книге <code>web/design/BOOK.md</code>, показана витриной <code>web/design/controls.html</code> и судится проверкой <code>scripts/check-design.py</code>: на нарушении она падает и называет строку. Значения живут только в <code>app.css</code>.</p>
+    <div class="swatches">
+      <div class="sw" style="background:#EDEDE7;color:#2E332B">бумага<span>#EDEDE7 · страница, лист</span></div>
+      <div class="sw" style="background:#FBFBF7;color:#2E332B">приподнятая<span>#FBFBF7 · карточка, контролы</span></div>
+      <div class="sw" style="background:#F1F2EA;color:#5A6154">утопленная<span>#F1F2EA · списки, миникарта</span></div>
+      <div class="sw" style="background:#DFE6D5;color:#414A39">выбранное<span>#DFE6D5 / #414A39</span></div>
+      <div class="sw" style="background:#2E332B;color:#FBFBF7">чернила<span>#2E332B · текст, рамки</span></div>
+      <div class="sw" style="background:#5F6E55;color:#FBFBF7">акцент<span>#5F6E55 · фокус, ручки; текста на нём нет</span></div>
+      <div class="sw" style="background:#F6EFDC;color:#6F5713">предупреждение<span>#F6EFDC / #6F5713 · уведомление</span></div>
+      <div class="sw" style="background:#F5E7E1;color:#8E4A34">ошибка<span>#F5E7E1 / #8E4A34</span></div>
+    </div>
+    <ul>
+      <li><b>Шрифт один</b> — Fira Code, наклона нет. Кегль — пять ступеней (<code>--text-xs</code> 0.78rem … <code>--text-xl</code> 1.1rem), высоты — три (<code>--h-control</code> 3rem, <code>--h-dense</code> 2rem, <code>--h-compact</code> 1.5rem), скругления — два (8 px и 5 px), отступы — от <code>--gap</code> 8 px.</li>
+      <li><b>Цвета — только токены</b>: сырьё двух тем и реестр пар «заливка / чернила». Цвет числом вне палитры — отказ проверки. Новая пара — строка реестра в книге.</li>
+      <li><b>Отклик наведения и нажатия — формулой</b> (7 % и 14 % чернил поверх заливки), не своим цветом. Фокус — кольцо акцента. Недоступное — чернилами, без прозрачности. <b>Теней нет.</b></li>
+      <li><b>Значки нарисованы</b>: inline SVG 24×24, штрих 1,5, <code>currentColor</code>, без заливок. Символами не набираются: Fira Code не знает <code>⚙ ✎ ⧉</code>. У каждой кнопки-значка подпись словом.</li>
+      <li><b>Полос прокрутки нет</b>; у прокручиваемого — растворяющийся край.</li>
+      <li><b>Две темы</b>: тёмная — тёплый серо-зелёный тон той же бумаги. Контраст пар не ниже 4,5:1, штрихов — не ниже 3:1.</li>
+      <li><b>Узкий экран</b> (до 900 px): область одна, переключается полкой режимов; там, где нет наведения, цель нажатия не меньше 44 px.</li>
+    </ul>
+    <div class="note">Дизайн-система — не пожелание, а контракт с машиной. Образец, который проверка отвергает, в разработку не попадает, каким бы красивым он ни был.</div>
+
+    <h2 id="draw">Что нарисовать</h2>
+    <p>Каждый предмет — в обеих темах и в ширине 375 px.</p>
+    <ol>
+      <li><b>Холст.</b> Сетка точками с шагом, кратным <code>--gap</code>; поле листа; пустой лист (модель не разбирается); лист с одним состоянием.</li>
+      <li><b>Узел-состояние</b>, четыре вида: стартовое, обычное, конечное (без рёбер и тела), композиция (квадрат с миниатюрой). Вид передаётся не только цветом.</li>
+      <li><b>Состояния узла</b>: обычное, наведение, выбранное, в фокусе, перетаскиваемое, «не размещён», «в прогоне» (рисуется сейчас, включится позже).</li>
+      <li><b>Ребро</b>: ортогональная ломаная с прямыми и со скруглёнными углами; стрелка у цели; условный (<code>ref</code>) и безусловный (<code>next</code>) переходы различимы не только подписью; петля самоперехода; подпись условия (моноширинная цитата, усечение); ребро выбрано; излом в покое, при наведении, при переносе.</li>
+      <li><b>Композиция изнутри</b>: лист композиции — цепочка шагов слева направо, параллельные ветви друг под другом, скобки вложенной рамкой; карточка модели в цепочке; вход в модель.</li>
+      <li><b>Крошки уровня</b> (<code>Корень › Middle › Engine</code>) и кнопка «наверх».</li>
+      <li><b>Панель инструментов</b>: масштаб (−, показатель, +), «вписать», «отцентрировать», «автораскладка», переключатель формы углов, кнопка навигатора.</li>
+      <li><b>Навигатор</b>: дерево «модель → состояния», строка с видом, выбранная строка; на узком экране — как открывается.</li>
+      <li><b>Миникарта</b>: рамка видимой области, узлы точками.</li>
+      <li><b>Уведомление о расхождении</b>: строка с именами лишних записей и действием «убрать».</li>
+      <li><b>Узкий экран</b>: вкладка в полке режимов, холст во весь экран, свёрнутая панель, без правки изломов.</li>
+    </ol>
+    <h3>Чего не делать</h3>
+    <ul>
+      <li>не придумывать значков видам состояний;</li>
+      <li>не вводить новых цветов, теней, третьей высоты и шестого кегля;</li>
+      <li>не рисовать редактирование модели: добавление состояний и рёбер, правку условий;</li>
+      <li>не показывать значения переменных и портов;</li>
+      <li>не делать тёмную тему единственной.</li>
+    </ul>
+
+    <h2 id="spec">Техническое задание</h2>
+    <p>Поведение, которое оформление обязано выразить. Числа — исходные; иные допустимы с названной причиной и <b>через шкалы книги</b>.</p>
+    <div class="rule"><b>Т1. Лист и сетка.</b> Единица — логический пиксель при масштабе 1,0. Сетка привязки — <code>--gap</code> (8 px); точки рисуются через три шага (24 px). Масштаб 0,25×…4×, шаг колеса 1,1; ниже 0,5× подписи условий скрыты, имена остаются.</div>
+    <div class="rule"><b>Т2. Карточка состояния.</b> Высота <code>--h-control</code>; ширина по имени, не уже 8ch плюс поля <code>--gap</code>; скругление <code>--radius</code>. Имя — <code>--text-md</code>; вид — строка <code>--text-xs</code> либо форма (двойная рамка у конечного, метка входа у стартового). Заливка — пара приподнятой поверхности; выбранное — пара «выбранное»; фокус — кольцо акцента.</div>
+    <div class="rule"><b>Т3. Композиция.</b> Квадрат со стороной 3 × <code>--h-control</code> (9rem); заголовок — имя; в теле миниатюра листа, вписанная целиком. Кнопка входа на карточке (для касания); двойной щелчок и Enter — вход.</div>
+    <div class="rule"><b>Т4. Ребро.</b> Штрих 1,5 при масштабе 1,0, чернила мягкие; выбранное — основные. Стрелка у цели рисованная. Углы прямые либо скруглённые радиусом <code>--radius-sm</code>, одна форма на файл. Безусловное ребро — сплошная линия, условное — с подписью; различие сверх подписи — выбор дизайнера. Самопереход — петля у правого верхнего угла. Подпись: <code>--text-sm</code>, на подложке бумаги без рамки, не длиннее 24ch, полная — подсказкой.</div>
+    <div class="rule"><b>Т5. Изломы.</b> Точка видна при выборе ребра и наведении: круг диаметром <code>--gap</code>; при переносе — заливка акцентом. Добавить — двойной щелчок по сегменту, снять — по точке; на касании — кнопки панели для выбранного ребра.</div>
+    <div class="rule"><b>Т6. Перенос узла.</b> Порог 4 px; при переносе карточка с рамкой акцента, рёбра следуют, сохранённые изломы стоят; привязка к сетке. Escape отменяет перенос, Ctrl+Z — после.</div>
+    <div class="rule"><b>Т7. Крошки.</b> Строка над листом, кегль <code>--text-sm</code>, разделитель нарисован; последняя крошка — текущий лист, не ссылка. Высота <code>--h-compact</code>.</div>
+    <div class="rule"><b>Т8. Панель инструментов.</b> Кнопки-значки высотой <code>--h-dense</code> в обойме сегментов в правом верхнем углу; показатель масштаба — <code>--text-xs</code>; переключатель углов — залипающая кнопка с <code>aria-pressed</code>; навигатор открывает панель слева поверх холста, не шире трети области.</div>
+    <div class="rule"><b>Т9. Навигатор.</b> Строки <code>--h-dense</code>: модель полужирно, состояния с отступом <code>--gap-lg</code>, вид меткой <code>--text-xs</code>; выбранная строка — пара «выбранное»; щелчок — выбрать и отцентрировать, двойной — войти.</div>
+    <div class="rule"><b>Т10. Миникарта.</b> Правый нижний угол, 8rem × 6rem, утопленная поверхность с рамкой; узлы прямоугольниками выключенных чернил, видимая область — рамка акцента; щелчок переносит вид. На узком экране её нет.</div>
+    <div class="rule"><b>Т11. Уведомление о расхождении.</b> Строка над листом: «Раскладка знает состояния, которых в модели нет: A, B — убрать». Действие — кнопка в строке; исчезает после записи.</div>
+    <div class="rule"><b>Т12. Пустой лист.</b> Одна строка по центру холста, <code>--text-lg</code>, мягкие чернила; ничего больше не рисуется.</div>
+    <div class="rule"><b>Т13. «Не размещён».</b> Узел, поставленный автоматически: штриховая рамка либо метка — не только цвет; снимается первым переносом.</div>
+    <div class="rule"><b>Т14. «В прогоне».</b> Узел активного состояния шага: рамка акцента и пара «выбранное»; несколько активных сразу (параллельные ветви) выглядят одинаково.</div>
+    <div class="rule"><b>Т15. Клавиатура.</b> Tab — по узлам в порядке ярусов; стрелки — перенос на шаг сетки (Shift — пять); Enter — вход; Escape — назад либо снять выбор; <code>+</code>/<code>−</code> — масштаб; <code>0</code> — вписать. Раскладка клавиш — подсказкой на кнопке навигатора.</div>
+    <div class="rule"><b>Т16. Узкий экран.</b> Вкладка в полке режимов; панель свёрнута до двух кнопок («вписать», навигатор); изломы не редактируются; перенос узла — долгим нажатием; миникарты нет.</div>
+
+    <h2 id="out">Выходные требования</h2>
+    <p>Результат принимается <b>только</b> в перечисленном виде; у каждой позиции назван способ проверки. Форма — вёрстка на живом <code>app.css</code>: картинку не проверит машина и не соберёт разработчик.</p>
+    <ol class="accept">
+      <li><div><b>Образцы в витрине</b> Фрагменты в <code>web/design/controls.html</code>, по разделу на контрол: карточка (четыре вида × семь состояний), ребро (обе формы углов, петля, подпись), излом, крошки, панель, строка навигатора, миникарта, уведомление, пустой лист.<small>Проверка: <code>check-design.py</code> зелёный; D6 требует образца у каждого контрола книги и наоборот; D7 — у витрины нет своих цветов и кеглей.</small></div></li>
+      <li><div><b>Правила в книге</b> Раздел «Схема» в <code>web/design/BOOK.md</code> по шаблону книги («что это → состояния → чего у него нет») на каждый контрол; новые пары — строками реестра; каждое отступление от референса названо с причиной.<small>Проверка: D3 — пара из реестра; чтение аналитиком.</small></div></li>
+      <li><div><b>Токены</b> Новые токены в <code>app.css</code> только через сырьё обеих тем, объявлены прежде употребления, с комментарием назначения; список с значениями обеих тем — в разделе книги.<small>Проверка: D1, D8.</small></div></li>
+      <li><div><b>Замер контраста</b> Таблица «пара → контраст светлая / тёмная» для всех новых пар и подписей; ни одного значения ниже 4,5:1; штрих ребра и рамки — не ниже 3:1 к фону листа.<small>Проверка: таблица в карточке фичи, выборочный пересчёт.</small></div></li>
+      <li><div><b>Значки</b> SVG 24×24, штрих 1,5, <code>currentColor</code>, без заливок и <code>title</code> внутри: масштаб ±, вписать, отцентрировать, автораскладка, углы прямые / скруглённые, навигатор, вход в композицию, наверх, добавить излом, убрать излом.<small>Проверка: прогон в витрине обеими темами.</small></div></li>
+      <li><div><b>Матрица состояний</b> Таблица «контрол × состояние → чем выражено» (пара, рамка, форма, метка) для узла, ребра, излома, строки навигатора, крошки; в каждой клетке состояние выражено не только цветом.<small>Проверка: чтение; требование доступности R13.</small></div></li>
+      <li><div><b>Размерная сетка</b> Все размеры через шкалы (<code>--h-*</code>, <code>--radius*</code>, <code>--gap*</code>, <code>--text-*</code>); новые числа (сторона квадрата, миникарта, предел подписи) — константами в <code>app.css</code> с производной от шкалы.<small>Проверка: D4, D5.</small></div></li>
+      <li><div><b>Спецификация взаимодействий</b> Уточнённые Т1–Т16 таблицей «жест / клавиша → результат → отклик на экране» для мыши, касания и клавиатуры, включая курсоры (<code>grab</code>, <code>grabbing</code>, <code>crosshair</code>).<small>Проверка: чтение аналитиком, сверка с R8–R11, R13.</small></div></li>
+      <li><div><b>Строки словаря</b> Все тексты схемы — ключами <code>scheme.*</code> в <code>i18n/ru.json</code> и <code>en.json</code>: подписи, подсказки, уведомления, пустой лист, «Корень», виды состояний. Русского текста мимо словаря нет.<small>Проверка: сканер <code>check-web.sh</code>.</small></div></li>
+      <li><div><b>Узкий экран и касание</b> Образцы показаны в ширине 375 px; цели нажатия не меньше 44 px под <code>hover: none</code>.<small>Проверка: прогон витрины с эмуляцией.</small></div></li>
+      <li><div><b>Обе темы</b> Каждый образец снят в светлой и тёмной теме; снимки приложены к карточке фичи.<small>Проверка: наличие снимков в разделе «Разработка», задача 03.</small></div></li>
+    </ol>
+
+    <h2 id="accept">Порядок приёма</h2>
+    <p>Оформление принято, когда выполнены одиннадцать позиций выше, проверка <code>check-design.py</code> зелёная, а аналитик подтвердил, что матрица состояний и спецификация взаимодействий покрывают требования R7–R13 карточки. До приёма разработка холста (задача 04) не начинается: холст строится на токенах оформления, и переделывать его дороже, чем подождать.</p>
+    <p>Вопросы по брифу и спорные размеры — в карточку фичи, раздел «Разработка», задача 03: там же остаются решения, принятые по ходу.</p>
+  </main>
+</div>
