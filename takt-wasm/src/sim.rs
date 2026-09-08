@@ -150,6 +150,12 @@ pub fn tick(id: u32, budget: u32) -> String {
         warnings: Vec<RunWarningJson>,
         /// Вывод программы (`debug`) - строки самой модели, а не замечания к ней.
         output: Vec<String>,
+        /// Активные состояния после каждого такта порции, по одному списку на строку
+        /// трассы: схема подсвечивает их, не разбирая строку.
+        states: Vec<Vec<String>>,
+        /// Ожидаемые переходы после каждого такта порции парами "из, в": схема
+        /// показывает, куда автомат уйдёт при нынешних значениях.
+        next: Vec<Vec<(String, String)>>,
     }
 
     SESSIONS.with(|sessions| {
@@ -160,6 +166,8 @@ pub fn tick(id: u32, budget: u32) -> String {
         let mut lines = Vec::new();
         let mut warnings = Vec::new();
         let mut output = Vec::new();
+        let mut states = Vec::new();
+        let mut next = Vec::new();
         for _ in 0..budget {
             match runner.step() {
                 Ok(step) => {
@@ -167,6 +175,8 @@ pub fn tick(id: u32, budget: u32) -> String {
                     output.extend(step.output);
                     if let Some(line) = step.line {
                         lines.push(line);
+                        states.push(step.states);
+                        next.push(step.next);
                     }
                     if let Some(result) = step.result {
                         let report = takt_sim::trace::result_report(&result);
@@ -177,6 +187,8 @@ pub fn tick(id: u32, budget: u32) -> String {
                             errors: report.errors,
                             warnings,
                             output,
+                            states,
+                            next,
                         });
                     }
                 }
@@ -193,6 +205,8 @@ pub fn tick(id: u32, budget: u32) -> String {
             errors: Vec::new(),
             warnings,
             output,
+            states,
+            next,
         })
     })
 }
@@ -254,6 +268,28 @@ mod tests {
         );
         assert!(lines[2].contains("n=3"), "счётчик тикает: {}", lines[2]);
         assert_eq!(reply["done"], Value::Bool(false), "модель не завершается");
+        // Активные состояния идут списком на каждую строку: схема подсвечивает по ним,
+        // а не разбирает строку трассы.
+        let states = reply["states"].as_array().unwrap();
+        assert_eq!(states.len(), lines.len(), "по списку на строку: {reply}");
+        let first: Vec<&str> = states[0]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| s.as_str().unwrap())
+            .collect();
+        assert!(
+            !first.is_empty() && lines[0].contains(first[0]),
+            "состояние есть и в строке: {reply}"
+        );
+        // Взгляд вперёд: у счётчика с самопереходом ожидаемый переход ведёт в то же
+        // состояние, и пар столько же, сколько строк.
+        let next = reply["next"].as_array().unwrap();
+        assert_eq!(
+            next.len(),
+            lines.len(),
+            "по списку ожиданий на строку: {reply}"
+        );
 
         assert_eq!(json(&close(id))["closed"], Value::Bool(true));
     }

@@ -15,7 +15,7 @@ export const SNAP = 8;
 export const HOP = 4;
 /** Радиус скругления углов ломаной: `--radius-sm`. */
 export const CORNER = 5;
-/** Отступ знака условия от узла при базовых местах «начало» и «конец». */
+/** Отступ знака условия от узла при базовых местах "начало" и "конец". */
 export const MARK_OFF = SNAP * 3;
 /** Поле листа вокруг рисунка. */
 export const MARGIN = SNAP * 9;
@@ -286,7 +286,7 @@ export function sheetSize(nodes, extra = []) {
   return { ox, oy, w: Math.max(COL * 2, maxX + MARGIN - ox), h: Math.max(ROW * 2, maxY + MARGIN - oy) };
 }
 
-/** Масштаб и сдвиг, при которых лист `w × h` целиком виден в области `box`. */
+/** Масштаб и сдвиг, при которых лист `w x h` целиком виден в области `box`. */
 export function fitView(box, w, h) {
   const k = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.min((box.width - 32) / w, (box.height - 32) / h)));
   return { k, x: (box.width - w * k) / 2, y: (box.height - h * k) / 2 };

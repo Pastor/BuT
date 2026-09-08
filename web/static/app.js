@@ -404,7 +404,7 @@ function fade(node) {
 function cache() {
   for (const id of [
     "editor", "diagnostics", "output", "trace", "version", "target", "args",
-    "scenario", "budget", "share", "run", "stop", "format", "status", "tabs", "modes",
+    "scenario", "budget", "share", "run", "step", "stop", "format", "status", "tabs", "modes",
     "lang", "tools-lang", "tools-lang-trace", "update", "showgen", "showsim", "grip", "split", "hsplit", "tsplit", "wrap", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
     "account", "session", "icon-enter", "icon-leave",
     "save", "openfile", "panel", "signedout", "signedin", "whoami",
@@ -477,6 +477,7 @@ function wire() {
   });
   dom.format.addEventListener("click", format);
   dom.run.addEventListener("click", run);
+  dom.step.addEventListener("click", stepOnce);
   dom.budget.addEventListener("change", () =>
     shell.remember(localStorage, shell.UI_KEYS.budget, dom.budget.value)
   );
@@ -961,29 +962,48 @@ function format() {
   say(t("editor.formatted"), "ok");
 }
 
-/** Запускает прогон в отдельном потоке. */
-function run() {
-  if (state.running) return;
-  selectPanel("trace");
-  selectMode("trace");
-  dom.trace.replaceChildren();
-  state.running = true;
-  dom.run.disabled = true;
-  dom.stop.disabled = false;
+/**
+ * Поток прогона: один на страницу, сессия в нём живёт между шагами и прогонами.
+ *
+ * Адрес - от этого модуля: собранная страница лежит в каталоге бандла, и адрес от
+ * документа увёл бы запрос в корень.
+ */
+function worker() {
+  if (!state.worker) {
+    state.worker = new Worker(new URL("worker.js", import.meta.url), { type: "module" });
+    state.worker.onmessage = (event) => onWorker(event.data ?? {});
+  }
+  return state.worker;
+}
 
-  state.worker?.terminate();
-  // Адрес - От этого модуля: собранная страница лежит в каталоге бандла, и адрес от
-  // документа увёл бы запрос в корень.
-  state.worker = new Worker(new URL("worker.js", import.meta.url), { type: "module" });
-  state.worker.onmessage = (event) => onWorker(event.data ?? {});
-  state.worker.postMessage({
-    type: "run",
+/** Что нужно потоку, чтобы открыть либо продолжить сессию. */
+function session() {
+  return {
     wasmUrl: state.build?.wasm ?? new URL(WASM_DEFAULT, location.href).href,
     source: state.editor.value(),
     scenario: state.scenario,
     tickMs: 0,
-    budget: Number(dom.budget.value) || 10_000,
-  });
+  };
+}
+
+/** Запускает прогон в отдельном потоке: до конца модели либо до бюджета. */
+function run() {
+  if (state.running) return;
+  selectPanel("trace");
+  selectMode("trace");
+  state.running = true;
+  dom.run.disabled = true;
+  dom.step.disabled = true;
+  dom.stop.disabled = false;
+  worker().postMessage({ type: "run", ...session(), budget: Number(dom.budget.value) || 10_000 });
+}
+
+/** Один такт: продолжает открытую сессию либо открывает новую по текущему тексту. */
+function stepOnce() {
+  if (state.running) return;
+  selectPanel("trace");
+  selectMode("trace");
+  worker().postMessage({ type: "step", ...session() });
 }
 
 function stop() {
@@ -992,9 +1012,23 @@ function stop() {
 
 function onWorker(message) {
   switch (message.type) {
+    case "opened":
+      // Новая сессия - новая трасса: прежние строки принадлежали другому тексту либо
+      // законченному прогону.
+      dom.trace.replaceChildren();
+      state.scheme.setRunning([]);
+      break;
+    case "stepped":
+      break;
     case "lines":
       for (const line of message.lines) dom.trace.appendChild(row(line, "trace"));
       dom.trace.scrollTop = dom.trace.scrollHeight;
+      // Схема подсвечивает активные состояния последнего такта порции: список приходит
+      // от эталона, разбирать строку трассы страница не вправе.
+      if (message.states?.length) {
+        const last = message.states.length - 1;
+        state.scheme.setRunning(message.states[last], message.next?.[last] ?? []);
+      }
       break;
     case "warnings":
       // Код показывается отдельно от текста - как у предупреждений компиляции.
@@ -1011,7 +1045,11 @@ function onWorker(message) {
     case "finished":
       for (const line of message.info ?? []) dom.trace.appendChild(row(line, "ok"));
       for (const line of message.errors ?? []) dom.trace.appendChild(row(line, "error"));
+      // По завершении подсветка прогона снимается: узел "в прогоне" говорит о текущем
+      // такте, а текущего такта больше нет. Остановленный прогон подсветку держит: его
+      // продолжают шагами.
       finish();
+      state.scheme.setRunning([]);
       break;
     case "halted":
       // Останов называется словами - и по бюджету, и по просьбе автора: молчаливо
@@ -1024,6 +1062,7 @@ function onWorker(message) {
       // "такт не выполнен", и это его язык, а не наш.
       dom.trace.appendChild(row(message.message ?? t(message.key, message.params), "error"));
       finish();
+      state.scheme.setRunning([]);
       break;
     default:
       break;
@@ -1033,6 +1072,7 @@ function onWorker(message) {
 function finish() {
   state.running = false;
   dom.run.disabled = false;
+  dom.step.disabled = false;
   dom.stop.disabled = true;
 }
 
@@ -1073,7 +1113,7 @@ function selectTab(name) {
     tab.classList.toggle("active", active);
     tab.setAttribute("aria-selected", String(active));
   }
-  for (const panel of document.querySelectorAll('[data-panel="output"], [data-panel="flags"]')) {
+  for (const panel of panels("output", "flags")) {
     panel.hidden = panel.dataset.panel !== name;
   }
   state.tab = name;
@@ -1089,25 +1129,40 @@ function selectTab(name) {
  * Панель ровно одна: область под них одна, и держать в ней два ответа
  * сразу негде. Обе отжаты - область уходит целиком, и модель занимает экран.
  */
+/**
+ * Панель правой области по имени.
+ *
+ * Ищется внутри рабочей области, а не по документу: `data-panel` стоит и на `body`
+ * (текущая панель для стилей), и запрос по документу первым находил бы `body`, когда
+ * его значение совпадает с искомым, - панель при этом оставалась бы на экране.
+ */
+function panel(name) {
+  return document.querySelector(`.work [data-panel="${name}"]`);
+}
+
+function panels(...names) {
+  return names.map(panel).filter(Boolean);
+}
+
 function selectPanel(name) {
   state.panel = name;
   dom.showgen.setAttribute("aria-pressed", String(name === "output"));
   dom.showsim.setAttribute("aria-pressed", String(name === "trace"));
   dom.showscheme.setAttribute("aria-pressed", String(name === "scheme"));
-  document.querySelector('[data-panel="scheme"]').hidden = name !== "scheme";
+  panel("scheme").hidden = name !== "scheme";
   // У пояснения место вывода занимает показ (09n): компилировать его нечем, а вкладка
   // "Ключи сборки" говорила бы о сборке, которой не будет.
   const doc = state.kind === "markdown";
   dom.tabs.hidden = name !== "output" || doc;
-  document.querySelector('[data-panel="trace"]').hidden = name !== "trace";
-  document.querySelector('[data-panel="doc"]').hidden = !(name === "output" && doc);
+  panel("trace").hidden = name !== "trace";
+  panel("doc").hidden = !(name === "output" && doc);
   if (name === "output" && doc) {
-    for (const panel of document.querySelectorAll('[data-panel="output"], [data-panel="flags"]')) {
+    for (const panel of panels("output", "flags")) {
       panel.hidden = true;
     }
     showDoc();
   } else if (name === "output") selectTab(state.tab === "flags" ? "flags" : "output");
-  else for (const panel of document.querySelectorAll('[data-panel="output"], [data-panel="flags"]')) {
+  else for (const panel of panels("output", "flags")) {
     panel.hidden = true;
   }
   document.body.dataset.panel = name ?? "none";

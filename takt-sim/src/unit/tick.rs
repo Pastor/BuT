@@ -117,6 +117,61 @@ impl Unit {
         None
     }
 
+    /// Переходы, которые сработали бы на следующем такте при нынешних значениях.
+    ///
+    /// Условия вычисляются в том же порядке, что на такте, но ни тела, ни переходы не
+    /// исполняются: это взгляд вперёд для схемы, а не такт. Ответ - пары "из, в" по
+    /// всем активным узлам; ошибка вычисления условия даёт пустой ответ, а не отказ:
+    /// её назовёт сам такт.
+    pub fn peek_transitions(&mut self) -> Vec<(String, String)> {
+        match &self.0 {
+            UnitKind::None => Vec::new(),
+            UnitKind::Node { state: None, .. } => Vec::new(),
+            UnitKind::Node { .. } => {
+                let state_name = match &self.0 {
+                    UnitKind::Node { state: Some(s), .. } => s.clone(),
+                    _ => unreachable!(),
+                };
+                let implementation = match &self.0 {
+                    UnitKind::Node { state_impls, .. } => state_impls.get(&state_name).cloned(),
+                    _ => unreachable!(),
+                };
+                // Незавершённая реализация держит узел: переходы самого узла до её конца
+                // не проверяются, смотрятся переходы внутри неё.
+                if let Some(inner) = implementation
+                    && !inner.borrow().is_terminal()
+                {
+                    return inner.borrow_mut().peek_transitions();
+                }
+                let transitions: Vec<(String, Predicate)> = match &self.0 {
+                    UnitKind::Node {
+                        state_transitions, ..
+                    } => state_transitions
+                        .get(&state_name)
+                        .cloned()
+                        .unwrap_or_default(),
+                    _ => unreachable!(),
+                };
+                for (name, pred) in &transitions {
+                    match pred.evaluate(self) {
+                        Ok(true) => return vec![(state_name, name.clone())],
+                        Ok(false) => {}
+                        Err(_) => return Vec::new(),
+                    }
+                }
+                Vec::new()
+            }
+            UnitKind::Parallel { units, .. } => units
+                .iter()
+                .flat_map(|u| u.borrow_mut().peek_transitions())
+                .collect(),
+            UnitKind::Sequential { units, index, .. } => units
+                .get(*index)
+                .map(|u| u.borrow_mut().peek_transitions())
+                .unwrap_or_default(),
+        }
+    }
+
     fn tick_node(&mut self, soft: bool) -> TickResult {
         // Шаг 1: клонируем имя текущего состояния
         let state_name: String = if let UnitKind::Node { state: Some(s), .. } = &self.0 {

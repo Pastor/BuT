@@ -98,6 +98,7 @@ export class Scheme {
     this.selected = null;
     this.selectedEdge = null;
     this.running = new Set();
+    this.expected = new Set();
     this.fitPending = true;
     this.kinds = {
       start: this.t("scheme.kind.start"),
@@ -164,10 +165,28 @@ export class Scheme {
     if (this.text() !== before) this.commit(before);
   }
 
-  /** Узлы активных состояний прогона. */
-  setRunning(names) {
+  /**
+   * Подсветка прогона: активные состояния, состояния, куда есть переход, и состояния,
+   * куда переход ожидается при нынешних значениях. Вид переключается без перестроения
+   * листа.
+   *
+   * @param {string[]} names активные состояния такта
+   * @param {string[][]} next ожидаемые переходы парами "из, в"
+   */
+  setRunning(names, next = []) {
     this.running = new Set(names ?? []);
-    this.draw();
+    this.expected = new Set((next ?? []).filter((pair) => this.running.has(pair[0])).map((pair) => pair[1]));
+    const sheet = this.current();
+    const reachable = new Set(
+      sheet.edges.filter((e) => this.running.has(e.from)).map((e) => e.to),
+    );
+    for (const node of this.dom.sheet.querySelectorAll(".node")) {
+      const name = node.dataset.name;
+      const running = this.running.has(name);
+      node.classList.toggle("running", running);
+      node.classList.toggle("expected", !running && this.expected.has(name));
+      node.classList.toggle("reachable", !running && !this.expected.has(name) && reachable.has(name));
+    }
   }
 
   /** Снимает записи, которых в модели нет. */
@@ -367,7 +386,7 @@ export class Scheme {
     this.onChange();
   }
 
-  /** Перенос узла: запись координат снимает метку «не размещён». */
+  /** Перенос узла: запись координат снимает метку "не размещён". */
   moveNode(name, x, y) {
     const sheet = this.current();
     if (!sheet.editable) return;
@@ -456,6 +475,12 @@ export class Scheme {
     for (const node of sheet.nodes) this.drawNode(sheet, node);
     svg.style.transformOrigin = "0 0";
     svg.style.transform = `translate(${this.view.x}px, ${this.view.y}px) scale(${this.view.k})`;
+    // Сетка холста едет с листом: шаг масштабируется, а при мелком масштабе удваивается,
+    // чтобы точки не сливались в заливку; начало сетки - начало листа.
+    let step = geo.SNAP * 3 * this.view.k;
+    while (step < geo.SNAP * 3 / 2) step *= 2;
+    scheme.style.backgroundSize = `${step}px ${step}px`;
+    scheme.style.backgroundPosition = `${this.view.x - sheet.ox * this.view.k}px ${this.view.y - sheet.oy * this.view.k}px`;
     scheme.classList.toggle("small", this.view.k < 0.5);
     this.dom.zoom.textContent = this.t("scheme.zoomValue", { zoom: this.view.k.toFixed(2) });
     for (const act of ["square", "round"]) {
@@ -530,6 +555,8 @@ export class Scheme {
     if (node.name === this.selected) classes.push("selected");
     if (node.unplaced && sheet.editable) classes.push("unplaced");
     if (this.running.has(node.name)) classes.push("running");
+    else if (this.expected.has(node.name)) classes.push("expected");
+    else if (sheet.edges.some((e) => this.running.has(e.from) && e.to === node.name)) classes.push("reachable");
     const composition = node.kind === "composition";
     const group = mk("g", {
       class: classes.join(" "),

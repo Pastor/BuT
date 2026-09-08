@@ -1139,6 +1139,10 @@ body[data-panel="none"] .work { grid-template-columns: 1fr; }
 .controls > [hidden] { display: none; }
 .controls label { font-size: var(--text-control); color: var(--on-surface-soft); }
 .controls input[type="text"] { flex: 1; min-width: 12ch; }
+/* Поле с числом - плотная ступень, как у выбора кегля в шапке: число читают, а не
+ * нажимают, и рост до кнопки действия здесь лишний. Правило одно на все числовые
+ * поля страницы, чтобы бюджет прогона и ступень кегля стояли в одну высоту. */
+input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 
 .output {
   flex: 1;
@@ -1264,11 +1268,19 @@ body[data-panel="none"] .work { grid-template-columns: 1fr; }
   min-height: 0;
   position: relative;
   overflow: hidden;
-  background: var(--surface);
-  color: var(--on-surface);
+  background: var(--surface-sheet);
+  color: var(--on-surface-sheet);
+  /* Поле бесконечное: сетка лежит на холсте, а не на листе, и едет с панорамой
+   * и масштабом - положение и шаг ей ставит холст. */
+  background-image: radial-gradient(circle at center,
+    var(--on-surface-off) 1px, transparent 1.2px);
+  background-size: var(--grid-step) var(--grid-step);
   cursor: grab;
   touch-action: none;
 }
+/* Лист на холсте не ограничен: ни рамки, ни своей подложки, рисунок за его краем
+ * виден. Размер листа остаётся мерой для "вписать" и миникарты. */
+.scheme .sheet { background: none; border: 0; overflow: visible; }
 
 .scheme.dragging { cursor: grabbing; }
 
@@ -1380,6 +1392,20 @@ body[data-panel="none"] .work { grid-template-columns: 1fr; }
  * состоянию шага, а не порядку ветвей. */
 .node.running .node-body { fill: var(--surface-yes); stroke: var(--accent); stroke-width: 2; }
 .node.running .node-mark { fill: var(--on-surface-yes); }
+/* Три тона прогона: текущее - акцент на заливке "выбранное";
+ * "возможен переход" (из активного сюда ведёт ребро) - пара "предупреждение" со
+ * штриховой рамкой тона `--warn`; "ожидается переход" (сюда автомат уйдёт при
+ * нынешних значениях) - пара "тревога" со сплошной рамкой тона `--alarm`. Каждый вид
+ * выражен и формой рамки, а не только цветом. Пары взяты из реестра книги, но
+ * приложены через `fill`/`stroke`: у элементов SVG фона нет. */
+.node.reachable .node-body,
+.node.reachable .node-comp { fill: var(--surface-warn); stroke: var(--warn); stroke-width: 2; stroke-dasharray: 6 3; }
+.node.reachable .node-mark { fill: var(--on-surface-warn); }
+.node.expected .node-body,
+.node.expected .node-comp { fill: var(--surface-alarm); stroke: var(--alarm); stroke-width: 2.5; }
+.node.expected .node-mark { fill: var(--on-surface-alarm); }
+.node.running .node-body { stroke-width: 2.5; }
+.node.running .node-comp { fill: var(--surface-yes); stroke: var(--accent); stroke-width: 2.5; }
 
 /* Композиция - квадрат со стороной `--comp-side` и миниатюрой листа внутри.
  * Форма отличает её от состояния без реализации сама по себе. */

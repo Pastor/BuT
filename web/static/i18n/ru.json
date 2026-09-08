@@ -29,6 +29,7 @@
   "trace.budget": "Бюджет, тактов",
   "trace.run": "Прогон",
   "trace.stop": "Стоп",
+  "trace.step": "Шаг",
   "trace.rows": "Высота сценария",
   "trace.scenario": "Сценарий входов (JSON, как файл -s у takt-sim)",
   "trace.notOpened": "прогон не открыт",

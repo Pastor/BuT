@@ -227,8 +227,18 @@
       <div class="controls">
         <label for="budget" data-i18n="trace.budget">Бюджет, тактов</label>
         <input id="budget" type="number" min="1" max="1000000" value="200">
-        <button id="run" type="button" data-i18n="trace.run">Прогон</button>
-        <button id="stop" type="button" disabled data-i18n="trace.stop">Стоп</button>
+        <!-- Прогон, шаг и стоп - кнопки-значки с подписью словом в подсказке и для
+             диктора. Шаг делает один такт и держит сессию открытой: следующий шаг
+             и прогон продолжают её, пока текст и сценарий не изменились. -->
+        <button id="run" class="icon-btn" type="button"
+                data-i18n-attr="aria-label:trace.run;data-tip:trace.run"
+                aria-label="Прогон" data-tip="Прогон"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 5l11 7-11 7z"/></svg></button>
+        <button id="step" class="icon-btn" type="button"
+                data-i18n-attr="aria-label:trace.step;data-tip:trace.step"
+                aria-label="Шаг" data-tip="Шаг"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 5l10 7-10 7z"/><path d="M18.5 5v14"/></svg></button>
+        <button id="stop" class="icon-btn" type="button" disabled
+                data-i18n-attr="aria-label:trace.stop;data-tip:trace.stop"
+                aria-label="Стоп" data-tip="Стоп"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg></button>
       </div>
       <!-- Подпись - одна строка словаря: разметка внутри переводимого текста
            потребовала бы `innerHTML` из словаря, то есть лишнего пути в DOM.

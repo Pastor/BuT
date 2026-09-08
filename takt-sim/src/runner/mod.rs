@@ -89,6 +89,14 @@ pub struct Step {
     /// Канал отдельный от предупреждений: это вывод модели, а не сообщение
     /// инструмента о ней, и получатель показывает их по-разному.
     pub output: Vec<String>,
+    /// Активные состояния после такта - те же, что печатает строка трассы, но
+    /// списком: потребитель без консоли подсвечивает их на схеме, а разбирать строку
+    /// обратно значило бы завести второй разбор трассы.
+    pub states: Vec<String>,
+    /// Переходы, которые сработали бы на следующем такте при нынешних значениях,
+    /// парами "из, в". Взгляд вперёд для схемы: следующий такт вправе изменить
+    /// значения телами и входами, и ответ - ожидание, а не обещание.
+    pub next: Vec<(String, String)>,
 }
 
 // -- Бегун симуляции ----------------------------------------------------------
@@ -263,6 +271,8 @@ impl SimulationRunner {
                 result: Some(self.outcome(false)),
                 warnings: self.take_warnings(),
                 output: self.unit.take_output(),
+                states: Vec::new(),
+                next: Vec::new(),
             });
         }
 
@@ -311,6 +321,8 @@ impl SimulationRunner {
                 }),
                 warnings: self.take_warnings(),
                 output: self.unit.take_output(),
+                states: Vec::new(),
+                next: Vec::new(),
             });
         }
         self.completed += 1;
@@ -342,11 +354,18 @@ impl SimulationRunner {
 
         // Проверяем терминальность
         let result = (tick_result == TickResult::Terminated).then(|| self.outcome(true));
+        let next = if result.is_none() {
+            self.unit.peek_transitions()
+        } else {
+            Vec::new()
+        };
         Ok(Step {
             line: Some(line),
             result,
             warnings: self.take_warnings(),
             output: self.unit.take_output(),
+            states: self.unit.active_states(),
+            next,
         })
     }
 

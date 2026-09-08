@@ -23,7 +23,7 @@ import * as geo from "../static/scheme-geometry.js";
 import { encodeState, decodeState } from "../static/share.js";
 import * as draft from "../static/draft.js";
 
-/** Лифт - пример заказчика: композиция из шести экземпляров одной модели. */
+/** Лифт: композиция из шести экземпляров одной модели. */
 const ELEVATOR = new URL("../../examples/elevator.takt", import.meta.url);
 
 let loaded = null;
@@ -368,6 +368,24 @@ test("граф: модуль отдаёт листы лифта, а страни
   const placed = geo.autoPlace(engine.nodes);
   assert.equal(new Set(Object.values(placed).map((p) => `${p.x}:${p.y}`)).size, 5);
 
+  // Прогон отдаёт активные состояния списком на каждый такт, и все они - узлы графа.
+  const opened = bridge.simOpen(source, "", 0);
+  assert.equal(opened.ok, true, JSON.stringify(opened));
+  const ticked = bridge.simTick(opened.id, 3);
+  assert.equal(ticked.ok, true, JSON.stringify(ticked));
+  assert.equal(ticked.states.length, ticked.lines.length, "по списку состояний на строку");
+  // Взгляд вперёд: по списку ожидаемых переходов на строку, каждая пара - имена узлов.
+  assert.equal(ticked.next.length, ticked.lines.length, "по списку ожиданий на строку");
+  const known = new Set(graph.sheets.flatMap((s) => s.nodes.map((n) => n.name)));
+  for (const step of ticked.states) {
+    assert.ok(step.length > 0, "у такта есть активное состояние");
+    for (const name of step) assert.ok(known.has(name), `состояние ${name} не узел графа`);
+  }
+  for (const pairs of ticked.next) {
+    for (const [from, to] of pairs) assert.ok(known.has(from) && known.has(to), `переход ${from} -> ${to} мимо графа`);
+  }
+  bridge.simClose(opened.id);
+
   // Неразбираемый текст - диагностика, а не падение.
   const broken = bridge.graph("start S {");
   assert.equal(broken.ok, false);
@@ -398,7 +416,7 @@ test("страница проекта: раскладка берётся пар�
   assert.equal(opened.layout, '{"format": 1, "sheets": {}}\n');
   assert.equal(asked.length, 3, `обращений ${asked.length}: ${asked.join(", ")}`);
 
-  // Без раскладки проект открывается как прежде: пусто и без лишних обращений.
+  // Без раскладки проект открывается как до этого: пусто и без лишних обращений.
   const bare = await read("AbCd", "/", async (url) => {
     const body = url.endsWith("/AbCd")
       ? { id: "AbCd", main_file: "model.takt", files: [files[0]] }
