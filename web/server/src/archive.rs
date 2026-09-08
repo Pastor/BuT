@@ -350,11 +350,18 @@ mod tests {
                 }],
                 Some("c".to_string()),
             ),
-            sources: vec![SourceFile {
-                name: "model.takt".into(),
-                kind: "takt".into(),
-                text: "model A {}".into(),
-            }],
+            sources: vec![
+                SourceFile {
+                    name: "model.takt".into(),
+                    kind: "takt".into(),
+                    text: "model A {}".into(),
+                },
+                SourceFile {
+                    name: "model.takt-ui".into(),
+                    kind: "layout".into(),
+                    text: "{\"format\": 1, \"sheets\": {}}\n".into(),
+                },
+            ],
             generated: vec![("playground.h".into(), "#ifndef X".into())],
             refusal: None,
         }
@@ -372,9 +379,13 @@ mod tests {
             "версия модуля пережила рейс"
         );
         assert_eq!(back.manifest.main_file.as_deref(), Some("model.takt"));
-        assert_eq!(back.sources.len(), 1, "вывод цели исходником не считается");
+        assert_eq!(back.sources.len(), 2, "вывод цели исходником не считается");
         assert_eq!(back.sources[0].name, "model.takt");
         assert_eq!(back.sources[0].text, "model A {}");
+        // Раскладка схемы - исходник проекта: едет в архиве и возвращается своим родом.
+        assert_eq!(back.sources[1].name, "model.takt-ui");
+        assert_eq!(back.sources[1].kind, "layout");
+        assert_eq!(back.sources[1].text, "{\"format\": 1, \"sheets\": {}}\n");
         // p: выбор автора едет вместе с проектом. Пара берётся непустой и не
         // умолчанием: на `c` без ключей потеря поля неотличима от подстановки
         // умолчания.

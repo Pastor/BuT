@@ -77,6 +77,11 @@ cp "$ROOT/takt-lang/src/compile_cli/mod.rs" "$ROOT/takt-lang/src/compile_cli/tar
 # Копия дерева - не "весь проект": файл, который тесты читают, а тест не
 # кладёт, роняет B4 с чужой причиной.
 cp "$ROOT/book/takt.tmTheme" "$TREE/book/"
+# Пример лифта: по нему проверяется граф модуля и сверка раскладки.
+# Копия дерева - не "весь проект": файл, который тесты читают, а тест не
+# кладёт, роняет B4 с чужой причиной.
+mkdir -p "$TREE/examples"
+cp "$ROOT/examples/elevator.takt" "$TREE/examples/"
 cp "$WASM" "$TREE/target/precheck/wasm32-unknown-unknown/$PROFILE/"
 
 run_gate() {  # запускает гейт на копии дерева

@@ -1,0 +1,647 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * ПАТЧ app.css — контролы вкладки «Схема» (фича 0539, задача 03).
+ *
+ * Куда вставлять:
+ *   1. Блок «сырьё светлой темы» — в `:root` первой палитры, ПОСЛЕ `--raw-yes-ink`.
+ *   2. Блок «сырьё тёмной темы» — в `:root` внутри `@media (prefers-color-scheme: dark)`,
+ *      ПОСЛЕ `--raw-yes-ink`.
+ *   3. Блок «роли» — в тот же первый `:root`, ПОСЛЕ пары `--surface-yes`.
+ *   4. Блок «шкалы схемы» — в тот же первый `:root`, ПОСЛЕ `--gap-lg`
+ *      (объявление прежде употребления — гейт D8).
+ *   5. Блок «контролы схемы» — в конец файла, ПЕРЕД разделом
+ *      «Полка режимов», чтобы адаптивные правила схемы стояли ниже базовых
+ *      (ловушка специфичности § 4 книги: порядок каскада сильнее специфичности).
+ *   6. Блок «узкий экран и касание» — в конец файла, последним.
+ *
+ * Для предпросмотра файл подключается вторым листом после `app.css`
+ * (`result/preview/*.html`) — это тождественно вставке в конец.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Сырьё: светлая тема ───────────────────────────────────────────────
+ * Поле листа — единственная новая пара (решение заказчика 2026-09-08:
+ * «минимум новых пар»). Своя она потому, что лист лежит НА поверхности
+ * области и обязан от неё отличаться: взяв `--surface-raised`, лист слился
+ * бы с карточками узлов, которые на нём стоят, и граница листа исчезла бы.
+ * Тон — та же чертёжная бумага, на полступени светлее фона области. */
+:root {
+  --raw-sheet: #F7F7F2;
+  --raw-sheet-ink: #2E332B;
+}
+
+/* ── 2. Сырьё: тёмная тема ───────────────────────────────────────────────
+ * Лист светлее фона области и темнее карточки: тот же порядок слоёв, что в
+ * светлой теме, а не его зеркало. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --raw-sheet: #20241C;
+    --raw-sheet-ink: #E3E5DC;
+  }
+}
+
+/* ── 3. Роли: новая пара реестра ─────────────────────────────────────────
+ * У поверхности свои чернила, даже когда они совпадают с основными: пара с
+ * общими «пока что» чернилами однажды разойдётся с темой наполовину. */
+:root {
+  --surface-sheet: var(--raw-sheet);
+  --on-surface-sheet: var(--raw-sheet-ink);
+}
+
+/* ── 4. Шкалы схемы: числа константами, каждое — производная шкалы ───────
+ * Своих чисел у холста нет: диаметр узла — ступень высоты, сторона квадрата
+ * композиции — три ступени, шаг сетки — три отступа. Переменные объявлены
+ * здесь, то есть прежде употребления (гейт D8: неизвестную переменную
+ * браузер отбрасывает молча вместе со всем правилом). */
+:root {
+  /* Диаметр круга узла: ступень контрола. Все узлы одного размера — имя
+   * состояния на карточке больше не стоит (см. § «Схема» книги), поэтому
+   * ширине нечего зависеть от текста. */
+  --node-d: var(--h-control);
+  /* Сторона квадрата композиции: три диаметра узла (9rem при базовом кегле) —
+   * ТЗ Т3. Внутри квадрата помещается миниатюра листа. */
+  --comp-side: calc(var(--node-d) * 3);
+  /* Шаг рисованной сетки — три шага привязки (24 px при `--gap` 8 px): точка
+   * на каждом шаге привязки читалась бы как заливка. */
+  --grid-step: calc(var(--gap) * 3);
+  /* Точка излома ребра: круг диаметром в отступ — ТЗ Т5. */
+  --pin-d: var(--gap);
+  /* Миникарта: 8rem × 6rem ТЗ Т10, выражены ступенью контрола. */
+  --map-w: calc(var(--node-d) * 8 / 3);
+  --map-h: calc(var(--node-d) * 2);
+  /* Пределы подписей. Обозначение узла коротко всегда, а вот подпись под ним
+   * и цитата условия на ребре — авторский текст, и мера строки у них своя:
+   * 12 знаков под узлом (шире — подписи соседних узлов сходятся), 24 знака у
+   * условия (ТЗ Т4). */
+  --node-label-max: 12ch;
+  --edge-label-max: 24ch;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 5. КОНТРОЛЫ СХЕМЫ
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Холст и лист (`.sheet`) ─────────────────────────────────────────────
+ * Холст — вместилище с прокруткой панорамой, лист — поле рисунка внутри него.
+ * Пара `--surface-sheet` — новая строка реестра книги.
+ * Сетка нарисована повторяющимся радиальным переходом, а не узлами SVG: узлов
+ * сетки было бы тысячи, и каждый попал бы в дерево доступности. */
+.scheme {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--on-surface);
+  cursor: grab;
+  touch-action: none;
+}
+
+.scheme.dragging { cursor: grabbing; }
+
+.sheet {
+  display: block;
+  background: var(--surface-sheet);
+  color: var(--on-surface-sheet);
+  background-image: radial-gradient(circle at center,
+    var(--on-surface-off) 1px, transparent 1.2px);
+  background-size: var(--grid-step) var(--grid-step);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* Пустой лист (`.sheet-empty`): модель не разбирается — на холсте слово, а не
+ * пустота. Пустой холст читается как поломка вёрстки, а не как названная
+ * граница (то же правило, что у приписки к выводу цели). */
+.sheet-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--gap-lg);
+  text-align: center;
+  font-size: var(--text-lg);
+  color: var(--on-surface-soft);
+}
+.sheet-empty[hidden] { display: none; }
+
+/* ── Узел-состояние (`.node`) ────────────────────────────────────────────
+ * Круг постоянного диаметра с обозначением `S`+номер; имя состояния живёт в
+ * легенде (решение заказчика 2026-09-08: имена бывают длинными, и карточка по
+ * имени рвала бы раскладку). Под кругом — подпись: авторская либо имя из
+ * модели, усечённая мерой `--node-label-max`.
+ *
+ * Штрих, чернила и заливка — свойства узла, а не рисунка: `fill` и `stroke`
+ * ссылаются на `currentColor`, поэтому состояние меняет один токен.
+ * Пара узла — `--surface-raised`/`--on-surface-raised` (реестр книги), но
+ * применена через `fill`/`stroke`: у элементов SVG фона нет. */
+.node { cursor: grab; }
+.node-body {
+  fill: var(--surface-raised);
+  stroke: var(--on-surface-soft);
+  stroke-width: 1.5;
+  transition: fill var(--motion), stroke var(--motion);
+}
+
+/* Обозначение: `S` кеглем кода, номер — нижним индексом. Индекс НАРИСОВАН
+ * смещением базовой линии, а не набран символом `₁`: подстрочных цифр в Fira
+ * Code нет (замер по `scripts/book-font-charset.txt`), и промах дал бы
+ * системный глиф на чужой базовой линии. */
+.node-mark {
+  font-family: var(--font-code);
+  font-size: var(--text-md);
+  fill: var(--on-surface-raised);
+  text-anchor: middle;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.node-num { font-size: var(--text-xs); }
+
+/* Подпись под узлом: служебная строка, чернила приглушённые, на подложке
+ * цвета листа — иначе ребро, проходящее под узлом, перечёркивает её. */
+.node-label-bg { fill: var(--surface-sheet); stroke: none; }
+.node-label {
+  font-family: var(--font-code);
+  font-size: var(--text-xs);
+  fill: var(--on-surface-soft);
+  text-anchor: middle;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Метка входа у стартового узла и вторая рамка у конечного — ФОРМА, а не цвет
+ * (правило доступности книги § 7: состояние никогда не только цветом). */
+.node-entry { fill: none; stroke: var(--on-surface); stroke-width: 1.5; }
+.node-final { fill: none; stroke: var(--on-surface-soft); stroke-width: 1.5; }
+
+/* Наведение и нажатие — формулой одной плотности, а не своей заливкой. */
+.node:hover .node-body {
+  fill: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface-raised));
+}
+.node:active .node-body {
+  fill: color-mix(in srgb, var(--on-surface) var(--state-press), var(--surface-raised));
+}
+
+/* Выбранный — подмена пары на «выбранное»: та же пара, что у вкладки. */
+.node.selected .node-body { fill: var(--surface-yes); stroke: var(--on-surface); }
+.node.selected .node-mark { fill: var(--on-surface-yes); }
+
+/* Фокус — кольцо акцента (§ 6 книги). У элемента SVG `outline` не рисуется,
+ * поэтому кольцо — свой круг вокруг узла, а не вторая шкала: радиус и отступ
+ * взяты у кольца страницы. */
+.node:focus-visible { outline: none; }
+.node:focus-visible .node-ring { stroke: var(--accent); stroke-width: 2; }
+.node-ring { fill: none; stroke: none; }
+
+/* Перетаскиваемый — приподнят парой карточки и обведён акцентом (ТЗ Т6). */
+.node.dragging { cursor: grabbing; }
+.node.dragging .node-body { fill: var(--surface-raised); stroke: var(--accent); stroke-width: 2; }
+
+/* «Не размещён»: узел поставлен автоматически, записи в файле нет. Рамка
+ * штриховая — форма, а не цвет; снимается первым переносом (ТЗ Т13). */
+.node.unplaced .node-body { stroke-dasharray: 4 3; }
+
+/* «В прогоне»: рамка акцента с заливкой «выбранное» (ТЗ Т14). Несколько
+ * активных узлов параллельных ветвей выглядят одинаково — вид принадлежит
+ * состоянию шага, а не порядку ветвей. */
+.node.running .node-body { fill: var(--surface-yes); stroke: var(--accent); stroke-width: 2; }
+.node.running .node-mark { fill: var(--on-surface-yes); }
+
+/* Композиция — квадрат со стороной `--comp-side` и миниатюрой листа внутри.
+ * Форма отличает её от состояния без реализации сама по себе. */
+.node-comp {
+  fill: var(--surface-raised);
+  stroke: var(--on-surface-soft);
+  stroke-width: 1.5;
+  rx: var(--radius);
+  transition: fill var(--motion), stroke var(--motion);
+}
+.node:hover .node-comp {
+  fill: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface-raised));
+}
+.node.selected .node-comp { fill: var(--surface-yes); stroke: var(--on-surface); }
+.node.dragging .node-comp { stroke: var(--accent); stroke-width: 2; }
+/* Миниатюра: узлы точками, рёбра линиями, текста нет вовсе — на девяти
+ * ремах он был бы нечитаем и читался бы как грязь. Чернила — приглушённые,
+ * а не `--on-surface-off`: миниатюра несёт сведение (сколько внутри
+ * шагов и ветвей), и порог 3:1 к заливке карточки к ней приложим. */
+.mini-node { fill: var(--on-surface-soft); stroke: none; }
+.mini-edge { fill: none; stroke: var(--on-surface-soft); stroke-width: 1; }
+/* Кнопка входа на карточке — для касания: двойного щелчка на сенсорном
+ * экране нет (ТЗ Т3). */
+.node-enter { fill: var(--surface-raised); stroke: var(--on-surface-soft); stroke-width: 1.5; }
+.node-enter-mark { fill: none; stroke: var(--on-surface); stroke-width: 1.5; }
+
+/* ── Ребро (`.edge`) ─────────────────────────────────────────────────────
+ * Ортогональная ломаная чернилами `--on-surface-soft`; выбранное — `--on-surface`.
+ * Форма углов одна на файл: прямые либо скруглённые `--radius-sm` — она
+ * задаётся формой пути, а не свойством, поэтому в стилях её нет.
+ * Условное (`ref`) и безусловное (`next`) различаются ФОРМОЙ СТРЕЛКИ
+ * (решение заказчика: открытая «птичка» у `ref`, залитый треугольник у
+ * `next`) — а не только подписью и не только цветом. */
+.edge {
+  fill: none;
+  stroke: var(--on-surface-soft);
+  stroke-width: 1.5;
+  transition: stroke var(--motion);
+}
+.edge.selected { stroke: var(--on-surface); stroke-width: 2; }
+/* Наконечники — два набора, покоя и выбора: наконечник маркера НЕ наследует
+ * чернила ссылающегося ребра (`context-stroke` знают не все браузеры), и
+ * выбранное ребро с приглушённой стрелкой читалось бы как половина выбора. */
+.arrow-open { fill: none; stroke: var(--on-surface-soft); stroke-width: 1.5; }
+.arrow-solid { fill: var(--on-surface-soft); stroke: none; }
+.arrow-open-sel { fill: none; stroke: var(--on-surface); stroke-width: 1.5; }
+.arrow-solid-sel { fill: var(--on-surface); stroke: none; }
+
+/* Петля самоперехода стоит у правого верхнего угла карточки (ТЗ Т4) — это
+ * геометрия пути, своих объявлений ей не нужно; класс назван, чтобы петлю
+ * можно было выбрать вместе с её ребром. */
+.edge-loop { }
+
+/* Знак условия: `K`+номер на подложке `--surface` без рамки (требование
+ * заказчика 2026-09-08). Цитаты условия на листе нет вовсе:
+ * `!Overloaded & NeedUp & !DoorBlocked` шире трёх узлов и перечёркивает
+ * рисунок, а усечённая цитата обманывает — по началу условие не
+ * узнать. Полное условие — во второй таблице легенды и в подсказке
+ * при наведении. Подложка обязательна: знак ложится на сетку и рёбра. */
+.edge-label-bg { fill: var(--surface); stroke: none; }
+.edge-mark {
+  font-family: var(--font-code);
+  font-size: var(--text-sm);
+  fill: var(--on-surface-soft);
+  text-anchor: middle;
+  /* Знак тянут указателем: место подписи относительно стрелки — авторское
+   * (требование заказчика 2026-09-08). Базовых мест три — начало, центр,
+   * конец, — и любое заменяется своим; курсор говорит об этом до нажатия. */
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.edge-mark.dragging { cursor: grabbing; fill: var(--on-surface); }
+/* Номер — нижним индексом, рисованным смещением базовой линии: тот
+ * же способ, что у знака узла — подстрочных цифр в Fira Code нет. */
+.edge-num { font-size: var(--text-xs); }
+.edge-group.selected .edge-mark { fill: var(--on-surface); }
+
+/* Ниже масштаба 0,5× знаки условий и подписи под узлами скрываются,
+ * обозначения на кругах остаются (ТЗ Т1): знак вне фигуры на таком
+ * масштабе читается как сор на линии. */
+.scheme.small .edge-mark,
+.scheme.small .edge-label-bg,
+.scheme.small .node-label,
+.scheme.small .node-label-bg { display: none; }
+
+/* ── Излом (`.pin`) ──────────────────────────────────────────────────────
+ * Точка ломаной: видна при выборе ребра и наведении на него, при переносе —
+ * залита акцентом (ТЗ Т5). Невидимая точка не пропадает из дерева: она
+ * остаётся целью нажатия, иначе на касании её было бы не поймать. */
+.pin {
+  fill: var(--surface-raised);
+  stroke: var(--on-surface);
+  stroke-width: 1.5;
+  opacity: 0;
+  cursor: crosshair;
+  transition: opacity var(--motion), fill var(--motion);
+}
+.edge-group:hover .pin,
+.edge-group.selected .pin { opacity: 1; }
+.pin:hover { fill: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface-raised)); }
+.pin.dragging { fill: var(--accent); stroke: var(--accent); opacity: 1; }
+
+/* ── Крошки уровня (`.crumbs`) ───────────────────────────────────────────
+ * Строка над листом: путь входа. Последняя крошка — текущий лист и не
+ * ссылка: ссылка на себя ничего не делает и об этом не говорит.
+ * Разделитель НАРИСОВАН рамкой, а не набран символом `›`: покрытие шрифта
+ * решает за нас, и промах даёт системный глиф на чужой базовой линии. */
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-half);
+  min-height: var(--h-compact);
+  padding: var(--gap-quarter) var(--gap);
+  font-size: var(--text-sm);
+  background: var(--surface-sunken);
+  color: var(--on-surface-sunken);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.crumb {
+  height: var(--h-compact);
+  padding: 0 var(--gap-half);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--on-surface-sunken);
+  font-size: var(--text-sm);
+}
+.crumb:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface-sunken));
+}
+.crumb:active:not(:disabled) {
+  background: color-mix(in srgb, var(--on-surface) var(--state-press), var(--surface-sunken));
+}
+/* Текущий лист — не кнопка вовсе: он `<span>`, и его нечем нажать. */
+.crumb-current { font-weight: 700; padding: 0 var(--gap-half); }
+/* Разделитель: уголок из двух рамок, повёрнутый на 45°. */
+.crumb-sep {
+  flex: none;
+  width: var(--gap-half);
+  height: var(--gap-half);
+  border-top: 1.5px solid var(--on-surface-off);
+  border-right: 1.5px solid var(--on-surface-off);
+  transform: rotate(45deg);
+}
+
+/* Кнопка «наверх» стоит в строке крошек, а та ростом со служебной шапкой:
+ * квадрат в три рема распирал бы строку вдвое. На касании она вырастает вместе
+ * с остальными целями (блок «узкий экран и касание» ниже). */
+.crumbs .icon-btn {
+  width: var(--h-dense);
+  min-width: var(--h-dense);
+  height: var(--h-dense);
+  border-radius: var(--radius-sm);
+}
+
+/* ── Панель инструментов схемы (`.scheme-tools`) ─────────────────────────
+ * Кнопки-значки в обойме `.seg` в правом верхнем углу холста — обойма
+ * существующая, своих объявлений ей не заводится. Панель лежит НАД листом,
+ * поэтому у неё пара приподнятой поверхности: на сетке прозрачная обойма
+ * читалась бы вместе с точками. */
+.scheme-tools {
+  position: absolute;
+  top: var(--gap);
+  right: var(--gap);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--gap-half);
+  padding: var(--gap-quarter);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--on-surface-raised);
+  border: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+/* Кнопка панели — плотная ступень: панель стоит на рисунке, и ряд кнопок в
+ * три рема съел бы лист. Под `hover: none` она вырастает (ниже). */
+.scheme-tools .icon-btn {
+  width: var(--h-dense);
+  min-width: var(--h-dense);
+  height: var(--h-dense);
+  border-radius: var(--radius-sm);
+}
+.scheme-tools .seg > .icon-btn { border-radius: 0; }
+/* Показатель масштаба — текст, а не кнопка: его читают. Ширина постоянная,
+ * иначе `0.25×` и `1.00×` сдвигали бы соседние кнопки. */
+.zoom-value {
+  min-width: 5ch;
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--on-surface-soft);
+}
+
+/* ── Навигатор (`.nav-row`) ──────────────────────────────────────────────
+ * Панель слева поверх холста: дерево «модель → состояния». Ширина по
+ * содержимому и не шире трети области (ТЗ Т8) — иначе панель закрывает то,
+ * ради чего её открыли. */
+.scheme-nav {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  width: max-content;
+  max-width: 33%;
+  overflow: auto;
+  padding: var(--gap-half);
+  background: var(--surface-raised);
+  color: var(--on-surface-raised);
+  border-right: 1px solid var(--border);
+}
+.scheme-nav[hidden] { display: none; }
+
+.nav-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-half);
+  width: 100%;
+  height: var(--h-dense);
+  padding: 0 var(--gap-half);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--on-surface-raised);
+  font-size: var(--text-control);
+  text-align: left;
+}
+/* Модель — полужирно, состояния — с отступом: уровень читается местом, а не
+ * значком (значков видам состояний книга не заводит). */
+.nav-row.nav-model { font-weight: 700; }
+.nav-row.nav-state { padding-left: var(--gap-lg); }
+.nav-row:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface-raised));
+}
+.nav-row:active:not(:disabled) {
+  background: color-mix(in srgb, var(--on-surface) var(--state-press), var(--surface-raised));
+}
+.nav-row[aria-selected="true"] { background: var(--surface-yes); color: var(--on-surface-yes); }
+/* Обозначение узла в строке — та же метка, что на круге: строка навигатора и
+ * узел на листе называются одинаково, иначе их приходится сличать глазами. */
+.nav-mark { flex: none; min-width: 3ch; color: var(--on-surface-soft); }
+.nav-kind { margin-left: auto; font-size: var(--text-xs); color: var(--on-surface-soft); }
+
+/* ── Полоса холста (`.scheme-stage`) ─────────────────────────────────────
+ * Холст и легенда делят одну полосу: по вертикали (легенда полкой снизу) либо
+ * по горизонтали (легенда колонкой справа). Третье место — плавающая панель
+ * — лежит ВНУТРИ холста, и полоса о ней не знает. */
+.scheme-stage { flex: 1; display: flex; min-height: 0; }
+.scheme-stage.legend-side-bottom { flex-direction: column; }
+.scheme-stage.legend-side-right { flex-direction: row; }
+
+/* ── Легенда обозначений (`.legend`) ─────────────────────────────────────
+ * ДВЕ таблицы в одной полосе: состояния (`S`+номер) и условия переходов
+ * (`K`+номер). Каждая — «знак → текст из модели → подпись автора → примета».
+ * Заведена по требованию заказчика 2026-09-08: круг одного размера и знак
+ * вместо цитаты имеют смысл только тогда, когда расшифровка читается рядом.
+ * Текст из модели — только чтение (модель правится текстом), подпись автора
+ * — поле ввода: она живёт в файле раскладки рядом с координатами. */
+.legend {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+  background: var(--surface-sunken);
+  color: var(--on-surface-sunken);
+}
+
+/* ── Место легенды: её двигают относительно холста ───────────────────────
+ * Требование заказчика 2026-09-08. Причина за требованием: расшифровку читают
+ * то рядом с рисунком, то не читают вовсе, а лист бывает и высоким, и
+ * широким — одно место на все модели право быть не может (то же основание,
+ * по которому доли областей и ширину оболочки задаёт читатель, § 5б, 5в).
+ *
+ * Мест три, и все они — ОДИН контрол с подменой места, а не три панели:
+ *   `.legend-bottom` — полка под холстом (умолчание, как было);
+ *   `.legend-right`  — колонка справа от холста;
+ *   `.legend-float`  — плавающая панель ПОВЕРХ холста, её тянут за заголовок.
+ * Выбор запоминается в раскладке рядом с формой углов (см. 10-marks-and-legend.md).
+ * Своих цветов и кеглей место не заводит: меняются только раскладка и место. */
+.legend-bottom { flex: 0 0 auto; max-height: 30dvh; border-top: 1px solid var(--border); }
+.legend-right { flex: 0 0 auto; width: max-content; max-width: 40%; border-left: 1px solid var(--border); }
+.legend-float {
+  position: absolute;
+  z-index: 4;
+  width: max-content;
+  max-width: 60%;
+  max-height: 60%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-sunken);
+  color: var(--on-surface-sunken);
+}
+
+/* Заголовок плавающей легенды — её ручка: панель тянут за него, а не за
+ * строки (тяга по строке отбирала бы выбор и правку подписи). Курсор
+ * говорит об этом до нажатия. */
+.legend-float .legend-title { cursor: grab; touch-action: none; }
+.legend-float.dragging { cursor: grabbing; }
+.legend-float.dragging .legend-title { cursor: grabbing; }
+/* Тяга — той же формулой отклика, что у ручки ширины и разделителя: своей
+ * заливки «взято» панель не заводит. */
+.legend-float .legend-title:hover {
+  background: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface-sunken));
+}
+/* Перенос идёт с той же привязкой к сетке `--gap`, что и перенос узла:
+ * панель, стоящая мимо сетки, читается как съехавшая. */
+/* Заголовок таблицы легенды: какую расшифровку читают ниже. */
+.legend-title {
+  padding: var(--gap-half) var(--gap);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--on-surface);
+}
+.legend-row {
+  display: grid;
+  /* Дорожки ПОСТОЯННЫЕ, а не `minmax`/`max-content`: сетка объявлена на
+   * строке, и гибкая дорожка резолвится по содержимому КАЖДОЙ строки — шапка
+   * перестаёт стоять над своим столбцом (замер: расхождение 10–20 px уже на
+   * четырёх строках). Легенду читают по столбцам, значит столбец обязан быть
+   * один на всю таблицу. Меры — в знаках: текст меряется текстом. */
+  grid-template-columns: 5ch 20ch 24ch 12ch;
+  align-items: center;
+  gap: var(--gap-half);
+  min-height: var(--h-dense);
+  padding: var(--gap-quarter) var(--gap);
+  font-size: var(--text-sm);
+}
+/* У таблицы условий свои доли: цитата условия длиннее имени состояния, а
+ * примета короче (пара «от → к» вместо слова о виде). Дорожки постоянные по
+ * той же причине. */
+.legend-conds .legend-row { grid-template-columns: 5ch 28ch 20ch 14ch; }
+/* Шапка легенды набрана ТЕМ ЖЕ кеглем, что строки, и отличается рамкой и
+ * чернилами: дорожки заданы в знаках (`ch`), а знак считается от кегля своей
+ * строки — свой кегль у шапки сдвигал заголовок «вид» на 20 px от его
+ * столбца (замер). Таблицу читают по столбцам, значит столбец обязан быть
+ * один на всю легенду. */
+.legend-head { font-size: var(--text-sm); color: var(--on-surface-sunken); border-bottom: 1px solid var(--border); }
+.legend-mark { color: var(--on-surface); }
+.legend-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Цитата условия в легенде: моноширинно и одной строкой с многоточием — мера
+ * та же, что была у подписи на листе (`--edge-label-max`); полная цитата
+ * приходит подсказкой, как и у знака на ребре. */
+.legend-cond {
+  font-family: var(--font-code);
+  max-width: var(--edge-label-max);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--on-surface);
+}
+/* Примета условия — пара «от → к»: одно и то же условие бывает на двух
+ * рёбрах, и знак без приметы не сказал бы, о каком переходе речь. */
+.legend-edge { font-size: var(--text-xs); color: var(--on-surface-soft); }
+/* Поле подписи — плотная ступень: строк в легенде столько же, сколько
+ * состояний, и ряд полей в три рема оставил бы от листа полосу. */
+.legend-alias { height: var(--h-dense); width: 100%; }
+.legend-kind { font-size: var(--text-xs); color: var(--on-surface-soft); }
+.legend-row[aria-selected="true"] { background: var(--surface-yes); color: var(--on-surface-yes); }
+
+/* ── Миникарта (`.minimap`) ──────────────────────────────────────────────
+ * Правый нижний угол: узлы прямоугольниками, видимая область — рамка
+ * акцента. Утопленная поверхность: миникарта не карточка на листе, а окно в
+ * него. */
+.minimap {
+  position: absolute;
+  right: var(--gap);
+  bottom: var(--gap);
+  z-index: 2;
+  width: var(--map-w);
+  height: var(--map-h);
+  background: var(--surface-sunken);
+  color: var(--on-surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: crosshair;
+}
+.map-node { fill: var(--on-surface-soft); stroke: none; }
+.map-view { fill: none; stroke: var(--accent); stroke-width: 1.5; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * 6. УЗКИЙ ЭКРАН И КАСАНИЕ
+ * Стоят ниже базовых правил намеренно: порядок каскада сильнее специфичности
+ * (§ 4 книги, и это уже стоило проекту дефекта).
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Там, где нет наведения, цель нажатия — ступень контрола (48 px перекрывает
+ * предел WCAG 2.5.5 в 44 px). Изломы не редактируются вовсе (ТЗ Т16): точка
+ * диаметром в отступ пальцем не берётся, а растить её значит рисовать не
+ * ломаную, а бусы. */
+@media (hover: none) {
+  .scheme-tools .icon-btn,
+  .crumbs .icon-btn {
+    width: var(--h-control);
+    min-width: var(--h-control);
+    height: var(--h-control);
+  }
+  .nav-row { height: var(--h-control); }
+  .legend-row { min-height: var(--h-control); }
+  .legend-alias { height: var(--h-control); }
+  .crumb { height: var(--h-control); }
+  .pin { display: none; }
+}
+
+/* До 900 px область одна на экран (полка режимов), и на холсте остаются две
+ * кнопки — «вписать» и навигатор: остальные шесть на 375 px закрыли бы
+ * четверть листа. Миникарты нет: окно в лист размером с ладонь показывает
+ * ладонь. */
+@media (max-width: 900px) {
+  .minimap { display: none; }
+  /* Панель сворачивается до двух кнопок — «вписать» и навигатор (ТЗ Т16):
+   * остальные восемь на 375 px закрыли бы четверть листа. Исчезающие части
+   * помечены в разметке классом `.tool-wide` и атрибутом `data-narrow="hide"`
+   * — правилу нужен признак в разметке, а не догадка по месту: «вписать»
+   * стоит в одной обойме с «отцентрировать», и по селектору обоймы пропало бы
+   * и то, что остаётся. */
+  .scheme-tools .tool-wide,
+  .scheme-tools [data-narrow="hide"] { display: none; }
+  .scheme-nav { max-width: 100%; }
+  /* Холст на узком экране обязан занимать экран, а не остаток от прочего:
+   * найдено прогоном на 375 px — легенда и служебные строки съедали холст до
+   * полосы в семьдесят пикселей. Поэтому у холста своя наименьшая высота, а
+   * легенда ужимается до трёх строк с прокруткой (её открывают, чтобы
+   * прочесть знак, а не чтобы читать всю). */
+  .scheme { min-height: 50dvh; }
+  .legend { max-height: calc(var(--h-control) * 3); }
+  /* Место легенды на узком экране одно — полка под холстом: колонка справа
+   * отняла бы у листа половину экрана, а плавающая панель на 375 px закрыла
+   * бы его целиком. Выбор автора не теряется — он просто не действует здесь,
+   * как доли областей (§ 5в книги). */
+  .legend-right, .legend-float {
+    position: static;
+    width: auto;
+    max-width: none;
+    border: 0;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+  }
+}

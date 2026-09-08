@@ -31,6 +31,7 @@
 
 pub mod compile;
 pub mod editor;
+pub mod graph;
 pub mod highlight;
 pub mod reply;
 pub mod sim;
@@ -231,6 +232,12 @@ pub extern "C" fn takt_symbols(len: u32) -> u32 {
 #[unsafe(no_mangle)]
 pub extern "C" fn takt_completion(len: u32) -> u32 {
     call(len, |r: SourceRequest| editor::completion(&r.source))
+}
+
+/// Граф модели для схемы: листы, узлы, рёбра, ярусы.
+#[unsafe(no_mangle)]
+pub extern "C" fn takt_graph(len: u32) -> u32 {
+    call(len, |r: SourceRequest| graph::graph(&r.source))
 }
 
 /// Запрос открытия прогона.

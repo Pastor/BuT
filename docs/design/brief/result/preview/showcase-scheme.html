@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Образцы схемы — Takt</title>
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="../01-app.css.patch.css">
+<style>
+  body { display: block; height: auto; overflow: visible; }
+  .shelf { padding: var(--gap); display: flex; flex-direction: column; gap: var(--gap); }
+  .case { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .case > .pane-head { border-bottom: 1px solid var(--border); }
+  .case-body { padding: var(--gap); display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap; }
+  .swatch { display: flex; align-items: center; gap: var(--gap-half); }
+  .chip { display: inline-flex; align-items: center; justify-content: center;
+          width: var(--h-control); height: var(--h-control);
+          border-radius: var(--radius); border: 1px solid var(--border); }
+  /* Раскладка образцов схемы. Своих цветов и кеглей здесь нет (гейт D7):
+     только сетка вместилищ и подмена способа размещения — живая панель
+     считается от холста (`position: absolute`), а в витрине стоит на месте. */
+  .case-canvas { position: relative; padding: var(--gap); display: flex; justify-content: center; }
+  .case-canvas .scheme-tools, .case-canvas .minimap { position: absolute; }
+  .case-tools, .case-map { position: relative; min-height: var(--h-control); padding: var(--gap);
+                           display: flex; justify-content: flex-end; }
+  .case-tools .scheme-tools, .case-map .minimap { position: static; }
+  .grid { display: flex; flex-direction: column; gap: var(--gap); width: 100%; }
+  .grid-row { display: flex; align-items: flex-start; gap: var(--gap); flex-wrap: wrap; }
+  .grid-label { min-width: 16ch; padding-top: var(--gap); }
+  .grid-cell { display: flex; flex-direction: column; align-items: center; gap: var(--gap-quarter); max-width: 26ch; }
+  .grid-note { color: var(--on-surface-soft); text-align: center; }
+  .sheet-cell { border-radius: var(--radius-sm); }
+  /* Живая подсказка считается от окна (`position: fixed`) и уехала бы в угол;
+     в витрине она показана на месте — переопределён только способ размещения. */
+  .case-tip .tip { position: static; display: inline-block; }
+  /* Наведение и фокус статичной страницей не показываются: `:hover` и
+     `:focus-visible` наступают только под указателем. Образец повторяет ту же
+     формулу и то же кольцо, что живое правило, — своих значений не заводит. */
+  .demo-hover .node-body { fill: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface-raised)); }
+  .demo-focus .node-ring { stroke: var(--accent); stroke-width: 2; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <span class="brand">Takt</span>
+  <span class="muted">образцы вкладки «Схема» · фича 0539, задача 03 · BOOK.md § «Схема»</span>
+</header>
+<main class="shelf">
+  <section class="case" data-control="--pairs">
+    <div class="pane-head"><span>Реестр пар — восьмая строка: поле листа</span></div>
+    <div class="case-body">
+      <span class="swatch" data-pair="--surface/--on-surface"><span class="chip" style="background: var(--surface); color: var(--on-surface)">Аа</span>surface</span>
+      <span class="swatch" data-pair="--surface-raised/--on-surface-raised"><span class="chip" style="background: var(--surface-raised); color: var(--on-surface-raised)">Аа</span>raised</span>
+      <span class="swatch" data-pair="--surface-sunken/--on-surface-sunken"><span class="chip" style="background: var(--surface-sunken); color: var(--on-surface-sunken)">Аа</span>sunken</span>
+      <span class="swatch" data-pair="--surface-field/--on-surface-field"><span class="chip" style="background: var(--surface-field); color: var(--on-surface-field)">Аа</span>field</span>
+      <span class="swatch" data-pair="--surface-alarm/--on-surface-alarm"><span class="chip" style="background: var(--surface-alarm); color: var(--on-surface-alarm)">Аа</span>alarm</span>
+      <span class="swatch" data-pair="--surface-warn/--on-surface-warn"><span class="chip" style="background: var(--surface-warn); color: var(--on-surface-warn)">Аа</span>warn</span>
+      <span class="swatch" data-pair="--surface-yes/--on-surface-yes"><span class="chip" style="background: var(--surface-yes); color: var(--on-surface-yes)">Аа</span>выбранное</span>
+      <span class="swatch" data-pair="--surface-sheet/--on-surface-sheet"><span class="chip" style="background: var(--surface-sheet); color: var(--on-surface-sheet)">Аа</span>поле листа</span>
+    </div>
+  </section>
+
+  <section class="case" data-control=".sheet">
+    <div class="pane-head"><span>Холст и лист — модель Engine (examples/elevator.takt); сетка точками через три шага привязки</span></div>
+    <div class="case-canvas"><svg class="sheet " viewBox="0 0 480 500" width="480" height="500" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group" tabindex="0" role="button" aria-label="переход: ShouldMove"><path class="edge" d="M240 96L240 168" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="223 " y="123" width="34" height="17" rx="3"/><text class="edge-mark" x="240" y="136">K<tspan class="edge-num" dy="4">1</tspan></text></g><g class="edge-group" tabindex="0" role="button" aria-label="переход: Overloaded | AtTarget"><path class="edge" d="M216 192L96 192L96 72L216 72" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="79 " y="123" width="34" height="17" rx="3"/><text class="edge-mark" x="96" y="136">K<tspan class="edge-num" dy="4">2</tspan></text></g><g class="edge-group" tabindex="0" role="button" aria-label="переход: NeedUp"><path class="edge" d="M240 216L240 276L120 276L120 288" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="163 " y="267" width="34" height="17" rx="3"/><text class="edge-mark" x="180" y="280">K<tspan class="edge-num" dy="4">3</tspan></text><circle class="pin" cx="240" cy="276" r="4"/><circle class="pin" cx="120" cy="276" r="4"/></g><g class="edge-group" tabindex="0" role="button" aria-label="переход: NeedDown"><path class="edge" d="M240 216L240 276L360 276L360 288" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="283 " y="267" width="34" height="17" rx="3"/><text class="edge-mark" x="300" y="280">K<tspan class="edge-num" dy="4">4</tspan></text></g><g class="edge-group" tabindex="0" role="button" aria-label="переход: AtTarget"><path class="edge" d="M120 336L120 408L216 408L216 432L216 432" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="151 " y="399" width="34" height="17" rx="3"/><text class="edge-mark" x="168" y="412">K<tspan class="edge-num" dy="4">5</tspan></text></g><g class="edge-group" tabindex="0" role="button" aria-label="переход: AtTarget"><path class="edge" d="M360 336L360 408L264 408L264 432L264 432" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="295 " y="399" width="34" height="17" rx="3"/><text class="edge-mark" x="312" y="412">K<tspan class="edge-num" dy="4">6</tspan></text></g><g class="edge-group" tabindex="0" role="button" aria-label="переход"><path class="edge" d="M240 456L420 456L420 72L264 72" marker-end="url(#arrow-solid)"/></g><g class="node " tabindex="0" role="button" aria-label="S1 — Idle"><circle class="node-ring" cx="240" cy="72" r="28"/><circle class="node-body" cx="240" cy="72" r="24"/><path class="node-entry" d="M200 72h12"/><path class="node-entry" d="M208 68l4 4-4 4"/><text class="node-mark" x="240" y="77">S<tspan class="node-num" dy="4">1</tspan></text><rect class="node-label-bg" x="220" y="99" width="40" height="17" rx="3"/><text class="node-label" x="240" y="112">Idle</text></g><g class="node " tabindex="0" role="button" aria-label="S2 — DoorClosing"><circle class="node-ring" cx="240" cy="192" r="28"/><circle class="node-body" cx="240" cy="192" r="24"/><text class="node-mark" x="240" y="197">S<tspan class="node-num" dy="4">2</tspan></text><rect class="node-label-bg" x="192" y="219" width="96" height="17" rx="3"/><text class="node-label" x="240" y="232">DoorClosing</text></g><g class="node " tabindex="0" role="button" aria-label="S3 — MovingUp"><circle class="node-ring" cx="120" cy="312" r="28"/><circle class="node-body" cx="120" cy="312" r="24"/><text class="node-mark" x="120" y="317">S<tspan class="node-num" dy="4">3</tspan></text><rect class="node-label-bg" x="84" y="339" width="72" height="17" rx="3"/><text class="node-label" x="120" y="352">MovingUp</text></g><g class="node " tabindex="0" role="button" aria-label="S4 — MovingDown"><circle class="node-ring" cx="360" cy="312" r="28"/><circle class="node-body" cx="360" cy="312" r="24"/><text class="node-mark" x="360" y="317">S<tspan class="node-num" dy="4">4</tspan></text><rect class="node-label-bg" x="316" y="339" width="88" height="17" rx="3"/><text class="node-label" x="360" y="352">MovingDown</text></g><g class="node " tabindex="0" role="button" aria-label="S5 — DoorOpening"><circle class="node-ring" cx="240" cy="432" r="28"/><circle class="node-body" cx="240" cy="432" r="24"/><text class="node-mark" x="240" y="437">S<tspan class="node-num" dy="4">5</tspan></text><rect class="node-label-bg" x="192" y="459" width="96" height="17" rx="3"/><text class="node-label" x="240" y="472">DoorOpening</text></g></svg><div class="scheme-tools">
+  <span class="seg tool-wide">
+    <button class="icon-btn" type="button" aria-label="Уменьшить"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M7.5 10.5h6"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Увеличить"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M7.5 10.5h6M10.5 7.5v6"/></svg></button>
+  </span>
+  <span class="zoom-value tool-wide">1,00×</span>
+  <span class="seg">
+    <button class="icon-btn" type="button" aria-label="Вписать лист"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9V4h5"/><path d="M15 4h5v5"/><path d="M20 15v5h-5"/><path d="M9 20H4v-5"/><path d="M9.5 9.5h5v5h-5z"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Отцентрировать" data-narrow="hide"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Автораскладка" data-narrow="hide"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9.5 3.5h5v4h-5z"/><path d="M3.5 16.5h5v4h-5z"/><path d="M15.5 16.5h5v4h-5z"/><path d="M12 7.5v3M6 16.5V13h12v3.5"/></svg></button>
+  </span>
+  <span class="seg tool-wide">
+    <button class="icon-btn" type="button" aria-label="Углы прямые" aria-pressed="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 19V5h14"/><path d="M3.5 17.5h3v3h-3z"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Углы скруглённые" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 19v-7a6 6 0 0 1 6-6h8"/><path d="M3.5 17.5h3v3h-3z"/></svg></button>
+  </span>
+  <span class="seg tool-wide">
+    <button class="icon-btn" type="button" aria-label="Легенда полкой снизу" aria-pressed="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 3.5h17v10h-17z"/><path d="M3.5 16h17v4.5h-17z"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Легенда колонкой справа" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 3.5h11v17h-11z"/><path d="M17 3.5h3.5v17H17z"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Легенда поверх холста" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 3.5h17v17h-17z"/><path d="M8.5 8.5h9v6h-9z"/></svg></button>
+  </span>
+  <span class="seg tool-wide">
+    <button class="icon-btn" type="button" aria-label="Знак условия у начала" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 18h18"/><path d="M4.5 5.5h6v6h-6z"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Знак условия по центру" aria-pressed="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 18h18"/><path d="M9 5.5h6v6H9z"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Знак условия у конца" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 18h18"/><path d="M13.5 5.5h6v6h-6z"/></svg></button>
+  </span>
+  <span class="seg tool-wide">
+    <button class="icon-btn" type="button" aria-label="Добавить излом"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20v-8h8"/><circle cx="12" cy="12" r="2.5"/><path d="M16.5 6.5h5M19 4v5"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Убрать излом"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20v-8h8"/><circle cx="12" cy="12" r="2.5"/><path d="M16.5 6.5h5"/></svg></button>
+  </span>
+  <button class="icon-btn" type="button" aria-label="Навигатор и раскладка клавиш" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 4.5h17v15h-17z"/><path d="M9 4.5v15"/><path d="M12 9h6M12 12h6M12 15h4"/></svg></button>
+</div><svg class="minimap" viewBox="0 0 128 96" role="img" aria-label="Миникарта листа">
+  <rect class="map-node" x="52" y="10" width="14" height="8" rx="2"/>
+  <rect class="map-node" x="52" y="34" width="14" height="8" rx="2"/>
+  <rect class="map-node" x="22" y="58" width="14" height="8" rx="2"/>
+  <rect class="map-node" x="82" y="58" width="14" height="8" rx="2"/>
+  <rect class="map-node" x="52" y="80" width="14" height="8" rx="2"/>
+  <rect class="map-view" x="34" y="24" width="60" height="46" rx="2"/>
+</svg></div>
+  </section>
+
+  <section class="case" data-control=".node">
+    <div class="pane-head"><span>Узел-состояние — три вида круга × семь состояний плюс композиция; вид передан формой, а не цветом</span></div>
+    <div class="case-body"><div class="grid"><div class="grid-row"><span class="grid-label">обычное</span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node " tabindex="0" role="button" aria-label="S1 — Idle"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><path class="node-entry" d="M20 40h12"/><path class="node-entry" d="M28 36l4 4-4 4"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">1</tspan></text><rect class="node-label-bg" x="40" y="67" width="40" height="17" rx="3"/><text class="node-label" x="60" y="80">Idle</text></g></svg><span class="grid-note">стартовое</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node " tabindex="0" role="button" aria-label="S2 — MovingUp"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">2</tspan></text><rect class="node-label-bg" x="24" y="67" width="72" height="17" rx="3"/><text class="node-label" x="60" y="80">MovingUp</text></g></svg><span class="grid-note">обычное</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node " tabindex="0" role="button" aria-label="S3 — End"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><circle class="node-final" cx="60" cy="40" r="19"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">3</tspan></text><rect class="node-label-bg" x="44" y="67" width="32" height="17" rx="3"/><text class="node-label" x="60" y="80">End</text></g></svg><span class="grid-note">конечное</span></span></div><div class="grid-row"><span class="grid-label">наведение</span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node demo-hover" tabindex="0" role="button" aria-label="S4 — Idle"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><path class="node-entry" d="M20 40h12"/><path class="node-entry" d="M28 36l4 4-4 4"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">4</tspan></text><rect class="node-label-bg" x="40" y="67" width="40" height="17" rx="3"/><text class="node-label" x="60" y="80">Idle</text></g></svg><span class="grid-note">стартовое</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node demo-hover" tabindex="0" role="button" aria-label="S5 — MovingUp"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">5</tspan></text><rect class="node-label-bg" x="24" y="67" width="72" height="17" rx="3"/><text class="node-label" x="60" y="80">MovingUp</text></g></svg><span class="grid-note">обычное</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node demo-hover" tabindex="0" role="button" aria-label="S1 — End"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><circle class="node-final" cx="60" cy="40" r="19"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">1</tspan></text><rect class="node-label-bg" x="44" y="67" width="32" height="17" rx="3"/><text class="node-label" x="60" y="80">End</text></g></svg><span class="grid-note">конечное</span></span></div><div class="grid-row"><span class="grid-label">выбранное</span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node selected" tabindex="0" role="button" aria-label="S2 — Idle"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><path class="node-entry" d="M20 40h12"/><path class="node-entry" d="M28 36l4 4-4 4"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">2</tspan></text><rect class="node-label-bg" x="40" y="67" width="40" height="17" rx="3"/><text class="node-label" x="60" y="80">Idle</text></g></svg><span class="grid-note">стартовое</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node selected" tabindex="0" role="button" aria-label="S3 — MovingUp"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">3</tspan></text><rect class="node-label-bg" x="24" y="67" width="72" height="17" rx="3"/><text class="node-label" x="60" y="80">MovingUp</text></g></svg><span class="grid-note">обычное</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node selected" tabindex="0" role="button" aria-label="S4 — End"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><circle class="node-final" cx="60" cy="40" r="19"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">4</tspan></text><rect class="node-label-bg" x="44" y="67" width="32" height="17" rx="3"/><text class="node-label" x="60" y="80">End</text></g></svg><span class="grid-note">конечное</span></span></div><div class="grid-row"><span class="grid-label">в фокусе</span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node demo-focus" tabindex="0" role="button" aria-label="S5 — Idle"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><path class="node-entry" d="M20 40h12"/><path class="node-entry" d="M28 36l4 4-4 4"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">5</tspan></text><rect class="node-label-bg" x="40" y="67" width="40" height="17" rx="3"/><text class="node-label" x="60" y="80">Idle</text></g></svg><span class="grid-note">стартовое</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node demo-focus" tabindex="0" role="button" aria-label="S1 — MovingUp"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">1</tspan></text><rect class="node-label-bg" x="24" y="67" width="72" height="17" rx="3"/><text class="node-label" x="60" y="80">MovingUp</text></g></svg><span class="grid-note">обычное</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node demo-focus" tabindex="0" role="button" aria-label="S2 — End"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><circle class="node-final" cx="60" cy="40" r="19"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">2</tspan></text><rect class="node-label-bg" x="44" y="67" width="32" height="17" rx="3"/><text class="node-label" x="60" y="80">End</text></g></svg><span class="grid-note">конечное</span></span></div><div class="grid-row"><span class="grid-label">перетаскиваемое</span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node dragging" tabindex="0" role="button" aria-label="S3 — Idle"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><path class="node-entry" d="M20 40h12"/><path class="node-entry" d="M28 36l4 4-4 4"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">3</tspan></text><rect class="node-label-bg" x="40" y="67" width="40" height="17" rx="3"/><text class="node-label" x="60" y="80">Idle</text></g></svg><span class="grid-note">стартовое</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node dragging" tabindex="0" role="button" aria-label="S4 — MovingUp"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">4</tspan></text><rect class="node-label-bg" x="24" y="67" width="72" height="17" rx="3"/><text class="node-label" x="60" y="80">MovingUp</text></g></svg><span class="grid-note">обычное</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node dragging" tabindex="0" role="button" aria-label="S5 — End"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><circle class="node-final" cx="60" cy="40" r="19"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">5</tspan></text><rect class="node-label-bg" x="44" y="67" width="32" height="17" rx="3"/><text class="node-label" x="60" y="80">End</text></g></svg><span class="grid-note">конечное</span></span></div><div class="grid-row"><span class="grid-label">не размещён</span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node unplaced" tabindex="0" role="button" aria-label="S1 — Idle"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><path class="node-entry" d="M20 40h12"/><path class="node-entry" d="M28 36l4 4-4 4"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">1</tspan></text><rect class="node-label-bg" x="40" y="67" width="40" height="17" rx="3"/><text class="node-label" x="60" y="80">Idle</text></g></svg><span class="grid-note">стартовое</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node unplaced" tabindex="0" role="button" aria-label="S2 — MovingUp"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">2</tspan></text><rect class="node-label-bg" x="24" y="67" width="72" height="17" rx="3"/><text class="node-label" x="60" y="80">MovingUp</text></g></svg><span class="grid-note">обычное</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node unplaced" tabindex="0" role="button" aria-label="S3 — End"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><circle class="node-final" cx="60" cy="40" r="19"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">3</tspan></text><rect class="node-label-bg" x="44" y="67" width="32" height="17" rx="3"/><text class="node-label" x="60" y="80">End</text></g></svg><span class="grid-note">конечное</span></span></div><div class="grid-row"><span class="grid-label">в прогоне</span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node running" tabindex="0" role="button" aria-label="S4 — Idle"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><path class="node-entry" d="M20 40h12"/><path class="node-entry" d="M28 36l4 4-4 4"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">4</tspan></text><rect class="node-label-bg" x="40" y="67" width="40" height="17" rx="3"/><text class="node-label" x="60" y="80">Idle</text></g></svg><span class="grid-note">стартовое</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node running" tabindex="0" role="button" aria-label="S5 — MovingUp"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">5</tspan></text><rect class="node-label-bg" x="24" y="67" width="72" height="17" rx="3"/><text class="node-label" x="60" y="80">MovingUp</text></g></svg><span class="grid-note">обычное</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node running" tabindex="0" role="button" aria-label="S1 — End"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><circle class="node-final" cx="60" cy="40" r="19"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">1</tspan></text><rect class="node-label-bg" x="44" y="67" width="32" height="17" rx="3"/><text class="node-label" x="60" y="80">End</text></g></svg><span class="grid-note">конечное</span></span></div><div class="grid-row"><span class="grid-label">композиция</span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 184 190" width="184" height="190" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node " tabindex="0" role="button" aria-label="S1 — Middle, композиция">
+  <rect class="node-ring" x="12" y="8" width="152" height="152" rx="12" fill="none"/>
+  <rect class="node-comp" x="16" y="12" width="144" height="144"/>
+  <text class="node-mark" x="38" y="38">S<tspan class="node-num" dy="4">1</tspan></text>
+  <path class="mini-edge" d="M52 64v18"/><path class="mini-edge" d="M52 90v18"/><path class="mini-edge" d="M56 86h26v22"/><circle class="mini-node" cx="52" cy="60" r="4"/><circle class="mini-node" cx="52" cy="86" r="4"/><circle class="mini-node" cx="52" cy="112" r="4"/><circle class="mini-node" cx="86" cy="112" r="4"/>
+  <circle class="node-enter" cx="140" cy="136" r="14"/>
+  <path class="node-enter-mark" d="M134 136h10"/>
+  <path class="node-enter-mark" d="M136 132l4 4-4 4"/>
+  <rect class="node-label-bg" x="60" y="159" width="56" height="17" rx="3"/><text class="node-label" x="88" y="172">Middle</text>
+</g></svg><span class="grid-note">обычное</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 184 190" width="184" height="190" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node selected" tabindex="0" role="button" aria-label="S2 — Middle, композиция">
+  <rect class="node-ring" x="12" y="8" width="152" height="152" rx="12" fill="none"/>
+  <rect class="node-comp" x="16" y="12" width="144" height="144"/>
+  <text class="node-mark" x="38" y="38">S<tspan class="node-num" dy="4">2</tspan></text>
+  <path class="mini-edge" d="M52 64v18"/><path class="mini-edge" d="M52 90v18"/><path class="mini-edge" d="M56 86h26v22"/><circle class="mini-node" cx="52" cy="60" r="4"/><circle class="mini-node" cx="52" cy="86" r="4"/><circle class="mini-node" cx="52" cy="112" r="4"/><circle class="mini-node" cx="86" cy="112" r="4"/>
+  <circle class="node-enter" cx="140" cy="136" r="14"/>
+  <path class="node-enter-mark" d="M134 136h10"/>
+  <path class="node-enter-mark" d="M136 132l4 4-4 4"/>
+  <rect class="node-label-bg" x="60" y="159" width="56" height="17" rx="3"/><text class="node-label" x="88" y="172">Middle</text>
+</g></svg><span class="grid-note">выбранное</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 184 190" width="184" height="190" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node unplaced" tabindex="0" role="button" aria-label="S3 — Middle, композиция">
+  <rect class="node-ring" x="12" y="8" width="152" height="152" rx="12" fill="none"/>
+  <rect class="node-comp" x="16" y="12" width="144" height="144"/>
+  <text class="node-mark" x="38" y="38">S<tspan class="node-num" dy="4">3</tspan></text>
+  <path class="mini-edge" d="M52 64v18"/><path class="mini-edge" d="M52 90v18"/><path class="mini-edge" d="M56 86h26v22"/><circle class="mini-node" cx="52" cy="60" r="4"/><circle class="mini-node" cx="52" cy="86" r="4"/><circle class="mini-node" cx="52" cy="112" r="4"/><circle class="mini-node" cx="86" cy="112" r="4"/>
+  <circle class="node-enter" cx="140" cy="136" r="14"/>
+  <path class="node-enter-mark" d="M134 136h10"/>
+  <path class="node-enter-mark" d="M136 132l4 4-4 4"/>
+  <rect class="node-label-bg" x="60" y="159" width="56" height="17" rx="3"/><text class="node-label" x="88" y="172">Middle</text>
+</g></svg><span class="grid-note">не размещён</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 184 190" width="184" height="190" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node running" tabindex="0" role="button" aria-label="S4 — Middle, композиция">
+  <rect class="node-ring" x="12" y="8" width="152" height="152" rx="12" fill="none"/>
+  <rect class="node-comp" x="16" y="12" width="144" height="144"/>
+  <text class="node-mark" x="38" y="38">S<tspan class="node-num" dy="4">4</tspan></text>
+  <path class="mini-edge" d="M52 64v18"/><path class="mini-edge" d="M52 90v18"/><path class="mini-edge" d="M56 86h26v22"/><circle class="mini-node" cx="52" cy="60" r="4"/><circle class="mini-node" cx="52" cy="86" r="4"/><circle class="mini-node" cx="52" cy="112" r="4"/><circle class="mini-node" cx="86" cy="112" r="4"/>
+  <circle class="node-enter" cx="140" cy="136" r="14"/>
+  <path class="node-enter-mark" d="M134 136h10"/>
+  <path class="node-enter-mark" d="M136 132l4 4-4 4"/>
+  <rect class="node-label-bg" x="60" y="159" width="56" height="17" rx="3"/><text class="node-label" x="88" y="172">Middle</text>
+</g></svg><span class="grid-note">в прогоне</span></span></div></div></div>
+  </section>
+
+  <section class="case" data-control=".legend">
+    <div class="pane-head"><span>Легенда обозначений — две таблицы: состояния (S) и условия переходов (K); подпись автора правится</span></div>
+    <div class="case-body"><div class="legend" style="max-width: 44rem">
+  <div class="legend-states">
+    <div class="legend-title">Состояния листа Engine</div>
+    <div class="legend-row legend-head"><span>знак</span><span>имя в модели</span><span>подпись автора</span><span>вид</span></div>
+    <div class="legend-row"><span class="legend-mark">S1</span><span class="legend-name">Idle</span><input class="legend-alias" type="text" value="Ожидание" aria-label="Подпись состояния Idle"><span class="legend-kind">старт</span></div>
+    <div class="legend-row" aria-selected="true"><span class="legend-mark">S2</span><span class="legend-name">DoorClosing</span><input class="legend-alias" type="text" value="Закрытие двери" aria-label="Подпись состояния DoorClosing"><span class="legend-kind">состояние</span></div>
+    <div class="legend-row"><span class="legend-mark">S3</span><span class="legend-name">MovingUp</span><input class="legend-alias" type="text" value="" placeholder="имя из модели" aria-label="Подпись состояния MovingUp"><span class="legend-kind">состояние</span></div>
+    <div class="legend-row"><span class="legend-mark">S4</span><span class="legend-name">MovingDown</span><input class="legend-alias" type="text" value="Движение вниз" aria-label="Подпись состояния MovingDown"><span class="legend-kind">состояние</span></div>
+    <div class="legend-row"><span class="legend-mark">S5</span><span class="legend-name">DoorOpening</span><input class="legend-alias" type="text" value="Открытие двери" aria-label="Подпись состояния DoorOpening"><span class="legend-kind">состояние</span></div>
+  </div>
+  <div class="legend-conds">
+    <div class="legend-title">Условия переходов</div>
+    <div class="legend-row legend-head"><span>знак</span><span>условие в модели</span><span>подпись автора</span><span>переход</span></div>
+    <div class="legend-row"><span class="legend-mark">K1</span><span class="legend-cond">ShouldMove</span><input class="legend-alias" type="text" value="Есть вызов" aria-label="Подпись условия K1"><span class="legend-edge">S1 → S2</span></div>
+    <div class="legend-row"><span class="legend-mark">K2</span><span class="legend-cond">Overloaded | AtTarget</span><input class="legend-alias" type="text" value="Перегруз или прибыли" aria-label="Подпись условия K2"><span class="legend-edge">S2 → S1</span></div>
+    <div class="legend-row" aria-selected="true"><span class="legend-mark">K3</span><span class="legend-cond">!Overloaded &amp; NeedUp &amp; !DoorBlocked</span><input class="legend-alias" type="text" value="Нужен подъём" aria-label="Подпись условия K3"><span class="legend-edge">S2 → S3</span></div>
+    <div class="legend-row"><span class="legend-mark">K4</span><span class="legend-cond">!Overloaded &amp; NeedDown</span><input class="legend-alias" type="text" value="" placeholder="условие из модели" aria-label="Подпись условия K4"><span class="legend-edge">S2 → S4</span></div>
+    <div class="legend-row"><span class="legend-mark">K5</span><span class="legend-cond">AtTarget</span><input class="legend-alias" type="text" value="Прибыли на этаж" aria-label="Подпись условия K5"><span class="legend-edge">S3 → S5</span></div>
+    <div class="legend-row"><span class="legend-mark">K6</span><span class="legend-cond">AtTarget</span><input class="legend-alias" type="text" value="Прибыли на этаж" aria-label="Подпись условия K6"><span class="legend-edge">S4 → S5</span></div>
+  </div>
+</div></div>
+  </section>
+
+  <section class="case" data-control=".tip">
+    <div class="pane-head"><span>Подсказка на схеме — латиница из модели и кириллица автора</span></div>
+    <div class="case-body case-tip">
+      <span class="tip">S2 · DoorClosing · Закрытие двери</span>
+      <span class="tip">K3 · !Overloaded &amp; NeedUp &amp; !DoorBlocked · Нужен подъём</span>
+      <span class="tip">S3 · MovingUp<br>подписи автора нет — показано имя из модели</span>
+    </div>
+  </section>
+
+  <section class="case" data-control=".edge">
+    <div class="pane-head"><span>Ребро — обе формы углов, стрелки ref и next, петля, подпись</span></div>
+    <div class="case-body"><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 240 120" width="240" height="120" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group" tabindex="0" role="button" aria-label="переход: AtTarget"><path class="edge" d="M24 24L120 24L120 96L216 96" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="55 " y="15" width="34" height="17" rx="3"/><text class="edge-mark" x="72" y="28">K<tspan class="edge-num" dy="4">1</tspan></text></g></svg><span class="grid-note">прямые углы, условное (ref) — открытая птичка</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 240 120" width="240" height="120" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group" tabindex="0" role="button" aria-label="переход: AtTarget"><path class="edge" d="M24 24L115 24Q120 24 120 29L120 91Q120 96 125 96L216 96" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="55 " y="15" width="34" height="17" rx="3"/><text class="edge-mark" x="72" y="28">K<tspan class="edge-num" dy="4">1</tspan></text></g></svg><span class="grid-note">скруглённые углы (--radius-sm)</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 240 120" width="240" height="120" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group" tabindex="0" role="button" aria-label="переход"><path class="edge" d="M24 60L216 60" marker-end="url(#arrow-solid)"/></g></svg><span class="grid-note">безусловное (next) — залитый треугольник</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 240 120" width="240" height="120" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group selected" tabindex="0" role="button" aria-label="переход: AtTarget"><path class="edge selected" d="M24 24L120 24L120 96L216 96" marker-end="url(#arrow-open-sel)"/><rect class="edge-label-bg" x="55 " y="15" width="34" height="17" rx="3"/><text class="edge-mark" x="72" y="28">K<tspan class="edge-num" dy="4">1</tspan></text><circle class="pin" cx="120" cy="24" r="4"/><circle class="pin" cx="120" cy="96" r="4"/></g></svg><span class="grid-note">выбранное ребро с изломами</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 240 150" width="240" height="150" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node " tabindex="0" role="button" aria-label="S2 — Idle"><circle class="node-ring" cx="110" cy="92" r="28"/><circle class="node-body" cx="110" cy="92" r="24"/><text class="node-mark" x="110" y="97">S<tspan class="node-num" dy="4">2</tspan></text><rect class="node-label-bg" x="90" y="119" width="40" height="17" rx="3"/><text class="node-label" x="110" y="132">Idle</text></g><g class="edge-group" tabindex="0" role="button" aria-label="переход: Retry"><path class="edge edge-loop" d="M128 72L128 32L186 32L186 84L136 84" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="140 " y="23" width="34" height="17" rx="3"/><text class="edge-mark" x="157" y="36">K<tspan class="edge-num" dy="4">1</tspan></text></g></svg><span class="grid-note">самопереход — петля у правого верхнего угла</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 300 90" width="300" height="90" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group" tabindex="0" role="button" aria-label="переход: !Overloaded & NeedUp &…"><path class="edge" d="M24 48L276 48" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="133 " y="39" width="34" height="17" rx="3"/><text class="edge-mark" x="150" y="52">K<tspan class="edge-num" dy="4">1</tspan></text></g></svg><span class="grid-note">подпись усечена мерой 24 знака (полная — в .tip)</span></span></div>
+  </section>
+
+  <section class="case" data-control=".edge-cross">
+    <div class="pane-head"><span>Пересечение линий — огибание, а не крест: крест читался бы как слияние, то есть как переход, которого в модели нет</span></div>
+    <div class="case-body">
+<span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 300 140" width="300" height="140" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group"><path class="edge" d="M24 70L276 70" marker-end="url(#arrow-open)"/></g><g class="edge-group"><path class="edge" d="M150 16L150 66A4 4 0 0 1 150 74L150 120" marker-end="url(#arrow-open)"/></g></svg><span class="grid-note">пересечение: мостик радиусом в половину шага привязки на том ребре, что нарисовано позже</span></span>
+<span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 300 160" width="300" height="160" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group"><path class="edge" d="M60 40L60 100L126 100" marker-end="url(#arrow-open)"/></g><g class="edge-group"><path class="edge" d="M240 40L240 100L174 100" marker-end="url(#arrow-open)"/></g><g class="node"><circle class="node-body" cx="150" cy="100" r="24"/><text class="node-mark" x="150" y="105">S<tspan class="node-num" dy="4">4</tspan></text><rect class="node-label-bg" x="130" y="127" width="40" height="17" rx="3"/><text class="node-label" x="150" y="140">Done</text></g></svg><span class="grid-note">слияние: общая точка у входа в узел — мостика нет, и это отличие видно без подписей</span></span>
+<span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 300 140" width="300" height="140" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group"><path class="edge" d="M24 70L276 70" marker-end="url(#arrow-open)"/></g><g class="edge-group selected"><path class="edge selected" d="M150 16L150 66A4 4 0 0 1 150 74L150 120" marker-end="url(#arrow-open-sel)"/><circle class="pin" cx="150" cy="120" r="4" style="opacity:1"/></g></svg><span class="grid-note">то же пересечение на выбранном ребре: мостик плотнее вместе со штрихом</span></span>
+    </div>
+  </section>
+
+  <section class="case" data-control=".edge-mark">
+    <div class="pane-head"><span>Место знака условия относительно стрелки — три базовых и своё (знак тянут указателем)</span></div>
+    <div class="case-body">
+<span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 200 130" width="200" height="130" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group"><path class="edge" d="M24 30L150 30L150 104" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="43" y="19" width="34" height="17" rx="3"/><text class="edge-mark" x="60" y="32">K<tspan class="edge-num" dy="4">1</tspan></text></g></svg><span class="grid-note">начало (базовое)</span></span>
+<span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 200 130" width="200" height="130" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group"><path class="edge" d="M24 30L150 30L150 104" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="133" y="19" width="34" height="17" rx="3"/><text class="edge-mark" x="150" y="32">K<tspan class="edge-num" dy="4">1</tspan></text></g></svg><span class="grid-note">центр (умолчание)</span></span>
+<span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 200 130" width="200" height="130" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group"><path class="edge" d="M24 30L150 30L150 104" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="133" y="69" width="34" height="17" rx="3"/><text class="edge-mark" x="150" y="82">K<tspan class="edge-num" dy="4">1</tspan></text></g></svg><span class="grid-note">конец (базовое)</span></span>
+<span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 200 130" width="200" height="130" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group"><path class="edge" d="M24 30L150 30L150 104" marker-end="url(#arrow-open)"/><rect class="edge-label-bg" x="79" y="55" width="34" height="17" rx="3"/><text class="edge-mark" x="96" y="68">K<tspan class="edge-num" dy="4">1</tspan></text></g></svg><span class="grid-note">своё — знак перенесён</span></span>
+    </div>
+  </section>
+
+  <section class="case" data-control=".pin">
+    <div class="pane-head"><span>Излом — в покое, при выборе ребра и при переносе</span></div>
+    <div class="case-body"><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 200 100" width="200" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group" tabindex="0" role="button" aria-label="переход"><path class="edge" d="M24 24L104 24L104 76L176 76" marker-end="url(#arrow-open)"/></g></svg><span class="grid-note">ребро не выбрано — точек нет</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 200 100" width="200" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group selected" tabindex="0" role="button" aria-label="переход"><path class="edge selected" d="M24 24L104 24L104 76L176 76" marker-end="url(#arrow-open-sel)"/><circle class="pin" cx="104" cy="24" r="4"/><circle class="pin" cx="104" cy="76" r="4"/></g></svg><span class="grid-note">ребро выбрано — точки видны</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 200 100" width="200" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="edge-group selected" tabindex="0" role="button" aria-label="переход"><path class="edge selected" d="M24 24L104 24L104 76L176 76" marker-end="url(#arrow-open-sel)"/></g><circle class="pin dragging" cx="104" cy="24" r="4"/><circle class="pin" cx="104" cy="76" r="4"/></svg><span class="grid-note">точка в переносе — заливка акцентом</span></span></div>
+  </section>
+
+  <section class="case" data-control=".crumbs">
+    <div class="pane-head"><span>Крошки уровня — разделитель нарисован, последняя крошка не ссылка</span></div>
+    <nav class="crumbs" aria-label="Уровень схемы">
+  <button class="crumb" type="button">Корень</button><span class="crumb-sep" aria-hidden="true"></span>
+  <button class="crumb" type="button">Middle</button><span class="crumb-sep" aria-hidden="true"></span>
+  <span class="crumb crumb-current" aria-current="page">Engine</span>
+  <span class="spacer"></span>
+  <button class="icon-btn" type="button" aria-label="Наверх"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20V5"/><path d="M6 11l6-6 6 6"/></svg></button>
+</nav>
+  </section>
+
+  <section class="case" data-control=".scheme-tools">
+    <div class="pane-head"><span>Панель инструментов схемы — кнопки-значки в обойме, показатель масштаба</span></div>
+    <div class="case-body"><div class="case-tools"><div class="scheme-tools">
+  <span class="seg tool-wide">
+    <button class="icon-btn" type="button" aria-label="Уменьшить"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M7.5 10.5h6"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Увеличить"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M7.5 10.5h6M10.5 7.5v6"/></svg></button>
+  </span>
+  <span class="zoom-value tool-wide">1,00×</span>
+  <span class="seg">
+    <button class="icon-btn" type="button" aria-label="Вписать лист"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9V4h5"/><path d="M15 4h5v5"/><path d="M20 15v5h-5"/><path d="M9 20H4v-5"/><path d="M9.5 9.5h5v5h-5z"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Отцентрировать" data-narrow="hide"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Автораскладка" data-narrow="hide"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9.5 3.5h5v4h-5z"/><path d="M3.5 16.5h5v4h-5z"/><path d="M15.5 16.5h5v4h-5z"/><path d="M12 7.5v3M6 16.5V13h12v3.5"/></svg></button>
+  </span>
+  <span class="seg tool-wide">
+    <button class="icon-btn" type="button" aria-label="Углы прямые" aria-pressed="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 19V5h14"/><path d="M3.5 17.5h3v3h-3z"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Углы скруглённые" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 19v-7a6 6 0 0 1 6-6h8"/><path d="M3.5 17.5h3v3h-3z"/></svg></button>
+  </span>
+  <span class="seg tool-wide">
+    <button class="icon-btn" type="button" aria-label="Легенда полкой снизу" aria-pressed="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 3.5h17v10h-17z"/><path d="M3.5 16h17v4.5h-17z"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Легенда колонкой справа" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 3.5h11v17h-11z"/><path d="M17 3.5h3.5v17H17z"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Легенда поверх холста" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 3.5h17v17h-17z"/><path d="M8.5 8.5h9v6h-9z"/></svg></button>
+  </span>
+  <span class="seg tool-wide">
+    <button class="icon-btn" type="button" aria-label="Знак условия у начала" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 18h18"/><path d="M4.5 5.5h6v6h-6z"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Знак условия по центру" aria-pressed="true"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 18h18"/><path d="M9 5.5h6v6H9z"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Знак условия у конца" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 18h18"/><path d="M13.5 5.5h6v6h-6z"/></svg></button>
+  </span>
+  <span class="seg tool-wide">
+    <button class="icon-btn" type="button" aria-label="Добавить излом"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20v-8h8"/><circle cx="12" cy="12" r="2.5"/><path d="M16.5 6.5h5M19 4v5"/></svg></button>
+    <button class="icon-btn" type="button" aria-label="Убрать излом"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20v-8h8"/><circle cx="12" cy="12" r="2.5"/><path d="M16.5 6.5h5"/></svg></button>
+  </span>
+  <button class="icon-btn" type="button" aria-label="Навигатор и раскладка клавиш" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 4.5h17v15h-17z"/><path d="M9 4.5v15"/><path d="M12 9h6M12 12h6M12 15h4"/></svg></button>
+</div></div></div>
+  </section>
+
+  <section class="case" data-control=".nav-row">
+    <div class="pane-head"><span>Строка навигатора — модель полужирно, состояния с отступом, выбранная — пара «выбранное»</span></div>
+    <div class="case-body"><div class="scheme-nav" style="position: static; max-width: 22rem">
+  <button class="nav-row nav-model" type="button" aria-selected="false"><span class="nav-mark"></span>Engine<span class="nav-kind">модель</span></button>
+  <button class="nav-row nav-state" type="button" aria-selected="false"><span class="nav-mark">S1</span>Idle<span class="nav-kind">старт</span></button>
+  <button class="nav-row nav-state" type="button" aria-selected="true"><span class="nav-mark">S2</span>DoorClosing<span class="nav-kind">состояние</span></button>
+  <button class="nav-row nav-state" type="button" aria-selected="false"><span class="nav-mark">S3</span>MovingUp<span class="nav-kind">состояние</span></button>
+  <button class="nav-row nav-state" type="button" aria-selected="false"><span class="nav-mark">S5</span>DoorOpening<span class="nav-kind">состояние</span></button>
+  <button class="nav-row nav-model" type="button" aria-selected="false"><span class="nav-mark"></span>Middle<span class="nav-kind">композиция</span></button>
+</div></div>
+  </section>
+
+  <section class="case" data-control=".minimap">
+    <div class="pane-head"><span>Миникарта — узлы прямоугольниками, видимая область рамкой акцента</span></div>
+    <div class="case-body"><div class="case-map"><svg class="minimap" viewBox="0 0 128 96" role="img" aria-label="Миникарта листа">
+  <rect class="map-node" x="52" y="10" width="14" height="8" rx="2"/>
+  <rect class="map-node" x="52" y="34" width="14" height="8" rx="2"/>
+  <rect class="map-node" x="22" y="58" width="14" height="8" rx="2"/>
+  <rect class="map-node" x="82" y="58" width="14" height="8" rx="2"/>
+  <rect class="map-node" x="52" y="80" width="14" height="8" rx="2"/>
+  <rect class="map-view" x="34" y="24" width="60" height="46" rx="2"/>
+</svg></div></div>
+  </section>
+
+  <section class="case" data-control=".sheet-empty">
+    <div class="pane-head"><span>Пустой лист — модель не разбирается</span></div>
+    <div class="case-canvas"><svg class="sheet sheet-flat" viewBox="0 0 480 200" width="480" height="200" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs></svg><div class="sheet-empty">Схема появится, когда модель разберётся</div></div>
+  </section>
+
+  <section class="case" data-control=".notice">
+    <div class="pane-head"><span>Уведомление о расхождении раскладки с моделью</span></div>
+    <div class="notice conflict">Раскладка знает состояния, которых в модели нет: Cooling, Halt<button type="button">убрать</button></div>
+  </section>
+
+  <section class="case" data-control="--marks">
+    <div class="pane-head"><span>Варианты обозначения узла — на выбор заказчика</span></div>
+    <div class="case-body"><div class="grid-row"><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><text class="node-mark" x="60" y="45">S<tspan class="node-num" dy="4">2</tspan></text><rect class="node-label-bg" x="12" y="67" width="96" height="17" rx="3"/><text class="node-label" x="60" y="80">DoorClosing</text></g></svg><span class="grid-note">A: S + номер нижним индексом — предлагаемый</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><text class="node-mark" x="60" y="45">2</text><rect class="node-label-bg" x="12" y="67" width="96" height="17" rx="3"/><text class="node-label" x="60" y="80">DoorClosing</text></g></svg><span class="grid-note">B: только номер</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><text class="node-mark" x="60" y="45">S2</text><rect class="node-label-bg" x="12" y="67" width="96" height="17" rx="3"/><text class="node-label" x="60" y="80">DoorClosing</text></g></svg><span class="grid-note">C: S2 в строку</span></span><span class="grid-cell"><svg class="sheet sheet-cell" viewBox="0 0 120 100" width="120" height="100" role="img"><defs>
+  <marker id="arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid" d="M1 1L9 5L1 9z"/></marker>
+  <marker id="arrow-open-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-open-sel" d="M1 1L9 5L1 9"/></marker>
+  <marker id="arrow-solid-sel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="arrow-solid-sel" d="M1 1L9 5L1 9z"/></marker>
+</defs><g class="node"><circle class="node-ring" cx="60" cy="40" r="28"/><circle class="node-body" cx="60" cy="40" r="24"/><text class="node-mark" x="60" y="45">D<tspan class="node-num" dy="4">2</tspan></text><rect class="node-label-bg" x="12" y="67" width="96" height="17" rx="3"/><text class="node-label" x="60" y="80">DoorClosing</text></g></svg><span class="grid-note">D: буква имени + номер</span></span></div></div>
+  </section>
+
+  <section class="case" data-control="--icons">
+    <div class="pane-head"><span>Значки схемы — SVG 24×24, штрих 1,5, currentColor, без заливок и без title</span></div>
+    <div class="case-body">
+      <span class="grid-cell"><span class="chip"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M7.5 10.5h6"/></svg></span><span class="grid-note">zoomOut</span></span>
+      <span class="grid-cell"><span class="chip"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M7.5 10.5h6M10.5 7.5v6"/></svg></span><span class="grid-note">zoomIn</span></span>
+      <span class="grid-cell"><span class="chip"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 9V4h5"/><path d="M15 4h5v5"/><path d="M20 15v5h-5"/><path d="M9 20H4v-5"/><path d="M9.5 9.5h5v5h-5z"/></svg></span><span class="grid-note">fit</span></span>
+      <span class="grid-cell"><span class="chip"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></span><span class="grid-note">center</span></span>
+      <span class="grid-cell"><span class="chip"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9.5 3.5h5v4h-5z"/><path d="M3.5 16.5h5v4h-5z"/><path d="M15.5 16.5h5v4h-5z"/><path d="M12 7.5v3M6 16.5V13h12v3.5"/></svg></span><span class="grid-note">autolayout</span></span>
+      <span class="grid-cell"><span class="chip"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 19V5h14"/><path d="M3.5 17.5h3v3h-3z"/></svg></span><span class="grid-note">cornersSquare</span></span>
+      <span class="grid-cell"><span class="chip"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 19v-7a6 6 0 0 1 6-6h8"/><path d="M3.5 17.5h3v3h-3z"/></svg></span><span class="grid-note">cornersRound</span></span>
+      <span class="grid-cell"><span class="chip"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 4.5h17v15h-17z"/><path d="M9 4.5v15"/><path d="M12 9h6M12 12h6M12 15h4"/></svg></span><span class="grid-note">navigator</span></span>
+      <span class="grid-cell"><span class="chip"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 4.5h15v15h-15z"/><path d="M8 12h6"/><path d="M11 9l3 3-3 3"/></svg></span><span class="grid-note">enter</span></span>
+      <span class="grid-cell"><span class="chip"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20V5"/><path d="M6 11l6-6 6 6"/></svg></span><span class="grid-note">up</span></span>
+      <span class="grid-cell"><span class="chip"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20v-8h8"/><circle cx="12" cy="12" r="2.5"/><path d="M16.5 6.5h5M19 4v5"/></svg></span><span class="grid-note">pinAdd</span></span>
+      <span class="grid-cell"><span class="chip"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20v-8h8"/><circle cx="12" cy="12" r="2.5"/><path d="M16.5 6.5h5"/></svg></span><span class="grid-note">pinDrop</span></span>
+    </div>
+  </section>
+</main>
+</body>
+</html>

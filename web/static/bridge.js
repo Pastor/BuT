@@ -107,6 +107,11 @@ export class Bridge {
     return this.call("takt_completion", { source });
   }
 
+  /** Граф модели для схемы: листы, узлы, рёбра, ярусы - всё считает модуль. */
+  graph(source) {
+    return this.call("takt_graph", { source });
+  }
+
   simOpen(source, scenario, tickMs) {
     return this.call("takt_sim_open", { source, scenario, tick_ms: tickMs ?? 0 });
   }

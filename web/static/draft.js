@@ -56,6 +56,7 @@ export function load(storage) {
       scenario: parsed.scenario ?? "",
       target: parsed.target ?? "",
       args: parsed.args ?? "",
+      layout: parsed.layout ?? "",
     };
   } catch {
     // Испорченная запись - не повод падать: страница открывается с умолчаниями, как при
@@ -103,6 +104,8 @@ export function saveFile(storage, record) {
     // не имеет, и читается она как "выбора нет": там подставится пара проекта.
     target: record.target ?? "",
     args: record.args ?? "",
+    // Раскладка схемы - авторская работа того же рода, что текст модели.
+    layout: record.layout ?? "",
     savedAt: record.savedAt ?? Date.now(),
   };
   // Старшие уходят первыми: черновик, к которому не возвращались двадцать файлов назад,

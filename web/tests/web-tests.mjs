@@ -41,6 +41,9 @@ import * as project from "../static/project.js";
 import * as api from "../static/api.js";
 import { feed } from "../static/showcase.js";
 
+// Файл раскладки и граф модуля - своим набором.
+import "./layout-tests.mjs";
+
 const MODEL = `var level: u8 := 0;
 
 start Run {
@@ -57,6 +60,7 @@ test("ссылка: круговой рейс сохраняет всё сост
     scenario: '[{"in_ports": {"x": 1}}]',
     target: "sv",
     args: "--fsm=table model.takt",
+    layout: '{"format": 1}\n',
   };
   const restored = await decodeState("#" + (await encodeState(state)));
   assert.deepEqual(restored, state);
@@ -93,7 +97,7 @@ test("координаты: смещение и позиция взаимно о
 
 test("черновик: круговой рейс через хранилище", () => {
   const storage = memoryStorage();
-  const value = { source: MODEL, scenario: "[]", target: "rust", args: "--inline=auto" };
+  const value = { source: MODEL, scenario: "[]", target: "rust", args: "--inline=auto", layout: "" };
   assert.equal(draft.save(storage, value), null);
   assert.deepEqual(draft.load(storage), value);
   draft.clear(storage);
@@ -453,9 +457,9 @@ test("язык: порядок выбора — сохранённый, брау
  */
 const PAGE_SCRIPTS = [
   "account.js", "api.js", "app.js", "boot.js", "bridge.js", "build.js",
-  "draft.js", "editor.js", "i18n.js", "pick.js", "project.js", "sample.js",
-  "flags.js", "json.js", "md.js", "share.js", "shell.js", "showcase.js", "tip.js",
-  "worker.js",
+  "draft.js", "editor.js", "i18n.js", "layout.js", "legend.js", "pick.js",
+  "project.js", "sample.js", "scheme.js", "scheme-geometry.js", "flags.js", "json.js",
+  "md.js", "share.js", "shell.js", "showcase.js", "tip.js", "worker.js",
 ];
 
 /**

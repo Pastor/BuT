@@ -2,7 +2,8 @@
 //
 // # Форма
 //
-// `{v, src, scn, t, args}` - версия модуля, исходник, сценарий, цель, ключи сборки.
+// `{v, src, scn, t, args, lay}` - версия модуля, исходник, сценарий, цель, ключи
+// сборки, раскладка схемы (текст файла `.takt-ui`).
 // Кодирование: JSON -> `deflate-raw` -> base64url. Версия хранится затем, чтобы
 // публикация открывалась модулем своей версии: вывод целей меняется вместе
 // с компилятором, и старая ссылка обязана показывать то же, что показывала.
@@ -39,6 +40,7 @@ function compact(state) {
   if (state.scenario) out.scn = state.scenario;
   if (state.target) out.t = state.target;
   if (state.args) out.args = state.args;
+  if (state.layout) out.lay = state.layout;
   return out;
 }
 
@@ -50,6 +52,7 @@ function expand(parsed) {
     scenario: parsed.scn ?? "",
     target: parsed.t ?? "",
     args: parsed.args ?? "",
+    layout: parsed.lay ?? "",
   };
 }
 

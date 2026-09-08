@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Узкий экран 375 px — прототип холста</title>
+<style>
+  /* Только рамка предпросмотра: настоящее окно шириной 375 px даёт медиазапросы
+     страницы, поэтому прототип показан в кадре такой ширины. */
+  html, body { margin: 0; height: 100%; }
+  body { display: flex; gap: 16px; align-items: flex-start; padding: 16px;
+         font: 13px/1.4 ui-monospace, monospace; }
+  figure { margin: 0; }
+  iframe { width: 375px; height: 720px; border: 1px solid #999; }
+  figcaption { padding: 4px 0; }
+</style>
+</head>
+<body>
+<figure>
+  <iframe src="prototype.html" title="Холст «Схема» на 375 px"></iframe>
+  <figcaption>375 × 720 — панель в две кнопки, миникарты нет, изломы не правятся</figcaption>
+</figure>
+<figure>
+  <iframe src="showcase-scheme.html" title="Витрина на 375 px"></iframe>
+  <figcaption>витрина образцов на той же ширине (пункт 10 выходных требований)</figcaption>
+</figure>
+</body>
+</html>

@@ -14,6 +14,8 @@
 
 import * as api from "./api.js";
 import * as draft from "./draft.js";
+import * as layoutFile from "./layout.js";
+import { layoutName, modelName } from "./layout.js";
 import { feed } from "./showcase.js";
 import { t } from "./i18n.js";
 
@@ -171,7 +173,7 @@ export function editing() {
  * несохранённый выбор терялся бы при каждой перезагрузке, тогда как текст
  * переживал бы её.
  */
-export function keepDraft(source, scenario, target, args) {
+export function keepDraft(source, scenario, target, args, layout) {
   if (!editing()) return null;
   return draft.saveFile(localStorage, {
     project: state.project.id,
@@ -185,6 +187,9 @@ export function keepDraft(source, scenario, target, args) {
     scenarioFile: state.scenarioFile,
     target,
     args,
+    // Раскладка схемы - авторская работа того же рода, что текст: она переживает
+    // перезагрузку вместе с ним.
+    layout,
   });
 }
 
@@ -676,11 +681,26 @@ async function openFile(id, name) {
     host.showTrace();
     return;
   }
+  // Раскладка - не самостоятельный документ: щелчок по ней открывает парную модель со
+  // схемой, а не JSON текстом в редакторе.
+  if (kindOf(name) === "layout") {
+    const pair = modelName(name);
+    if (pair && state.project?.files?.some((file) => file.name === pair)) {
+      await openFile(id, pair);
+      host.showScheme();
+    }
+    return;
+  }
   try {
     const body = await api.file(id, name);
     state.file = name;
     state.revision = body.revision;
     const kept = draft.loadFile(localStorage, id, name);
+    // Раскладка схемы читается парой к модели: файла нет - лист пуст.
+    const layoutPair = layoutName(name);
+    const hasLayout = Boolean(layoutPair) && state.project?.files?.some((file) => file.name === layoutPair && file.kind === "layout");
+    state.layoutFile = hasLayout ? layoutPair : null;
+    state.layoutRead = hasLayout ? ((await api.file(id, layoutPair)).text ?? "") : "";
     if (kept && kept.source !== body.text) {
       state.conflict = {
         kind: "draft",
@@ -702,6 +722,8 @@ async function openFile(id, name) {
         kind: kindOf(name),
         target: kept.target || build().target,
         args: kept.args ?? build().args,
+        layout: kept.layout ?? state.layoutRead,
+        layoutFile: state.layoutFile,
       });
       // Черновик сценария берётся, только если он от того же файла: текст одного
       // сценария под именем другого - подмена, а не сохранность.
@@ -710,7 +732,14 @@ async function openFile(id, name) {
       }
     } else {
       hideConflict();
-      host.open({ source: body.text, file: name, kind: kindOf(name), ...build() });
+      host.open({
+        source: body.text,
+        file: name,
+        kind: kindOf(name),
+        layout: state.layoutRead,
+        layoutFile: state.layoutFile,
+        ...build(),
+      });
     }
     refresh();
   } catch (error) {
@@ -737,6 +766,24 @@ async function keepScenario(revision) {
   state.revision = written.revision;
   state.scenarioRead = text;
   return written.revision;
+}
+
+/**
+ * Записывает раскладку схемы парным файлом, если она изменилась.
+ *
+ * Пустая раскладка при отсутствующем файле не записывается: файла нет и не
+ * нужно. Записанный текст запоминается, чтобы следующая запись шла только по
+ * новым правкам.
+ */
+async function keepLayout() {
+  const pair = layoutName(state.file);
+  if (!pair) return;
+  const current = host.layout();
+  if (current === state.layoutRead) return;
+  if (!state.layoutFile && current === layoutFile.canonical(layoutFile.empty())) return;
+  await api.write(state.project.id, pair, current, null);
+  state.layoutFile = pair;
+  state.layoutRead = current;
 }
 
 /**
@@ -805,6 +852,13 @@ async function save() {
     // живёт в другой области экрана, и молча записанный чужой файл - это работа, о
     // которой автор не просил.
     const also = await keepScenario(written.revision);
+    // Раскладка схемы пишется своим файлом рядом с моделью - и только когда она
+    // изменилась: пустой файл ради пустой раскладки проекту не нужен.
+    try {
+      await keepLayout();
+    } catch (error) {
+      host.say(t("scheme.layoutNotSaved", { error: text(error) }), "warning");
+    }
     host.say(
       also
         ? t("account.savedWith", { revision: also, file: state.scenarioFile })

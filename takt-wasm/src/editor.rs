@@ -257,7 +257,8 @@ pub struct RangeJson {
 }
 
 impl RangeJson {
-    fn of(range: Range) -> Self {
+    /// Диапазон протокола LSP в форме страницы.
+    pub(crate) fn of(range: Range) -> Self {
         Self {
             start_line: range.start.line,
             start_character: range.start.character,

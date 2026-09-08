@@ -12,8 +12,7 @@ extern crate core;
 use crate::parser::ast;
 use diagnostics::Diagnostic;
 
-/// Внешняя карта адресов портов (`.ld`-подобный формат).
-pub mod address_map;
+pub mod address_map; // внешняя карта адресов портов (`.ld`-подобный формат)
 pub mod compile_cli; // подкоманда `compile`, вынесена из бинарника
 /// Модуль диагностических сообщений компилятора.
 pub mod diagnostics;
@@ -21,9 +20,9 @@ pub mod diagnostics;
 pub mod format;
 /// Модуль генерации кода (C и другие целевые платформы).
 pub mod generator;
-/// Вспомогательные функции LSP-сервера (только при флаге `lsp`).
+pub mod layout; // граф модели для схемы: листы, узлы, рёбра, ярусы
 #[cfg(feature = "lsp")]
-pub mod lsp;
+pub mod lsp; // вспомогательные функции LSP-сервера (только при флаге `lsp`)
 /// Модуль парсера: лексер, грамматика, АСД.
 pub mod parser;
 pub mod semantic; // семантический анализ и построение семантического дерева

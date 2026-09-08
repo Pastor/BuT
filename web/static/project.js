@@ -17,6 +17,8 @@
 // страница показывает его ответ. Заведи проверку здесь - и правило стало бы жить в двух
 // местах, разойдясь при первой же правке.
 
+import { layoutName } from "./layout.js";
+
 /**
  * Достаёт идентификатор проекта из пути; `null` - путь не наш.
  *
@@ -49,12 +51,15 @@ export function apiRoot(pathname) {
  * Возвращает состояние в той же форме, что и ссылка-снимок: страница не должна
  * знать, откуда пришёл исходник - иначе путей применения стало бы два.
  *
+ * Раскладка схемы - файл, парный активной модели по имени (`layoutName`): его нет -
+ * раскладка пуста, и схема ставит состояния сама.
+ *
  * @param {string} id идентификатор проекта
  * @param {string} root корень API
  * @param {typeof fetch} [get] способ сходить за данными (подменяется в тестах)
  * @returns {Promise<{name: string, owner: string, visibility: string,
  *   version: string, target: string, args: string, source: string,
- *   scenario: string}>}
+ *   scenario: string, layout: string, layoutFile: string|null}>}
  */
 export async function read(id, root, get = fetch) {
   const meta = await ask(get, `${root}api/projects/${encodeURIComponent(id)}`);
@@ -71,6 +76,10 @@ export async function read(id, root, get = fetch) {
     files.find((file) => file.kind === "scenario");
   const source = main ? await text(get, root, id, main.name) : "";
   const scenario = scenarioFile ? await text(get, root, id, scenarioFile.name) : "";
+  const pairName = main ? layoutName(main.name) : null;
+  const layoutFile =
+    files.find((file) => file.name === pairName && file.kind === "layout") ?? null;
+  const layout = layoutFile ? await text(get, root, id, layoutFile.name) : "";
   return {
     name: meta.name ?? "",
     owner: meta.owner ?? "",
@@ -84,6 +93,8 @@ export async function read(id, root, get = fetch) {
     args: meta.build_args ?? "",
     source,
     scenario,
+    layout,
+    layoutFile: layoutFile?.name ?? null,
   };
 }
 

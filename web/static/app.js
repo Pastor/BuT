@@ -19,6 +19,8 @@ import * as jsonSpans from "./json.js";
 import * as md from "./md.js";
 import * as flags from "./flags.js";
 import * as project from "./project.js";
+import * as layoutFile from "./layout.js";
+import { Scheme } from "./scheme.js";
 import * as api from "./api.js";
 import * as account from "./account.js";
 
@@ -69,6 +71,10 @@ const state = {
   kind: "takt",
   /** Имя открытого файла проекта; пусто - безымянный буфер. */
   file: "",
+  /** Холст схемы: граф от модуля, раскладка из файла рядом с моделью. */
+  scheme: null,
+  /** Имя файла раскладки, парного открытой модели; `null` - файла в проекте нет. */
+  layoutFile: null,
   /** Открытая панель правой области: "output", "trace" либо null. */
   panel: "output",
   /** Вкладка внутри панели генерации. */
@@ -139,6 +145,37 @@ export async function main() {
     saveDraft();
   });
   wire();
+  state.scheme = new Scheme(
+    {
+      scheme: dom.scheme,
+      sheet: dom.sheet,
+      map: dom.map,
+      stage: dom.stage,
+      legend: dom.legend,
+      crumbs: dom.crumbs,
+      crumbsUp: dom["scheme-up"],
+      nav: dom.nav,
+      tools: dom["scheme-tools"],
+      empty: dom["scheme-empty"],
+      notice: dom["scheme-notice"],
+      noticeText: dom["scheme-notice-text"],
+      noticeDrop: dom["scheme-drop"],
+      zoom: dom.zoom,
+    },
+    {
+      t,
+      // Щелчок по узлу ставит курсор на имя состояния: выбор синхронен с текстом.
+      onSelect: (node) => jump(node.nameRange.start_line, node.nameRange.start_character),
+      // Правка раскладки - такая же работа, как правка текста: черновик пишется по тем
+      // же правилам и с тем же вопросом при уходе.
+      onChange: () => {
+        state.dirty = true;
+        saveDraft();
+      },
+    },
+  );
+  // Курсор в объявлении состояния подсвечивает узел: обратная половина синхронизации.
+  document.addEventListener("selectionchange", syncCursor);
 
   // Учётная запись и проекты. Корень API берётся от пути страницы: за прокси она стоит
   // под префиксом, а на `/p/<id>` относительный адрес увёл бы запрос под неё саму.
@@ -160,6 +197,8 @@ export async function main() {
     // Черновик пишется немедленно перед уходом на площадку: отложенная запись до
     // перехода не доживёт.
     keep: () => saveDraft.now(),
+    // Раскладка схемы: текст файла `.takt-ui` для записи в проект и в черновик.
+    layout: () => state.scheme.text(),
     // Цель выгрузки - та, что открыта во вкладке вывода: архив "с генерацией" берёт
     // выбранную цель. Она же уходит в метаданные проекта при сохранении - вместе с
     // ключами.
@@ -178,6 +217,7 @@ export async function main() {
       if (name) setPick("scenariofile", name);
     },
     showTrace: () => selectPanel("trace"),
+    showScheme: () => selectPanel("scheme"),
     say,
   });
   // Возврат с площадки разбирается до восстановления состояния: во фрагменте там
@@ -218,6 +258,8 @@ async function openProject() {
       scenario: opened.scenario,
       target: opened.target,
       args: opened.args,
+      layout: opened.layout,
+      layoutFile: opened.layoutFile,
     };
   } catch (error) {
     // Отказ виден строкой, а не пустой страницей: удалённый или закрытый проект -
@@ -372,7 +414,9 @@ function cache() {
     "oauth", "pick", "picklogin", "pickok", "profile", "links", "newpass",
     "setpass", "download", "upload", "showcase", "finder", "query", "findbtn",
     "found", "more", "doc", "sourcetitle", "openfilename", "scenariopick",
-    "scenariofile",
+    "scenariofile", "showscheme", "scheme-notice", "scheme-notice-text", "scheme-drop",
+    "crumbs", "scheme-up", "stage", "scheme", "sheet", "nav", "scheme-tools", "map",
+    "scheme-empty", "legend", "zoom",
   ]) {
     dom[id] = document.getElementById(id);
   }
@@ -440,6 +484,7 @@ function wire() {
   // закрывает область - так автор освобождает экран под модель.
   dom.showgen.addEventListener("click", () => selectPanel(state.panel === "output" ? null : "output"));
   dom.showsim.addEventListener("click", () => selectPanel(state.panel === "trace" ? null : "trace"));
+  dom.showscheme.addEventListener("click", () => selectPanel(state.panel === "scheme" ? null : "scheme"));
   dom.stop.addEventListener("click", stop);
   dom.share.addEventListener("click", share);
   dom.tabs.addEventListener("click", (event) => {
@@ -495,13 +540,15 @@ const saveDraft = draft.debounce(() => {
   // Черновик открытого файла проекта ключуется проектом и файлом (`v2`), а безымянный
   // буфер остаётся под прежним ключом: им пользуется тот, кто не входил вовсе, и терять
   // его при появлении проектов незачем.
+  const layout = state.scheme ? state.scheme.text() : "";
   const problem = account.editing()
-    ? account.keepDraft(state.editor.value(), state.scenario, state.target, state.args)
+    ? account.keepDraft(state.editor.value(), state.scenario, state.target, state.args, layout)
     : draft.save(localStorage, {
         source: state.editor.value(),
         scenario: state.scenario,
         target: state.target,
         args: state.args,
+        layout,
       });
   if (problem) say(t(problem.key, problem.params), "warning");
 }, 400);
@@ -516,6 +563,14 @@ function applyState(restored) {
   // Род открытого файла (09n): пусто - модель, как было до появления пояснений.
   state.kind = restored.kind ?? "takt";
   state.file = restored.file ?? "";
+  // Раскладка схемы приходит вместе с моделью (файл проекта, черновик, ссылка); не
+  // пришла - лист пуст, и состояния встанут по ярусам.
+  state.layoutFile = restored.layoutFile ?? null;
+  if (state.scheme) {
+    const read = layoutFile.parse(restored.layout ?? "");
+    state.scheme.setLayout(read.layout);
+    if (read.problem) say(t(read.problem.key, read.problem.params), "warning");
+  }
   setPick("target", state.target);
   dom.args.value = state.args;
   drawFlags();
@@ -706,7 +761,30 @@ function refresh() {
   state.editor.highlight(tokens, diagnostics.diagnostics ?? []);
   showDiagnostics(diagnostics.diagnostics ?? []);
   compile();
+  drawScheme();
 }
+
+/**
+ * Перестраивает схему по тексту, когда её панель открыта.
+ *
+ * Закрытая схема не считается: граф модели на каждую правку текста - работа, и
+ * печатать её в невидимую область незачем (то же правило, что у вывода цели).
+ */
+function drawScheme() {
+  if (state.panel !== "scheme" || !state.bridge || !state.scheme) return;
+  if (state.kind === "markdown") {
+    state.scheme.setGraph(null);
+    return;
+  }
+  state.scheme.setGraph(state.bridge.graph(state.editor.value()));
+}
+
+/** Курсор в объявлении состояния подсвечивает его узел на схеме. */
+const syncCursor = draft.debounce(() => {
+  if (state.panel !== "scheme" || !state.scheme || !dom.editor.contains(document.activeElement)) return;
+  const at = state.editor.position();
+  if (at) state.scheme.highlight(at.line, at.character);
+}, 120);
 
 /** Показывает разметку пояснения: узлы строит `md.js`, а не `innerHTML`. */
 function showDoc() {
@@ -793,6 +871,13 @@ function renameSymbol() {
     text = text.slice(0, from) + edit.new_text + text.slice(to);
   }
   state.editor.setValue(text);
+  // Ключи раскладки едут за именем: иначе каждое переименование роняло бы позицию.
+  const first = edits[0];
+  if (first) {
+    const from = positionToOffset(source, first.range.start_line, first.range.start_character);
+    const to = positionToOffset(source, first.range.end_line, first.range.end_character);
+    state.scheme.renamed(source.slice(from, to), newName);
+  }
   say(t("editor.renamed", { count: edits.length }), "ok");
 }
 
@@ -959,6 +1044,9 @@ async function share() {
     scenario: state.scenario,
     target: state.target,
     args: state.args,
+    // Раскладка едет в ссылке только непустой: пустая - умолчание, и место в ссылке ей
+    // не нужно.
+    layout: state.scheme.text() === layoutFile.canonical(layoutFile.empty()) ? "" : state.scheme.text(),
   });
   if (await build.outdated(state.build)) dom.update.hidden = false;
   const url = `${location.origin}${location.pathname}#${fragment}`;
@@ -1005,6 +1093,8 @@ function selectPanel(name) {
   state.panel = name;
   dom.showgen.setAttribute("aria-pressed", String(name === "output"));
   dom.showsim.setAttribute("aria-pressed", String(name === "trace"));
+  dom.showscheme.setAttribute("aria-pressed", String(name === "scheme"));
+  document.querySelector('[data-panel="scheme"]').hidden = name !== "scheme";
   // У пояснения место вывода занимает показ (09n): компилировать его нечем, а вкладка
   // "Ключи сборки" говорила бы о сборке, которой не будет.
   const doc = state.kind === "markdown";
@@ -1023,8 +1113,9 @@ function selectPanel(name) {
   document.body.dataset.panel = name ?? "none";
   shell.remember(localStorage, shell.UI_KEYS.panel, name ?? "");
   // Открыли генерацию - вывод обязан быть свежим: пока панель была закрыта, правки
-  // модели в него не печатались.
+  // модели в него не печатались. Схема - по тому же правилу.
   if (name === "output") compile();
+  if (name === "scheme") drawScheme();
 }
 
 /**

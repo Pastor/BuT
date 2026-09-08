@@ -125,6 +125,10 @@ pub enum Kind {
     Scenario,
     /// Пояснение к проекту на Markdown.
     Markdown,
+    /// Раскладка схемы модели (`.takt-ui`): координаты состояний и изломы рёбер,
+    /// парная модели по имени файла. Компилятор её не читает, сборка от неё не
+    /// зависит.
+    Layout,
 }
 
 impl Kind {
@@ -134,6 +138,7 @@ impl Kind {
             Self::Takt => "takt",
             Self::Scenario => "scenario",
             Self::Markdown => "markdown",
+            Self::Layout => "layout",
         }
     }
 }
@@ -149,7 +154,12 @@ pub fn check_file_name(name: &str) -> Result<Kind, ApiError> {
     if length > NAME_CHARS {
         return Err(exceeded("длина имени файла в символах", NAME_CHARS, length));
     }
-    let kind = if let Some(stem) = name.strip_suffix(".takt") {
+    // Раскладка проверяется раньше модели: `.takt-ui` кончается не на `.takt`, но
+    // порядок ветвей делает правило независимым от формы расширений.
+    let kind = if let Some(stem) = name.strip_suffix(".takt-ui") {
+        check_stem(stem)?;
+        Kind::Layout
+    } else if let Some(stem) = name.strip_suffix(".takt") {
         check_stem(stem)?;
         Kind::Takt
     } else if let Some(stem) = name.strip_suffix(".json") {
@@ -163,7 +173,7 @@ pub fn check_file_name(name: &str) -> Result<Kind, ApiError> {
         Kind::Markdown
     } else {
         return Err(ApiError::BadRequest(
-            "имя файла: расширение '.takt', '.json' либо '.md'".to_string(),
+            "имя файла: расширение '.takt', '.json', '.md' либо '.takt-ui'".to_string(),
         ));
     };
     Ok(kind)
@@ -219,6 +229,13 @@ mod tests {
             check_file_name("run-1.json").expect("годно"),
             Kind::Scenario
         );
+        assert_eq!(
+            check_file_name("heater.takt-ui").expect("годно"),
+            Kind::Layout,
+            "раскладка - свой род, а не модель"
+        );
+        assert!(check_file_name(".takt-ui").is_err(), "пустое имя раскладки");
+        assert!(check_file_name("модель.takt-ui").is_err(), "тот же алфавит");
         assert!(check_file_name("модель.takt").is_err(), "кириллица");
         assert!(check_file_name("два слова.takt").is_err(), "пробел");
         assert!(check_file_name("heater.c").is_err(), "чужое расширение");

@@ -589,12 +589,13 @@ async fn markdown_lives_in_the_project_and_the_active_scenario_is_named() {
     let token = owner(&stand, "ivan").await;
     let id = project(&stand, &token, "Термореле").await;
 
-    // Три рода файлов; вид выводится из расширения одним правилом.
+    // Четыре рода файлов; вид выводится из расширения одним правилом.
     for (name, text) in [
         ("model.takt", "start Run {}"),
         ("run.json", "[]"),
         ("readme.md", "# Термореле\n\nГреет, пока холодно."),
         ("cold.json", "[]"),
+        ("model.takt-ui", "{\"format\": 1, \"sheets\": {}}"),
     ] {
         let (status, body) = stand
             .put_as(
@@ -622,13 +623,14 @@ async fn markdown_lives_in_the_project_and_the_active_scenario_is_named() {
         vec![
             ("cold.json", "scenario"),
             ("model.takt", "takt"),
+            ("model.takt-ui", "layout"),
             ("readme.md", "markdown"),
             ("run.json", "scenario"),
         ],
         "роды выведены из расширения"
     );
 
-    // Чужое расширение отвергается, и причина называет все три.
+    // Чужое расширение отвергается, и причина называет все четыре.
     let (status, body) = stand
         .put_as(
             &format!("/api/projects/{id}/files/notes.txt"),
@@ -641,12 +643,20 @@ async fn markdown_lives_in_the_project_and_the_active_scenario_is_named() {
         body["message"].as_str().expect("текст").contains(".md"),
         "причина не называет род: {body}"
     );
+    assert!(
+        body["message"]
+            .as_str()
+            .expect("текст")
+            .contains(".takt-ui"),
+        "причина не называет раскладку: {body}"
+    );
 
     // Активный файл - только модель, активный сценарий - только сценарий: перепутанные
     // роли дали бы не отказ, а пустую страницу либо прогон по пояснению.
     for (field, value) in [
         ("main_file", "readme.md"),
         ("main_file", "run.json"),
+        ("main_file", "model.takt-ui"),
         ("main_scenario", "model.takt"),
         ("main_scenario", "readme.md"),
         ("main_scenario", "нет-такого.json"),

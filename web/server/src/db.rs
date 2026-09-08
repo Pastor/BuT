@@ -42,7 +42,7 @@ use tokio_postgres::NoTls;
 /// прежней версии **отвергается с обоими номерами**, и это видно словами, а не
 /// проявляется потерей данных на стенде. n подняла до `6`: у проекта появился активный
 /// Сценарий (их бывает несколько).
-pub const SCHEMA_VERSION: i64 = 6;
+pub const SCHEMA_VERSION: i64 = 7;
 
 /// Заводит пул соединений по строке подключения.
 ///
@@ -88,6 +88,14 @@ const MIGRATIONS: &[(i64, &str)] = &[
          ALTER TABLE project_files
              ADD CONSTRAINT project_files_kind_check
              CHECK (kind IN ('takt', 'scenario', 'markdown'));",
+    ),
+    // 6 -> 7: род файла `layout` - раскладка схемы модели.
+    (
+        6,
+        "ALTER TABLE project_files DROP CONSTRAINT IF EXISTS project_files_kind_check;
+         ALTER TABLE project_files
+             ADD CONSTRAINT project_files_kind_check
+             CHECK (kind IN ('takt', 'scenario', 'markdown', 'layout'));",
     ),
 ];
 
@@ -230,7 +238,7 @@ CREATE TABLE project_files (
     -- отказать здесь. Расхождение видно сразу — вставка падает, а не молча
     -- заводит файл, о роде которого страница ничего не знает. Сторож —
     -- проверка родов в `tests/projects.rs`.
-    kind       TEXT NOT NULL CHECK (kind IN ('takt', 'scenario', 'markdown')),
+    kind       TEXT NOT NULL CHECK (kind IN ('takt', 'scenario', 'markdown', 'layout')),
     size_bytes BIGINT NOT NULL,
     PRIMARY KEY (project_id, name)
 );
