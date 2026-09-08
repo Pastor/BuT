@@ -157,6 +157,36 @@ test("раскладка: запись канонична и переживае�
   assert.deepEqual(kept.sheets["/"].edges["A>B:0"], { label: { place: "end" } });
 });
 
+test("раскладка: настройки вида пишутся ступенями, а умолчания не пишутся", () => {
+  // Файл хранит решение автора ("линия жирная"), а не его оформление в пикселях:
+  // запиши сюда числа - и вид схемы окажется закреплён мимо оформления страницы.
+  const file = layout.empty();
+  layout.setView(file, "edgeWidth", "bold");
+  layout.setView(file, "gamma", "draft");
+  layout.setView(file, "snap", false);
+  const text = layout.canonical(file);
+  assert.match(text, /"edgeWidth": "bold"/);
+  assert.match(text, /"snap": false/);
+
+  // Умолчание записи не оставляет: канон несёт только отличия от вида по
+  // умолчанию, иначе дифф файла в git пух бы на каждую открытую схему.
+  layout.setView(file, "gamma", "color");
+  assert.doesNotMatch(layout.canonical(file), /gamma/);
+
+  // Ступень вне набора не принимается: чужое значение не вправе ни рисоваться,
+  // ни доживать до записи.
+  layout.setView(file, "edgeWidth", "чужая");
+  assert.equal(layout.viewOf(file).edgeWidth, "bold");
+  const back = layout.parse(layout.canonical(file)).layout;
+  assert.deepEqual(layout.viewOf(back), layout.viewOf(file), "круговой рейс потерял ступени");
+
+  // Умолчание места знака - тоже настройка, и центр в файле не хранится.
+  layout.labelPlaceAt(file, "start");
+  assert.match(layout.canonical(file), /"labelPlace": "start"/);
+  layout.labelPlaceAt(file, "center");
+  assert.doesNotMatch(layout.canonical(file), /labelPlace/);
+});
+
 test("раскладка: негодный файл - названная причина и пустая раскладка", () => {
   const empty = layout.canonical(layout.empty());
   for (const [text, key] of [

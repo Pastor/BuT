@@ -459,7 +459,8 @@ test("язык: порядок выбора — сохранённый, брау
 const PAGE_SCRIPTS = [
   "account.js", "alerts.js", "api.js", "app.js", "boot.js", "bridge.js", "build.js",
   "draft.js", "editor.js", "i18n.js", "layout.js", "legend.js", "pick.js",
-  "project.js", "sample.js", "scheme.js", "scheme-geometry.js", "flags.js", "json.js",
+  "project.js", "sample.js", "scheme.js", "scheme-geometry.js", "scheme-settings.js",
+  "flags.js", "json.js",
   "md.js", "share.js", "shell.js", "showcase.js", "tip.js", "worker.js",
 ];
 

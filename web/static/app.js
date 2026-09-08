@@ -165,6 +165,11 @@ export async function main() {
       noticeText: dom["scheme-notice-text"],
       noticeDrop: dom["scheme-drop"],
       zoom: dom.zoom,
+      settingsModal: dom["scheme-modal"],
+      settingsTabs: dom["scheme-tabs"],
+      settingsBody: dom["scheme-settings"],
+      settingsSave: dom["scheme-save"],
+      settingsCancel: dom["scheme-cancel"],
     },
     {
       t,
@@ -421,6 +426,7 @@ function cache() {
     "scenariofile", "showscheme", "scheme-notice", "scheme-notice-text", "scheme-drop",
     "crumbs", "scheme-up", "stage", "scheme", "sheet", "nav", "scheme-tools", "map",
     "scheme-empty", "legend", "zoom", "alerts",
+    "scheme-modal", "scheme-tabs", "scheme-settings", "scheme-save", "scheme-cancel",
   ]) {
     dom[id] = document.getElementById(id);
   }
@@ -482,6 +488,12 @@ function wire() {
   dom.format.addEventListener("click", format);
   dom.run.addEventListener("click", run);
   dom.step.addEventListener("click", stepOnce);
+  // Двойники кнопок прогона в строке уровня схемы: действие то же самое, своего
+  // обработчика у них нет - разъехаться двум обработчикам проще, чем кажется.
+  for (const button of document.querySelectorAll("[data-run]")) {
+    const act = { run, step: stepOnce, stop }[button.dataset.run];
+    if (act) button.addEventListener("click", act);
+  }
   dom.budget.addEventListener("change", () =>
     shell.remember(localStorage, shell.UI_KEYS.budget, dom.budget.value)
   );
@@ -1000,9 +1012,7 @@ function run() {
   selectPanel("trace");
   selectMode("trace");
   state.running = true;
-  dom.run.disabled = true;
-  dom.step.disabled = true;
-  dom.stop.disabled = false;
+  setRunButtons({ run: true, step: true, stop: false });
   worker().postMessage({ type: "run", ...session(), budget: Number(dom.budget.value) || 10_000 });
 }
 
@@ -1079,9 +1089,7 @@ function onWorker(message) {
 
 function finish() {
   state.running = false;
-  dom.run.disabled = false;
-  dom.step.disabled = false;
-  dom.stop.disabled = true;
+  setRunButtons({ run: false, step: false, stop: true });
 }
 
 /** Кладёт состояние редактора в адресную строку и в буфер обмена. */
@@ -1220,6 +1228,21 @@ function alarm(error) {
   const text = alerts.textOf(error);
   if (!text) return;
   alerts.show(dom.alerts, t("alerts.system", { error: text }), t("alerts.dismiss"));
+}
+
+/**
+ * Доступность кнопок прогона - разом у оригинала и его двойников.
+ *
+ * Двойники стоят в строке уровня схемы, и состояние у них общее: кнопка "стоп",
+ * доступная в одной области и погашенная в другой, говорит о прогоне неправду.
+ *
+ * @param {{run: boolean, step: boolean, stop: boolean}} off какие погасить
+ */
+function setRunButtons(off) {
+  for (const [name, disabled] of Object.entries(off)) {
+    dom[name].disabled = disabled;
+    for (const twin of document.querySelectorAll(`[data-run="${name}"]`)) twin.disabled = disabled;
+  }
 }
 
 function say(text, kind) {

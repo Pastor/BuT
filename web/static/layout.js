@@ -3,13 +3,22 @@
 // # Что хранится
 //
 // Раскладка - работа автора: где стоят карточки состояний, как изломаны рёбра, какими
-// словами подписаны знаки и где стоит легенда. Файл лежит рядом с моделью
-// (`elevator.takt` -> `elevator.takt-ui`) и хранит только это: размеров в нём нет, их
-// задаёт оформление, и хранить их значило бы зафиксировать вид.
+// словами подписаны знаки, где стоит легенда и каким начертанием нарисована схема.
+// Файл лежит рядом с моделью (`elevator.takt` -> `elevator.takt-ui`).
+//
+// Размеров в файле нет: настройки вида записаны ступенями ("тонкая", "обычная",
+// "жирная"), а числа за ступенями задаёт оформление. Запиши сюда пиксели - и вид
+// схемы окажется закреплён файлом автора мимо оформления страницы, а сменить шкалу
+// станет нельзя, не переписав чужие файлы.
 //
 // # Форма
 //
 //   { "format": 1, "corners": "square" | "round",
+//     "labelPlace": "start" | "center" | "end",
+//     "view": { "edgeWidth": "thin" | "normal" | "bold", "nodeWidth": тоже,
+//               "arrow": "open" | "solid" | "line", "font": "gost" | "mono",
+//               "fontSize": "sm" | "md" | "lg", "gamma": "draft" | "color" | "contrast",
+//               "grid": "off" | "small" | "medium" | "large", "snap": true | false },
 //     "legend": { "place": "bottom" | "right" | "float", "x": 24, "y": 72 },
 //     "sheets": { "<путь листа>": {
 //         "nodes": { "<имя>": { "x": 0, "y": 0 } },
@@ -42,6 +51,31 @@ export const LEGEND_PLACES = ["bottom", "right", "float"];
 
 /** Места знака условия относительно стрелки; `own` - своё, с координатами. */
 export const LABEL_PLACES = ["start", "center", "end", "own"];
+
+/**
+ * Настройки вида: наборы ступеней и умолчания.
+ *
+ * Ступень, а не число: файл хранит решение автора ("линия тонкая"), а не его
+ * оформление в пикселях. Первое значение набора - умолчание, и в файл оно не
+ * пишется: канон несёт только отличия от вида по умолчанию.
+ */
+export const VIEW = {
+  edgeWidth: ["thin", "normal", "bold"],
+  nodeWidth: ["normal", "thin", "bold"],
+  arrow: ["open", "solid", "line"],
+  font: ["gost", "mono"],
+  fontSize: ["md", "sm", "lg"],
+  gamma: ["color", "draft", "contrast"],
+  grid: ["medium", "small", "large", "off"],
+  snap: [true, false],
+};
+
+/** Настройки вида по умолчанию. */
+export function defaultView() {
+  const out = {};
+  for (const [key, values] of Object.entries(VIEW)) out[key] = values[0];
+  return out;
+}
 
 /** Расширение файла раскладки. */
 export const EXTENSION = ".takt-ui";
@@ -243,6 +277,43 @@ export function nameEdge(layout, path, key, alias) {
 }
 
 /**
+ * Ставит настройку вида; значение вне набора и умолчание записи не оставляют.
+ *
+ * @param {object} layout раскладка (меняется на месте)
+ * @param {string} key имя настройки из `VIEW`
+ * @param {string|boolean} value ступень
+ */
+export function setView(layout, key, value) {
+  const values = VIEW[key];
+  if (!values || !values.includes(value)) return layout;
+  if (!isObject(layout.view)) layout.view = {};
+  if (value === values[0]) delete layout.view[key];
+  else layout.view[key] = value;
+  if (Object.keys(layout.view).length === 0) delete layout.view;
+  return layout;
+}
+
+/** Настройки вида раскладки, дополненные умолчаниями. */
+export function viewOf(layout) {
+  return { ...defaultView(), ...cleanView(layout?.view) };
+}
+
+/**
+ * Ставит умолчание места знака условия; центр - умолчание и не записывается.
+ *
+ * Место каждого ребра сильнее умолчания: автор мог отвести один знак от стрелки
+ * руками, и смена общего правила не вправе стирать эту работу.
+ */
+export function labelPlaceAt(layout, placeName) {
+  if (placeName === "center" || !LABEL_PLACES.includes(placeName) || placeName === "own") {
+    delete layout.labelPlace;
+    return layout;
+  }
+  layout.labelPlace = placeName;
+  return layout;
+}
+
+/**
  * Ставит место легенды; полка снизу - умолчание и не записывается.
  */
 export function legendAt(layout, placeName, x, y) {
@@ -352,6 +423,9 @@ export function rename(layout, path, from, to) {
 function normalize(raw) {
   const out = empty();
   if (CORNERS.includes(raw?.corners)) out.corners = raw.corners;
+  if (["start", "end"].includes(raw?.labelPlace)) out.labelPlace = raw.labelPlace;
+  const view = cleanView(raw?.view);
+  if (Object.keys(view).length > 0) out.view = view;
   const legend = cleanLegend(raw?.legend);
   if (legend) out.legend = legend;
   const sheets = isObject(raw?.sheets) ? raw.sheets : {};
@@ -386,6 +460,23 @@ function normalize(raw) {
     // Пустой лист - шум: записи о нём нет, как нет и файла у модели без раскладки.
     if (Object.keys(edges).length + Object.keys(names).length + Object.keys(nodes).length === 0) continue;
     out.sheets[path] = { edges, names, nodes };
+  }
+  return out;
+}
+
+/**
+ * Настройки вида: только известные ключи с известными ступенями, умолчания сняты.
+ *
+ * Незнакомая настройка отбрасывается молча, как и запись листа без узла: файл -
+ * подсказка, и чужая ступень не вправе ни рисоваться, ни доживать до записи.
+ */
+function cleanView(raw) {
+  const out = {};
+  if (!isObject(raw)) return out;
+  for (const key of Object.keys(VIEW).sort()) {
+    const values = VIEW[key];
+    const value = raw[key];
+    if (values.includes(value) && value !== values[0]) out[key] = value;
   }
   return out;
 }

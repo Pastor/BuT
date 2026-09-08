@@ -20,6 +20,7 @@
 import * as geo from "./scheme-geometry.js";
 import * as layoutFile from "./layout.js";
 import { paintLegend, paintNav, tipOf } from "./legend.js";
+import { Settings } from "./scheme-settings.js";
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -48,30 +49,45 @@ function markText(node, mark, numClass) {
   node.appendChild(num);
 }
 
-/** Усечение подписи мерой в знаках: длиннее - многоточие. */
-function cut(text, max) {
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
-}
+/**
+ * Наконечники: два вида (переход и продолжение) по два состояния - маркер не
+ * наследует чернила ссылающегося ребра.
+ *
+ * Форма задаётся настройкой вида: `open` - раскрытая стрелка, `solid` - залитый
+ * треугольник, `line` - узкий штрих. Форма и размер стоят рядом: узкий штрих
+ * длиннее раскрытой стрелки, иначе на тонкой линии он читается точкой.
+ */
+const ARROWS = {
+  open: { d: "M1 1L9 5L1 9", close: "", size: 7 },
+  solid: { d: "M1 1L9 5L1 9", close: "z", size: 7 },
+  line: { d: "M2 2L9 5L2 8", close: "", size: 9 },
+};
 
-/** Наконечники: два вида по два состояния - маркер не наследует чернила ребра. */
-function defs() {
+/** Шаг сетки ступенями: множитель к `geo.SNAP`; `off` - сетки нет. */
+const GRID_STEPS = { small: 2, medium: 3, large: 5, off: 0 };
+
+function defs(arrow = "open") {
+  const shape = ARROWS[arrow] ?? ARROWS.open;
   const out = mk("defs");
-  for (const [id, cls, close] of [
-    ["arrow-open", "arrow-open", ""],
-    ["arrow-solid", "arrow-solid", "z"],
-    ["arrow-open-sel", "arrow-open-sel", ""],
-    ["arrow-solid-sel", "arrow-solid-sel", "z"],
+  for (const [id, cls] of [
+    ["arrow-open", "arrow-open"],
+    ["arrow-solid", "arrow-solid"],
+    ["arrow-open-sel", "arrow-open-sel"],
+    ["arrow-solid-sel", "arrow-solid-sel"],
   ]) {
+    // Залитый наконечник у ребра `next` остаётся залитым при любой форме: вид
+    // ребра говорит о роде перехода, а настройка - о рисунке стрелки.
+    const close = id.startsWith("arrow-solid") ? "z" : shape.close;
     const marker = mk("marker", {
       id,
       viewBox: "0 0 10 10",
       refX: 9,
       refY: 5,
-      markerWidth: 7,
-      markerHeight: 7,
+      markerWidth: shape.size,
+      markerHeight: shape.size,
       orient: "auto-start-reverse",
     });
-    marker.appendChild(mk("path", { class: cls, d: `M1 1L9 5L1 9${close}` }));
+    marker.appendChild(mk("path", { class: cls, d: `${shape.d}${close}` }));
     out.appendChild(marker);
   }
   return out;
@@ -391,7 +407,7 @@ export class Scheme {
     const sheet = this.current();
     if (!sheet.editable) return;
     const before = this.text();
-    layoutFile.place(this.layout, sheet.path, name, geo.snap(x), geo.snap(y));
+    layoutFile.place(this.layout, sheet.path, name, this.snapped(x), this.snapped(y));
     this.commit(before);
   }
 
@@ -410,6 +426,53 @@ export class Scheme {
     const before = this.text();
     this.layout.corners = corners;
     this.commit(before);
+  }
+
+  // ── Настройки отрисовки ─────────────────────────────────────────────────
+
+  /**
+   * Открывает окно настроек.
+   *
+   * Снимок раскладки снимается здесь: правка идёт по живой раскладке (лист
+   * перерисовывается на каждый выбор), и "отменить" возвращает текст снимка
+   * целиком. Пошаговой отмены у окна нет намеренно: настройка - не работа над
+   * раскладкой, а её вид, и история отмены холста им не забивается.
+   */
+  openSettings() {
+    if (!this.settings) return;
+    this.settingsBefore = this.text();
+    this.settings.open();
+  }
+
+  /** Ступени вида, показанные окну: настройки и то, что живёт рядом с ними. */
+  settingValues() {
+    return {
+      ...layoutFile.viewOf(this.layout),
+      corners: this.layout.corners ?? "square",
+      labelPlace: this.labelPlace(),
+    };
+  }
+
+  /** Выбор ступени в окне: раскладка правится сразу, лист перерисовывается. */
+  pickSetting(key, value) {
+    if (key === "corners") this.layout.corners = value;
+    else if (key === "labelPlace") layoutFile.labelPlaceAt(this.layout, value);
+    else layoutFile.setView(this.layout, key, value);
+    this.draw();
+  }
+
+  /** Закрепление настроек: правка уходит вызывающему как всякая другая. */
+  saveSettings() {
+    this.commit(this.settingsBefore ?? this.text());
+    this.settingsBefore = null;
+  }
+
+  /** Отказ: раскладка возвращается к снимку, снятому при открытии окна. */
+  cancelSettings() {
+    if (this.settingsBefore === null || this.settingsBefore === undefined) return;
+    this.layout = layoutFile.parse(this.settingsBefore).layout;
+    this.settingsBefore = null;
+    this.draw();
   }
 
   /** Место легенды: часть раскладки, а не настройка браузера. */
@@ -443,11 +506,21 @@ export class Scheme {
   draw() {
     const { sheet: svg, scheme, empty } = this.dom;
     const sheet = this.current();
+    const view = layoutFile.viewOf(this.layout);
     empty.hidden = this.graph !== null;
     svg.setAttribute("viewBox", `${sheet.ox} ${sheet.oy} ${sheet.w} ${sheet.h}`);
     svg.setAttribute("width", sheet.w);
     svg.setAttribute("height", sheet.h);
-    svg.replaceChildren(defs());
+    svg.replaceChildren(defs(view.arrow));
+    // Ступени вида уходят на холст признаками, а числа за ними стоят в оформлении
+    // (`app.css`): толщина линии, кегль и гамма - решения книги контролов, а файл
+    // автора хранит выбор ступени, а не пиксели.
+    for (const [key, value] of Object.entries(view)) {
+      // Признак пишется через `dataset`, и имя ступени приезжает в разметку через
+      // дефис (`edgeWidth` -> `data-edge-width`): правила оформления написаны в
+      // этой же форме, и другая их не находит - нашлось прогоном страницы.
+      scheme.dataset[key] = String(value);
+    }
     // Вписать лист можно только в область ненулевого размера: пока панель скрыта,
     // просьба ждёт её появления (наблюдатель размера позовёт перерисовку).
     if (this.fitPending) {
@@ -476,21 +549,15 @@ export class Scheme {
     svg.style.transformOrigin = "0 0";
     svg.style.transform = `translate(${this.view.x}px, ${this.view.y}px) scale(${this.view.k})`;
     // Сетка холста едет с листом: шаг масштабируется, а при мелком масштабе удваивается,
-    // чтобы точки не сливались в заливку; начало сетки - начало листа.
-    let step = geo.SNAP * 3 * this.view.k;
-    while (step < geo.SNAP * 3 / 2) step *= 2;
+    // чтобы точки не сливались в заливку; начало сетки - начало листа. Шаг задан
+    // ступенью настроек; `off` снимает сетку вовсе - подложку гасит оформление.
+    const cells = GRID_STEPS[view.grid] ?? GRID_STEPS.medium;
+    let step = geo.SNAP * cells * this.view.k;
+    while (cells > 0 && step < geo.SNAP * cells / 2) step *= 2;
     scheme.style.backgroundSize = `${step}px ${step}px`;
     scheme.style.backgroundPosition = `${this.view.x - sheet.ox * this.view.k}px ${this.view.y - sheet.oy * this.view.k}px`;
     scheme.classList.toggle("small", this.view.k < 0.5);
     this.dom.zoom.textContent = this.t("scheme.zoomValue", { zoom: this.view.k.toFixed(2) });
-    for (const act of ["square", "round"]) {
-      this.dom.tools.querySelector(`[data-act="${act}"]`)?.setAttribute("aria-pressed", String((this.layout.corners ?? "square") === act));
-    }
-    const chosen = sheet.edges.find((e) => e.key === this.selectedEdge);
-    for (const placeName of ["start", "center", "end"]) {
-      const button = this.dom.tools.querySelector(`[data-act="mark-${placeName}"]`);
-      if (button) button.setAttribute("aria-pressed", String(Boolean(chosen?.cond) && (chosen.label?.place ?? "center") === placeName));
-    }
     this.drawCrumbs(sheet);
     this.drawMap(sheet);
     this.paintSide(sheet);
@@ -517,7 +584,9 @@ export class Scheme {
       }),
     );
     if (edge.cond) {
-      const [mx, my] = geo.markSpot(edge.label, pts);
+      // Умолчание места знака - настройка вида, своё место ребра сильнее: автор мог
+      // отвести один знак руками, и общее правило не вправе стирать эту работу.
+      const [mx, my] = geo.markSpot(edge.label ?? { place: this.labelPlace() }, pts);
       const text = backing(group, mx, my + 2, edge.mark, "edge-mark");
       markText(text, edge.mark, "edge-num");
       text.setAttribute("data-tip", tipOf(edge.mark, edge.cond, edge.alias));
@@ -570,11 +639,6 @@ export class Scheme {
         ? `${tipOf(node.mark, node.name, node.alias)} · ${this.t("scheme.unplaced")}`
         : tipOf(node.mark, node.name, node.alias),
     });
-    // Под узлом печатается только подпись автора. Имя состояния из модели туда не
-    // идёт: знак узла и его имя стоят рядом в легенде, а на листе имя повторяло бы
-    // её у каждого кружка - и на схеме, где имена длинные, читался бы столбик
-    // подписей, а не автомат. Само имя остаётся в подсказке узла.
-    const label = node.alias ? cut(node.alias, 12) : "";
     if (composition) {
       const h = geo.SIDE / 2;
       group.appendChild(mk("rect", { class: "node-ring", x: node.x - h - 4, y: node.y - h - 4, width: geo.SIDE + 8, height: geo.SIDE + 8, rx: 12 }));
@@ -594,7 +658,6 @@ export class Scheme {
         });
         group.appendChild(enter);
       }
-      if (label) backing(group, node.x, node.y + h + 14, label, "node-label");
     } else {
       group.appendChild(mk("circle", { class: "node-ring", cx: node.x, cy: node.y, r: geo.R + 4 }));
       group.appendChild(mk("circle", { class: "node-body", cx: node.x, cy: node.y, r: geo.R }));
@@ -606,7 +669,6 @@ export class Scheme {
       const text = mk("text", { class: "node-mark", x: node.x, y: node.y + 5 });
       markText(text, node.mark, "node-num");
       group.appendChild(text);
-      if (label) backing(group, node.x, node.y + geo.R + 14, label, "node-label");
     }
     group.addEventListener("pointerdown", (event) => this.dragNode(event, sheet, node, group));
     group.addEventListener("dblclick", () => this.enter(node.name));
@@ -781,11 +843,6 @@ export class Scheme {
       path?.classList.toggle("selected", chosen);
       path?.setAttribute("marker-end", `url(#${group.dataset.kind === "next" ? "arrow-solid" : "arrow-open"}${chosen ? "-sel" : ""})`);
     }
-    const edge = sheet.edges.find((e) => e.key === this.selectedEdge);
-    for (const placeName of ["start", "center", "end"]) {
-      const button = this.dom.tools.querySelector(`[data-act="mark-${placeName}"]`);
-      if (button) button.setAttribute("aria-pressed", String(Boolean(edge?.cond) && (edge.label?.place ?? "center") === placeName));
-    }
     this.paintSide(sheet);
   }
 
@@ -845,7 +902,17 @@ export class Scheme {
     const box = this.dom.scheme.getBoundingClientRect();
     const sheet = this.current();
     const [x, y] = geo.toSheet(this.view, event.clientX - box.left, event.clientY - box.top);
-    return [geo.snap(x + sheet.ox), geo.snap(y + sheet.oy)];
+    return [this.snapped(x + sheet.ox), this.snapped(y + sheet.oy)];
+  }
+
+  /** Привязка к сетке по настройке вида: выключена - координата остаётся точной. */
+  snapped(value) {
+    return layoutFile.viewOf(this.layout).snap ? geo.snap(value) : Math.round(value);
+  }
+
+  /** Умолчание места знака условия из файла раскладки. */
+  labelPlace() {
+    return this.layout.labelPlace ?? "center";
   }
 
   // ── Тяга: узел, излом, знак, легенда ────────────────────────────────────
@@ -891,7 +958,7 @@ export class Scheme {
       onStart: () => group.classList.add("dragging"),
       onMove: (dx, dy) => {
         if (!sheet.editable) return;
-        last = [geo.snap(origin.x + dx), geo.snap(origin.y + dy)];
+        last = [this.snapped(origin.x + dx), this.snapped(origin.y + dy)];
         layoutFile.place(this.layout, sheet.path, node.name, last[0], last[1]);
         this.draw();
       },
@@ -917,7 +984,7 @@ export class Scheme {
     this.drag(event, {
       onStart: () => pin.classList.add("dragging"),
       onMove: (dx, dy) => {
-        const points = edge.points.map((p, i) => (i === index ? [geo.snap(origin[0] + dx), geo.snap(origin[1] + dy)] : p));
+        const points = edge.points.map((p, i) => (i === index ? [this.snapped(origin[0] + dx), this.snapped(origin[1] + dy)] : p));
         layoutFile.bend(this.layout, sheet.path, edge.key, points);
         this.selectedEdge = edge.key;
         this.selected = null;
@@ -936,11 +1003,11 @@ export class Scheme {
 
   dragMark(event, sheet, edge, pts, text) {
     const before = this.text();
-    const origin = geo.markSpot(edge.label, pts);
+    const origin = geo.markSpot(edge.label ?? { place: this.labelPlace() }, pts);
     this.drag(event, {
       onStart: () => text.classList.add("dragging"),
       onMove: (dx, dy) => {
-        layoutFile.labelAt(this.layout, sheet.path, edge.key, "own", geo.snap(origin[0] + dx), geo.snap(origin[1] + dy));
+        layoutFile.labelAt(this.layout, sheet.path, edge.key, "own", this.snapped(origin[0] + dx), this.snapped(origin[1] + dy));
         this.selectedEdge = edge.key;
         this.selected = null;
         this.draw();
@@ -1015,24 +1082,14 @@ export class Scheme {
       const to = sheet.nodes.find((n) => n.name === edge.to);
       const pts = geo.route(from, edge.loop ? from : to, edge.points);
       const [mx, my] = geo.longestMid(pts);
-      layoutFile.bend(this.layout, sheet.path, edge.key, [...edge.points, [geo.snap(mx), geo.snap(my)]]);
+      layoutFile.bend(this.layout, sheet.path, edge.key, [...edge.points, [this.snapped(mx), this.snapped(my)]]);
     } else {
       layoutFile.bend(this.layout, sheet.path, edge.key, edge.points.slice(0, -1));
     }
     this.commit(before);
   }
 
-  /** Место знака условия у выбранного ребра. */
-  markByButton(placeName) {
-    const sheet = this.current();
-    const edge = sheet.edges.find((e) => e.key === this.selectedEdge);
-    if (!edge?.cond || !sheet.editable) return;
-    const before = this.text();
-    layoutFile.labelAt(this.layout, sheet.path, edge.key, placeName);
-    this.commit(before);
-  }
-
-  // ── Панель, холст, клавиатура ───────────────────────────────────────────
+    // ── Панель, холст, клавиатура ───────────────────────────────────────────
 
   wire() {
     const { scheme, map, tools, nav, noticeDrop } = this.dom;
@@ -1091,9 +1148,8 @@ export class Scheme {
       else if (act === "fit") this.fit();
       else if (act === "center") this.center();
       else if (act === "auto") this.autoLayout();
-      else if (act === "square" || act === "round") this.setCorners(act);
       else if (act.startsWith("legend-")) this.placeLegend(act.slice(7));
-      else if (act.startsWith("mark-")) this.markByButton(act.slice(5));
+      else if (act === "settings") this.openSettings();
       else if (act === "pin-add") this.pinByButton(true);
       else if (act === "pin-drop") this.pinByButton(false);
       else if (act === "nav") {
@@ -1101,6 +1157,24 @@ export class Scheme {
         button.setAttribute("aria-pressed", String(!nav.hidden));
       }
     });
+    if (this.dom.settingsModal) {
+      this.settings = new Settings(
+        {
+          modal: this.dom.settingsModal,
+          tabs: this.dom.settingsTabs,
+          body: this.dom.settingsBody,
+          save: this.dom.settingsSave,
+          cancel: this.dom.settingsCancel,
+        },
+        {
+          t: this.t,
+          values: () => this.settingValues(),
+          onPick: (key, value) => this.pickSetting(key, value),
+          onSave: () => this.saveSettings(),
+          onCancel: () => this.cancelSettings(),
+        },
+      );
+    }
     this.dom.crumbsUp.addEventListener("click", () => this.back());
     noticeDrop.addEventListener("click", () => this.dropStale());
     scheme.addEventListener("keydown", (event) => this.onKey(event));

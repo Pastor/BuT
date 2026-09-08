@@ -35,6 +35,18 @@
   font-display: swap;
 }
 
+/* Чертёжный шрифт схемы: ГОСТ 2.304-81 тип А, наклонный. Наклон принадлежит
+ * самому начертанию, а не синтезируется браузером - синтетический наклон
+ * ГОСТ не воспроизводит (у чертёжного шрифта своя форма букв, а не сдвиг
+ * прямых). Файл лежит рядом со страницей: внешних CDN у неё нет. */
+@font-face {
+  font-family: "GOST Type A";
+  src: url("font/GOST2.304-81TypeA-Slanted.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ── Сырьё: светлая тема ────────────────────────────────────────────────── */
 :root {
   /* Палитра "чертёжная бумага" взята у образца как есть (принятое решение
@@ -221,11 +233,8 @@
   /* Миникарта: 8rem x 6rem, выражены ступенью контрола. */
   --map-w: calc(var(--node-d) * 8 / 3);
   --map-h: calc(var(--node-d) * 2);
-  /* Пределы подписей. Обозначение узла коротко всегда, а вот подпись под ним
-   * и цитата условия на ребре - авторский текст, и мера строки у них своя:
-   * 12 знаков под узлом (шире - подписи соседних узлов сходятся), 24 знака у
-   * условия. */
-  --node-label-max: 12ch;
+  /* Предел подписи. Обозначение узла коротко всегда, а цитата условия на ребре
+   * - авторский текст, и мера строки у неё своя: 24 знака. */
   --edge-label-max: 24ch;
 
   /* Ширина оболочки. Умолчание - всё окно: ничего не меняется, пока читатель
@@ -250,6 +259,12 @@
   --font-ui: var(--font-code);
   /* Наклона нет: он был требованием чертёжного шрифта, которого больше нет. */
   --ui-slant: normal;
+  /* Схема - чертёж, и набрана она чертёжным шрифтом:
+   * ГОСТ 2.304-81 тип А наклонный. Роль третья и своя: страница остаётся на
+   * Fira Code, а лист, знаки и легенда читаются как чертёж. Установленное в
+   * систему начертание идёт вторым именем, дальше - системный курсив: без
+   * загруженного файла схема обязана остаться читаемой. */
+  --font-scheme: "GOST Type A", "GOST 2.304-81", "ГОСТ 2.304-81", ui-sans-serif, sans-serif;
 }
 
 /* ── Сырьё: тёмная тема ─────────────────────────────────────────────────── */
@@ -805,6 +820,46 @@ body[data-panel="none"] .work { grid-template-columns: 1fr; }
 .modal-brands { display: flex; flex-direction: column; gap: var(--gap-half); }
 .modal-brands[hidden], .modal-body[hidden] { display: none; }
 
+/* ── Окно настроек схемы ─────────────────────────────────────────────────
+ * Полоса вкладок - та же `.tabs`, что у вывода: у страницы один вид вкладок.
+ * Ряд ступеней - кнопки-образцы: каждая рисует свою ступень тем же
+ * оформлением, что и лист, поэтому выбор виден до нажатия. */
+.settings-body { gap: var(--gap); max-height: 60dvh; overflow-y: auto; }
+.set-row { display: flex; flex-direction: column; gap: var(--gap-quarter); }
+.set-name { font-size: var(--text-sm); color: var(--on-surface-soft); }
+.set-steps { display: flex; gap: var(--gap-half); flex-wrap: wrap; }
+/* Кнопка-образец: рисунок сверху, подпись снизу. Подпись обязательна - рисунок
+ * говорит "как", а слово говорит "что", и на образцах "тонкая" и "обычная"
+ * разницу в полпикселя глазом ловят не все. */
+.set-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap-quarter);
+  padding: var(--gap-half);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  color: var(--on-surface-raised);
+}
+.set-step:hover {
+  background: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface-raised));
+}
+.set-step[aria-checked="true"] {
+  background: var(--surface-yes);
+  color: var(--on-surface-yes);
+  border-color: var(--accent);
+}
+.set-step-name { font-size: var(--text-xs); }
+/* Образец стоит на подложке листа: линия и узел обязаны читаться так же, как на
+ * холсте, а не на поверхности окна. */
+.set-sample {
+  display: block;
+  background: var(--surface-sheet);
+  border-radius: var(--radius-sm);
+}
+.set-dot { fill: var(--on-surface-off); }
+
 /* Кнопка площадки: значок и подпись. Значок приходит именем файла от сервера -
  * своего списка площадок у страницы нет. */
 .brand-btn { display: flex; align-items: center; gap: var(--gap-half); width: 100%; }
@@ -1355,6 +1410,48 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 
 .scheme.dragging { cursor: grabbing; }
 
+/* ── Ступени вида схемы (настройки отрисовки) ────────────────────────────
+ * Файл раскладки хранит выбор ступени ("линия тонкая"), а числа за ступенями
+ * стоят здесь: вид схемы остаётся решением оформления, и сменить шкалу можно,
+ * не переписывая чужие файлы. Признак ступени ставит холсту `scheme.js`. */
+.scheme {
+  --sheet-edge: 1;
+  --sheet-node: 1.5;
+  --text-sheet: var(--text-md);
+  --text-mark: var(--text-sm);
+}
+.scheme[data-edge-width="thin"] { --sheet-edge: 1; }
+.scheme[data-edge-width="normal"] { --sheet-edge: 1.5; }
+.scheme[data-edge-width="bold"] { --sheet-edge: 2.5; }
+.scheme[data-node-width="thin"] { --sheet-node: 1; }
+.scheme[data-node-width="normal"] { --sheet-node: 1.5; }
+.scheme[data-node-width="bold"] { --sheet-node: 2.5; }
+.scheme[data-font-size="sm"] { --text-sheet: var(--text-sm); --text-mark: var(--text-xs); }
+.scheme[data-font-size="md"] { --text-sheet: var(--text-md); --text-mark: var(--text-sm); }
+.scheme[data-font-size="lg"] { --text-sheet: var(--text-lg); --text-mark: var(--text-md); }
+/* Гарнитура листа: чертёжный ГОСТ либо тот же моноширинный, что у кода. */
+.scheme[data-font="mono"] { --font-scheme: var(--font-code); }
+/* Сетка снимается ступенью `off`: холст остаётся, точек на нём нет. */
+.scheme[data-grid="off"] { background-image: none; }
+/* Чертёжная гамма: лист без цвета - линии и знаки одними чернилами. Состояния
+ * прогона при этом различимы формой (штрих, вторая рамка), а не цветом:
+ * правило доступности книги (состояние никогда не только цветом). */
+.scheme[data-gamma="draft"] .edge,
+.scheme[data-gamma="draft"] .arrow-open,
+.scheme[data-gamma="draft"] .node-body,
+.scheme[data-gamma="draft"] .node-comp { stroke: var(--on-surface); }
+.scheme[data-gamma="draft"] .arrow-solid { fill: var(--on-surface); stroke: var(--on-surface); }
+.scheme[data-gamma="draft"] .node-body,
+.scheme[data-gamma="draft"] .node-comp { fill: var(--surface-sheet); }
+.scheme[data-gamma="draft"] .node-mark,
+.scheme[data-gamma="draft"] .edge-mark { fill: var(--on-surface); }
+/* Повышенный контраст: те же роли, но чернила и штрих взяты в полную силу. */
+.scheme[data-gamma="contrast"] .edge { stroke: var(--on-surface); }
+.scheme[data-gamma="contrast"] .edge-mark,
+.scheme[data-gamma="contrast"] .node-mark { fill: var(--on-surface); }
+.scheme[data-gamma="contrast"] .node-body { stroke: var(--on-surface); }
+
+
 .sheet {
   display: block;
   background: var(--surface-sheet);
@@ -1384,9 +1481,9 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 
 /* ── Узел-состояние (`.node`) ────────────────────────────────────────────
  * Круг постоянного диаметра с обозначением `S`+номер; имя состояния живёт в
- * легенде (имена бывают длинными, и карточка по
- * имени рвала бы раскладку). Под кругом - подпись: авторская либо имя из
- * модели, усечённая мерой `--node-label-max`.
+ * легенде (имена бывают длинными, и карточка по имени рвала бы раскладку).
+ * Под кругом не пишется ничего: расшифровку знака читают в легенде, и второе
+ * место для того же текста делало бы лист столбиком подписей.
  *
  * Штрих, чернила и заливка - свойства узла, а не рисунка: `fill` и `stroke`
  * ссылаются на `currentColor`, поэтому состояние меняет один токен.
@@ -1396,7 +1493,7 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 .node-body {
   fill: var(--surface-raised);
   stroke: var(--on-surface-soft);
-  stroke-width: 1.5;
+  stroke-width: var(--sheet-node);
   transition: fill var(--motion), stroke var(--motion);
 }
 
@@ -1405,26 +1502,14 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  * Code нет (см. `scripts/book-font-charset.txt`), и промах дал бы
  * системный глиф на чужой базовой линии. */
 .node-mark {
-  font-family: var(--font-code);
-  font-size: var(--text-md);
+  font-family: var(--font-scheme);
+  font-size: var(--text-sheet);
   fill: var(--on-surface-raised);
   text-anchor: middle;
   user-select: none;
   -webkit-user-select: none;
 }
 .node-num { font-size: var(--text-xs); }
-
-/* Подпись под узлом: служебная строка, чернила приглушённые, на подложке
- * цвета листа - иначе ребро, проходящее под узлом, перечёркивает её. */
-.node-label-bg { fill: var(--surface-sheet); stroke: none; }
-.node-label {
-  font-family: var(--font-code);
-  font-size: var(--text-xs);
-  fill: var(--on-surface-soft);
-  text-anchor: middle;
-  user-select: none;
-  -webkit-user-select: none;
-}
 
 /* Метка входа у стартового узла и вторая рамка у конечного - форма, а не цвет
  * (правило доступности книги раздел 7: состояние никогда не только цветом). */
@@ -1513,14 +1598,14 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 .edge {
   fill: none;
   stroke: var(--on-surface-soft);
-  stroke-width: 1.5;
+  stroke-width: var(--sheet-edge);
   transition: stroke var(--motion);
 }
 .edge.selected { stroke: var(--on-surface); stroke-width: 2; }
 /* Наконечники - два набора, покоя и выбора: наконечник маркера не наследует
  * чернила ссылающегося ребра (`context-stroke` знают не все браузеры), и
  * выбранное ребро с приглушённой стрелкой читалось бы как половина выбора. */
-.arrow-open { fill: none; stroke: var(--on-surface-soft); stroke-width: 1.5; }
+.arrow-open { fill: none; stroke: var(--on-surface-soft); stroke-width: var(--sheet-edge); }
 .arrow-solid { fill: var(--on-surface-soft); stroke: none; }
 .arrow-open-sel { fill: none; stroke: var(--on-surface); stroke-width: 1.5; }
 .arrow-solid-sel { fill: var(--on-surface); stroke: none; }
@@ -1538,8 +1623,8 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  * при наведении. Подложка обязательна: знак ложится на сетку и рёбра. */
 .edge-label-bg { fill: var(--surface); stroke: none; }
 .edge-mark {
-  font-family: var(--font-code);
-  font-size: var(--text-sm);
+  font-family: var(--font-scheme);
+  font-size: var(--text-mark);
   fill: var(--on-surface-soft);
   text-anchor: middle;
   /* Знак тянут указателем: место подписи относительно стрелки - авторское
@@ -1555,13 +1640,10 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 .edge-num { font-size: var(--text-xs); }
 .edge-group.selected .edge-mark { fill: var(--on-surface); }
 
-/* Ниже масштаба 0,5x знаки условий и подписи под узлами скрываются,
- * обозначения на кругах остаются: знак вне фигуры на таком
- * масштабе читается как сор на линии. */
+/* Ниже масштаба 0,5x знаки условий скрываются, обозначения на кругах
+ * остаются: знак вне фигуры на таком масштабе читается как сор на линии. */
 .scheme.small .edge-mark,
-.scheme.small .edge-label-bg,
-.scheme.small .node-label,
-.scheme.small .node-label-bg { display: none; }
+.scheme.small .edge-label-bg { display: none; }
 
 /* ── Излом (`.pin`) ──────────────────────────────────────────────────────
  * Точка ломаной: видна при выборе ребра и наведении на него, при переносе -
