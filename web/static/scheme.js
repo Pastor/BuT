@@ -570,7 +570,11 @@ export class Scheme {
         ? `${tipOf(node.mark, node.name, node.alias)} · ${this.t("scheme.unplaced")}`
         : tipOf(node.mark, node.name, node.alias),
     });
-    const label = cut(node.alias || node.name, 12);
+    // Под узлом печатается только подпись автора. Имя состояния из модели туда не
+    // идёт: знак узла и его имя стоят рядом в легенде, а на листе имя повторяло бы
+    // её у каждого кружка - и на схеме, где имена длинные, читался бы столбик
+    // подписей, а не автомат. Само имя остаётся в подсказке узла.
+    const label = node.alias ? cut(node.alias, 12) : "";
     if (composition) {
       const h = geo.SIDE / 2;
       group.appendChild(mk("rect", { class: "node-ring", x: node.x - h - 4, y: node.y - h - 4, width: geo.SIDE + 8, height: geo.SIDE + 8, rx: 12 }));
@@ -590,7 +594,7 @@ export class Scheme {
         });
         group.appendChild(enter);
       }
-      backing(group, node.x, node.y + h + 14, label, "node-label");
+      if (label) backing(group, node.x, node.y + h + 14, label, "node-label");
     } else {
       group.appendChild(mk("circle", { class: "node-ring", cx: node.x, cy: node.y, r: geo.R + 4 }));
       group.appendChild(mk("circle", { class: "node-body", cx: node.x, cy: node.y, r: geo.R }));
@@ -602,7 +606,7 @@ export class Scheme {
       const text = mk("text", { class: "node-mark", x: node.x, y: node.y + 5 });
       markText(text, node.mark, "node-num");
       group.appendChild(text);
-      backing(group, node.x, node.y + geo.R + 14, label, "node-label");
+      if (label) backing(group, node.x, node.y + geo.R + 14, label, "node-label");
     }
     group.addEventListener("pointerdown", (event) => this.dragNode(event, sheet, node, group));
     group.addEventListener("dblclick", () => this.enter(node.name));
