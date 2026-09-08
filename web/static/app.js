@@ -494,7 +494,7 @@ function wire() {
   // настройки. Кнопки узнаются признаком `data-run`, а не именами узлов:
   // список действий один, и заводить трёх имён на три кнопки незачем.
   for (const button of document.querySelectorAll("[data-run]")) {
-    const act = { run, step: stepOnce, stop }[button.dataset.run];
+    const act = { run, step: stepOnce, stop, reset: resetRun }[button.dataset.run];
     if (act) button.addEventListener("click", act);
   }
   dom.budget.addEventListener("change", () =>
@@ -1041,6 +1041,19 @@ function stop() {
   state.worker?.postMessage({ type: "stop" });
 }
 
+/**
+ * Сброс: автомат возвращается в начальное состояние.
+ *
+ * Трасса при этом остаётся: прежний прогон стоит рядом с новым,
+ * и их можно сличить. Подсветка со схемы снимается - активных состояний больше нет,
+ * а оставленная подсветка говорила бы о ходе, которого не идёт.
+ */
+function resetRun() {
+  if (state.running) return;
+  state.worker?.postMessage({ type: "reset" });
+  state.scheme?.setRunning([]);
+}
+
 function onWorker(message) {
   switch (message.type) {
     case "opened":
@@ -1050,6 +1063,11 @@ function onWorker(message) {
       state.scheme.setRunning([]);
       break;
     case "stepped":
+      break;
+    case "reset":
+      // Сессия закрыта: следующий пуск начнёт с первого такта. Трасса остаётся -
+      // её чистит открытие новой сессии, и до пуска сличать есть что.
+      say(t("trace.wasReset"), "ok");
       break;
     case "lines":
       for (const line of message.lines) dom.trace.appendChild(row(line, "trace"));

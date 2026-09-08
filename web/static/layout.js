@@ -18,9 +18,12 @@
 //               "edits": [ { "by": "кто", "at": "2026-09-08T18:20:00Z" } ] },
 //     "labelPlace": "start" | "center" | "end",
 //     "view": { "edgeWidth": "thin" | "normal" | "bold", "nodeWidth": тоже,
-//               "arrow": "open" | "solid" | "line", "font": "gost" | "mono",
-//               "fontSize": "sm" | "md" | "lg", "gamma": "draft" | "color" | "contrast",
-//               "grid": "off" | "small" | "medium" | "large", "snap": true | false },
+//               "arrow": "open" | "solid" | "line",
+//               "stateFont" | "condFont": "gost" | "mono",
+//               "stateSize" | "condSize": "xs" | "sm" | "md" | "lg",
+//               "gamma": "draft" | "color" | "contrast",
+//               "grid": "off" | "small" | "medium" | "large",
+//               "snap": true | false, "marks": true | false },
 //     "legend": { "place": "bottom" | "right" | "float", "x": 24, "y": 72 },
 //     "sheets": { "<путь листа>": {
 //         "nodes": { "<имя>": { "x": 0, "y": 0 } },
@@ -76,11 +79,17 @@ export const VIEW = {
   edgeWidth: ["thin", "normal", "bold"],
   nodeWidth: ["normal", "thin", "bold"],
   arrow: ["open", "solid", "line"],
-  font: ["gost", "mono"],
-  fontSize: ["md", "sm", "lg"],
+  // Подписи состояний и подписи условий набираются порознь: знак состояния читают
+  // на рисунке, а цитату условия - как код, и одна гарнитура на двоих означала бы,
+  // что выбор для одного навязан другому.
+  stateFont: ["gost", "mono"],
+  stateSize: ["md", "sm", "lg"],
+  condFont: ["gost", "mono"],
+  condSize: ["sm", "xs", "md"],
   gamma: ["color", "draft", "contrast"],
   grid: ["medium", "small", "large", "off"],
   snap: [true, false],
+  marks: [true, false],
 };
 
 /** Настройки вида по умолчанию. */

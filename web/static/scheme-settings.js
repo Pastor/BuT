@@ -7,7 +7,7 @@
 // в файле раскладки (`layout.js`), то есть едут с проектом: читатель видит схему
 // такой, какой её оформил автор.
 //
-// # Почему образцы, а не списки
+// # Образцы вместо списков
 //
 // Выбор здесь зрительный: "тонкая линия" словами не отличить от "обычной", пока
 // их не увидишь рядом. Каждая ступень нарисована на своей кнопке тем же
@@ -96,8 +96,8 @@ const TABS = [
     label: "scheme.settings.font",
     fields: [
       {
-        id: "font",
-        label: "scheme.settings.fontFamily",
+        id: "stateFont",
+        label: "scheme.settings.stateFont",
         sample: fontSample,
         steps: [
           { value: "gost", label: "scheme.font.gost" },
@@ -105,13 +105,32 @@ const TABS = [
         ],
       },
       {
-        id: "fontSize",
-        label: "scheme.settings.fontSize",
+        id: "stateSize",
+        label: "scheme.settings.stateSize",
         sample: sizeSample,
         steps: [
           { value: "sm", label: "scheme.size.sm" },
           { value: "md", label: "scheme.size.md" },
           { value: "lg", label: "scheme.size.lg" },
+        ],
+      },
+      {
+        id: "condFont",
+        label: "scheme.settings.condFont",
+        sample: condFontSample,
+        steps: [
+          { value: "gost", label: "scheme.font.gost" },
+          { value: "mono", label: "scheme.font.mono" },
+        ],
+      },
+      {
+        id: "condSize",
+        label: "scheme.settings.condSize",
+        sample: condSizeSample,
+        steps: [
+          { value: "xs", label: "scheme.size.xs" },
+          { value: "sm", label: "scheme.size.sm" },
+          { value: "md", label: "scheme.size.md" },
         ],
       },
     ],
@@ -154,6 +173,15 @@ const TABS = [
         steps: [
           { value: true, label: "scheme.snap.on" },
           { value: false, label: "scheme.snap.off" },
+        ],
+      },
+      {
+        id: "marks",
+        label: "scheme.settings.marks",
+        sample: marksSample,
+        steps: [
+          { value: true, label: "scheme.marks.on" },
+          { value: false, label: "scheme.marks.off" },
         ],
       },
     ],
@@ -351,6 +379,38 @@ function sizeSample(step) {
   const text = mk("text", { class: "node-mark", x: 28, y: 21, style: `font-size: ${size}px` });
   text.textContent = "S1";
   svg.appendChild(text);
+  return svg;
+}
+
+function condFontSample(step) {
+  const svg = box();
+  const text = mk("text", { class: "edge-mark", x: 28, y: 19, style: step === "mono" ? "font-family: var(--font-code)" : "" });
+  text.textContent = "K1";
+  svg.appendChild(text);
+  return svg;
+}
+
+function condSizeSample(step) {
+  const svg = box();
+  const size = { xs: 9, sm: 11, md: 13 }[step];
+  const text = mk("text", { class: "edge-mark", x: 28, y: 20, style: `font-size: ${size}px` });
+  text.textContent = "K1";
+  svg.appendChild(text);
+  return svg;
+}
+
+/** Легенда значков: три строки расшифровки либо их отсутствие. */
+function marksSample(step) {
+  const svg = box();
+  if (!step) {
+    svg.appendChild(mk("path", { class: "edge", d: "M14 14h28", "stroke-width": 1.5 }));
+    svg.appendChild(mk("circle", { class: "node-body", cx: 10, cy: 14, r: 4, "stroke-width": 1.5 }));
+    return svg;
+  }
+  for (let i = 0; i < 3; i += 1) {
+    svg.appendChild(mk("circle", { class: "node-body", cx: 10, cy: 6 + i * 8, r: 3, "stroke-width": 1.2 }));
+    svg.appendChild(mk("path", { class: "edge", d: `M18 ${6 + i * 8}h26`, "stroke-width": 1.2 }));
+  }
   return svg;
 }
 

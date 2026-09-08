@@ -2,7 +2,9 @@
 //
 // Легенда объясняет знаки текущего листа: две таблицы - состояния (`S`+номер) и
 // условия переходов (`K`+номер), каждая "знак -> текст из модели -> подпись автора ->
-// примета". Имя из модели только читается (модель правится текстом), подпись автора -
+// примета". Третьей идёт расшифровка обозначений - что значат цвет узла и вид
+// линии; её показ - настройка схемы: чертёж, знаки которого читатель уже знает,
+// расшифровки не требует. Имя из модели только читается (модель правится текстом), подпись автора -
 // поле ввода: она живёт в файле раскладки рядом с координатами.
 //
 // Навигатор ведёт по уровням модели: строка листа и строки состояний с обозначением
@@ -150,6 +152,63 @@ export function paintLegend(container, ctx) {
   }
   if (!any) conds.appendChild(row([span("legend-kind", t("scheme.legend.noConditions"))]));
   container.appendChild(conds);
+
+  // Расшифровка обозначений идёт последней и по настройке: она объясняет знаки, а
+  // не называет содержимое листа, и автору, который их знает, только занимает место.
+  if (ctx.marks) container.appendChild(marksBlock(t));
+}
+
+/**
+ * Расшифровка обозначений: цвета состояний и виды линий.
+ *
+ * Образцы рисуются теми же классами, что и лист: сменится оформление - сменится и
+ * образец. Второй набор правил рисования обещал бы не то, что нарисовано на схеме.
+ */
+function marksBlock(t) {
+  const NS = "http://www.w3.org/2000/svg";
+  const box = (draw) => {
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("class", "legend-sample");
+    svg.setAttribute("viewBox", "0 0 44 24");
+    svg.setAttribute("aria-hidden", "true");
+    draw(svg);
+    return svg;
+  };
+  const shape = (tag, attrs) => {
+    const node = document.createElementNS(NS, tag);
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+    return node;
+  };
+  const node = (cls) => box((svg) => {
+    svg.appendChild(shape("circle", { class: `node-ring ${cls}`, cx: 22, cy: 12, r: 8 }));
+    svg.appendChild(shape("circle", { class: cls, cx: 22, cy: 12, r: 8 }));
+  });
+  const line = (cls, marker) => box((svg) => {
+    const path = shape("path", { class: cls, d: "M4 12h30" });
+    if (marker) path.setAttribute("marker-end", `url(#${marker})`);
+    svg.appendChild(path);
+  });
+
+  const block = document.createElement("div");
+  block.className = "legend-marks";
+  const title = document.createElement("div");
+  title.className = "legend-title";
+  title.textContent = t("scheme.legend.marks");
+  block.appendChild(title);
+  const items = [
+    { draw: () => node("node-body"), label: "scheme.legend.markState" },
+    { draw: () => node("node-body running"), label: "scheme.legend.markRunning" },
+    { draw: () => node("node-body expected"), label: "scheme.legend.markExpected" },
+    { draw: () => node("node-body reachable"), label: "scheme.legend.markReachable" },
+    { draw: () => node("node-body unplaced"), label: "scheme.legend.markUnplaced" },
+    { draw: () => line("edge", "arrow-open"), label: "scheme.legend.markEdgeRef" },
+    { draw: () => line("edge", "arrow-solid"), label: "scheme.legend.markEdgeNext" },
+    { draw: () => line("edge edge-loop"), label: "scheme.legend.markEdgeLoop" },
+  ];
+  for (const item of items) {
+    block.appendChild(row([item.draw(), span("legend-name", t(item.label))], "legend-row legend-mark-row"));
+  }
+  return block;
 }
 
 /**

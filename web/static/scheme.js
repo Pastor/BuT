@@ -784,6 +784,7 @@ export class Scheme {
       selectedNode: this.selected,
       selectedEdge: this.selectedEdge,
       floating: this.dom.legend.classList.contains("legend-float"),
+      marks: layoutFile.viewOf(this.layout).marks,
       onNode: (name) => this.selectNode(name),
       onEdge: (key) => this.selectEdge(key),
       onEnter: (name) => this.enter(name),

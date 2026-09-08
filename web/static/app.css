@@ -1426,11 +1426,22 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 .scheme[data-node-width="thin"] { --sheet-node: 1; }
 .scheme[data-node-width="normal"] { --sheet-node: 1.5; }
 .scheme[data-node-width="bold"] { --sheet-node: 2.5; }
-.scheme[data-font-size="sm"] { --text-sheet: var(--text-sm); --text-mark: var(--text-xs); }
-.scheme[data-font-size="md"] { --text-sheet: var(--text-md); --text-mark: var(--text-sm); }
-.scheme[data-font-size="lg"] { --text-sheet: var(--text-lg); --text-mark: var(--text-md); }
-/* Гарнитура листа: чертёжный ГОСТ либо тот же моноширинный, что у кода. */
-.scheme[data-font="mono"] { --font-scheme: var(--font-code); }
+.scheme[data-state-size="xs"] { --text-sheet: var(--text-xs); }
+.scheme[data-state-size="sm"] { --text-sheet: var(--text-sm); }
+.scheme[data-state-size="md"] { --text-sheet: var(--text-md); }
+.scheme[data-state-size="lg"] { --text-sheet: var(--text-lg); }
+.scheme[data-cond-size="xs"] { --text-mark: var(--text-xs); }
+.scheme[data-cond-size="sm"] { --text-mark: var(--text-sm); }
+.scheme[data-cond-size="md"] { --text-mark: var(--text-md); }
+.scheme[data-cond-size="lg"] { --text-mark: var(--text-lg); }
+/* Гарнитуры листа: чертёжный ГОСТ либо тот же моноширинный, что у кода. Подпись
+ * состояния и цитата условия выбираются порознь - это два разных чтения. */
+.scheme {
+  --font-state: var(--font-scheme);
+  --font-cond: var(--font-scheme);
+}
+.scheme[data-state-font="mono"] { --font-state: var(--font-code); }
+.scheme[data-cond-font="mono"] { --font-cond: var(--font-code); }
 /* Сетка снимается ступенью `off`: холст остаётся, точек на нём нет. */
 .scheme[data-grid="off"] { background-image: none; }
 /* Чертёжная гамма: лист без цвета - линии и знаки одними чернилами. Состояния
@@ -1502,7 +1513,7 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  * Code нет (см. `scripts/book-font-charset.txt`), и промах дал бы
  * системный глиф на чужой базовой линии. */
 .node-mark {
-  font-family: var(--font-scheme);
+  font-family: var(--font-state);
   font-size: var(--text-sheet);
   fill: var(--on-surface-raised);
   text-anchor: middle;
@@ -1623,7 +1634,7 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  * при наведении. Подложка обязательна: знак ложится на сетку и рёбра. */
 .edge-label-bg { fill: var(--surface); stroke: none; }
 .edge-mark {
-  font-family: var(--font-scheme);
+  font-family: var(--font-cond);
   font-size: var(--text-mark);
   fill: var(--on-surface-soft);
   text-anchor: middle;
@@ -1945,6 +1956,16 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 /* Поле подписи - плотная ступень: строк в легенде столько же, сколько
  * состояний, и ряд полей в три рема оставил бы от листа полосу. */
 .legend-alias { height: var(--h-dense); width: 100%; }
+/* Расшифровка обозначений: образец слева, слово справа. Образец рисуется классами
+ * листа, поэтому подложка у него листовая - на поверхности легенды линия и узел
+ * читались бы иначе, чем на холсте. */
+.legend-mark-row { grid-template-columns: 3rem 1fr; align-items: center; }
+.legend-sample {
+  width: 44px;
+  height: var(--h-compact);
+  background: var(--surface-sheet);
+  border-radius: var(--radius-sm);
+}
 .legend-kind { font-size: var(--text-xs); color: var(--on-surface-soft); }
 .legend-row[aria-selected="true"] { background: var(--surface-yes); color: var(--on-surface-yes); }
 
