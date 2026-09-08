@@ -13,6 +13,8 @@
   "bar.split": "Ширина областей",
   "bar.width": "Ширина страницы",
   "bar.moduleFailed": "модуль не загружен: {error}",
+  "alerts.dismiss": "Убрать сообщение",
+  "alerts.system": "Сбой инструмента: {error}",
   "source.title": "Модель",
   "source.editor": "Исходный текст модели",
   "diagnostics.title": "Диагностики",

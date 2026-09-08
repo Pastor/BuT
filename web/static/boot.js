@@ -8,11 +8,15 @@
 
 import { main } from "./app.js";
 import { t } from "./i18n.js";
+import * as alerts from "./alerts.js";
 
 main().catch((error) => {
   // Отказ загрузки модуля обязан быть виден: пустая страница неотличима от работающей,
-  // пока автор не начнёт печатать.
-  document.getElementById("version").textContent = t("bar.moduleFailed", {
-    error: error?.message ?? error,
-  });
+  // пока автор не начнёт печатать. Сказано в двух местах: строка шапки называет
+  // состояние сборки, а полоса поверх страницы - сам сбой, и её видно, даже когда
+  // читатель смотрит не в шапку. Перехват `alerts.watch` сюда не достаёт: отказ
+  // запуска - отклонение этого обещания, а его ловит `catch`.
+  const text = t("bar.moduleFailed", { error: alerts.textOf(error) });
+  document.getElementById("version").textContent = text;
+  alerts.show(document.getElementById("alerts"), text, t("alerts.dismiss"));
 });

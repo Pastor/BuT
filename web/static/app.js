@@ -23,6 +23,7 @@ import * as layoutFile from "./layout.js";
 import { Scheme } from "./scheme.js";
 import * as api from "./api.js";
 import * as account from "./account.js";
+import * as alerts from "./alerts.js";
 
 /**
  * Адрес модуля, если описи сборки нет.
@@ -117,6 +118,9 @@ export async function main() {
   // Подсказки - свои, а не нативные: `title` в разметке нет вовсе.
   tip.attach(document);
   await useLanguage(i18n.pick(i18n.stored(localStorage), navigator.languages ?? []));
+  // Перехват сбоев ставится сразу за словарём: раньше о них некому было сказать
+  // словами, позже - первый же отказ ушёл бы в консоль, которую автор не открывал.
+  alerts.watch(window, alarm);
   fillLanguages();
   picks.lang = enhance(dom.lang);
 
@@ -416,7 +420,7 @@ function cache() {
     "found", "more", "doc", "sourcetitle", "openfilename", "scenariopick",
     "scenariofile", "showscheme", "scheme-notice", "scheme-notice-text", "scheme-drop",
     "crumbs", "scheme-up", "stage", "scheme", "sheet", "nav", "scheme-tools", "map",
-    "scheme-empty", "legend", "zoom",
+    "scheme-empty", "legend", "zoom", "alerts",
   ]) {
     dom[id] = document.getElementById(id);
   }
@@ -770,14 +774,18 @@ function refresh() {
  *
  * Закрытая схема не считается: граф модели на каждую правку текста - работа, и
  * печатать её в невидимую область незачем (то же правило, что у вывода цели).
+ *
+ * @param {boolean} opened панель только что открыли: после отрисовки лист
+ *   проверяется на видимость (`Scheme.ensureVisible`).
  */
-function drawScheme() {
+function drawScheme(opened = false) {
   if (state.panel !== "scheme" || !state.bridge || !state.scheme) return;
   if (state.kind === "markdown") {
     state.scheme.setGraph(null);
     return;
   }
   state.scheme.setGraph(state.bridge.graph(state.editor.value()));
+  if (opened) state.scheme.ensureVisible();
 }
 
 /** Курсор в объявлении состояния подсвечивает его узел на схеме. */
@@ -1168,9 +1176,10 @@ function selectPanel(name) {
   document.body.dataset.panel = name ?? "none";
   shell.remember(localStorage, shell.UI_KEYS.panel, name ?? "");
   // Открыли генерацию - вывод обязан быть свежим: пока панель была закрыта, правки
-  // модели в него не печатались. Схема - по тому же правилу.
+  // модели в него не печатались. Схема - по тому же правилу, и вдобавок вид листа
+  // проверяется: закрыть панель могли с отведённым в сторону холстом.
   if (name === "output") compile();
-  if (name === "scheme") drawScheme();
+  if (name === "scheme") drawScheme(true);
 }
 
 /**
@@ -1196,6 +1205,21 @@ function row(text, kind) {
   node.className = `row row-${kind}`;
   node.textContent = text;
   return node;
+}
+
+/**
+ * Системное сообщение: сбой инструмента, а не замечание к модели.
+ *
+ * Замечания компилятора и эталона идут в свои области (список диагностик,
+ * трасса) - они относятся к тексту автора и живут, пока живёт ошибка в нём.
+ * Сюда попадает то, о чём автору сказать нечего: не загрузился модуль, отказал
+ * запрос, упал обработчик. Молчать об этом нельзя - неработающий инструмент
+ * выглядит работающим, пока о нём не сказано.
+ */
+function alarm(error) {
+  const text = alerts.textOf(error);
+  if (!text) return;
+  alerts.show(dom.alerts, t("alerts.system", { error: text }), t("alerts.dismiss"));
 }
 
 function say(text, kind) {

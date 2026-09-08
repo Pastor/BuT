@@ -644,6 +644,12 @@ export class Scheme {
   drawCrumbs(sheet) {
     const { crumbs } = this.dom;
     crumbs.replaceChildren();
+    // Кнопка "наверх" - первая в строке: она про путь входа, а не про холст, и
+    // читается вместе с крошками слева направо. Доступна она ровно тогда, когда
+    // есть куда подниматься: на листе модели верхнего уровня подъём никуда не ведёт.
+    const up = this.dom.crumbsUp;
+    up.disabled = this.trail.length < 2;
+    crumbs.appendChild(up);
     this.trail.forEach((level, index) => {
       if (index > 0) {
         const sep = document.createElement("span");
@@ -673,12 +679,6 @@ export class Scheme {
         crumbs.appendChild(button);
       }
     });
-    const spacer = document.createElement("span");
-    spacer.className = "spacer";
-    crumbs.appendChild(spacer);
-    const up = this.dom.crumbsUp;
-    up.disabled = this.trail.length < 2;
-    crumbs.appendChild(up);
   }
 
   drawMap(sheet) {
@@ -786,6 +786,32 @@ export class Scheme {
   }
 
   // ── Вид ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Проверяет, видно ли лист после отрисовки, и вписывает его, когда не видно.
+   *
+   * Зовётся при открытии панели схемы. Вид - величина стойкая: панель могли закрыть
+   * с отведённым в сторону холстом либо при другой ширине области, и открыв её, автор
+   * увидел бы пустое поле при живой модели. Вписывать лист всякий раз нельзя - это
+   * сбрасывало бы заданный вручную масштаб, поэтому вид трогается ровно тогда, когда в
+   * холсте не оказалось ни одного узла.
+   */
+  ensureVisible() {
+    const sheet = this.current();
+    if (sheet.nodes.length === 0) return;
+    const box = this.dom.scheme.getBoundingClientRect();
+    // Область без размера ещё ничего не показывает: вписывание ждёт наблюдателя размера
+    // (тот же приём, что у `draw`).
+    if (box.width === 0 || box.height === 0) {
+      this.fitPending = true;
+      return;
+    }
+    const seen = [...this.dom.sheet.querySelectorAll(".node")].some((node) => {
+      const at = node.getBoundingClientRect();
+      return at.right > box.left && at.left < box.right && at.bottom > box.top && at.top < box.bottom;
+    });
+    if (!seen) this.fit();
+  }
 
   fit() {
     const sheet = this.current();

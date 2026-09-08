@@ -1019,6 +1019,77 @@ body[data-panel="none"] .work { grid-template-columns: 1fr; }
  * 2026-09-04; правило нужно каждому узлу, который прячут атрибутом. */
 .notice[hidden] { display: none; }
 
+/* ── Системные сообщения (`.alerts`) ─────────────────────────────────────
+ * Полоса поверх страницы сверху: сбой инструмента застаёт автора в любой из
+ * областей, и строка в одной из них осталась бы незамеченной в двух других.
+ * Пара "тревога" - та же, что у строки диагностики: у страницы один красный,
+ * и второго ей не заводится. Слой выше окна (`.modal`, 50): запрос может
+ * отказать и при открытом окне, и тогда молчание выглядит зависанием.
+ * Теней здесь нет - их нет во всей системе. */
+.alerts {
+  position: fixed;
+  top: var(--gap);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-half);
+  width: min(40rem, calc(100% - var(--gap) * 2));
+  /* Пустой контейнер лежит поверх шапки во всю ширину: без этого он забирал бы
+   * щелчки по кнопкам под собой, когда сообщений нет вовсе. Сами сообщения
+   * события принимают - у них `pointer-events` возвращён. */
+  pointer-events: none;
+}
+.alert {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--gap-half);
+  padding: var(--gap-half) var(--gap);
+  font-size: var(--text-sm);
+  background: var(--surface-alarm);
+  color: var(--on-surface-alarm);
+  border: 1px solid var(--alarm);
+  border-radius: var(--radius);
+}
+/* Текст чужой и бывает длинным без пробелов (адрес, имя файла): он переносится
+ * по любому месту, иначе полоса вылезала бы за край экрана. */
+.alert-text { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.alert-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--h-dense);
+  min-width: var(--h-dense);
+  height: var(--h-dense);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+}
+.alert-close:hover {
+  background: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface-alarm));
+}
+.alert-close:active {
+  background: color-mix(in srgb, var(--on-surface) var(--state-press), var(--surface-alarm));
+}
+/* Крестик нарисован рамками, а не набран символом: покрытие шрифта решает за
+ * нас, и промах даёт системный глиф на чужой базовой линии (правило крошек). */
+.alert-close > span { position: relative; width: 0.75rem; height: 0.75rem; }
+.alert-close > span::before,
+.alert-close > span::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 1.5px solid currentColor;
+}
+.alert-close > span::before { transform: rotate(45deg); }
+.alert-close > span::after { transform: rotate(-45deg); }
+
 /* Панель учётной записи и проектов.
     `[hidden]` объявлен ПОСЛЕ `display`: `display: flex` сильнее `hidden`, и
    без этой строки панель не пряталась бы вовсе (урок задачи 03). */
@@ -1514,18 +1585,36 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  * ссылка: ссылка на себя ничего не делает и об этом не говорит.
  * Разделитель нарисован рамкой, а не набран символом `›`: покрытие шрифта
  * решает за нас, и промах даёт системный глиф на чужой базовой линии. */
-.crumbs {
+/* Строка уровня целиком: путь входа слева, кнопки холста справа. Фон, рамка и
+ * поля принадлежат ей, а не крошкам: иначе у двух половин одной линии было бы
+ * по своей подложке, и на переносе они разъехались бы ступенькой. */
+.scheme-bar {
   display: flex;
   align-items: center;
   gap: var(--gap-half);
   min-height: var(--h-compact);
   padding: var(--gap-quarter) var(--gap);
-  font-size: var(--text-sm);
   background: var(--surface-sunken);
   color: var(--on-surface-sunken);
   border-bottom: 1px solid var(--border);
-  flex-wrap: wrap;
+  /* Строка одна и не переносится: кнопки холста стоят на линии кнопки "наверх".
+   * Тесно - сжимается путь входа (у него прокрутка), а не растёт высота: второй
+   * ряд отнимал бы у листа полосу в рост контрола на каждом узком экране. */
+  flex-wrap: nowrap;
 }
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-half);
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--text-sm);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+/* Кнопка "наверх" и разделители не сжимаются вместе с путём: сжимаются имена. */
+.crumbs .icon-btn, .crumb-sep { flex: none; }
+.crumb { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .crumb {
   height: var(--h-compact);
   padding: 0 var(--gap-half);
@@ -1564,24 +1653,29 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 }
 
 /* ── Панель инструментов схемы (`.scheme-tools`) ─────────────────────────
- * Кнопки-значки в обойме `.seg` в правом верхнем углу холста - обойма
- * существующая, своих объявлений ей не заводится. Панель лежит над листом,
- * поэтому у неё пара приподнятой поверхности: на сетке прозрачная обойма
- * читалась бы вместе с точками. */
+ * Кнопки-значки в обойме `.seg` - обойма существующая, своих объявлений ей не
+ * заводится. Панель стоит в строке уровня, на одной линии с кнопкой "наверх":
+ * над листом она закрывала бы узлы, а холст бесконечен и отвести рисунок
+ * из-под неё нельзя. Пара приподнятой поверхности у неё сохранена - ею она
+ * отделена от подложки строки. */
 .scheme-tools {
-  position: absolute;
-  top: var(--gap);
-  right: var(--gap);
-  z-index: 2;
   display: flex;
   align-items: center;
   gap: var(--gap-half);
+  margin-left: auto;
   padding: var(--gap-quarter);
   border-radius: var(--radius);
   background: var(--surface-raised);
   color: var(--on-surface-raised);
   border: 1px solid var(--border);
-  flex-wrap: wrap;
+  /* Внутри панель не переносится: рассыпавшись на три ряда, она съедала бы
+   * вертикаль холста. Не поместилась рядом с путём входа - строка уровня
+   * переносит её целиком (`.scheme-bar` переносит, панель - нет), а не влезла
+   * и в ширину - прокручивается внутри себя: страница горизонтальной прокрутки
+   * не получает, а кнопка за краем достаётся жестом, а не исчезает. */
+  flex-wrap: nowrap;
+  max-width: 100%;
+  overflow-x: auto;
 }
 /* Кнопка панели - плотная ступень: панель стоит на рисунке, и ряд кнопок в
  * три рема съел бы лист. Под `hover: none` она вырастает (ниже). */
@@ -1793,7 +1887,7 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  * крошки. */
 .panel-scheme { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 0; }
 .panel-scheme[hidden] { display: none; }
-.panel-scheme > .notice, .panel-scheme > .crumbs { flex: none; }
+.panel-scheme > .notice, .panel-scheme > .scheme-bar { flex: none; }
 /* Рамка параллели и скобок на листе композиции: штриховая, чернилами
  * выключенного - она группирует, а не сообщает. */
 .node-frame { fill: none; stroke: var(--on-surface-off); stroke-width: 1.5; stroke-dasharray: 6 4; }
@@ -1888,14 +1982,14 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
   .pin { display: none; }
 }
 
-/* До 900 px область одна на экран (полка режимов), и на холсте остаются две
- * кнопки - "вписать" и навигатор: остальные шесть на 375 px закрыли бы
- * четверть листа. Миникарты нет: окно в лист размером с ладонь показывает
- * ладонь. */
+/* До 900 px область одна на экран (полка режимов), и в строке уровня остаются
+ * две кнопки - "вписать" и навигатор: остальные шесть на 375 px не умещаются
+ * рядом с путём входа и уводили бы строку в третий ряд. Миникарты нет: окно в
+ * лист размером с ладонь показывает ладонь. */
 @media (max-width: 900px) {
   .minimap { display: none; }
   /* Панель сворачивается до двух кнопок - "вписать" и навигатор:
-   * остальные восемь на 375 px закрыли бы четверть листа. Исчезающие части
+   * остальные восемь на 375 px не умещаются в строке уровня. Исчезающие части
    * помечены в разметке классом `.tool-wide` и атрибутом `data-narrow="hide"`
    * - правилу нужен признак в разметке, а не догадка по месту: "вписать"
    * стоит в одной обойме с "отцентрировать", и по селектору обоймы пропало бы

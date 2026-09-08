@@ -13,6 +13,8 @@
   "bar.split": "Pane width",
   "bar.width": "Page width",
   "bar.moduleFailed": "module not loaded: {error}",
+  "alerts.dismiss": "Dismiss message",
+  "alerts.system": "Tool failure: {error}",
   "source.title": "Model",
   "source.editor": "Model source text",
   "diagnostics.title": "Diagnostics",

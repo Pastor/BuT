@@ -32,6 +32,7 @@ import { inlineScripts, literalsWithText, nodesWithoutKey } from "./strings.mjs"
 import { bundleOfUrl } from "../static/build.js";
 import * as shell from "../static/shell.js";
 import * as tip from "../static/tip.js";
+import * as alerts from "../static/alerts.js";
 import * as editor from "../static/editor.js";
 import * as json from "../static/json.js";
 import * as flags from "../static/flags.js";
@@ -456,7 +457,7 @@ test("язык: порядок выбора — сохранённый, брау
  * `index.html` нет, а забытый модуль остался бы без обеих проверок молча.
  */
 const PAGE_SCRIPTS = [
-  "account.js", "api.js", "app.js", "boot.js", "bridge.js", "build.js",
+  "account.js", "alerts.js", "api.js", "app.js", "boot.js", "bridge.js", "build.js",
   "draft.js", "editor.js", "i18n.js", "layout.js", "legend.js", "pick.js",
   "project.js", "sample.js", "scheme.js", "scheme-geometry.js", "flags.js", "json.js",
   "md.js", "share.js", "shell.js", "showcase.js", "tip.js", "worker.js",
@@ -1420,6 +1421,39 @@ test("markdown: показ строит узлы, а не разметку из 
   }
 });
 
+test("системные сообщения: строятся узлами, повтор не плодится, крестик убирает", async () => {
+  // Текст приходит от чужого источника (ответ сервера, сообщение среды), поэтому
+  // разметкой строкой его не пишут. Проверяется и запрет в модуле, и поведение.
+  const source = await readFile(new URL("../static/alerts.js", import.meta.url), "utf8");
+  assert.ok(
+    !/\.innerHTML|\.outerHTML|insertAdjacentHTML/.test(source),
+    "носитель сообщений пишет разметку строкой",
+  );
+
+  const host = fakeHost();
+  const first = alerts.show(host, "модуль не загружен", "Убрать");
+  assert.ok(first, "сообщение не показано");
+  assert.equal(host.children.length, 1);
+  assert.equal(first.children[0].textContent, "модуль не загружен", "текст не в textContent");
+
+  // Отказ обещания приходит очередями: одно и то же сообщение не обязано
+  // выстраиваться стопкой во весь экран.
+  assert.equal(alerts.show(host, "модуль не загружен", "Убрать"), null, "повтор показан");
+  assert.equal(host.children.length, 1);
+  alerts.show(host, "другой сбой", "Убрать");
+  assert.equal(host.children.length, 2, "другое сообщение не показано");
+
+  // Крестик снимает своё сообщение и только его.
+  first.children[1].click();
+  assert.equal(host.children.length, 1);
+  assert.equal(host.children[0].dataset.text, "другой сбой");
+
+  // Текст ошибки: сообщение, если оно есть, иначе сама величина.
+  assert.equal(alerts.textOf(new Error("сеть недоступна")), "сеть недоступна");
+  assert.equal(alerts.textOf("строкой"), "строкой");
+  assert.equal(alerts.textOf(null), "", "пустая ошибка обязана быть пустым текстом");
+});
+
 test("разметка: скрытый узел действительно скрыт", async () => {
   // `display: flex` сильнее `hidden`: узел с таким классом остаётся на
   // экране, сколько его ни прячь. Класс ловился прогоном страницы дважды -
@@ -1612,6 +1646,39 @@ test("витрина: новый поиск начинается с первой
   await lane.first("");
   assert.deepEqual(asked[3], [null, null], `спрошено ${JSON.stringify(asked[3])}`);
 });
+
+/**
+ * Узел-хозяин в памяти: столько от документа, сколько трогает `alerts.js`.
+ *
+ * Полноценного документа в наборе нет и не заводится: предмет проверки -
+ * поведение носителя (узлы, повтор, снятие), а не браузер.
+ */
+function fakeHost() {
+  const doc = {
+    createElement(tag) {
+      const node = {
+        tag,
+        children: [],
+        dataset: {},
+        className: "",
+        textContent: "",
+        listeners: {},
+        ownerDocument: doc,
+        setAttribute(name, value) { node[name] = value; },
+        appendChild(child) { node.children.push(child); child.parent = node; return child; },
+        addEventListener(name, handler) { node.listeners[name] = handler; },
+        click() { node.listeners.click?.(); },
+        remove() {
+          const at = node.parent?.children.indexOf(node) ?? -1;
+          if (at >= 0) node.parent.children.splice(at, 1);
+        },
+      };
+      return node;
+    },
+  };
+  const host = doc.createElement("div");
+  return host;
+}
 
 /** Хранилище в памяти - тот же интерфейс, что у `localStorage`. */
 function memoryStorage() {
