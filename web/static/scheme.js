@@ -1067,7 +1067,8 @@ export class Scheme {
       (event) => {
         event.preventDefault();
         const box = scheme.getBoundingClientRect();
-        this.view = geo.zoomAt(this.view, event.clientX - box.left, event.clientY - box.top, event.deltaY < 0 ? geo.ZOOM_STEP : 1 / geo.ZOOM_STEP);
+        const step = geo.WHEEL_ZOOM_STEP;
+        this.view = geo.zoomAt(this.view, event.clientX - box.left, event.clientY - box.top, event.deltaY < 0 ? step : 1 / step);
         this.draw();
       },
       { passive: false },
