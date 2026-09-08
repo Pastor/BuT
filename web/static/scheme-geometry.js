@@ -204,19 +204,25 @@ export function bendingPoints(from, to, points) {
   for (let i = 0; i < list.length; i += 1) {
     const before = i > 0 ? list[i - 1] : [from.x, from.y];
     const after = i + 1 < list.length ? list[i + 1] : [to.x, to.y];
-    if (offSegment(list[i], before, after) > SNAP / 2) kept.push(list[i]);
+    if (offLine(list[i], before, after) > SNAP / 2) kept.push(list[i]);
   }
   return kept;
 }
 
-/** Расстояние от точки до отрезка; вырожденный отрезок - расстояние до его точки. */
-function offSegment(p, a, b) {
+/**
+ * Расстояние от точки до прямой через соседей; совпали соседи - до самой точки.
+ *
+ * Мерится прямая, а не отрезок: точка на линии, но за спиной соседа, изгиба не
+ * даёт - линия там идёт по себе же. Считай до отрезка, и такая точка объявлялась
+ * бы изгибом, потому что до ближнего конца ей далеко (нашлось прогоном стенда:
+ * две точки на одной вертикали пережили снятие фокуса).
+ */
+function offLine(p, a, b) {
   const vx = b[0] - a[0];
   const vy = b[1] - a[1];
-  const len = vx * vx + vy * vy;
+  const len = Math.hypot(vx, vy);
   if (len === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
-  const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * vx + (p[1] - a[1]) * vy) / len));
-  return Math.hypot(p[0] - (a[0] + t * vx), p[1] - (a[1] + t * vy));
+  return Math.abs((p[0] - a[0]) * vy - (p[1] - a[1]) * vx) / len;
 }
 
 /** Середина самого длинного сегмента ломаной. */

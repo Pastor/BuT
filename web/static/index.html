@@ -230,10 +230,6 @@
     </div>
 
     <div data-panel="trace" class="panel" hidden>
-      <div class="controls">
-        <label for="budget" data-i18n="trace.budget">Бюджет, тактов</label>
-        <input id="budget" type="number" min="1" max="1000000" value="200">
-      </div>
       <!-- Подпись - одна строка словаря: разметка внутри переводимого текста
            потребовала бы `innerHTML` из словаря, то есть лишнего пути в DOM.
            Ключ `-s` остался в строке, элемент `code` снят. -->
@@ -269,6 +265,12 @@
              область незачем. Действие и доступность у них общие с оригиналом
              (`data-run`), второго обработчика не заводится. -->
         <div class="scheme-tools scheme-run">
+          <!-- Сколько тактов пускать: величина принадлежит прогону, и стоит она у
+               его кнопок. В панели прогона ей было место, пока там был и сам
+               прогон. -->
+          <label for="budget" class="run-steps" data-i18n="trace.budget">Шаги</label>
+          <input id="budget" type="number" min="1" max="1000000" value="200"
+                 data-i18n-attr="data-tip:trace.budgetHint" data-tip="Сколько тактов пускать">
           <span class="seg">
           <button class="icon-btn" type="button" data-run="run"
                   data-i18n-attr="aria-label:trace.run;data-tip:trace.run"

@@ -1865,7 +1865,17 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  * строке две разные кнопки-значка читались бы как два разных рода действия,
  * которого между "пустить прогон" и "вписать лист" нет. Место в строке задаёт
  * не отступ, а порядок: путь входа между ними растягивается сам. */
-.scheme-run { flex: none; }
+.scheme-run { flex: none; gap: var(--gap-quarter); }
+/* Число тактов стоит у кнопок прогона: подпись мелкая, поле узкое - это величина
+ * при кнопке, а не поле формы. */
+.run-steps { font-size: var(--text-xs); color: var(--on-surface-soft); }
+.scheme-run input[type="number"] {
+  width: 6ch;
+  height: var(--h-dense);
+  padding: 0 var(--gap-quarter);
+  font-size: var(--text-sm);
+  text-align: center;
+}
 
 /* ── Панель инструментов схемы (`.scheme-tools`) ─────────────────────────
  * Кнопки-значки в обойме `.seg` - обойма существующая, своих объявлений ей не

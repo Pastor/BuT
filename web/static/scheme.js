@@ -134,6 +134,9 @@ export class Scheme {
     this.running = new Set();
     this.expected = new Set();
     this.fitPending = true;
+    // Счётчик масок щели под знаком: имя маски обязано быть своим у каждого ребра,
+    // а ключ ребра содержит знаки, которых в имени быть не может.
+    this.gapSeq = 0;
     this.kinds = {
       start: this.t("scheme.kind.start"),
       state: this.t("scheme.kind.state"),
@@ -368,24 +371,25 @@ export class Scheme {
     const node = sheet.nodes.find((n) => n.name === name);
     const level = node ? this.target(sheet, node) : null;
     if (!level) return;
+    // Фокус снимается до смены листа: правило звеньев работает на том листе, где
+    // ребро живёт, а после смены его там уже нет.
+    this.focusEdge(null);
     this.trail = [...this.trail, level];
     this.selected = null;
-    this.selectedEdge = null;
     this.fitPending = true;
     this.draw();
   }
 
   /** Назад по крошкам; на корне - снятие выбора. */
   back() {
+    this.focusEdge(null);
     if (this.trail.length > 1) {
       this.trail = this.trail.slice(0, -1);
       this.selected = null;
-      this.selectedEdge = null;
       this.fitPending = true;
       this.draw();
-    } else if (this.selected || this.selectedEdge) {
+    } else if (this.selected) {
       this.selected = null;
-      this.selectedEdge = null;
       this.draw();
     }
   }
@@ -530,9 +534,14 @@ export class Scheme {
     const sheet = this.current();
     const view = layoutFile.viewOf(this.layout);
     empty.hidden = this.graph !== null;
+    // Масштаб задан размером самого рисунка, а не растяжением готовой картинки:
+    // `viewBox` остаётся в единицах листа, а ширина и высота растут вместе с
+    // масштабом - браузер рисует вектор в нужном разрешении. Растяни готовый SVG
+    // трансформацией, и он масштабируется как растр: линии и знаки мылятся, и
+    // заметнее всего это на подсветке прогона, где обводка толще.
     svg.setAttribute("viewBox", `${sheet.ox} ${sheet.oy} ${sheet.w} ${sheet.h}`);
-    svg.setAttribute("width", sheet.w);
-    svg.setAttribute("height", sheet.h);
+    svg.setAttribute("width", sheet.w * this.view.k);
+    svg.setAttribute("height", sheet.h * this.view.k);
     svg.replaceChildren(defs(view.arrow));
     // Ступени вида уходят на холст признаками, а числа за ними стоят в оформлении
     // (`app.css`): толщина линии, кегль и гамма - решения книги контролов, а файл
@@ -569,7 +578,7 @@ export class Scheme {
     }
     for (const node of sheet.nodes) this.drawNode(sheet, node);
     svg.style.transformOrigin = "0 0";
-    svg.style.transform = `translate(${this.view.x}px, ${this.view.y}px) scale(${this.view.k})`;
+    svg.style.transform = `translate(${this.view.x}px, ${this.view.y}px)`;
     // Сетка холста едет с листом: шаг масштабируется, а при мелком масштабе удваивается,
     // чтобы точки не сливались в заливку; начало сетки - начало листа. Шаг задан
     // ступенью настроек; `off` снимает сетку вовсе - подложку гасит оформление.
@@ -598,17 +607,20 @@ export class Scheme {
         : this.t("scheme.edge", { from: edge.from, to: edge.to }),
     });
     const marker = `${edge.kind === "next" ? "arrow-solid" : "arrow-open"}${selected ? "-sel" : ""}`;
-    group.appendChild(
-      mk("path", {
-        class: `edge${selected ? " selected" : ""}${edge.loop ? " edge-loop" : ""}`,
-        d: geo.buildPath(pts, hops, this.layout.corners === "round"),
-        "marker-end": `url(#${marker})`,
-      }),
-    );
+    const line = mk("path", {
+      class: `edge${selected ? " selected" : ""}${edge.loop ? " edge-loop" : ""}`,
+      d: geo.buildPath(pts, hops, this.layout.corners === "round"),
+      "marker-end": `url(#${marker})`,
+    });
+    group.appendChild(line);
     if (edge.cond) {
       // Умолчание места знака - настройка вида, своё место ребра сильнее: автор мог
       // отвести один знак руками, и общее правило не вправе стирать эту работу.
       const [mx, my] = geo.markSpot(edge.label ?? { place: this.labelPlace() }, pts);
+      // Линия расступается под знаком: щель вырезана маской, а не закрыта заливкой -
+      // холст под ней остаётся холстом, и точки сетки в просвете видны. Заливка
+      // цвета листа поверх линии дала бы прямоугольную заплату на сетке.
+      this.gapUnderMark(group, line, sheet, edge.mark, mx, my);
       const text = backing(group, mx, my + 2, edge.mark, "edge-mark");
       markText(text, edge.mark, "edge-num");
       text.setAttribute("data-tip", tipOf(edge.mark, edge.cond, edge.alias));
@@ -635,6 +647,25 @@ export class Scheme {
       this.selectEdge(edge.key);
     });
     this.dom.sheet.appendChild(group);
+  }
+
+  /**
+   * Вырезает в линии щель под знаком условия.
+   *
+   * Щель - ширина знака и по три единицы с боков: линия не должна касаться букв,
+   * но и просвет во всю ширину знака с запасом рвал бы короткое ребро надвое.
+   * Маска живёт при своём ребре: она зависит от места знака, а место у каждого
+   * ребра своё.
+   */
+  gapUnderMark(group, line, sheet, mark, mx, my) {
+    const w = mark.length * 8 + 8 + 6;
+    const h = 21;
+    const id = `edge-gap-${this.gapSeq++}`;
+    const mask = mk("mask", { id, maskUnits: "userSpaceOnUse" });
+    mask.appendChild(mk("rect", { x: sheet.ox, y: sheet.oy, width: sheet.w, height: sheet.h, fill: "white" }));
+    mask.appendChild(mk("rect", { x: mx - w / 2, y: my - h / 2, width: w, height: h, fill: "black" }));
+    group.appendChild(mask);
+    line.setAttribute("mask", `url(#${id})`);
   }
 
   drawNode(sheet, node) {
@@ -753,9 +784,9 @@ export class Scheme {
         button.type = "button";
         button.textContent = title;
         button.addEventListener("click", () => {
+          this.focusEdge(null);
           this.trail = this.trail.slice(0, index + 1);
           this.selected = null;
-          this.selectedEdge = null;
           this.fitPending = true;
           this.draw();
         });
