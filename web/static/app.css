@@ -159,6 +159,10 @@
    * значений на 92 объявления, прежде чем завели правило. Проверка отвергает
    * `font-size` числом целиком. */
   --text-xs: 0.78rem;  /* служебные строки: шапки областей, имя файла */
+  /* Индекс знака - доля от самого знака, а не ступень шкалы: кегль знака выбирает
+   * автор настройками, и номер обязан ехать за ним. Абсолютная ступень оставляла
+   * номер прежним, и на крупном знаке он читался приставшей соринкой. */
+  --text-index: 0.6em;
   --text-sm: 0.82rem;  /* код в списках и выводе */
   --text-md: 0.9rem;   /* код редактора - его читают дольше всего */
   --text-lg: 1rem;     /* текст интерфейса */
@@ -824,7 +828,17 @@ body[data-panel="none"] .work { grid-template-columns: 1fr; }
  * Полоса вкладок - та же `.tabs`, что у вывода: у страницы один вид вкладок.
  * Ряд ступеней - кнопки-образцы: каждая рисует свою ступень тем же
  * оформлением, что и лист, поэтому выбор виден до нажатия. */
-.settings-body { gap: var(--gap); max-height: 60dvh; overflow-y: auto; }
+/* Окно настроек одного размера на все вкладки: ширина шире общей (ряды образцов
+ * длиннее строки ввода), высота - по самой длинной вкладке. Прыгающее окно
+ * заставляет искать кнопки заново при каждом переключении, а вкладки для того и
+ * заведены, чтобы ходить по ним свободно. */
+#scheme-modal .modal-box { width: min(34rem, 100%); }
+.settings-body {
+  gap: var(--gap);
+  min-height: 26rem;
+  max-height: 60dvh;
+  overflow-y: auto;
+}
 .set-row { display: flex; flex-direction: column; gap: var(--gap-quarter); }
 .set-name { font-size: var(--text-sm); color: var(--on-surface-soft); }
 .set-steps { display: flex; gap: var(--gap-half); flex-wrap: wrap; }
@@ -858,7 +872,25 @@ body[data-panel="none"] .work { grid-template-columns: 1fr; }
   background: var(--surface-sheet);
   border-radius: var(--radius-sm);
 }
+/* Образцы стоят вне холста, а ступени толщины объявлены на нём: без своих значений
+ * линия образца рисовалась бы нулевой ширины. Здесь стоят средние ступени - образец
+ * показывает форму, а толщину выбирают соседним полем. */
+.set-sample, .legend-sample {
+  --sheet-edge: 1.5;
+  --sheet-node: 1.5;
+  --text-sheet: var(--text-sm);
+  --text-mark: var(--text-xs);
+  --font-state: var(--font-scheme);
+  --font-cond: var(--font-scheme);
+}
+/* Чертёжная гамма образца: те же правила, что у холста, но признак стоит на самом
+ * образце - в окне настроек холста рядом нет. */
+.set-sample[data-gamma="draft"] .node-body { fill: var(--surface-sheet); stroke: var(--on-surface); }
+.set-sample[data-gamma="contrast"] .node-body { stroke: var(--on-surface); stroke-width: 2.5; }
 .set-dot { fill: var(--on-surface-off); }
+/* Подложка знака в образце показана всегда: образец объясняет место знака, а не
+ * его поведение под указателем. */
+.set-mark-bg { fill: var(--surface-raised); stroke: var(--border); }
 
 /* Кнопка площадки: значок и подпись. Значок приходит именем файла от сервера -
  * своего списка площадок у страницы нет. */
@@ -1199,6 +1231,17 @@ body[data-panel="none"] .work { grid-template-columns: 1fr; }
 }
 
 .trace { max-height: none; flex: 1; }
+/* Журнал прогона под холстом схемы: высота от разделителя, прокрутка внутри.
+ * `flex: 0 0 auto` обязателен - иначе журнал и холст делили бы остаток по своему
+ * усмотрению, и граница, которую тянет автор, ничего бы не решала. */
+.panel-scheme > .trace {
+  flex: 0 0 auto;
+  height: var(--log-h, 30dvh);
+  max-height: 70dvh;
+  min-height: var(--h-control);
+  overflow-y: auto;
+}
+.panel-scheme > .trace[hidden] { display: none; }
 
 /* Высоту списка диагностик задаёт читатель разделителем рядов (`shell.js`).
  * Умолчание - прежние 30 % высоты: пока разделитель не тронут, не меняется
@@ -1224,6 +1267,48 @@ body[data-panel="none"] .work { grid-template-columns: 1fr; }
 .row-trace { color: var(--on-surface); }
 /* Вывод модели: не замечание инструмента, но и не строка трассы. */
 .row-output { color: var(--on-surface-soft); font-style: italic; }
+
+/* ── Запись журнала прогона ──────────────────────────────────────────────
+ * Каждая строка - отдельное поле: своя подложка, свой отступ, её выделяют
+ * щелчком. Чередование фона ведёт глаз по длинной трассе - соседние такты
+ * различаются полосой, а не только числом.
+ * Колонка рода стоит слева и написана словом: цветом одним состояние не
+ * передаётся, а у шага она пуста - строка сама называет себя тактом. */
+.panel-scheme > .trace {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-quarter);
+  padding: var(--gap-quarter) var(--gap-half);
+}
+/* Запись - карточка: своя рамка и своё скругление. Рамка отделяет такт от такта
+ * там, где одна подложка не справляется, - строки трассы похожи одна на другую,
+ * и глазу нужна граница, а не только оттенок. */
+.panel-scheme > .trace .row {
+  display: flex;
+  gap: var(--gap-half);
+  align-items: baseline;
+  padding: var(--gap-quarter) var(--gap-half);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: default;
+}
+.panel-scheme > .trace .row:nth-child(even) {
+  background: color-mix(in srgb, var(--on-surface) 6%, transparent);
+}
+.row-kind {
+  flex: none;
+  width: 4ch;
+  font-size: var(--text-xs);
+  color: var(--on-surface-off);
+  text-align: right;
+}
+.row-text { min-width: 0; white-space: pre-wrap; }
+/* Выделение - светлая подложка акцента, а не сплошная заливка: отметка чтения
+ * не должна кричать громче самой строки, которую отметили. */
+.panel-scheme > .trace .row[aria-selected="true"] {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: var(--accent);
+}
 
 /* ── Вкладки и панели ───────────────────────────────────────────────────── */
 .tabs {
@@ -1410,6 +1495,28 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 
 .scheme.dragging { cursor: grabbing; }
 
+/* Кнопка возврата на уровень выше: угол холста, а не строка над ним. Она стоит на
+ * месте, пока лист ездит под ней: угол принадлежит области просмотра, а не рисунку.
+ * Вид - тот же, что у кнопок панели холста: плотная ступень на приподнятой
+ * поверхности, чтобы значок читался и на сетке, и поверх узла. */
+.scheme-up {
+  position: absolute;
+  top: var(--gap);
+  right: var(--gap);
+  z-index: 2;
+  width: var(--h-dense);
+  min-width: var(--h-dense);
+  height: var(--h-dense);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--on-surface-raised);
+}
+.scheme-up:hover {
+  background: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface-raised));
+}
+.scheme-up[hidden] { display: none; }
+
 /* ── Ступени вида схемы (настройки отрисовки) ────────────────────────────
  * Файл раскладки хранит выбор ступени ("линия тонкая"), а числа за ступенями
  * стоят здесь: вид схемы остаётся решением оформления, и сменить шкалу можно,
@@ -1520,7 +1627,7 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
   user-select: none;
   -webkit-user-select: none;
 }
-.node-num { font-size: var(--text-xs); }
+.node-num { font-size: var(--text-index); }
 
 /* Метка входа у стартового узла и вторая рамка у конечного - форма, а не цвет
  * (правило доступности книги раздел 7: состояние никогда не только цветом). */
@@ -1632,7 +1739,16 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  * рисунок, а усечённая цитата обманывает - по началу условие не
  * узнать. Полное условие - во второй таблице легенды и в подсказке
  * при наведении. Подложка обязательна: знак ложится на сетку и рёбра. */
-.edge-label-bg { fill: var(--surface); stroke: none; }
+/* Подложка знака условия обычно невидима: знак читается прямо на линии, а рамка
+ * вокруг каждого условия дробит рисунок на карточки. Под указателем она
+ * проявляется - контур и бледная заливка: знак тянут, и цель нажатия обязана быть
+ * видна до нажатия. */
+.edge-mark-bg { fill: none; stroke: none; }
+.edge-mark-box:hover .edge-mark-bg,
+.edge-group.selected .edge-mark-bg {
+  fill: color-mix(in srgb, var(--surface-raised) 70%, transparent);
+  stroke: var(--border);
+}
 .edge-mark {
   font-family: var(--font-cond);
   font-size: var(--text-mark);
@@ -1648,13 +1764,13 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 .edge-mark.dragging { cursor: grabbing; fill: var(--on-surface); }
 /* Номер - нижним индексом, рисованным смещением базовой линии: тот
  * же способ, что у знака узла - подстрочных цифр в Fira Code нет. */
-.edge-num { font-size: var(--text-xs); }
+.edge-num { font-size: var(--text-index); }
 .edge-group.selected .edge-mark { fill: var(--on-surface); }
 
 /* Ниже масштаба 0,5x знаки условий скрываются, обозначения на кругах
  * остаются: знак вне фигуры на таком масштабе читается как сор на линии. */
 .scheme.small .edge-mark,
-.scheme.small .edge-label-bg { display: none; }
+.scheme.small .edge-mark-bg { display: none; }
 
 /* ── Излом (`.pin`) ──────────────────────────────────────────────────────
  * Точка ломаной: видна при выборе ребра и наведении на него, при переносе -
@@ -1879,8 +1995,28 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  *   `.legend-float`  - плавающая панель поверх холста, её тянут за заголовок.
  * Выбор запоминается в раскладке рядом с формой углов (см. 10-marks-and-legend.md).
  * Своих цветов и кеглей место не заводит: меняются только раскладка и место. */
-.legend-bottom { flex: 0 0 auto; max-height: 30dvh; border-top: 1px solid var(--border); }
-.legend-right { flex: 0 0 auto; width: max-content; max-width: 40%; border-left: 1px solid var(--border); }
+/* Размер легенды тянут разделителем: сколько её видно, решает автор. Умолчание -
+ * прежние доли; предел оставлен, чтобы легенда не съела холст целиком. */
+.legend-bottom {
+  flex: 0 0 auto;
+  height: var(--legend-h, 30dvh);
+  max-height: 70dvh;
+  min-height: var(--h-control);
+  border-top: 1px solid var(--border);
+}
+.legend-right {
+  flex: 0 0 auto;
+  width: var(--legend-w, max-content);
+  max-width: 60%;
+  min-width: 8rem;
+  border-left: 1px solid var(--border);
+}
+/* Разделитель принадлежит месту легенды: у полки ось - высота, у колонки - ширина,
+ * и лишний из двух скрыт. Плавающая легенда не делит область вовсе. */
+.legend-side-bottom > #legendcols,
+.legend-side-right > #legendrows { display: none; }
+.scheme-stage:has(> .legend-float) > #legendrows,
+.scheme-stage:has(> .legend-float) > #legendcols { display: none; }
 .legend-float {
   position: absolute;
   z-index: 4;

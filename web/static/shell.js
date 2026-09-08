@@ -30,6 +30,11 @@ export const ROWS_KEY = "takt.rows";
 
 /** Ключ хранилища долей вкладки прогона (сценарий и трасса). */
 export const TRACE_KEY = "takt.rows.trace";
+/** Доля высоты, отданная журналу прогона под холстом схемы. */
+export const LOG_KEY = "takt.rows.log";
+/** Доля высоты, отданная легенде-полке, и доля ширины у легенды-колонки. */
+export const LEGEND_ROWS_KEY = "takt.rows.legend";
+export const LEGEND_COLS_KEY = "takt.panes.legend";
 
 /** Какими стрелками двигается разделитель каждой оси. */
 const ARROWS = { x: ["ArrowLeft", "ArrowRight"], y: ["ArrowUp", "ArrowDown"] };
@@ -62,6 +67,16 @@ export const ROWS_DEFAULT = 0.7;
  * обрезанной трассой.
  */
 export const TRACE_DEFAULT = 0.3;
+/**
+ * Умолчания долей схемы: журнал под холстом, легенда полкой и колонкой.
+ *
+ * Доля считается от начала области (сверху, слева) - это позиция границы, а не
+ * размер нижней части. Журналу и легенде достаётся остаток, поэтому умолчание
+ * 0.7 означает "им треть".
+ */
+export const LOG_DEFAULT = 0.7;
+export const LEGEND_ROWS_DEFAULT = 0.7;
+export const LEGEND_COLS_DEFAULT = 0.7;
 
 /**
  * Приводит долю к допустимой и отбрасывает мусор.
@@ -262,6 +277,56 @@ export function attachTraceRows(split, storage) {
  *          box: () => DOMRect, apply: (ratio: number, root: HTMLElement) => void}} plan
  *        чем меряем, где помним, что ставим и к чему возвращаемся
  */
+/**
+ * Разделитель журнала прогона: сколько высоты схемы отдано журналу.
+ *
+ * Доля считается от области схемы, а не от окна: журнал стоит под холстом, и его
+ * граница принадлежит этой области, а не странице.
+ */
+export function attachLogRows(split, storage) {
+  attachDivider(split, {
+    storage,
+    key: LOG_KEY,
+    axis: "y",
+    fallback: LOG_DEFAULT,
+    box: () => split.parentElement.getBoundingClientRect(),
+    // Доля - часть высоты, отданная холсту: журнал стоит снизу. Величина
+    // берётся от окна (`dvh`), а не от области: процент от растущего родителя
+    // даёт круговую зависимость - журнал тянет панель, панель растит журнал.
+    apply: (ratio, root) => {
+      root.style.setProperty("--log-h", `${(1 - ratio) * 100}dvh`);
+    },
+  });
+}
+
+/** Разделитель легенды-полки: её высота под холстом. */
+export function attachLegendRows(split, storage) {
+  attachDivider(split, {
+    storage,
+    key: LEGEND_ROWS_KEY,
+    axis: "y",
+    fallback: LEGEND_ROWS_DEFAULT,
+    box: () => split.parentElement.getBoundingClientRect(),
+    apply: (ratio, root) => {
+      root.style.setProperty("--legend-h", `${(1 - ratio) * 100}dvh`);
+    },
+  });
+}
+
+/** Разделитель легенды-колонки: её ширина справа от холста. */
+export function attachLegendCols(split, storage) {
+  attachDivider(split, {
+    storage,
+    key: LEGEND_COLS_KEY,
+    axis: "x",
+    fallback: LEGEND_COLS_DEFAULT,
+    box: () => split.parentElement.getBoundingClientRect(),
+    apply: (ratio, root) => {
+      root.style.setProperty("--legend-w", `${(1 - ratio) * 100}%`);
+    },
+  });
+}
+
 function attachDivider(split, plan) {
   const root = split.ownerDocument.documentElement;
   const vertical = plan.axis === "y";
@@ -491,6 +556,8 @@ export const UI_KEYS = {
   budget: "takt.ui.budget",
   /** Открытая панель правой области: `output`, `trace` либо пусто. */
   panel: "takt.ui.panel",
+  /** Виден ли журнал прогона под холстом схемы. */
+  log: "takt.ui.log",
 };
 
 /** Читает настройку; `fallback` - если её нет либо хранилище недоступно. */

@@ -99,8 +99,11 @@ export async function main() {
   // и той же ручкой правил (границы, память, клавиатура).
   shell.attachPanes(dom.split, localStorage);
   shell.attachRows(dom.hsplit, localStorage);
-  // Вкладка прогона делится так же: сценарий сверху, трасса снизу.
-  shell.attachTraceRows(dom.tsplit, localStorage);
+  // Схема делится так же: журнал под холстом, легенда полкой либо колонкой. Доли
+  // помнит браузер читателя - это его вид, а не свойство проекта.
+  shell.attachLogRows(dom.logsplit, localStorage);
+  shell.attachLegendRows(dom.legendrows, localStorage);
+  shell.attachLegendCols(dom.legendcols, localStorage);
   // Перенос строк - Одна настройка на все области кода: так человек читает код вообще,
   // а не конкретную панель.
   shell.attachWrap(
@@ -417,7 +420,7 @@ function cache() {
   for (const id of [
     "editor", "diagnostics", "output", "trace", "version", "target", "args",
     "scenario", "budget", "share", "format", "status", "tabs", "modes",
-    "lang", "tools-lang", "tools-lang-trace", "update", "showgen", "showsim", "grip", "split", "hsplit", "tsplit", "wrap", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
+    "lang", "tools-lang", "tools-lang-trace", "update", "showgen", "showsim", "grip", "split", "hsplit", "wrap", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
     "account", "session", "icon-enter", "icon-leave",
     "save", "openfile", "panel", "signedout", "signedin", "whoami",
     "whoami-bar",
@@ -430,6 +433,7 @@ function cache() {
     "crumbs", "scheme-up", "stage", "scheme", "sheet", "nav", "scheme-tools", "map",
     "scheme-empty", "legend", "zoom", "alerts",
     "scheme-modal", "scheme-tabs", "scheme-settings", "scheme-save", "scheme-cancel",
+    "showlog", "logsplit", "legendrows", "legendcols",
   ]) {
     dom[id] = document.getElementById(id);
   }
@@ -505,6 +509,21 @@ function wire() {
   dom.showgen.addEventListener("click", () => selectPanel(state.panel === "output" ? null : "output"));
   dom.showsim.addEventListener("click", () => selectPanel(state.panel === "trace" ? null : "trace"));
   dom.showscheme.addEventListener("click", () => selectPanel(state.panel === "scheme" ? null : "scheme"));
+  // Запись журнала выделяется щелчком: в длинной трассе так не теряют место, к
+  // которому вернулись. Выделена всегда одна - это отметка чтения, а не отбор.
+  dom.trace.addEventListener("click", (event) => {
+    const line = event.target.closest(".row");
+    if (!line || !dom.trace.contains(line)) return;
+    const was = line.getAttribute("aria-selected") === "true";
+    for (const other of dom.trace.querySelectorAll('[aria-selected="true"]')) {
+      other.removeAttribute("aria-selected");
+    }
+    if (!was) line.setAttribute("aria-selected", "true");
+  });
+  // Журнал прогона убирается со схемы кнопкой: лист и журнал читают вместе, но
+  // когда рисунок велик, полоса строк отнимает у него половину области.
+  showLog(shell.setting(localStorage, shell.UI_KEYS.log, "1") !== "0");
+  dom.showlog.addEventListener("click", () => showLog(dom.showlog.getAttribute("aria-pressed") !== "true"));
   dom.share.addEventListener("click", share);
   dom.tabs.addEventListener("click", (event) => {
     const tab = event.target.closest("[data-tab]");
@@ -1239,12 +1258,37 @@ function selectMode(name) {
   if (name !== "source") selectPanel(name);
 }
 
+/**
+ * Строка списка: диагностика, замечание прогона, строка трассы.
+ *
+ * У записи журнала есть колонка рода - слово, а не только цвет: цветом одним
+ * состояние не передаётся (правило доступности книги оформления), да и рода у
+ * прогона три - шаг, замечание, вывод модели. У шага колонка пуста: строка сама
+ * называет себя тактом, и слово "шаг" стояло бы дважды.
+ */
 function row(text, kind) {
   const node = document.createElement("div");
   node.className = `row row-${kind}`;
-  node.textContent = text;
+  const known = ROW_KINDS[kind];
+  if (known) {
+    const mark = document.createElement("span");
+    mark.className = "row-kind";
+    mark.textContent = t(known.label);
+    node.appendChild(mark);
+  }
+  const body = document.createElement("span");
+  body.className = "row-text";
+  body.textContent = text;
+  node.appendChild(body);
   return node;
 }
+
+/** Слово рода записи; рода без слова колонки не получают. */
+const ROW_KINDS = {
+  warning: { label: "trace.kindWarning" },
+  output: { label: "trace.kindOutput" },
+  error: { label: "trace.kindError" },
+};
 
 /**
  * Системное сообщение: сбой инструмента, а не замечание к модели.
@@ -1274,6 +1318,19 @@ function setRunButtons(off) {
   for (const [name, disabled] of Object.entries(off)) {
     for (const button of document.querySelectorAll(`[data-run="${name}"]`)) button.disabled = disabled;
   }
+}
+
+/**
+ * Показывает либо убирает журнал прогона под холстом схемы.
+ *
+ * Разделитель уходит вместе с журналом: граница без второй области ничего не
+ * делит, а нажать её всё ещё можно - и доля менялась бы вслепую.
+ */
+function showLog(shown) {
+  dom.showlog.setAttribute("aria-pressed", String(shown));
+  dom.trace.hidden = !shown;
+  dom.logsplit.hidden = !shown;
+  shell.remember(localStorage, shell.UI_KEYS.log, shown ? "1" : "0");
 }
 
 function say(text, kind) {

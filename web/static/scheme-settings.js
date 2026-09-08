@@ -358,7 +358,7 @@ function placeSample(step) {
   const svg = box();
   svg.appendChild(mk("path", { class: "edge", d: "M6 14h44", "stroke-width": 1.5 }));
   const x = { start: 14, center: 28, end: 42 }[step];
-  svg.appendChild(mk("rect", { class: "edge-label-bg", x: x - 7, y: 2, width: 14, height: 12, rx: 2 }));
+  svg.appendChild(mk("rect", { class: "set-mark-bg", x: x - 7, y: 2, width: 14, height: 12, rx: 2 }));
   const text = mk("text", { class: "edge-mark", x, y: 12 });
   text.textContent = "K";
   svg.appendChild(text);
@@ -366,37 +366,37 @@ function placeSample(step) {
 }
 
 function fontSample(step) {
-  const svg = box();
-  const text = mk("text", { class: "node-mark", x: 28, y: 20, style: step === "mono" ? "font-family: var(--font-code)" : "" });
-  text.textContent = "S1";
-  svg.appendChild(text);
-  return svg;
+  // Кегль образца гарнитуры постоянен: сравнивают форму знака, а не его величину -
+  // её выбирают соседним полем.
+  const font = step === "mono" ? "font-family: var(--font-code); " : "";
+  return markBox("node-mark", "node-num", "S", "1", `${font}font-size: 15px`);
 }
 
 function sizeSample(step) {
+  const size = { xs: 10, sm: 13, md: 16, lg: 20 }[step];
+  return markBox("node-mark", "node-num", "S", "1", `font-size: ${size}px`);
+}
+
+/** Знак с номером: та же пара классов, что на листе, - индекс едет за кеглем. */
+function markBox(cls, numCls, letter, number, style) {
   const svg = box();
-  const size = { sm: 10, md: 13, lg: 17 }[step];
-  const text = mk("text", { class: "node-mark", x: 28, y: 21, style: `font-size: ${size}px` });
-  text.textContent = "S1";
+  const text = mk("text", { class: cls, x: 28, y: 19, style });
+  text.textContent = letter;
+  const num = mk("tspan", { class: numCls, dy: "0.3em" });
+  num.textContent = number;
+  text.appendChild(num);
   svg.appendChild(text);
   return svg;
 }
 
 function condFontSample(step) {
-  const svg = box();
-  const text = mk("text", { class: "edge-mark", x: 28, y: 19, style: step === "mono" ? "font-family: var(--font-code)" : "" });
-  text.textContent = "K1";
-  svg.appendChild(text);
-  return svg;
+  const font = step === "mono" ? "font-family: var(--font-code); " : "";
+  return markBox("edge-mark", "edge-num", "K", "1", `${font}font-size: 15px`);
 }
 
 function condSizeSample(step) {
-  const svg = box();
-  const size = { xs: 9, sm: 11, md: 13 }[step];
-  const text = mk("text", { class: "edge-mark", x: 28, y: 20, style: `font-size: ${size}px` });
-  text.textContent = "K1";
-  svg.appendChild(text);
-  return svg;
+  const size = { xs: 10, sm: 13, md: 16 }[step];
+  return markBox("edge-mark", "edge-num", "K", "1", `font-size: ${size}px`);
 }
 
 /** Легенда значков: три строки расшифровки либо их отсутствие. */
@@ -416,21 +416,15 @@ function marksSample(step) {
 
 function gammaSample(step) {
   const svg = box();
-  // Гамма показывается тремя кружками ролей: покой, ход, тревога. У чертёжной
-  // они одинаковы - в том и смысл ступени.
-  const roles = {
-    color: ["node-body", "node-body running", "node-body expected"],
-    draft: ["node-body", "node-body", "node-body"],
-    contrast: ["node-body", "node-body running", "node-body expected"],
-  }[step];
-  roles.forEach((cls, i) => {
-    const circle = mk("circle", { class: cls, cx: 14 + i * 14, cy: 14, r: 6, "stroke-width": step === "contrast" ? 2.5 : 1.5 });
-    if (step === "draft") {
-      circle.setAttribute("fill", "var(--surface-sheet)");
-      circle.setAttribute("stroke", "var(--on-surface)");
-    }
-    svg.appendChild(circle);
+  // Кружки рисуются в обёртке узла: вид состояния задают правила `.node.running
+  // .node-body`, и кружок без родителя-узла остаётся бесцветным.
+  const states = step === "draft" ? ["", "", ""] : ["", "running", "expected"];
+  states.forEach((state, i) => {
+    const group = mk("g", { class: `node ${state}`.trim() });
+    group.appendChild(mk("circle", { class: "node-body", cx: 14 + i * 14, cy: 14, r: 6 }));
+    svg.appendChild(group);
   });
+  svg.dataset.gamma = step;
   return svg;
 }
 

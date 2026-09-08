@@ -32,19 +32,34 @@ function mk(tag, attrs = {}) {
 }
 
 /** Ширина подложки под текст знака или подписи: по числу знаков кода. */
+/**
+ * Знак с подложкой: подложка обычно невидима и проявляется под указателем.
+ *
+ * Знак и подложка лежат в своей группе, а не рядом в общей: правило наведения
+ * должно смотреть на пару целиком - иначе рамка вспыхивала бы от прикосновения к
+ * линии, проходящей мимо, и гасла бы, стоит указателю попасть между буквами.
+ */
 function backing(parent, cx, cy, text, cls) {
   const w = text.length * 8 + 8;
-  parent.appendChild(mk("rect", { class: `${cls}-bg`, x: cx - w / 2, y: cy - 11, width: w, height: 17, rx: 3 }));
+  const box = mk("g", { class: `${cls}-box` });
+  box.appendChild(mk("rect", { class: `${cls}-bg`, x: cx - w / 2, y: cy - 11, width: w, height: 17, rx: 3 }));
   const node = mk("text", { class: cls, x: cx, y: cy + 2 });
   node.textContent = text;
-  parent.appendChild(node);
+  box.appendChild(node);
+  parent.appendChild(box);
   return node;
 }
 
-/** Знак с номером нижним индексом, рисованным смещением базовой линии. */
+/**
+ * Знак с номером нижним индексом, рисованным смещением базовой линии.
+ *
+ * Смещение задано долей кегля (`em`), а не числом: кегль знака выбирает автор
+ * настройками, и номер, смещённый на постоянные четыре единицы, при крупном знаке
+ * оказывался бы почти на его базовой линии.
+ */
 function markText(node, mark, numClass) {
   node.textContent = mark.slice(0, 1);
-  const num = mk("tspan", { class: numClass, dy: 4 });
+  const num = mk("tspan", { class: numClass, dy: "0.3em" });
   num.textContent = mark.slice(1);
   node.appendChild(num);
 }
@@ -169,7 +184,7 @@ export class Scheme {
     });
     if (hit && hit.name !== this.selected) {
       this.selected = hit.name;
-      this.selectedEdge = null;
+      this.focusEdge(null);
       this.applySelection();
     }
   }
@@ -611,10 +626,6 @@ export class Scheme {
       edge.points.forEach((p, index) => {
         const pin = mk("circle", { class: "pin", cx: p[0], cy: p[1], r: geo.SNAP / 2, tabindex: 0, role: "button", "aria-label": this.t("scheme.pinHint") });
         pin.addEventListener("pointerdown", (event) => this.dragPin(event, sheet, edge, index, pin));
-        pin.addEventListener("dblclick", (event) => {
-          event.stopPropagation();
-          this.dropPin(sheet, edge, index);
-        });
         group.appendChild(pin);
       });
       group.addEventListener("dblclick", (event) => this.addPinAt(event, sheet, edge, pts));
@@ -685,7 +696,7 @@ export class Scheme {
     group.addEventListener("focus", () => {
       if (this.selected !== node.name) {
         this.selected = node.name;
-        this.selectedEdge = null;
+        this.focusEdge(null);
         this.applySelection();
       }
     });
@@ -717,12 +728,11 @@ export class Scheme {
   drawCrumbs(sheet) {
     const { crumbs } = this.dom;
     crumbs.replaceChildren();
-    // Кнопка "наверх" - первая в строке: она про путь входа, а не про холст, и
-    // читается вместе с крошками слева направо. Доступна она ровно тогда, когда
-    // есть куда подниматься: на листе модели верхнего уровня подъём никуда не ведёт.
-    const up = this.dom.crumbsUp;
-    up.disabled = this.trail.length < 2;
-    crumbs.appendChild(up);
+    // Кнопка "наверх" живёт в углу холста, а не в этой строке: она про рисунок, и
+    // рука тянется к ней там, где смотрит глаз. Появляется ровно тогда, когда есть
+    // куда подниматься - на верхнем листе подъём никуда не ведёт, и погашенная
+    // кнопка занимала бы угол, ничего не обещая.
+    this.dom.crumbsUp.hidden = this.trail.length < 2;
     this.trail.forEach((level, index) => {
       if (index > 0) {
         const sep = document.createElement("span");
@@ -823,16 +833,47 @@ export class Scheme {
 
   selectNode(name, fromUser = true) {
     this.selected = name;
-    this.selectedEdge = null;
+    this.focusEdge(null);
     this.applySelection();
     const node = this.current().nodes.find((n) => n.name === name);
     if (fromUser && node?.nameRange) this.onSelect(node);
   }
 
   selectEdge(key) {
-    this.selectedEdge = key;
+    this.focusEdge(key);
     this.selected = null;
     this.applySelection();
+  }
+
+  /**
+   * Ставит ребро в фокус, а с прежнего снимает звенья, не дающие изгиба.
+   *
+   * Правило одно: звено - это изгиб. Явно заведённое звено ложится на линию и
+   * живёт, пока ребро в фокусе: автор ведёт его туда, где линии нужен угол. Ушёл
+   * фокус - линия остаётся с теми звеньями, которые её действительно гнут, а
+   * лежащие на прямой снимаются сами. Удалять звено отдельным действием нечем и
+   * незачем: выпрямил линию - звена нет.
+   */
+  focusEdge(key) {
+    const leaving = this.selectedEdge;
+    this.selectedEdge = key;
+    if (leaving && leaving !== key) this.straighten(leaving);
+  }
+
+  /** Снимает с ребра звенья, лежащие на прямой; правит раскладку, если снял. */
+  straighten(key) {
+    const sheet = this.current();
+    if (!sheet.editable) return;
+    const edge = sheet.edges.find((e) => e.key === key);
+    if (!edge || edge.points.length === 0) return;
+    const from = sheet.nodes.find((n) => n.name === edge.from);
+    const to = sheet.nodes.find((n) => n.name === edge.to);
+    if (!from || !to) return;
+    const kept = geo.bendingPoints(from, edge.loop ? from : to, edge.points);
+    if (kept.length === edge.points.length) return;
+    const before = this.text();
+    layoutFile.bend(this.layout, sheet.path, edge.key, kept);
+    this.commit(before);
   }
 
   /**
@@ -925,7 +966,7 @@ export class Scheme {
 
   // ── Тяга: узел, излом, знак, легенда ────────────────────────────────────
 
-  /** Общий приём тяги: порог, движение, отпускание, отмена по Escape. */
+    /** Общий приём тяги: порог, движение, отпускание, отмена по Escape. */
   drag(event, { onStart, onMove, onEnd, onCancel }) {
     if (event.button) return;
     event.stopPropagation();
@@ -1068,32 +1109,28 @@ export class Scheme {
     points.splice(at, 0, p);
     const before = this.text();
     layoutFile.bend(this.layout, sheet.path, edge.key, points);
-    this.selectedEdge = edge.key;
+    this.focusEdge(edge.key);
     this.selected = null;
     this.commit(before);
   }
 
-  dropPin(sheet, edge, index) {
-    const before = this.text();
-    layoutFile.bend(this.layout, sheet.path, edge.key, edge.points.filter((_, i) => i !== index));
-    this.commit(before);
-  }
-
-  /** Излом кнопкой панели: на середину самого длинного сегмента выбранного ребра. */
-  pinByButton(add) {
+  /**
+   * Звено кнопкой панели: на середину самого длинного сегмента выбранного ребра.
+   *
+   * Точка ложится ровно на линию - изгиба она пока не даёт и живёт, пока ребро в
+   * фокусе. Автор ведёт её туда, где линии нужен угол; оставит на месте - звено
+   * снимется само, когда фокус уйдёт.
+   */
+  pinByButton() {
     const sheet = this.current();
     const edge = sheet.edges.find((e) => e.key === this.selectedEdge);
     if (!edge || !sheet.editable) return;
     const before = this.text();
-    if (add) {
-      const from = sheet.nodes.find((n) => n.name === edge.from);
-      const to = sheet.nodes.find((n) => n.name === edge.to);
-      const pts = geo.route(from, edge.loop ? from : to, edge.points);
-      const [mx, my] = geo.longestMid(pts);
-      layoutFile.bend(this.layout, sheet.path, edge.key, [...edge.points, [this.snapped(mx), this.snapped(my)]]);
-    } else {
-      layoutFile.bend(this.layout, sheet.path, edge.key, edge.points.slice(0, -1));
-    }
+    const from = sheet.nodes.find((n) => n.name === edge.from);
+    const to = sheet.nodes.find((n) => n.name === edge.to);
+    const pts = geo.route(from, edge.loop ? from : to, edge.points);
+    const [mx, my] = geo.longestMid(pts);
+    layoutFile.bend(this.layout, sheet.path, edge.key, [...edge.points, [this.snapped(mx), this.snapped(my)]]);
     this.commit(before);
   }
 
@@ -1122,7 +1159,7 @@ export class Scheme {
       if (event.target === scheme || event.target === this.dom.sheet) {
         if (this.selected || this.selectedEdge) {
           this.selected = null;
-          this.selectedEdge = null;
+          this.focusEdge(null);
           this.applySelection();
         }
       }
@@ -1158,8 +1195,7 @@ export class Scheme {
       else if (act === "auto") this.autoLayout();
       else if (act.startsWith("legend-")) this.placeLegend(act.slice(7));
       else if (act === "settings") this.openSettings();
-      else if (act === "pin-add") this.pinByButton(true);
-      else if (act === "pin-drop") this.pinByButton(false);
+      else if (act === "pin-add") this.pinByButton();
       else if (act === "nav") {
         nav.hidden = !nav.hidden;
         button.setAttribute("aria-pressed", String(!nav.hidden));

@@ -166,6 +166,11 @@ export function paintLegend(container, ctx) {
  */
 function marksBlock(t) {
   const NS = "http://www.w3.org/2000/svg";
+  const shape = (tag, attrs) => {
+    const node = document.createElementNS(NS, tag);
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+    return node;
+  };
   const box = (draw) => {
     const svg = document.createElementNS(NS, "svg");
     svg.setAttribute("class", "legend-sample");
@@ -174,19 +179,24 @@ function marksBlock(t) {
     draw(svg);
     return svg;
   };
-  const shape = (tag, attrs) => {
-    const node = document.createElementNS(NS, tag);
-    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
-    return node;
-  };
-  const node = (cls) => box((svg) => {
-    svg.appendChild(shape("circle", { class: `node-ring ${cls}`, cx: 22, cy: 12, r: 8 }));
-    svg.appendChild(shape("circle", { class: cls, cx: 22, cy: 12, r: 8 }));
+  // Узел рисуется в той же обёртке, что на листе: вид состояния задают правила
+  // `.node.running .node-body`, и кружок без родителя-узла остаётся бесцветным -
+  // все пять образцов выглядели одинаково серыми.
+  const node = (state) => box((svg) => {
+    const group = shape("g", { class: `node ${state}`.trim() });
+    group.appendChild(shape("circle", { class: "node-body", cx: 22, cy: 12, r: 8 }));
+    svg.appendChild(group);
   });
-  const line = (cls, marker) => box((svg) => {
-    const path = shape("path", { class: cls, d: "M4 12h30" });
-    if (marker) path.setAttribute("marker-end", `url(#${marker})`);
-    svg.appendChild(path);
+  // Наконечник рисуется здесь же, а не берётся маркером листа: маркер объявлен в
+  // `defs` того SVG и в чужом недоступен - стрелка приезжала голой линией.
+  const line = (cls, head) => box((svg) => {
+    svg.appendChild(shape("path", { class: cls, d: "M6 12h24" }));
+    if (head === "solid") svg.appendChild(shape("path", { class: "arrow-solid", d: "M30 7l8 5-8 5z" }));
+    if (head === "open") svg.appendChild(shape("path", { class: "arrow-open", d: "M30 7l8 5-8 5" }));
+  });
+  const loop = () => box((svg) => {
+    svg.appendChild(shape("path", { class: "edge edge-loop", d: "M14 16a8 8 0 1 1 14 0" }));
+    svg.appendChild(shape("path", { class: "arrow-open", d: "M24 11l4 5-6 1" }));
   });
 
   const block = document.createElement("div");
@@ -196,14 +206,14 @@ function marksBlock(t) {
   title.textContent = t("scheme.legend.marks");
   block.appendChild(title);
   const items = [
-    { draw: () => node("node-body"), label: "scheme.legend.markState" },
-    { draw: () => node("node-body running"), label: "scheme.legend.markRunning" },
-    { draw: () => node("node-body expected"), label: "scheme.legend.markExpected" },
-    { draw: () => node("node-body reachable"), label: "scheme.legend.markReachable" },
-    { draw: () => node("node-body unplaced"), label: "scheme.legend.markUnplaced" },
-    { draw: () => line("edge", "arrow-open"), label: "scheme.legend.markEdgeRef" },
-    { draw: () => line("edge", "arrow-solid"), label: "scheme.legend.markEdgeNext" },
-    { draw: () => line("edge edge-loop"), label: "scheme.legend.markEdgeLoop" },
+    { draw: () => node(""), label: "scheme.legend.markState" },
+    { draw: () => node("running"), label: "scheme.legend.markRunning" },
+    { draw: () => node("expected"), label: "scheme.legend.markExpected" },
+    { draw: () => node("reachable"), label: "scheme.legend.markReachable" },
+    { draw: () => node("unplaced"), label: "scheme.legend.markUnplaced" },
+    { draw: () => line("edge", "open"), label: "scheme.legend.markEdgeRef" },
+    { draw: () => line("edge", "solid"), label: "scheme.legend.markEdgeNext" },
+    { draw: () => loop(), label: "scheme.legend.markEdgeLoop" },
   ];
   for (const item of items) {
     block.appendChild(row([item.draw(), span("legend-name", t(item.label))], "legend-row legend-mark-row"));

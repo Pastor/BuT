@@ -250,11 +250,6 @@
            пришлось бы рисовать второй колонкой, синхронизируя прокрутку. -->
       <div id="scenario" class="editor scenario" data-i18n-attr="aria-label:trace.scenario"
            aria-label="Сценарий входов"></div>
-      <!-- Разделитель рядов вкладки: сколько отдано сценарию, сколько трассе. -->
-      <div id="tsplit" class="split split-h" role="separator" aria-orientation="horizontal"
-           data-i18n-attr="aria-label:trace.rows" aria-label="Высота сценария" tabindex="0"></div>
-      <div id="tools-lang-trace" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
-      <div id="trace" class="list trace" aria-live="polite"></div>
     </div>
 
     <!-- Схема состояний: уведомление о расхождении раскладки с моделью,
@@ -287,12 +282,12 @@
           <button class="icon-btn" type="button" data-run="stop" disabled
                   data-i18n-attr="aria-label:trace.stop;data-tip:trace.stop"
                   aria-label="Стоп" data-tip="Стоп"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg></button>
+          <button id="showlog" class="icon-btn" type="button" aria-pressed="true"
+                  data-i18n-attr="aria-label:trace.log;data-tip:trace.log"
+                  aria-label="Журнал прогона" data-tip="Журнал прогона"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button>
           </span>
         </div>
-        <nav id="crumbs" class="crumbs" data-i18n-attr="aria-label:scheme.level" aria-label="Уровень схемы">
-          <button id="scheme-up" class="icon-btn" type="button" disabled
-                  data-i18n-attr="aria-label:scheme.up;data-tip:scheme.up" aria-label="Наверх" data-tip="Наверх"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20V5"/><path d="M6 11l6-6 6 6"/></svg></button>
-        </nav>
+        <nav id="crumbs" class="crumbs" data-i18n-attr="aria-label:scheme.level" aria-label="Уровень схемы"></nav>
         <div id="scheme-tools" class="scheme-tools">
           <span class="seg tool-wide">
         <button class="icon-btn" type="button" data-act="zoom-out" data-i18n-attr="aria-label:scheme.zoomOut;data-tip:scheme.zoomOut" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M7.5 10.5h6"/></svg></button>
@@ -311,7 +306,6 @@
           </span>
           <span class="seg tool-wide">
         <button class="icon-btn" type="button" data-act="pin-add" data-i18n-attr="aria-label:scheme.pinAdd;data-tip:scheme.pinAdd" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20v-8h8"/><circle cx="12" cy="12" r="2.5"/><path d="M16.5 6.5h5M19 4v5"/></svg></button>
-        <button class="icon-btn" type="button" data-act="pin-drop" data-i18n-attr="aria-label:scheme.pinDrop;data-tip:scheme.pinDrop" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20v-8h8"/><circle cx="12" cy="12" r="2.5"/><path d="M16.5 6.5h5"/></svg></button>
           </span>
           <button class="icon-btn" type="button" data-act="settings" data-i18n-attr="aria-label:scheme.settings;data-tip:scheme.settings" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3M6 6l2.1 2.1M15.9 15.9L18 18M18 6l-2.1 2.1M8.1 15.9L6 18"/></svg></button>
           <button class="icon-btn" type="button" data-act="nav" aria-pressed="false" data-i18n-attr="aria-label:scheme.navigator;data-tip:scheme.navigatorHint" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 4.5h17v15h-17z"/><path d="M9 4.5v15"/><path d="M12 9h6M12 12h6M12 15h4"/></svg></button>
@@ -320,12 +314,31 @@
       <div id="stage" class="scheme-stage legend-side-bottom">
         <div id="scheme" class="scheme" tabindex="0" data-i18n-attr="aria-label:scheme.canvas" aria-label="Схема состояний модели">
           <svg id="sheet" class="sheet" role="img"></svg>
+          <!-- Возврат на уровень выше: кнопка стоит в углу холста и появляется
+               только внутри композиции - на верхнем листе подниматься некуда.
+               С листом она не едет: угол принадлежит области, а не рисунку. -->
+          <button id="scheme-up" class="icon-btn scheme-up" type="button" hidden
+                  data-i18n-attr="aria-label:scheme.up;data-tip:scheme.up" aria-label="Наверх" data-tip="Наверх"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20V5"/><path d="M6 11l6-6 6 6"/></svg></button>
           <div id="nav" class="scheme-nav" hidden></div>
           <svg id="map" class="minimap" viewBox="0 0 128 96" role="img" data-i18n-attr="aria-label:scheme.minimap" aria-label="Миникарта листа"></svg>
           <div id="scheme-empty" class="sheet-empty" data-i18n="scheme.empty" hidden>Схема появится, когда модель разберётся</div>
         </div>
+        <!-- Границу легенды тянут мышью: сколько её видно, решает автор. Полке
+             принадлежит высота, колонке - ширина, и это две разные оси - у
+             разделителя ось задаётся при подключении, поэтому их двое. -->
+        <div id="legendrows" class="split split-h" role="separator" aria-orientation="horizontal"
+             data-i18n-attr="aria-label:scheme.legend.rows" aria-label="Высота легенды" tabindex="0"></div>
+        <div id="legendcols" class="split split-v" role="separator" aria-orientation="vertical"
+             data-i18n-attr="aria-label:scheme.legend.cols" aria-label="Ширина легенды" tabindex="0"></div>
         <div id="legend" class="legend legend-bottom" data-i18n-attr="aria-label:scheme.legend" aria-label="Легенда обозначений"></div>
       </div>
+      <!-- Журнал прогона: он читается вместе со схемой - подсветка говорит, где
+           автомат сейчас, а строки говорят, как он туда пришёл. Полоса убирается
+           кнопкой в ряду прогона, а её высоту автор тянет разделителем. -->
+      <div id="logsplit" class="split split-h" role="separator" aria-orientation="horizontal"
+           data-i18n-attr="aria-label:trace.logRows" aria-label="Высота журнала" tabindex="0"></div>
+      <div id="tools-lang-trace" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
+      <div id="trace" class="list trace" aria-live="polite"></div>
     </div>
     <!-- Ключи сборки выбором: та же строка, что в поле "Ключи сборки", только
          собранная контролами. Список ключей строит `flags.js` и сверяет с

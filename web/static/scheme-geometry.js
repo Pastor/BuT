@@ -185,6 +185,40 @@ export function pointAlong(pts, from, dist) {
   return list[list.length - 1];
 }
 
+/**
+ * Точки, в которых линия действительно изгибается.
+ *
+ * Звено - это изгиб: точка, лежащая на прямой между соседями, ничего о форме
+ * линии не говорит, и в раскладке ей делать нечего. Порог назван половиной шага
+ * сетки: точка, отстоящая на меньшее, на глаз лежит на линии, а раскладка,
+ * хранящая такие точки, растёт от каждого случайного касания.
+ *
+ * @param {{x: number, y: number}} from узел начала
+ * @param {{x: number, y: number}} to узел конца
+ * @param {number[][]} points изломы автора
+ * @returns {number[][]} те из них, что дают изгиб
+ */
+export function bendingPoints(from, to, points) {
+  const kept = [];
+  const list = Array.isArray(points) ? points : [];
+  for (let i = 0; i < list.length; i += 1) {
+    const before = i > 0 ? list[i - 1] : [from.x, from.y];
+    const after = i + 1 < list.length ? list[i + 1] : [to.x, to.y];
+    if (offSegment(list[i], before, after) > SNAP / 2) kept.push(list[i]);
+  }
+  return kept;
+}
+
+/** Расстояние от точки до отрезка; вырожденный отрезок - расстояние до его точки. */
+function offSegment(p, a, b) {
+  const vx = b[0] - a[0];
+  const vy = b[1] - a[1];
+  const len = vx * vx + vy * vy;
+  if (len === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
+  const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * vx + (p[1] - a[1]) * vy) / len));
+  return Math.hypot(p[0] - (a[0] + t * vx), p[1] - (a[1] + t * vy));
+}
+
 /** Середина самого длинного сегмента ломаной. */
 export function longestMid(pts) {
   let best = -1;
