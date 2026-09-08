@@ -1734,6 +1734,12 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
   border-radius: var(--radius-sm);
 }
 
+/* Двойники кнопок прогона стоят в той же коробке, что и панель холста: в одной
+ * строке две разные кнопки-значка читались бы как два разных рода действия,
+ * которого между "пустить прогон" и "вписать лист" нет. Место в строке задаёт
+ * не отступ, а порядок: путь входа между ними растягивается сам. */
+.scheme-run { flex: none; }
+
 /* ── Панель инструментов схемы (`.scheme-tools`) ─────────────────────────
  * Кнопки-значки в обойме `.seg` - обойма существующая, своих объявлений ей не
  * заводится. Панель стоит в строке уровня, на одной линии с кнопкой "наверх":
@@ -1744,7 +1750,6 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
   display: flex;
   align-items: center;
   gap: var(--gap-half);
-  margin-left: auto;
   padding: var(--gap-quarter);
   border-radius: var(--radius);
   background: var(--surface-raised);

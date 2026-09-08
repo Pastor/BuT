@@ -14,6 +14,8 @@
 // # Форма
 //
 //   { "format": 1, "corners": "square" | "round",
+//     "meta": { "createdBy": "автор", "createdAt": "2026-09-08T18:00:00Z",
+//               "edits": [ { "by": "кто", "at": "2026-09-08T18:20:00Z" } ] },
 //     "labelPlace": "start" | "center" | "end",
 //     "view": { "edgeWidth": "thin" | "normal" | "bold", "nodeWidth": тоже,
 //               "arrow": "open" | "solid" | "line", "font": "gost" | "mono",
@@ -31,6 +33,17 @@
 // Запись каноническая: ключи отсортированы, отступ два пробела, числа целые, перевод
 // строки в конце, умолчания и пустые листы не пишутся - дифф файла в git несёт только
 // смысл.
+//
+// # Кто и когда
+//
+// Файл называет создателя и время создания, а правки ведёт журналом: строка на
+// сеанс правки, не чаще раза в час на одного человека, последние двадцать. Час -
+// не украшение: раскладку правят перетаскиванием, и запись на каждое движение
+// узла сделала бы журнал длиннее самой раскладки. Предел тоже: без него файл
+// растёт бесконечно и перестаёт читаться глазами.
+//
+// Читатель без входа записывается гостем (`guest`): имени у него нет, а знать,
+// что файл правили, полезно.
 //
 // # Расхождение с моделью
 //
@@ -277,6 +290,55 @@ export function nameEdge(layout, path, key, alias) {
 }
 
 /**
+ * Имя, которым записывается правка читателя без входа.
+ *
+ * Латиницей и в файле: это идентификатор записи, а не подпись читателю. Русское
+ * слово в файле зависело бы от языка той страницы, где правку сделали, - и один
+ * файл нёс бы "гость" и "guest" вперемешку.
+ */
+export const GUEST = "guest";
+
+/** Сколько записей журнала правок хранится; старые вытесняются. */
+export const EDITS_KEPT = 20;
+
+/** Насколько частые правки одного человека сливаются в одну запись, мс. */
+const EDIT_WINDOW = 60 * 60 * 1000;
+
+/**
+ * Отмечает правку раскладки: создателя - однажды, правившего - журналом.
+ *
+ * Запись создателя ставится при первой же правке пустого файла и больше не
+ * меняется: создатель у файла один. Журнал ведётся по правилу "строка на сеанс":
+ * правка тем же человеком в пределах часа обновляет время последней строки, а не
+ * заводит новую - иначе перетаскивание одного узла дало бы десяток записей.
+ *
+ * @param {object} layout раскладка (меняется на месте)
+ * @param {string} who имя правившего; пусто - гость
+ * @param {number} now время правки (мс эпохи)
+ */
+export function touch(layout, who, now = Date.now()) {
+  const by = typeof who === "string" && who.trim() !== "" ? who.trim() : GUEST;
+  const at = new Date(now).toISOString().replace(/\.\d{3}Z$/, "Z");
+  if (!isObject(layout.meta)) layout.meta = {};
+  const meta = layout.meta;
+  if (typeof meta.createdBy !== "string" || meta.createdBy === "") {
+    meta.createdBy = by;
+    meta.createdAt = at;
+  }
+  const edits = Array.isArray(meta.edits) ? meta.edits : [];
+  const last = edits[edits.length - 1];
+  if (last && last.by === by && now - Date.parse(last.at) < EDIT_WINDOW) last.at = at;
+  else edits.push({ at, by });
+  meta.edits = edits.slice(-EDITS_KEPT);
+  return layout;
+}
+
+/** Сведения о создателе и правках; пусто - файла ещё никто не трогал. */
+export function metaOf(layout) {
+  return cleanMeta(layout?.meta);
+}
+
+/**
  * Ставит настройку вида; значение вне набора и умолчание записи не оставляют.
  *
  * @param {object} layout раскладка (меняется на месте)
@@ -424,6 +486,8 @@ function normalize(raw) {
   const out = empty();
   if (CORNERS.includes(raw?.corners)) out.corners = raw.corners;
   if (["start", "end"].includes(raw?.labelPlace)) out.labelPlace = raw.labelPlace;
+  const meta = cleanMeta(raw?.meta);
+  if (meta) out.meta = meta;
   const view = cleanView(raw?.view);
   if (Object.keys(view).length > 0) out.view = view;
   const legend = cleanLegend(raw?.legend);
@@ -462,6 +526,33 @@ function normalize(raw) {
     out.sheets[path] = { edges, names, nodes };
   }
   return out;
+}
+
+/**
+ * Сведения о создателе и правках: строки и время, журнал - в пределе.
+ *
+ * Негодная запись отбрасывается молча, как и чужая ступень: файл - подсказка, и
+ * испорченная запись об авторстве не вправе ни рисоваться, ни доживать до записи.
+ */
+function cleanMeta(raw) {
+  if (!isObject(raw)) return null;
+  const out = {};
+  if (typeof raw.createdBy === "string" && raw.createdBy.trim() !== "") {
+    out.createdBy = raw.createdBy.trim();
+    if (isTime(raw.createdAt)) out.createdAt = raw.createdAt;
+  }
+  const edits = (Array.isArray(raw.edits) ? raw.edits : [])
+    .filter((e) => isObject(e) && typeof e.by === "string" && e.by.trim() !== "" && isTime(e.at))
+    .map((e) => ({ at: e.at, by: e.by.trim() }))
+    .slice(-EDITS_KEPT);
+  if (edits.length > 0) out.edits = edits;
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+/** Время записи: только форма ISO с секундами и зоной UTC. */
+function isTime(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(value)
+    && !Number.isNaN(Date.parse(value));
 }
 
 /**

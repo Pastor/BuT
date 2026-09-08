@@ -105,6 +105,9 @@ export class Scheme {
     this.t = options.t;
     this.onSelect = options.onSelect ?? (() => {});
     this.onChange = options.onChange ?? (() => {});
+    // Кто правит - спрашивается у страницы на каждую правку, а не запоминается:
+    // вход и выход случаются посреди работы над схемой.
+    this.who = options.who ?? (() => "");
     this.graph = null;
     this.layout = layoutFile.empty();
     this.undo = [];
@@ -377,6 +380,10 @@ export class Scheme {
   /** Запоминает прежнее состояние, перерисовывает и сообщает вызывающему. */
   commit(before) {
     if (before === this.text()) return;
+    // Кто и когда правил - часть файла раскладки, и отмечается это здесь: одна
+    // точка фиксации правки на весь холст. Отмечай в местах правки - и первая же
+    // забытая точка дала бы файл, о правке которого никто не узнал.
+    layoutFile.touch(this.layout, this.who());
     this.undo.push(before);
     if (this.undo.length > 100) this.undo.shift();
     this.redo = [];

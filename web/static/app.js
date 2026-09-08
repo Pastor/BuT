@@ -173,6 +173,9 @@ export async function main() {
     },
     {
       t,
+      // Кто правит раскладку: логин вошедшего, а без входа - пусто (носитель
+      // раскладки запишет гостя). Спрашивается на каждую правку.
+      who: () => api.who()?.login ?? "",
       // Щелчок по узлу ставит курсор на имя состояния: выбор синхронен с текстом.
       onSelect: (node) => jump(node.nameRange.start_line, node.nameRange.start_character),
       // Правка раскладки - такая же работа, как правка текста: черновик пишется по тем
@@ -413,7 +416,7 @@ function fade(node) {
 function cache() {
   for (const id of [
     "editor", "diagnostics", "output", "trace", "version", "target", "args",
-    "scenario", "budget", "share", "run", "step", "stop", "format", "status", "tabs", "modes",
+    "scenario", "budget", "share", "format", "status", "tabs", "modes",
     "lang", "tools-lang", "tools-lang-trace", "update", "showgen", "showsim", "grip", "split", "hsplit", "tsplit", "wrap", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
     "account", "session", "icon-enter", "icon-leave",
     "save", "openfile", "panel", "signedout", "signedin", "whoami",
@@ -486,10 +489,10 @@ function wire() {
     account.chooseScenario(dom.scenariofile.value);
   });
   dom.format.addEventListener("click", format);
-  dom.run.addEventListener("click", run);
-  dom.step.addEventListener("click", stepOnce);
-  // Двойники кнопок прогона в строке уровня схемы: действие то же самое, своего
-  // обработчика у них нет - разъехаться двум обработчикам проще, чем кажется.
+  // Прогон, шаг и стоп живут в строке уровня схемы: прогон смотрят на схеме -
+  // она показывает ход автомата подсветкой, а вкладка прогона несёт лог и
+  // настройки. Кнопки узнаются признаком `data-run`, а не именами узлов:
+  // список действий один, и заводить трёх имён на три кнопки незачем.
   for (const button of document.querySelectorAll("[data-run]")) {
     const act = { run, step: stepOnce, stop }[button.dataset.run];
     if (act) button.addEventListener("click", act);
@@ -502,7 +505,6 @@ function wire() {
   dom.showgen.addEventListener("click", () => selectPanel(state.panel === "output" ? null : "output"));
   dom.showsim.addEventListener("click", () => selectPanel(state.panel === "trace" ? null : "trace"));
   dom.showscheme.addEventListener("click", () => selectPanel(state.panel === "scheme" ? null : "scheme"));
-  dom.stop.addEventListener("click", stop);
   dom.share.addEventListener("click", share);
   dom.tabs.addEventListener("click", (event) => {
     const tab = event.target.closest("[data-tab]");
@@ -1009,8 +1011,7 @@ function session() {
 /** Запускает прогон в отдельном потоке: до конца модели либо до бюджета. */
 function run() {
   if (state.running) return;
-  selectPanel("trace");
-  selectMode("trace");
+  showRun();
   state.running = true;
   setRunButtons({ run: true, step: true, stop: false });
   worker().postMessage({ type: "run", ...session(), budget: Number(dom.budget.value) || 10_000 });
@@ -1019,9 +1020,21 @@ function run() {
 /** Один такт: продолжает открытую сессию либо открывает новую по текущему тексту. */
 function stepOnce() {
   if (state.running) return;
+  showRun();
+  worker().postMessage({ type: "step", ...session() });
+}
+
+/**
+ * Куда смотреть во время прогона.
+ *
+ * Открыта схема - она и показывает ход: узлы подсвечиваются, и уводить автора на
+ * вкладку прогона значило бы отнять у него то, ради чего он схему открыл. В любой
+ * другой области трасса нужна: иначе прогон идёт молча.
+ */
+function showRun() {
+  if (state.panel === "scheme") return;
   selectPanel("trace");
   selectMode("trace");
-  worker().postMessage({ type: "step", ...session() });
 }
 
 function stop() {
@@ -1231,17 +1244,17 @@ function alarm(error) {
 }
 
 /**
- * Доступность кнопок прогона - разом у оригинала и его двойников.
+ * Доступность кнопок прогона.
  *
- * Двойники стоят в строке уровня схемы, и состояние у них общее: кнопка "стоп",
- * доступная в одной области и погашенная в другой, говорит о прогоне неправду.
+ * Кнопки ищутся признаком: их место - строка уровня схемы, но правило "какая
+ * кнопка сейчас погашена" принадлежит прогону, а не месту. Заведи кнопку в
+ * другой области - она получит то же состояние, не требуя правки здесь.
  *
  * @param {{run: boolean, step: boolean, stop: boolean}} off какие погасить
  */
 function setRunButtons(off) {
   for (const [name, disabled] of Object.entries(off)) {
-    dom[name].disabled = disabled;
-    for (const twin of document.querySelectorAll(`[data-run="${name}"]`)) twin.disabled = disabled;
+    for (const button of document.querySelectorAll(`[data-run="${name}"]`)) button.disabled = disabled;
   }
 }
 

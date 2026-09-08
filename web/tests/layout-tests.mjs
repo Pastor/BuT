@@ -187,6 +187,43 @@ test("раскладка: настройки вида пишутся ступе�
   assert.doesNotMatch(layout.canonical(file), /labelPlace/);
 });
 
+test("раскладка: файл называет создателя, а правки ведёт журналом", () => {
+  const file = layout.empty();
+  const t0 = Date.parse("2026-09-08T18:00:00Z");
+  layout.touch(file, "pastor", t0);
+  layout.touch(file, "pastor", t0 + 5 * 60_000);
+  // Правка тем же человеком в пределах часа обновляет время, а не заводит вторую
+  // запись: раскладку правят перетаскиванием, и журнал стал бы длиннее раскладки.
+  assert.equal(layout.metaOf(file).edits.length, 1);
+  assert.equal(layout.metaOf(file).edits[0].at, "2026-09-08T18:05:00Z");
+
+  // Читатель без входа записывается гостем: имени у него нет, а знать, что файл
+  // правили, полезно.
+  layout.touch(file, "", t0 + 2 * 3_600_000);
+  assert.equal(layout.metaOf(file).edits.at(-1).by, layout.GUEST);
+  assert.equal(layout.GUEST, "guest", "имя гостя в файле обязано быть латиницей");
+
+  // Создатель у файла один и не меняется вторым правившим.
+  assert.equal(layout.metaOf(file).createdBy, "pastor");
+  assert.equal(layout.metaOf(file).createdAt, "2026-09-08T18:00:00Z");
+
+  // Журнал в пределе: старые записи вытесняются, файл не растёт бесконечно.
+  for (let i = 0; i < layout.EDITS_KEPT + 5; i += 1) {
+    layout.touch(file, `автор${i}`, t0 + (i + 3) * 3_600_000);
+  }
+  assert.equal(layout.metaOf(file).edits.length, layout.EDITS_KEPT);
+  assert.equal(layout.metaOf(file).edits.at(-1).by, `автор${layout.EDITS_KEPT + 4}`);
+
+  // Круговой рейс сведения сохраняет, а испорченную запись отбрасывает.
+  const back = layout.parse(layout.canonical(file)).layout;
+  assert.deepEqual(layout.metaOf(back), layout.metaOf(file));
+  const dirty = layout.parse(JSON.stringify({
+    format: 1,
+    meta: { createdBy: "", edits: [{ by: "кто", at: "вчера" }, { by: "", at: "2026-09-08T18:00:00Z" }] },
+  })).layout;
+  assert.equal(layout.metaOf(dirty), null, "негодные записи об авторстве приняты");
+});
+
 test("раскладка: негодный файл - названная причина и пустая раскладка", () => {
   const empty = layout.canonical(layout.empty());
   for (const [text, key] of [
