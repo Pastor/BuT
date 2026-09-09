@@ -681,10 +681,10 @@ function showKind() {
   dom.sourcetitle.dataset.i18n = key;
   dom.sourcetitle.textContent = t(key);
   dom.openfilename.textContent = state.file;
-  // Чем показать файл, решает его род: модель и пояснение правятся кодом,
-  // сценарий - своим полем, раскладка показывается схемой. Отдельных областей
-  // у сценария и схемы нет: они такие же файлы проекта, как модель.
-  showSource({ scenario: "scenario", layout: "scheme" }[state.kind] ?? "code");
+  // Чем показать файл, решает его род: модель правится кодом, сценарий - своим
+  // полем, раскладка показывается схемой, пояснение - разметкой. Отдельных
+  // областей у них нет: это такие же файлы проекта, как модель.
+  showSource({ scenario: "scenario", layout: "scheme", markdown: "doc" }[state.kind] ?? "code");
   // Ключи сборки к пояснению отношения не имеют: вкладки уходят вместе с выводом цели,
   // а их место занимает показ.
   if (state.panel === "output") selectPanel("output");
@@ -1270,26 +1270,22 @@ function showSource(what) {
   const scheme = panel("scheme");
   dom.editor.hidden = what !== "code";
   dom.scenario.hidden = what !== "scenario";
+  dom.doc.hidden = what !== "doc";
   if (scheme) scheme.hidden = what !== "scheme";
   if (what === "scheme") drawScheme(true);
+  if (what === "doc") showDoc();
 }
 
 function selectPanel(name) {
   state.panel = name;
   dom.showgen.setAttribute("aria-pressed", String(name === "output"));
-  // У пояснения место вывода занимает показ (09n): компилировать его нечем, а вкладка
-  // "Ключи сборки" говорила бы о сборке, которой не будет.
+  // Пояснение компилировать нечем: вкладка "Ключи сборки" говорила бы о сборке,
+  // которой не будет, и область вывода у пояснения закрыта.
   const doc = state.kind === "markdown";
   dom.tabs.hidden = name !== "output" || doc;
-  panel("doc").hidden = !(name === "output" && doc);
-  if (name === "output" && doc) {
-    for (const panel of panels("output", "flags")) {
-      panel.hidden = true;
-    }
-    showDoc();
-  } else if (name === "output") selectTab(state.tab === "flags" ? "flags" : "output");
-  else for (const panel of panels("output", "flags")) {
-    panel.hidden = true;
+  if (name === "output" && !doc) selectTab(state.tab === "flags" ? "flags" : "output");
+  if (name !== "output" || doc) {
+    for (const hidden of panels("output", "flags")) hidden.hidden = true;
   }
   document.body.dataset.panel = name ?? "none";
   shell.remember(localStorage, shell.UI_KEYS.panel, name ?? "");

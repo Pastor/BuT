@@ -640,7 +640,8 @@ body {
 /* Область кода показывает один файл: скрытые узлы места не занимают, а
  * показанный занимает всю её высоту - холсту схемы нужна вертикаль, и без
  * этого правила он схлопывался под легенду. */
-#editor[hidden], #scenario[hidden], .panel-scheme[hidden] { display: none; }
+#editor[hidden], #scenario[hidden], #doc[hidden], .panel-scheme[hidden] { display: none; }
+.pane-source > #doc { flex: 1; min-height: 0; overflow: auto; }
 .pane-source > .panel-scheme { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
 /* ── Верхняя строка ─────────────────────────────────────────────────────── */
@@ -826,7 +827,12 @@ button:disabled, select:disabled, input:disabled, textarea:disabled {
  * узлы по одному: иначе разделитель остался бы висеть у края. */
 body[data-panel="none"] .pane-result,
 body[data-panel="none"] > .work > #split { display: none; }
-body[data-panel="none"] .work { grid-template-columns: 1fr; }
+/* Закрытая генерация оставляет две области: код и структуру проекта. Прежнее
+ * правило схлопывало сетку в одну дорожку - тогда областей было две, и
+ * структура уезжала под них. */
+body[data-panel="none"] .work {
+  grid-template-columns: minmax(0, 1fr) auto var(--tree-w, 15rem);
+}
 
 /* Вкладки нужны только генерации: у симуляции панель одна. */
 .tabs[hidden] { display: none; }

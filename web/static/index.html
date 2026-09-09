@@ -194,6 +194,7 @@
     <div id="editor" class="editor" data-i18n-attr="aria-label:source.editor" aria-label="Исходный текст модели"></div>
     <div id="scenario" class="editor scenario" data-i18n-attr="aria-label:trace.scenario"
            aria-label="Сценарий входов"></div>
+    <div id="doc" class="doc" hidden></div>
 <div data-panel="scheme" class="panel panel-scheme" hidden>
       <div id="scheme-notice" class="notice conflict" hidden>
         <span id="scheme-notice-text"></span>
@@ -333,13 +334,6 @@
     <!-- Ключи сборки выбором: та же строка, что в поле "Ключи сборки", только
          собранная контролами. Список ключей строит `flags.js` и сверяет с
          разбором аргументов сторож — свой список разошёлся бы молча. -->
-    <!-- Показ пояснения: правая область вместо вывода цели, когда открыт
-         файл `.md` (задача 09n, решение заказчика). ⚠️ Узлы строит `md.js`
-         построением, а не `innerHTML`: текст пишет автор проекта, а видят его
-         читатели витрины. -->
-    <div data-panel="doc" class="panel" hidden>
-      <div id="doc" class="doc"></div>
-    </div>
 
     <div data-panel="flags" class="panel" hidden>
       <div class="controls">
