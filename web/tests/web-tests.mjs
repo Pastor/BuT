@@ -1180,18 +1180,15 @@ test("шапка: две полосы, и каждая отвечает на с�
   // действия над проектом у его состава: предмет у них тот же, что у показанного
   // ниже, а не у страницы.
   const source = html.slice(html.indexOf('<section class="pane pane-source">'), html.indexOf('id="split"'));
-  for (const id of ["format", "wrap"]) {
+  for (const id of ["format", "pickscenario"]) {
     assert.ok(!tools.includes(`id="${id}"`), `'${id}' остался в полосе страницы`);
-    assert.ok(source.includes(`id="${id}"`), `'${id}' не переехал в область кода`);
+    assert.ok(source.includes(`id="${id}"`), `'${id}' не стоит у текста`);
   }
-  // Порядок задан: перенос строк идёт сразу за форматированием.
-  const order = ["format", "wrap"].map((id) => source.indexOf(`id="${id}"`));
-  assert.deepEqual(order.slice().sort((a, b) => a - b), order, "перенос строк не следует за форматом");
-
-  // Кнопка залипающая, и нажатое состояние обязано быть видно: без правила
-  // она сообщает только заголовком, а включён ли перенос - вопрос к самому
-  // тексту, то есть к тому, ради чего её и нажимают.
-  assert.match(source, /id="wrap"[^>]*aria-pressed/, "кнопка переноса без aria-pressed");
+  // Перенос строк - настройка чтения, а не действие над текстом: своей кнопки у
+  // него нет вовсе, выбор живёт в окне настроек рядом с языком.
+  assert.ok(!html.includes('id="wrap"'), "кнопка переноса осталась на странице");
+  const settings = await readFile(new URL("../static/scheme-settings.js", import.meta.url), "utf8");
+  assert.match(settings, /id: "page:wrap"/, "переноса нет в настройках страницы");
   // Настройка одна на все области кода: правило переноса обязано покрыть и
   // сценарий с трассой, иначе кнопка на них молчит.
   for (const area of [".editor.wrap", ".output.wrap", ".scenario.wrap", ".trace.wrap"]) {
@@ -1313,6 +1310,54 @@ test("кегль страницы: шаг в единицу и обе грани
   assert.equal(shell.fontSize({ getItem: () => "13" }), 13);
   assert.equal(shell.fontSize({ getItem: () => "не число" }), shell.FONT_DEFAULT);
   assert.ok(shell.FONT_MIN < shell.FONT_DEFAULT && shell.FONT_DEFAULT < shell.FONT_MAX);
+});
+
+test("схема перестраивается по показанному, а не по панели вывода", async () => {
+  // Предмет - у кого спрашивают "показана ли схема". Схема стала одним из
+  // показов области кода наравне с кодом и сценарием, и признак у неё там же.
+  // Пока его брали у области вывода, значение "схема" не появлялось там никогда:
+  // граф не перестраивался ни на правку модели, ни на открытие раскладки, а лист
+  // при этом показывался - раскладку кладёт свой путь.
+  const app = await readFile(new URL("../static/app.js", import.meta.url), "utf8");
+  assert.ok(!/state\.panel\s*!==\s*"scheme"/.test(app), "показ схемы спрашивают у области вывода");
+  const draw = app.slice(app.indexOf("function drawScheme"), app.indexOf("\n}", app.indexOf("function drawScheme")));
+  assert.match(draw, /state\.shown !== "scheme"/, "перестроение не смотрит на показанное");
+  assert.match(draw, /setGraph\(/, "перестроение не строит граф");
+});
+
+test("действия над файлом обращены к выбранному в структуре", async () => {
+  // Предмет - какой файл трогают мусорка и переименование. Выбранный в дереве не
+  // равен открытому в области кода: сценарий и раскладку открывают, не меняя
+  // открытого файла, и по нему действия пришлись бы не на тот файл, на который
+  // смотрит автор.
+  const account = await readFile(new URL("../static/account.js", import.meta.url), "utf8");
+  assert.match(account, /state\.picked = name;/, "выбор в дереве не запоминается");
+  assert.match(account, /function picked\(\)/, "у выбранного файла нет одного носителя");
+  for (const name of ["openRenameFile", "openDropFile", "renameFile", "dropFile"]) {
+    const from = account.indexOf(`function ${name}(`);
+    assert.ok(from > 0, `${name} пропала`);
+    const body = account.slice(from, account.indexOf("\n}", from));
+    assert.match(body, /picked\(\)/, `${name} трогает не выбранный файл`);
+  }
+  // Отметка выбора видна: без неё автор не знает, к чему обращены кнопки.
+  assert.match(account, /aria-pressed", String\(node\.dataset\.file === state\.picked\)/,
+    "выбранный файл не отмечен в дереве");
+});
+
+test("журнал диагностик: заглушка догоняет словарь", async () => {
+  // Предмет - порядок внутри перерисовки. Заглушку пустого журнала строит первая
+  // же отрисовка, а та случается раньше словаря: выбранная область зовёт сборку,
+  // и сборка без моста отвечает пустым списком диагностик. Ранний выход из
+  // перерисовки написан для того, чему нужен мост, и заглушка к этому не
+  // относится - стой она после выхода, читатель видел бы ключ вместо слов.
+  const app = await readFile(new URL("../static/app.js", import.meta.url), "utf8");
+  const from = app.indexOf("function redraw()");
+  const body = app.slice(from, app.indexOf("\n}", from));
+  const stub = body.indexOf("row-none");
+  const bail = body.indexOf("if (!state.bridge) return;");
+  assert.ok(stub > 0, "заглушка не переписывается при смене языка");
+  assert.ok(bail > 0, "ранний выход из перерисовки пропал");
+  assert.ok(stub < bail, "заглушка переписывается после раннего выхода - ключ останется");
 });
 
 test("сценарий занимает область кода целиком, как модель", async () => {

@@ -190,12 +190,18 @@ export class Panels {
         const place = this.dom.docks?.[dock] ?? this.dom.docks?.[panel.home];
         if (place && node.parentElement !== place) place.appendChild(node);
       }
-      node.hidden = !visible(when, this.narrow);
+      // Видимость ставится атрибутом, а не свойством: `hidden` есть у
+      // `HTMLElement`, а миникарта - `<svg>`. Присвоение свойства такому узлу
+      // заводит обычное поле объекта: страница отвечает "скрыта", атрибута нет,
+      // и правило `[hidden]` не срабатывает - панель остаётся на экране.
+      node.toggleAttribute("hidden", !visible(when, this.narrow));
     }
     // У легенды, кроме неё самой, есть разделители: скрытая легенда, чья ручка
     // осталась на экране, тянулась бы в пустоту.
     const legendHidden = !visible(this.whenOf("legend"), this.narrow);
-    for (const split of this.dom.legendSplits ?? []) split.hidden = legendHidden;
+    for (const split of this.dom.legendSplits ?? []) {
+      split.toggleAttribute("hidden", legendHidden);
+    }
     // Признак видимости миникарты - на холсте: от неё отступает место панели
     // нижнего правого угла, а показана она бывает при любой ширине окна.
     if (this.dom.scheme) {

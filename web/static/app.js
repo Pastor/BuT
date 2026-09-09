@@ -10,7 +10,6 @@ import * as draft from "./draft.js";
 import { encodeState, decodeState } from "./share.js";
 import * as i18n from "./i18n.js";
 import { t } from "./i18n.js";
-import { SAMPLE } from "./sample.js";
 import { enhance } from "./pick.js";
 import * as build from "./build.js";
 import * as shell from "./shell.js";
@@ -95,6 +94,7 @@ const state = {
   diagKeep: 500,
   treeSide: "right",
   crumbsShown: true,
+  wrap: false,
   // Что показано в области кода: `code`, `scenario` либо `scheme`. Род открытого
   // файла этого не говорит: сценарий и раскладку открывают, не меняя рода.
   shown: "code",
@@ -131,14 +131,11 @@ export async function main() {
     side: () => state.treeSide,
     least: () => measureTree() ?? 0,
   });
-  // Перенос строк - Одна настройка на все области кода: так человек читает код вообще,
-  // а не конкретную панель.
-  shell.attachWrap(
-    dom.wrap,
-    [dom.editor, dom.output, dom.scenario, dom.trace],
-    localStorage,
-    shell.WRAP_KEY
-  );
+  // Перенос строк - одна настройка на все области кода: так человек читает код
+  // вообще, а не конкретную панель. Своей кнопки у неё нет - её место в окне
+  // настроек рядом с языком.
+  state.wrap = shell.wrapped(localStorage, shell.WRAP_KEY);
+  shell.applyWrap(wrapAreas(), state.wrap);
   // Кегль страницы: ±1 к корневому размеру, от которого считаются все ступени.
   shell.attachFontSize(dom.fontless, dom.fontmore, dom.fontsize, localStorage);
   // Прочие настройки интерфейса - оттуда же: вкладка и бюджет прогона.
@@ -242,7 +239,7 @@ export async function main() {
       // же носителей, что и правит читатель руками.
       pageValues: () => ({
         lang: i18n.language(),
-        wrap: dom.wrap.getAttribute("aria-pressed") === "true",
+        wrap: state.wrap,
         treeSide: state.treeSide,
         diagKeep: state.diagKeep,
         crumbs: state.crumbsShown,
@@ -283,7 +280,13 @@ export async function main() {
     // на странице больше нет. Текст остаётся: закрытие проекта не потеря работы.
     closed: () => {
       state.file = "";
+      state.kind = "takt";
       dom.openfilename.textContent = "";
+      // Проект закрыт - показывать нечего: ни кода, ни сценария, ни схемы.
+      // Оставшийся показ говорил бы о файле, которого больше не открыто.
+      showSource("none");
+      dom.output.replaceChildren();
+      clearDiagnostics();
     },
     // Раскладка схемы: текст файла `.takt-ui` для записи в проект и в черновик.
     layout: () => state.scheme.text(),
@@ -304,6 +307,8 @@ export async function main() {
       paintScenario();
       if (state.shown === "scenario") showSource("scenario");
     },
+    // Дерево перерисовано: мерка его ширины считается по нарисованным именам.
+    treeChanged: () => measureTree(),
     showTrace: () => showSource("scenario"),
     showScheme: () => showSource("scheme"),
     say,
@@ -315,13 +320,21 @@ export async function main() {
   // ticket, а не ссылка-снимок, и принять одно за другое нельзя.
   const returned = await account.handleReturn();
 
-  // Порядок источников: адрес проекта -> ссылка-снимок -> черновик -> пример. Живая
-  // страница сильнее снимка и черновика: читатель пришёл по адресу проекта, и показать
-  // ему вместо проекта вчерашний черновик значило бы ответить не на тот вопрос.
+  // Порядок источников: адрес проекта -> последний открытый проект -> ссылка-снимок
+  // -> черновик -> пусто. Живая страница сильнее снимка и черновика: читатель пришёл
+  // по адресу проекта, и показать ему вместо проекта вчерашний черновик значило бы
+  // ответить не на тот вопрос.
   const opened = await openProject();
-  const restored =
-    opened ?? (returned ? null : await decodeState(location.hash)) ?? draft.load(localStorage);
-  applyState(restored ?? { source: SAMPLE });
+  // Автор работает в проекте, и заход возвращает его туда же: спрашивать о том,
+  // что уже известно, страница не должна. Проект открывает себя сам - состав
+  // файлов и активный файл приходят от него.
+  const last = opened ? false : await account.restoreLast();
+  const restored = last
+    ? null
+    : opened ?? (returned ? null : await decodeState(location.hash)) ?? draft.load(localStorage);
+  // Без проекта и без черновика области пусты: образец здесь был бы чужой работой
+  // на месте своей.
+  if (!last) applyState(restored ?? { source: "" });
   refresh();
 }
 
@@ -392,16 +405,21 @@ async function useLanguage(lang) {
  * переписать его задним числом значило бы соврать о том, что было напечатано.
  */
 function redraw() {
+  // Журнал диагностик - история случившегося, и переписывать его задним числом
+  // нельзя (то же правило, что у трассы). Строка "ошибок нет" историей не
+  // является: это заглушка пустого журнала, и язык у неё сегодняшний.
+  //
+  // Стоит она до проверки моста намеренно: заглушку строит первая же отрисовка
+  // журнала, а та случается раньше словаря - выбранная область зовёт сборку, и
+  // сборка без моста отвечает пустым списком диагностик. Ранний выход написан
+  // для перерисовок, которым нужен мост, и заглушка к ним не относится.
+  const empty = dom.diagnostics?.querySelector(".row-none .row-text");
+  if (empty) empty.textContent = t("diagnostics.none");
   // Зовётся и до того, как страница собрана: язык выбирается первым делом, раньше
   // модуля и редактора. Отсюда обе проверки - без них смена языка роняла бы загрузку
   // страницы, и отказ выглядел бы отказом модуля.
   if (!state.bridge) return;
   showVersion();
-  // Журнал диагностик - история случившегося, и переписывать его задним числом
-  // нельзя (то же правило, что у трассы). Строка "ошибок нет" историей не
-  // является: это заглушка пустого журнала, и язык у неё сегодняшний.
-  const empty = dom.diagnostics?.querySelector(".row-none .row-text");
-  if (empty) empty.textContent = t("diagnostics.none");
   if (state.editor) refresh();
   // Открытое окно настроек построено кодом: смена языка из него самого оставила
   // бы его подписи на прежнем языке, и читатель увидел бы два языка разом.
@@ -512,7 +530,8 @@ function setPageSetting(key, value) {
     setPick("lang", value);
     dom.lang.dispatchEvent(new Event("change"));
   } else if (key === "wrap") {
-    if ((dom.wrap.getAttribute("aria-pressed") === "true") !== value) dom.wrap.click();
+    state.wrap = value === true;
+    shell.setWrap(wrapAreas(), state.wrap, localStorage, shell.WRAP_KEY);
   } else if (key === "crumbs") {
     showCrumbs(value !== false);
   } else if (key === "treeSide") {
@@ -527,6 +546,11 @@ function setPageSetting(key, value) {
   }
 }
 
+/** Области кода, которых касается перенос строк: настройка одна на все. */
+function wrapAreas() {
+  return [dom.editor, dom.output, dom.scenario, dom.trace];
+}
+
 /** Места панелей холста по имени: признак стоит в разметке. */
 function docks() {
   const out = {};
@@ -538,7 +562,7 @@ function cache() {
   for (const id of [
     "editor", "diagnostics", "output", "trace", "version", "target", "args",
     "scenario", "budget", "share", "format", "say", "tabs", "modes",
-    "lang", "tools-lang", "tools-lang-trace", "update", "showgen", "showdiag", "grip", "split", "hsplit", "wrap", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
+    "lang", "tools-lang", "tools-lang-trace", "update", "showgen", "showdiag", "grip", "split", "hsplit", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
     "account", "session", "icon-enter", "icon-leave",
     "save", "openfile", "panel", "signedout", "signedin", "whoami",
     "whoami-bar",
@@ -551,11 +575,13 @@ function cache() {
     "tree", "treesplit", "diagnostics-head", "diagclear", "showtree",
     "openproject", "createproject", "createcancel", "opencancel",
     "dropok", "dropcancel", "droptext", "fromsample", "closeproject",
-    "newfile", "dropfile", "renamefile", "filekinds", "filename", "filepreview",
+    "newfile", "dropfile", "renamefile", "uploadfile", "downloadfile", "filepick",
+    "importproject", "filekinds", "filename", "filepreview",
     "fileok", "filecancel", "dropfileok", "dropfilecancel", "dropfiletext",
     "renamename", "renamepreview", "renameok", "renamecancel",
     "project-modal", "open-modal", "drop-modal", "file-modal", "dropfile-modal",
-    "rename-modal",
+    "rename-modal", "pickscenario", "scenario-modal", "scenarios",
+    "scenarioload", "scenariocancel",
     "crumbs", "scheme-up", "stage", "scheme", "sheet", "nav", "map",
     "panel-run", "panel-view", "panel-sheet", "settings",
     "scheme-empty", "legend", "zoom", "alerts",
@@ -739,7 +765,9 @@ function applyState(restored) {
   drawFlags();
   state.scenarioEditor.setValue(state.scenario);
   paintScenario();
-  state.editor.setValue(restored.source ?? SAMPLE);
+  // Текста нет - область пуста: образец на месте открытого файла читался бы как
+  // чужая работа. Он остаётся у нового проекта "по шаблону", где его просят явно.
+  state.editor.setValue(restored.source ?? "");
   showKind();
 }
 
@@ -911,16 +939,21 @@ function refresh() {
 }
 
 /**
- * Перестраивает схему по тексту, когда её панель открыта.
+ * Перестраивает схему по тексту, когда она показана.
  *
- * Закрытая схема не считается: граф модели на каждую правку текста - работа, и
- * печатать её в невидимую область незачем (то же правило, что у вывода цели).
+ * Показана ли схема, знает область кода (`state.shown`), а не область вывода:
+ * схема - один из показов открытого файла, наравне с кодом и сценарием. Пока
+ * признак брался у панели вывода, значение "схема" не появлялось там никогда, и
+ * граф не перестраивался ни на правку модели, ни на открытие раскладки.
  *
- * @param {boolean} opened панель только что открыли: после отрисовки лист
+ * Непоказанная схема не считается: граф модели на каждую правку текста - работа,
+ * и печатать её в невидимую область незачем (то же правило, что у вывода цели).
+ *
+ * @param {boolean} opened схему только что открыли: после отрисовки лист
  *   проверяется на видимость (`Scheme.ensureVisible`).
  */
 function drawScheme(opened = false) {
-  if (state.panel !== "scheme" || !state.bridge || !state.scheme) return;
+  if (state.shown !== "scheme" || !state.bridge || !state.scheme) return;
   if (state.kind === "markdown") {
     state.scheme.setGraph(null);
     return;
@@ -931,7 +964,7 @@ function drawScheme(opened = false) {
 
 /** Курсор в объявлении состояния подсвечивает его узел на схеме. */
 const syncCursor = draft.debounce(() => {
-  if (state.panel !== "scheme" || !state.scheme || !dom.editor.contains(document.activeElement)) return;
+  if (state.shown !== "scheme" || !state.scheme || !dom.editor.contains(document.activeElement)) return;
   const at = state.editor.position();
   if (at) state.scheme.highlight(at.line, at.character);
 }, 120);
@@ -1575,13 +1608,22 @@ function measureTree() {
     document.documentElement.style.setProperty("--tree-min-y", `${Math.round(room)}px`);
     return room;
   }
+  // Меряется текст, а не узел: строка дерева растянута во всю его ширину, и
+  // ширина узла отвечала бы шириной панели. Пока мерили её, нижняя граница
+  // росла вслед за растянутой панелью, и сузить дерево было уже нечем.
+  const ruler = document.createRange();
   let need = 0;
   for (const node of dom.tree.querySelectorAll(".tree-file, .tree-kind")) {
-    need = Math.max(need, node.scrollWidth);
+    ruler.selectNodeContents(node);
+    need = Math.max(need, ruler.getBoundingClientRect().width);
   }
-  // Полоса действий тоже часть области: ужать её ниже своих кнопок нельзя.
-  const tools = dom.tree.parentElement?.querySelector(".tree-tools");
-  const room = Math.min(window.innerWidth / 2, Math.max(need + TREE_PADDING, tools?.scrollWidth ?? 0));
+  // Полоса действий тоже часть области, но мерится она **одной кнопкой**, а не
+  // собой: кнопки переносятся по строкам, и ширина полосы всегда равна ширине
+  // панели - взяв её, нижняя граница росла бы вслед за растянутой панелью, и
+  // сузить дерево было бы уже нечем.
+  const button = dom.tree.parentElement?.querySelector(".tree-tools .icon-btn:not([hidden])");
+  const least = button ? button.getBoundingClientRect().width + TREE_PADDING : 0;
+  const room = Math.min(window.innerWidth / 2, Math.max(need + TREE_PADDING, least));
   document.documentElement.style.setProperty("--tree-min", `${Math.round(room)}px`);
   return room;
 }
@@ -1626,12 +1668,14 @@ function showTree(show) {
 function showSource(what) {
   const scheme = panel("scheme");
   state.shown = what;
+  // "none" - показывать нечего (проект закрыт): все показы гаснут разом, и
+  // подпись области молчит вместе с ними.
   // Подпись области и имя рядом с ней говорят о показанном, а не об открытом
   // файле: сценарий и раскладку открывают, не меняя рода, и подпись "Модель" над
   // сценарием читалась бы как потерянная модель.
   const own = state.kind === "markdown" ? "source.titleDoc" : "source.title";
   const shownKey = what === "scenario" ? "source.titleScenario" : "source.titleScheme";
-  const key = what === "code" ? own : shownKey;
+  const key = what === "code" || what === "none" ? own : shownKey;
   dom.sourcetitle.dataset.i18n = key;
   dom.sourcetitle.textContent = t(key);
   dom.openfilename.textContent = what === "scenario" ? state.scenarioFile : state.file;

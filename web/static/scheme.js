@@ -110,6 +110,21 @@ function defs(arrow = "open") {
 }
 
 /** Холст схемы. */
+/**
+ * Мера щипка: расстояние между двумя пальцами и точка между ними.
+ *
+ * Точка нужна опорой масштаба: лист растёт от того места, которое держат, а не
+ * от угла холста, - иначе рисунок уезжает из-под пальцев.
+ */
+function span(touches) {
+  const [a, b] = [...touches.values()];
+  return {
+    dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+    x: (a.clientX + b.clientX) / 2,
+    y: (a.clientY + b.clientY) / 2,
+  };
+}
+
 export class Scheme {
   /**
    * @param {object} dom узлы: `scheme`, `sheet`, `map`, `stage`, `legend`, `crumbs`,
@@ -1202,9 +1217,46 @@ export class Scheme {
 
   wire() {
     const { scheme, map, tools, nav, noticeDrop } = this.dom;
+    // Пальцы на холсте: один возит лист, два меняют масштаб. Указатели ведутся
+    // здесь, а не в обработчике панорамы: второй палец обязан её прекратить -
+    // иначе лист поедет и растянется разом.
+    const touches = new Map();
+    let pinch = null;
+    scheme.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "mouse") return;
+      if (event.target.closest(".scheme-tools, .scheme-nav, .minimap, .legend")) return;
+      touches.set(event.pointerId, event);
+      if (touches.size === 2) {
+        this.panStop?.();
+        pinch = span(touches);
+      }
+    });
+    const pinchMove = (event) => {
+      if (!touches.has(event.pointerId)) return;
+      touches.set(event.pointerId, event);
+      if (touches.size !== 2 || !pinch) return;
+      const now = span(touches);
+      if (!pinch.dist || !now.dist) return;
+      const box = scheme.getBoundingClientRect();
+      // Масштаб считается от прошлого шага, а не от начала жеста: щипок идёт
+      // мелкими приращениями, и точка опоры едет вместе с пальцами.
+      this.view = geo.zoomAt(this.view, now.x - box.left, now.y - box.top, now.dist / pinch.dist);
+      pinch = now;
+      this.draw();
+    };
+    const pinchDrop = (event) => {
+      touches.delete(event.pointerId);
+      if (touches.size < 2) pinch = null;
+    };
+    window.addEventListener("pointermove", pinchMove);
+    window.addEventListener("pointerup", pinchDrop);
+    window.addEventListener("pointercancel", pinchDrop);
+
     scheme.addEventListener("pointerdown", (event) => {
       if (event.target.closest(".scheme-tools, .scheme-nav, .minimap, .legend")) return;
       if (event.button) return;
+      // Второй палец уже на холсте - это щипок, а не панорама.
+      if (touches.size > 1) return;
       const start = { x: event.clientX, y: event.clientY, vx: this.view.x, vy: this.view.y };
       scheme.classList.add("dragging");
       const move = (e) => {
@@ -1215,7 +1267,9 @@ export class Scheme {
         scheme.classList.remove("dragging");
         window.removeEventListener("pointermove", move);
         window.removeEventListener("pointerup", stop);
+        this.panStop = null;
       };
+      this.panStop = stop;
       window.addEventListener("pointermove", move);
       window.addEventListener("pointerup", stop);
     });

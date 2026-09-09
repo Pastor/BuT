@@ -17,6 +17,7 @@ import * as draft from "./draft.js";
 import * as layoutFile from "./layout.js";
 import { layoutName, modelName } from "./layout.js";
 import { feed } from "./showcase.js";
+import * as shell from "./shell.js";
 import { SAMPLE } from "./sample.js";
 import { t } from "./i18n.js";
 
@@ -34,6 +35,13 @@ const state = {
   project: null,
   /** Имя открытого файла. */
   file: null,
+  /**
+   * Имя файла, выбранного в структуре проекта.
+   *
+   * Не то же, что открытый: сценарий и раскладку открывают, не меняя открытого
+   * файла, и действия над файлом обращены именно к выбранному.
+   */
+  picked: null,
   /** Проект, назначенный к удалению: строка списка, а не открытый проект. */
   doomed: null,
   /** Ревизия проекта на момент чтения файла. */
@@ -107,6 +115,9 @@ export function attach(nodes, callbacks) {
   dom.filename.addEventListener("keydown", (event) => {
     if (event.key === "Enter") makeFile();
   });
+  dom.pickscenario.addEventListener("click", () => openScenarioPick());
+  dom.scenarioload.addEventListener("click", () => loadScenario());
+  dom.scenariocancel.addEventListener("click", () => closeModal(dom["scenario-modal"]));
   dom.renamefile.addEventListener("click", () => openRenameFile());
   dom.renameok.addEventListener("click", () => renameFile());
   dom.renamecancel.addEventListener("click", () => closeModal(dom["rename-modal"]));
@@ -121,7 +132,7 @@ export function attach(nodes, callbacks) {
   // затемнению и Escape закрывают любое из трёх окон.
   const MODALS = [
     "project-modal", "open-modal", "drop-modal", "file-modal", "dropfile-modal",
-    "rename-modal",
+    "rename-modal", "scenario-modal",
   ];
   for (const id of MODALS) {
     dom[id].addEventListener("click", (event) => {
@@ -138,7 +149,13 @@ export function attach(nodes, callbacks) {
   dom.reread.addEventListener("click", () => resolveConflict("reread"));
   dom.overwrite.addEventListener("click", () => resolveConflict("overwrite"));
   dom.download.addEventListener("click", () => download());
+  // Поле выбора файла спрятано, а открывает его кнопка: ряд значков не должен
+  // разрываться чужим контролом.
+  dom.importproject.addEventListener("click", () => dom.upload.click());
   dom.upload.addEventListener("change", (event) => upload(event.target.files?.[0]));
+  dom.uploadfile.addEventListener("click", () => dom.filepick.click());
+  dom.filepick.addEventListener("change", (event) => uploadFile(event.target.files?.[0]));
+  dom.downloadfile.addEventListener("click", () => downloadFile());
   dom.setpass.addEventListener("click", () => setPassword());
   dom.showcase.addEventListener("click", () => toggleShowcase());
   dom.findbtn.addEventListener("click", () => search());
@@ -476,6 +493,65 @@ async function upload(file) {
   }
 }
 
+/**
+ * Кладёт файл с диска в открытый проект.
+ *
+ * Имя берётся у самого файла - его же видит автор у себя на машине; род решает
+ * расширение, как и при заведении со страницы. Занятое имя - отказ страницы, а
+ * не молчаливая перезапись: правка чужого текста своим файлом хуже отказа.
+ */
+async function uploadFile(file) {
+  if (!file) return;
+  try {
+    if (!state.project) {
+      host.say(t("file.needProject"), "warning");
+      return;
+    }
+    const name = file.name;
+    if (state.project.files?.some((item) => item.name === name)) {
+      host.say(t("file.exists", { name }), "warning");
+      return;
+    }
+    const text = await file.text();
+    await api.write(state.project.id, name, text, null);
+    await openProjectFiles(state.project.id);
+    await openFile(state.project.id, name);
+    host.say(t("file.uploaded", { name }), "ok");
+  } catch (error) {
+    fail(error);
+  } finally {
+    // Тот же файл выбирают дважды: без сброса второе "выбрать" молчит.
+    dom.filepick.value = "";
+  }
+}
+
+/**
+ * Выгружает выбранный файл проекта на диск.
+ *
+ * Текст берётся у сервера, а не у страницы: в области кода лежит правка автора,
+ * а выгружается файл проекта - то, что в нём сохранено.
+ */
+async function downloadFile() {
+  if (!state.project || !picked()) {
+    host.say(t("file.nothingOpen"), "warning");
+    return;
+  }
+  const name = picked();
+  try {
+    const body = await api.file(state.project.id, name);
+    const url = URL.createObjectURL(new Blob([body.text], { type: "text/plain" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.click();
+    // Ссылка живёт до конца загрузки: снятая сразу, она отменила бы её.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    host.say(t("file.downloaded", { name }), "ok");
+  } catch (error) {
+    fail(error);
+  }
+}
+
 /** Задаёт пароль записи, у которой его не было. */
 async function setPassword() {
   const password = dom.newpass.value;
@@ -646,11 +722,11 @@ function openNewFile() {
  */
 function openRenameFile() {
   if (!state.project) return;
-  if (!state.file) {
+  if (!picked()) {
     host.say(t("file.nothingOpen"), "warning");
     return;
   }
-  dom.renamename.value = stemOf(state.file);
+  dom.renamename.value = stemOf(picked());
   showRenamePreview();
   dom["rename-modal"].hidden = false;
   dom.renamename.focus();
@@ -660,11 +736,11 @@ function openRenameFile() {
 /** Открывает окно удаления открытого файла. */
 function openDropFile() {
   if (!state.project) return;
-  if (!state.file) {
+  if (!picked()) {
     host.say(t("file.nothingOpen"), "warning");
     return;
   }
-  dom.dropfiletext.textContent = t("file.dropAsk", { name: state.file });
+  dom.dropfiletext.textContent = t("file.dropAsk", { name: picked() });
   dom["dropfile-modal"].hidden = false;
 }
 
@@ -735,15 +811,45 @@ async function drop() {
 function closeProject(say = true) {
   state.project = null;
   state.file = null;
+  state.picked = null;
   state.revision = null;
   state.level = "none";
   state.scenarioFile = null;
+  state.scenarioRead = "";
   state.doomed = null;
+  // Проект закрыт - закрыто и всё, что о нём говорило: текст, сценарий, схема,
+  // состав файлов. Остаться на экране им нельзя: показанное принадлежит проекту,
+  // и после закрытия оно врало бы о том, что открыто.
+  shell.forget(localStorage, shell.UI_KEYS.project);
   paintTree([]);
   hideConflict();
+  host.open({ source: "", scenario: "", layout: "", file: "", kind: "takt" });
   host.closed();
   if (say) host.say(t("account.closed"), "ok");
   refresh();
+}
+
+/**
+ * Возвращает страницу к последнему открытому проекту.
+ *
+ * Спрашивается при заходе: автор работает в проекте, и начинать каждый раз с
+ * выбора из списка значит спрашивать его о том, что уже известно. Проекта нет
+ * или он больше не читается - страница остаётся пустой, а не показывает образец.
+ *
+ * @returns {Promise<boolean>} открылся ли проект
+ */
+export async function restoreLast() {
+  if (!api.signed()) return false;
+  const id = shell.setting(localStorage, shell.UI_KEYS.project, "");
+  if (!id) return false;
+  try {
+    await openProject(id);
+    return state.project !== null;
+  } catch {
+    // Проект удалён, права сняты, сервер молчит - забываем и открываемся пустыми.
+    shell.forget(localStorage, shell.UI_KEYS.project);
+    return false;
+  }
 }
 
 /** Роды файлов, которые автор вправе завести, и расширение каждого. */
@@ -836,6 +942,76 @@ async function makeFile() {
   }
 }
 
+/**
+ * Открывает выбор сценария прогона для открытой модели.
+ *
+ * Сценарии названы по модели: файл `.json`, чьё имя начинается с её имени, - её
+ * сценарий. Правило одно на страницу и на автора: `heater.json`,
+ * `heater-cold.json` принадлежат `heater.takt`, а `probe.json` - нет.
+ */
+function openScenarioPick() {
+  const model = modelOf();
+  if (!model) {
+    host.say(t("scenario.needModel"), "warning");
+    return;
+  }
+  const own = scenariosOf(model);
+  dom.scenarios.replaceChildren();
+  if (own.length === 0) {
+    // Пустой список говорит словами: молчащее окно читалось бы как поломка.
+    const empty = document.createElement("div");
+    empty.className = "row row-ok";
+    empty.textContent = t("scenario.none", { name: model });
+    dom.scenarios.appendChild(empty);
+  }
+  for (const name of own) {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "row row-pick";
+    row.dataset.scenario = name;
+    row.textContent = name;
+    row.setAttribute("aria-pressed", String(name === state.scenarioFile));
+    row.addEventListener("click", () => {
+      for (const other of dom.scenarios.children) other.setAttribute?.("aria-pressed", "false");
+      row.setAttribute("aria-pressed", "true");
+    });
+    dom.scenarios.appendChild(row);
+  }
+  dom["scenario-modal"].hidden = false;
+}
+
+/** Имя открытой модели: сам файл либо модель, парная открытой раскладке. */
+function modelOf() {
+  const name = picked();
+  if (name.endsWith(".takt")) return name;
+  if (name.endsWith(layoutFile.EXTENSION)) return modelName(name);
+  return state.file && state.file.endsWith(".takt") ? state.file : "";
+}
+
+/** Сценарии модели: файлы рода "сценарий", названные по её имени. */
+function scenariosOf(model) {
+  const stem = model.slice(0, -".takt".length);
+  return (state.project?.files ?? [])
+    .filter((file) => file.kind === "scenario" && file.name.startsWith(stem))
+    .map((file) => file.name)
+    .sort((a, b) => a.localeCompare(b));
+}
+
+/** Назначает выбранный сценарий прогоном модели. */
+async function loadScenario() {
+  const chosen = [...dom.scenarios.children].find(
+    (node) => node.getAttribute?.("aria-pressed") === "true"
+  );
+  if (!chosen) {
+    closeModal(dom["scenario-modal"]);
+    return;
+  }
+  const name = chosen.dataset.scenario;
+  await chooseScenario(name);
+  closeModal(dom["scenario-modal"]);
+  host.say(t("scenario.chosen", { name }), "ok");
+}
+
 /** Расширение открытого файла: род задаёт его, а не автор. */
 function extensionOf(name) {
   const kind = FILE_KINDS.find((item) => name.endsWith(item.extension));
@@ -848,10 +1024,18 @@ function stemOf(name) {
   return extension ? name.slice(0, -extension.length) : name;
 }
 
+/**
+ * Файл, над которым совершаются действия: выбранный в дереве, а без выбора -
+ * открытый в области кода (проект могли открыть с назначенным файлом).
+ */
+function picked() {
+  return state.picked || state.file || "";
+}
+
 /** Показывает имя, которое получится при переименовании. */
 function showRenamePreview() {
   const raw = dom.renamename.value.trim();
-  dom.renamepreview.textContent = raw ? raw + extensionOf(state.file) : "";
+  dom.renamepreview.textContent = raw ? raw + extensionOf(picked()) : "";
 }
 
 /**
@@ -862,7 +1046,7 @@ function showRenamePreview() {
  * нет. Пару знает страница - сервер видит два независимых файла.
  */
 async function renameFile() {
-  if (!state.project || !state.file) return;
+  if (!state.project || !picked()) return;
   const raw = dom.renamename.value.trim();
   if (!raw) {
     host.say(t("file.needName"), "warning");
@@ -872,7 +1056,7 @@ async function renameFile() {
     host.say(t("file.badName"), "warning");
     return;
   }
-  const was = state.file;
+  const was = picked();
   const name = raw + extensionOf(was);
   if (name === was) {
     closeModal(dom["rename-modal"]);
@@ -906,8 +1090,8 @@ async function renameFile() {
  * модель, и осиротевший он показывал бы схему того, чего нет.
  */
 async function dropFile() {
-  if (!state.project || !state.file) return;
-  const doomed = state.file;
+  if (!state.project || !picked()) return;
+  const doomed = picked();
   try {
     await api.removeFile(state.project.id, doomed);
     if (doomed.endsWith(".takt")) {
@@ -1014,6 +1198,7 @@ function paintTree(files) {
     empty.dataset.i18n = key;
     empty.textContent = t(key);
     dom.tree.appendChild(empty);
+    host.treeChanged?.();
     return;
   }
   for (const { kind, label } of KINDS) {
@@ -1037,6 +1222,17 @@ function paintTree(files) {
     }
     dom.tree.appendChild(group);
   }
+  markPicked();
+  // Состав дерева сменился - сменилась и его мерка: нижнюю границу ширины
+  // страница считает по именам файлов, и считать её надо по нарисованным.
+  host.treeChanged?.();
+}
+
+/** Отмечает выбранный файл в дереве: отметка одна, это место работы. */
+function markPicked() {
+  for (const node of dom.tree.querySelectorAll(".tree-file")) {
+    node.setAttribute("aria-pressed", String(node.dataset.file === state.picked));
+  }
 }
 
 /** Рисует пустую структуру: страница открыта без проекта. */
@@ -1048,6 +1244,9 @@ export function paintEmptyTree() {
 async function openProjectFiles(id) {
   const opened = await api.project(id);
   state.project = opened;
+  // Открытый проект запоминается: заход на страницу возвращает автора туда, где
+  // он работал, - иначе каждый заход начинался бы с выбора из списка.
+  shell.remember(localStorage, shell.UI_KEYS.project, id);
   state.level = opened.level;
   paintTree(opened.files);
   // Сценариев бывает несколько: проект называет свой, и он же становится умолчанием. Не
@@ -1124,6 +1323,12 @@ async function openProject(id) {
  */
 async function openFile(id, name) {
   if (!id || !name) return;
+  // Выбранный в дереве файл - не то же, что открытый в области кода: сценарий и
+  // раскладку открывают, не меняя открытого файла (щелчок по сценарию не
+  // подменяет модель). Действия над файлом обращены к выбранному - иначе
+  // мусорка и переименование трогали бы не тот файл, на который смотрит автор.
+  state.picked = name;
+  markPicked();
   // Сценарий открывается своей областью: он живёт во вкладке прогона, и подмена им
   // модели означала бы, что автор потерял модель из виду, щёлкнув по списку файлов.
   if (kindOf(name) === "scenario") {
@@ -1406,11 +1611,17 @@ function refresh() {
   const writes = opened && (state.level === "edit" || state.level === "owner");
   dom.newproject.hidden = opened;
   dom.openproject.hidden = opened;
+  // Загрузка архива - действие над проектами: пока проект открыт, полоса
+  // говорит о нём и его файлах.
+  dom.importproject.hidden = opened;
   dom.download.hidden = !opened;
   dom.closeproject.hidden = !opened;
   // Заводить и удалять файлы вправе тот, кто вправе писать: чужой проект
   // открывается на чтение, и предлагать ему правку значит обещать отказ сервера.
   dom.newfile.hidden = !writes;
+  dom.pickscenario.hidden = !opened;
+  dom.uploadfile.hidden = !writes;
+  dom.downloadfile.hidden = !opened;
   dom.renamefile.hidden = !writes;
   dom.dropfile.hidden = !writes;
   const writable = editing() && (state.level === "edit" || state.level === "owner");

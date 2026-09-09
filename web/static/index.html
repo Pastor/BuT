@@ -128,12 +128,12 @@
       <button id="format" class="icon-btn" type="button"
           data-i18n-attr="data-tip:bar.format;aria-label:bar.format"
           data-tip="Формат" aria-label="Формат"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16M4 12h16M4 19h16"/><path d="M8 8.5 5.5 12 8 15.5"/></svg></button>
-      <!-- Перенос длинных строк - одна залипающая кнопка на все области кода:
-       исходник, вывод цели, сценарий и трассу (решение заказчика). Нажатое
-       состояние видно (`aria-pressed`), иначе кнопка ничего не сообщает. -->
-      <button id="wrap" class="icon-btn" type="button" aria-pressed="false"
-          data-i18n-attr="data-tip:bar.wrap;aria-label:bar.wrap"
-          data-tip="Переносить длинные строки" aria-label="Переносить длинные строки"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6.5h16"/><path d="M4 12h12.5a3.5 3.5 0 0 1 0 7H9.5"/><path d="M12.5 16.5 9.5 19l3 2.5"/></svg></button>
+      <!-- Сценарий прогона выбирается здесь же, где правят текст модели: он к
+           этой модели и относится - файл `.json`, чьё имя начинается с имени
+           модели. -->
+      <button id="pickscenario" class="icon-btn" type="button" hidden
+              data-i18n-attr="data-tip:scenario.pick;aria-label:scenario.pick"
+              data-tip="Сценарий прогона" aria-label="Сценарий прогона"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 5.5h15v13h-15z"/><path d="M8 9.5h8M8 13h5"/><path d="M15.5 16.5l2 2 3.5-4"/></svg></button>
     </div>
 
     <!-- Панель учётной записи и проектов. Скрыта, пока её не позвали: без
@@ -158,10 +158,6 @@
            панели. Скачивание же — действие над открытым проектом, доступное
            всякому, кто его видит: его место в шапке, рядом с «Поделиться»
            (нашлось прогоном страницы — в панели читатель его не искал бы). -->
-      <div class="controls">
-        <label for="upload" data-i18n="archive.upload">Загрузить архив</label>
-        <input id="upload" type="file" accept=".zip,application/zip">
-      </div>
     </div>
 
     <!-- Витрина открытых проектов: она и есть обещанное "выложить на всеобщее
@@ -379,6 +375,14 @@
       <button id="openproject" class="icon-btn" type="button"
               data-i18n-attr="data-tip:account.openProject;aria-label:account.openProject"
               data-tip="Открыть проект" aria-label="Открыть проект"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 19.5v-14h6l2 2.5h9v11.5z"/></svg></button>
+      <!-- Загрузка проекта из архива: то же действие над проектами, что завести и
+           открыть, поэтому и место у него то же. Поле выбора файла спрятано -
+           его открывает кнопка: голое `input[type=file]` в ряду значков
+           выглядело бы чужим. -->
+      <button id="importproject" class="icon-btn" type="button"
+              data-i18n-attr="data-tip:archive.upload;aria-label:archive.upload"
+              data-tip="Загрузить архив" aria-label="Загрузить архив"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 4.5h17v4h-17z"/><path d="M5 8.5v11h14v-11"/><path d="M12 18.5v-7"/><path d="M9 14l3-3 3 3"/></svg></button>
+      <input id="upload" type="file" accept=".zip,application/zip" hidden>
       <button id="download" class="icon-btn" type="button" hidden
               data-i18n-attr="data-tip:archive.download;aria-label:archive.download"
               data-tip="Скачать архивом" aria-label="Скачать архивом"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 4.5h17v4h-17z"/><path d="M5 8.5v11h14v-11"/><path d="M10 12h4"/></svg></button>
@@ -395,6 +399,15 @@
               data-tip="Добавить файл" aria-label="Добавить файл"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 3.5h7l5 5v12h-12z"/><path d="M13 3.5v5.5h5.5"/><path d="M12 12v5M9.5 14.5h5"/></svg></button>
       <!-- Переименование: имя правится без расширения, расширение ставит род
            файла - как и при заведении. -->
+      <!-- Файл приходит с диска и уходит на диск: проект собирают из того, что
+           уже написано, а показать написанное вне страницы иначе нечем. -->
+      <button id="uploadfile" class="icon-btn" type="button" hidden
+              data-i18n-attr="data-tip:file.upload;aria-label:file.upload"
+              data-tip="Загрузить файл в проект" aria-label="Загрузить файл в проект"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 3.5h7l5 5v12h-12z"/><path d="M13 3.5v5.5h5.5"/><path d="M12 17.5v-6"/><path d="M9.5 14l2.5-2.5 2.5 2.5"/></svg></button>
+      <input id="filepick" type="file" accept=".takt,.takt-ui,.json,.md" hidden>
+      <button id="downloadfile" class="icon-btn" type="button" hidden
+              data-i18n-attr="data-tip:file.download;aria-label:file.download"
+              data-tip="Выгрузить файл" aria-label="Выгрузить файл"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 3.5h7l5 5v12h-12z"/><path d="M13 3.5v5.5h5.5"/><path d="M12 11.5v6"/><path d="M9.5 15l2.5 2.5 2.5-2.5"/></svg></button>
       <button id="renamefile" class="icon-btn" type="button" hidden
               data-i18n-attr="data-tip:file.rename;aria-label:file.rename"
               data-tip="Переименовать файл" aria-label="Переименовать файл"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 16.5l10-10 3 3-10 10h-3z"/><path d="M13.5 7.5l3 3"/><path d="M4.5 20.5h15"/></svg></button>
@@ -507,6 +520,22 @@
       <div class="modal-actions">
         <button id="filecancel" type="button" data-i18n="account.cancel">Отмена</button>
         <button id="fileok" class="primary" type="button" data-i18n="account.create">Создать</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Выбор сценария прогона: список файлов, названных по модели. Пустой список
+     говорит словами - молчащее окно читалось бы как поломка. -->
+<div id="scenario-modal" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true"
+       data-i18n-attr="aria-label:scenario.pick" aria-label="Сценарий прогона">
+    <div class="modal-head" data-i18n="scenario.pick">Сценарий прогона</div>
+    <div class="modal-body">
+      <div id="scenarios" class="list" data-i18n-attr="aria-label:scenario.list" aria-label="Сценарии модели"></div>
+      <div class="modal-actions">
+        <button id="scenariocancel" type="button" data-i18n="account.cancel">Отмена</button>
+        <button id="scenarioload" class="primary" type="button" data-i18n="scenario.load">Загрузить</button>
       </div>
     </div>
   </div>

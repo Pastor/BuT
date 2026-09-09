@@ -495,27 +495,28 @@ export function wrapped(storage, key) {
  * @param {Storage} storage хранилище настройки
  * @param {string} key ключ хранилища этой области
  */
-export function attachWrap(button, areas, storage, key) {
-  const boxes = [].concat(areas).filter(Boolean);
-  const apply = (on) => {
-    // Класс ставится области, а не строкам: строки перестраивает покраска (`paintCode`)
-    // на каждую правку, и настройка исчезала бы с первым же нажатием клавиши.
-    for (const box of boxes) box.classList.toggle("wrap", on);
-    button.setAttribute("aria-pressed", String(on));
-  };
-  let on = wrapped(storage, key);
-  button.addEventListener("click", () => {
-    on = !on;
-    apply(on);
-    try {
-      // Не тернарник из двух литералов: сверка ключей словаря принимает такую форму за
-      // подписи (второй случай за задачу - см. стрелки осей).
-      storage.setItem(key, String(Number(on)));
-    } catch {
-      // Приватный режим: настройка действует до перезагрузки.
-    }
-  });
-  apply(on);
+export function applyWrap(areas, on) {
+  // Класс ставится области, а не строкам: строки перестраивает покраска (`paintCode`)
+  // на каждую правку, и настройка исчезала бы с первым же нажатием клавиши.
+  for (const box of [].concat(areas).filter(Boolean)) box.classList.toggle("wrap", on);
+}
+
+/**
+ * Ставит перенос строк и запоминает выбор.
+ *
+ * Своей кнопки у переноса нет: это настройка чтения, и живёт она в окне
+ * настроек рядом с языком - у полосы действий области предмет другой, там правят
+ * открытый текст, а не то, как его читают.
+ */
+export function setWrap(areas, on, storage, key) {
+  applyWrap(areas, on);
+  try {
+    // Не тернарник из двух литералов: сверка ключей словаря принимает такую форму за
+    // подписи (второй случай за задачу - см. стрелки осей).
+    storage.setItem(key, String(Number(on)));
+  } catch {
+    // Приватный режим: настройка действует до перезагрузки.
+  }
 }
 
 /** Ключ хранилища кегля страницы. */
@@ -624,6 +625,8 @@ export const UI_KEYS = {
   diagKeep: "takt.ui.diagKeep",
   /** Видны ли путь открытого файла и ревизия в шапке. */
   crumbs: "takt.ui.crumbs",
+  /** Последний открытый проект: страница возвращается к нему при заходе. */
+  project: "takt.ui.project",
 };
 
 /** Стороны, на которых может стоять структура проекта. */
@@ -674,5 +677,19 @@ export function remember(storage, key, value) {
     storage.setItem(key, String(value));
   } catch {
     // Приватный режим либо запрет сайту: настройка действует до перезагрузки.
+  }
+}
+
+/**
+ * Забывает настройку.
+ *
+ * Пустая запись не годится: `setting` отвечает на неё умолчанием, а забытое
+ * значит "выбора нет" - у последнего открытого проекта это разные вещи.
+ */
+export function forget(storage, key) {
+  try {
+    storage.removeItem(key);
+  } catch {
+    // То же, что у записи: без хранилища настройка живёт до перезагрузки.
   }
 }
