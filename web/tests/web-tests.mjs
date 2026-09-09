@@ -38,6 +38,7 @@ import * as json from "../static/json.js";
 import * as flags from "../static/flags.js";
 import * as md from "../static/md.js";
 import * as panels from "../static/panels.js";
+import * as host from "../static/scheme-host.js";
 import * as build from "../static/build.js";
 import * as project from "../static/project.js";
 import * as api from "../static/api.js";
@@ -461,6 +462,7 @@ const PAGE_SCRIPTS = [
   "account.js", "alerts.js", "api.js", "app.js", "boot.js", "bridge.js", "build.js",
   "draft.js", "editor.js", "i18n.js", "layout.js", "legend.js", "pick.js",
   "panels.js", "project.js", "sample.js", "scheme.js", "scheme-geometry.js",
+  "scheme-host.js",
   "scheme-settings.js",
   "flags.js", "json.js",
   "md.js", "share.js", "shell.js", "showcase.js", "tip.js", "worker.js",
@@ -1163,6 +1165,32 @@ test("страница проекта: закрытый отвечает наз�
     () => project.read("AbCd", "/", broken),
     (error) => error.key === "project.failed",
   );
+});
+
+test("холст панели: чужое сообщение пропускается, своё разбирается", () => {
+  // В окне редактора соседствуют свои источники сообщений: панель обязана
+  // пропускать то, что адресовано не ей, а не падать и не рисовать пустоту.
+  assert.equal(host.parseIncoming(null), null);
+  assert.equal(host.parseIncoming({ type: "чужое" }), null);
+  assert.deepEqual(host.parseIncoming({ type: "layout", text: "x" }), { type: "layout", text: "x" });
+  assert.deepEqual(host.parseIncoming({ type: "layout" }), { type: "layout", text: "" });
+  assert.deepEqual(
+    host.parseIncoming({ type: "cursor", line: 3, character: 7 }),
+    { type: "cursor", line: 3, character: 7 },
+  );
+  // Позиция, пришедшая не числом, курсор бы увела: такое сообщение не читается.
+  assert.equal(host.parseIncoming({ type: "cursor", line: "3", character: null }), null);
+});
+
+test("холст панели: наружу уходит правка раскладки и выбор узла", () => {
+  assert.deepEqual(host.layoutMessage("текст"), { type: "layout", text: "текст" });
+  // Курсор ставит редактор, и координаты ему нужны в единицах протокола -
+  // берутся у имени узла, а не у холста.
+  const node = { nameRange: { start_line: 5, start_character: 6 } };
+  assert.deepEqual(host.selectMessage(node), { type: "select", line: 5, character: 6 });
+  // Узел без позиции курсор не двигает: чужая координата хуже отсутствующей.
+  assert.equal(host.selectMessage({}), null);
+  assert.deepEqual(host.readyMessage(), { type: "ready" });
 });
 
 test("панели: место набирает их в линию, а не в столбец", async () => {

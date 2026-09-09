@@ -96,6 +96,10 @@ mv "$DIST/b/$BUNDLE/index.html" "$DIST/index.html"
 sed -i.bak -E 's%(href|src)="([^"#:/][^"]*)"%\1="b/'"$BUNDLE"'/\2"%g' "$DIST/index.html"
 rm -f "$DIST/index.html.bak"
 
+# Холст для панели редактора: та же разметка и те же модули, данные снаружи.
+# Страница собирается из `index.html`, чтобы второго носителя разметки не было.
+python3 "$ROOT/scripts/build-scheme-host.py" "$DIST/b/$BUNDLE"
+
 cp "$WASM" "$DIST/wasm/$VERSION/takt.wasm"
 WASM_SHA="$(sha256 "$DIST/wasm/$VERSION/takt.wasm")"
 WASM_SIZE="$(wc -c < "$DIST/wasm/$VERSION/takt.wasm" | tr -d ' ')"
