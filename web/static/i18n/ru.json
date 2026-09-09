@@ -280,5 +280,15 @@
   "tree.kind.markdown": "Пояснения",
   "tree.empty": "Проект не открыт",
   "say.title": "Сообщения",
-  "output.empty": "строить нечего: см. диагностики"
+  "output.empty": "строить нечего: см. диагностики",
+  "account.openProject": "Открыть проект",
+  "account.dropProject": "Удалить проект",
+  "account.dropOk": "Удалить",
+  "account.dropAsk": "Удалить проект «{name}» со всеми файлами?",
+  "account.dropped": "проект «{name}» удалён",
+  "account.create": "Создать",
+  "account.fromSample": "По образцу",
+  "account.needSignIn": "нужно войти",
+  "tree.actions": "Действия над проектом",
+  "tree.noFiles": "Файлов пока нет"
 }

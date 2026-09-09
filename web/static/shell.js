@@ -588,6 +588,8 @@ export const UI_KEYS = {
   diagnostics: "takt.ui.diagnostics",
   /** Доля структуры проекта в рабочей области. */
   tree: "takt.ui.tree",
+  /** Видна ли структура проекта. */
+  treeShown: "takt.ui.treeShown",
 };
 
 /** Читает настройку; `fallback` - если её нет либо хранилище недоступно. */

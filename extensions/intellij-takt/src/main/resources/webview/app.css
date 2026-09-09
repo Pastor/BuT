@@ -608,6 +608,16 @@ body {
   min-width: 0;
   overflow: hidden;
 }
+/* Действия над проектом: ряд кнопок над его составом. Место выбрано по
+ * предмету - это действия над тем, что показано ниже. */
+.tree-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-half);
+  padding: var(--gap-half);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
 .tree { flex: 1; overflow: auto; padding: var(--gap-half); display: flex; flex-direction: column; gap: var(--gap); }
 .tree-group { display: flex; flex-direction: column; gap: var(--gap-quarter); }
 /* Род - подпись группы, а не значок у строки: файлов в проекте немного, а
@@ -834,6 +844,19 @@ body[data-panel="none"] .work {
   grid-template-columns: minmax(0, 1fr) auto var(--tree-w, 15rem);
 }
 
+/* Структура проекта прячется, как прочие области, - своей кнопкой. Ручка
+ * ширины уходит вместе с ней: граница без второй области ничего не делит, а
+ * тянуть её всё ещё можно, и доля менялась бы вслепую. */
+body[data-tree="off"] .pane-tree,
+body[data-tree="off"] > .work > #treesplit { display: none; }
+body[data-tree="off"] .work {
+  grid-template-columns: minmax(0, var(--panes-l, 1fr)) auto minmax(0, var(--panes-r, 1fr));
+}
+/* Обе закрыты - остаётся код во всю ширину. */
+body[data-panel="none"][data-tree="off"] .work {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 /* Вкладки нужны только генерации: у симуляции панель одна. */
 .tabs[hidden] { display: none; }
 
@@ -886,6 +909,17 @@ body[data-panel="none"] .work {
   color: var(--on-surface-yes);
   border-color: var(--accent);
 }
+/* Отметка: квадрат и подпись одной строкой; нажимается вся строка - целиться в
+ * квадрат стороной в двенадцать пикселей неудобно и мышью, и пальцем. */
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-half);
+  min-height: var(--h-dense);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
 .modal-brands { display: flex; flex-direction: column; gap: var(--gap-half); }
 .modal-brands[hidden], .modal-body[hidden] { display: none; }
 

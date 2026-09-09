@@ -17,6 +17,7 @@ import * as draft from "./draft.js";
 import * as layoutFile from "./layout.js";
 import { layoutName, modelName } from "./layout.js";
 import { feed } from "./showcase.js";
+import { SAMPLE } from "./sample.js";
 import { t } from "./i18n.js";
 
 /**
@@ -85,7 +86,31 @@ export function attach(nodes, callbacks) {
   dom.signin.addEventListener("click", () => enter(api.signIn));
   dom.signup.addEventListener("click", () => enter(api.register));
   dom.signout.addEventListener("click", () => leave());
-  dom.newproject.addEventListener("click", () => make());
+  dom.newproject.addEventListener("click", () => openCreate());
+  dom.createproject.addEventListener("click", () => make());
+  dom.createcancel.addEventListener("click", () => closeModal(dom["project-modal"]));
+  dom.newname.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") make();
+  });
+  // Выбор проекта - отдельный разговор: список читают, а не держат на экране.
+  dom.openproject.addEventListener("click", () => openChooser());
+  dom.opencancel.addEventListener("click", () => closeModal(dom["open-modal"]));
+  dom.dropproject.addEventListener("click", () => openDrop());
+  dom.dropok.addEventListener("click", () => drop());
+  dom.dropcancel.addEventListener("click", () => closeModal(dom["drop-modal"]));
+  // Выход из разговора не должен требовать попадания в кнопку: щелчок по
+  // затемнению и Escape закрывают любое из трёх окон.
+  for (const id of ["project-modal", "open-modal", "drop-modal"]) {
+    dom[id].addEventListener("click", (event) => {
+      if (event.target === dom[id]) closeModal(dom[id]);
+    });
+  }
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    for (const id of ["project-modal", "open-modal", "drop-modal"]) {
+      if (!dom[id].hidden) closeModal(dom[id]);
+    }
+  });
   dom.save.addEventListener("click", () => save());
   dom.reread.addEventListener("click", () => resolveConflict("reread"));
   dom.overwrite.addEventListener("click", () => resolveConflict("overwrite"));
@@ -119,7 +144,9 @@ export function attach(nodes, callbacks) {
   });
   dom.projects.addEventListener("click", (event) => {
     const row = event.target.closest("[data-project]");
-    if (row) openProject(row.dataset.project);
+    if (!row) return;
+    closeModal(dom["open-modal"]);
+    openProject(row.dataset.project);
   });
   dom.tree.addEventListener("click", (event) => {
     const row = event.target.closest("[data-file]");
@@ -544,7 +571,47 @@ async function leave() {
   refresh();
 }
 
-/** Заводит проект с именем из поля. */
+/** Закрывает окно, возвращая внимание туда, откуда его позвали. */
+function closeModal(box) {
+  box.hidden = true;
+}
+
+/** Открывает окно заведения проекта: имя и отметка образца. */
+function openCreate() {
+  if (!signedIn()) return;
+  dom["project-modal"].hidden = false;
+  dom.newname.focus();
+}
+
+/** Открывает окно выбора: список читается заново - его мог пополнить другой. */
+async function openChooser() {
+  if (!signedIn()) return;
+  dom["open-modal"].hidden = false;
+  await list();
+}
+
+/** Открывает окно удаления: проект назван по имени. */
+function openDrop() {
+  if (!state.project) return;
+  dom.droptext.textContent = t("account.dropAsk", { name: state.project.name });
+  dom["drop-modal"].hidden = false;
+}
+
+/** Вошли ли; не вошли - сказано словами, а окно не открывается. */
+function signedIn() {
+  if (api.signed()) return true;
+  host.say(t("account.needSignIn"), "warning");
+  return false;
+}
+
+/**
+ * Заводит проект и сразу его открывает.
+ *
+ * Пустой проект хорош тому, кто знает язык; отметка "по образцу" кладёт в него
+ * рабочую модель - она компилируется и прогоняется с первого нажатия. Файл
+ * пишется до открытия: открытый проект читает состав с сервера, и образец,
+ * положенный после, не попал бы в дерево.
+ */
 async function make() {
   const name = dom.newname.value.trim();
   if (!name) {
@@ -553,9 +620,37 @@ async function make() {
   }
   try {
     const created = await api.create(name);
+    if (dom.fromsample.checked) await api.write(created.id, DEFAULT_FILE, SAMPLE, null);
     dom.newname.value = "";
+    closeModal(dom["project-modal"]);
     await list();
     await openProject(created.id);
+  } catch (error) {
+    fail(error);
+  }
+}
+
+/**
+ * Удаляет открытый проект.
+ *
+ * Спрошено уже было - здесь только исполнение. После удаления страница остаётся
+ * без проекта: показывать состав того, чего нет, нельзя, а открытый текст
+ * автору всё ещё виден.
+ */
+async function drop() {
+  const doomed = state.project;
+  if (!doomed) return;
+  try {
+    await api.remove(doomed.id);
+    closeModal(dom["drop-modal"]);
+    state.project = null;
+    state.file = null;
+    state.revision = null;
+    state.level = "none";
+    paintTree([]);
+    host.say(t("account.dropped", { name: doomed.name }), "ok");
+    refresh();
+    await list();
   } catch (error) {
     fail(error);
   }
@@ -606,10 +701,14 @@ function paintTree(files) {
   ];
   dom.tree.replaceChildren();
   if (files.length === 0) {
+    // Пусто по двум разным причинам, и путать их нельзя: у нового проекта
+    // файлов ещё нет, но он открыт, и "проект не открыт" здесь было бы ложью -
+    // автор как раз в нём и пишет.
+    const key = state.project ? "tree.noFiles" : "tree.empty";
     const empty = document.createElement("div");
     empty.className = "tree-kind";
-    empty.dataset.i18n = "tree.empty";
-    empty.textContent = t("tree.empty");
+    empty.dataset.i18n = key;
+    empty.textContent = t(key);
     dom.tree.appendChild(empty);
     return;
   }
@@ -702,6 +801,9 @@ async function openProject(id) {
       state.file = DEFAULT_FILE;
       state.revision = null;
       hideConflict();
+      // Пустой проект открывается пустым. Оставь мы текст прежнего - он выглядел
+      // бы содержимым нового проекта и ушёл бы в него первым же сохранением.
+      host.open({ source: "", scenario: "", layout: "" });
       refresh();
     }
   } catch (error) {
@@ -988,6 +1090,10 @@ function refresh() {
   dom["whoami-bar"].textContent = me ? me.login : "";
   dom["whoami-bar"].hidden = me === null;
   dom.download.hidden = state.project === null;
+  // Удалить может только владелец: читателю и соавтору кнопка не показывается -
+  // отказ сервера на действие, которое страница предложила сама, читается как
+  // поломка.
+  dom.dropproject.hidden = state.project === null || state.level !== "owner";
   const writable = editing() && (state.level === "edit" || state.level === "owner");
   dom.save.hidden = !writable;
   dom.openfile.hidden = !editing();

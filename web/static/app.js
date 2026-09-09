@@ -132,6 +132,7 @@ export async function main() {
   // области, которой больше нет, и страница открылась бы без вывода вовсе.
   selectPanel(shell.setting(localStorage, shell.UI_KEYS.panel, "output") === "output" ? "output" : null);
   showDiagnosticsPane(shell.setting(localStorage, shell.UI_KEYS.diagnostics, "1") === "1");
+  showTree(shell.setting(localStorage, shell.UI_KEYS.treeShown, "1") === "1");
   // Подсказки - свои, а не нативные: `title` в разметке нет вовсе.
   tip.attach(document);
   await useLanguage(i18n.pick(i18n.stored(localStorage), navigator.languages ?? []));
@@ -491,7 +492,10 @@ function cache() {
     "setpass", "download", "upload", "showcase", "finder", "query", "findbtn",
     "found", "more", "doc", "sourcetitle", "openfilename",
     "scheme-notice", "scheme-notice-text", "scheme-drop",
-    "tree", "treesplit", "diagnostics-head",
+    "tree", "treesplit", "diagnostics-head", "showtree",
+    "openproject", "dropproject", "createproject", "createcancel", "opencancel",
+    "dropok", "dropcancel", "droptext", "fromsample",
+    "project-modal", "open-modal", "drop-modal",
     "crumbs", "scheme-up", "stage", "scheme", "sheet", "nav", "map",
     "panel-run", "panel-view", "panel-sheet", "settings",
     "scheme-empty", "legend", "zoom", "alerts",
@@ -569,6 +573,7 @@ function wire() {
   // закрывает область - так автор освобождает экран под модель.
   dom.showgen.addEventListener("click", () => selectPanel(state.panel === "output" ? null : "output"));
   dom.showdiag.addEventListener("click", () => showDiagnosticsPane(dom.diagnostics.hidden));
+  dom.showtree.addEventListener("click", () => showTree(document.body.dataset.tree === "off"));
   // Запись журнала выделяется щелчком: в длинной трассе так не теряют место, к
   // которому вернулись. Выделена всегда одна - это отметка чтения, а не отбор.
   dom.trace.addEventListener("click", (event) => {
@@ -1340,6 +1345,19 @@ function showDiagnosticsPane(show) {
 }
 
 /**
+ * Показывает либо прячет структуру проекта.
+ *
+ * Правило смотрит на состояние страницы (`body[data-tree]`), а не прячет узлы
+ * по одному: иначе ручка ширины осталась бы висеть у края и тянула бы долю
+ * области, которой на экране нет.
+ */
+function showTree(show) {
+  document.body.dataset.tree = show ? "on" : "off";
+  dom.showtree.setAttribute("aria-pressed", String(show));
+  shell.remember(localStorage, shell.UI_KEYS.treeShown, show ? "1" : "0");
+}
+
+/**
  * Показывает в области кода то, чем открытый файл смотрят.
  *
  * Область одна на все роды файлов: читатель работает с тем, что выбрал в
@@ -1390,9 +1408,11 @@ function selectMode(name) {
     mode.classList.toggle("active", active);
     mode.setAttribute("aria-selected", String(active));
   }
-  // Область вывода на узком экране открывается вместе со своим режимом; код и
-  // структура своих панелей не имеют - их показывает раскладка.
+  // Область на узком экране открывается вместе со своим режимом: выбрав её в
+  // полке, читатель просит показать именно её, и отжатая кнопка показа спорила
+  // бы с этой просьбой.
   if (name === "output") selectPanel("output");
+  if (name === "tree") showTree(true);
 }
 
 /**

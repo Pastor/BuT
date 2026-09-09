@@ -965,6 +965,68 @@ test("структура проекта: область справа, файлы
   }
 });
 
+test("структура проекта: прячется своей кнопкой и вместе с ручкой ширины", async () => {
+  const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
+  const app = await readFile(new URL("../static/app.js", import.meta.url), "utf8");
+  const css = await readFile(new URL("../static/app.css", import.meta.url), "utf8");
+
+  // Кнопка залипающая и стоит там же, где показ генерации и диагностик: это
+  // настройки показа страницы, и место у них одно.
+  const tools = html.slice(html.indexOf('<div class="bar bar-tools">'), html.indexOf("<main"));
+  assert.match(tools, /id="showtree"[^>]*aria-pressed/, "кнопка структуры не залипающая");
+
+  // Прячется состоянием страницы, а не узлами по одному: ручка ширины уходит
+  // вместе с областью - иначе она тянула бы долю того, чего на экране нет.
+  assert.match(css, /body\[data-tree="off"\][\s\S]{0,120}?display: none/, "область не прячется");
+  assert.match(css, /body\[data-tree="off"\] > \.work > #treesplit/, "ручка ширины остаётся");
+  assert.match(css, /body\[data-panel="none"\]\[data-tree="off"\] \.work/,
+    "обе закрытые области не дают коду всю ширину");
+  // Выбор переживает перезагрузку: это настройка читателя.
+  assert.match(app, /UI_KEYS\.treeShown/, "видимость структуры не запоминается");
+});
+
+test("проект: действия стоят над его составом, а выгрузка ушла из шапки", async () => {
+  const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
+  const account = await readFile(new URL("../static/account.js", import.meta.url), "utf8");
+  const api = await readFile(new URL("../static/api.js", import.meta.url), "utf8");
+
+  // Полоса действий - внутри области структуры и выше дерева: это действия над
+  // тем, что показано ниже.
+  const tree = html.slice(html.indexOf('class="pane pane-tree"'), html.indexOf("</main>"));
+  assert.ok(tree.includes('class="tree-tools"'), "полосы действий над структурой нет");
+  for (const id of ["newproject", "openproject", "download", "dropproject"]) {
+    assert.ok(tree.includes(`id="${id}"`), `в полосе действий нет '${id}'`);
+  }
+  const order = ['class="tree-tools"', 'id="tree"'].map((mark) => tree.indexOf(mark));
+  assert.deepEqual(order.slice().sort((a, b) => a - b), order, "действия стоят под составом");
+
+  // Заведение и выбор проекта - разговоры, и у каждого своё окно: список
+  // проектов читают, а не держат на экране.
+  for (const id of ["project-modal", "open-modal", "drop-modal"]) {
+    assert.ok(html.includes(`id="${id}"`), `окна '${id}' нет`);
+  }
+  const panel = html.slice(html.indexOf('id="panel"'), html.indexOf('id="finder"'));
+  assert.ok(!panel.includes('id="newname"'), "заведение проекта осталось в панели учётной записи");
+  assert.ok(!panel.includes('id="projects"'), "список проектов остался в панели учётной записи");
+
+  // Отметка образца кладёт в новый проект рабочую модель - тем же файлом, каким
+  // проект открывается.
+  assert.match(account, /dom\.fromsample\.checked[\s\S]{0,80}?api\.write\(created\.id, DEFAULT_FILE, SAMPLE/,
+    "отметка образца не кладёт модель");
+  // Пустой проект открывается пустым: прежний текст выглядел бы его содержимым.
+  assert.match(account, /host\.open\(\{ source: "", scenario: "", layout: "" \}\)/,
+    "новый проект открывается прежним текстом");
+
+  // Удаление необратимо: оно спрашивает и называет проект по имени.
+  assert.ok(account.includes('t("account.dropAsk"'), "удаление не спрашивает");
+  assert.match(api, /export async function remove\(id\)[\s\S]{0,160}?method: "DELETE"/,
+    "у страницы нет удаления проекта");
+  // Кнопка удаления - только владельцу: отказ сервера на действие, которое
+  // страница предложила сама, читается как поломка.
+  assert.match(account, /dom\.dropproject\.hidden = state\.project === null \|\| state\.level !== "owner"/,
+    "удаление предлагается не владельцу");
+});
+
 test("шапка: две полосы, и каждая отвечает на свой вопрос", async () => {
   // Предмет - состав полос: верхняя
   // отвечает "что за страница" (имя, версия языка, время сборки, вход), нижняя
@@ -980,8 +1042,10 @@ test("шапка: две полосы, и каждая отвечает на с�
   for (const id of ["version", "project", "openfile", "whoami-bar", "session", "lang"]) {
     assert.ok(brand.includes(`id="${id}"`), `верхняя полоса без '${id}'`);
   }
-  for (const id of ["account", "showcase", "save", "format", "wrap",
-                    "share", "download"]) {
+  // Выгрузка архивом ушла отсюда к структуре проекта: это действие над
+  // проектом, а не над страницей.
+  assert.ok(!tools.includes('id="download"'), "выгрузка осталась в полосе управления");
+  for (const id of ["account", "showcase", "save", "format", "wrap", "share"]) {
     assert.ok(tools.includes(`id="${id}"`), `полоса управления без '${id}'`);
     assert.ok(!brand.includes(`id="${id}"`), `'${id}' остался в верхней полосе`);
   }

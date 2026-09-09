@@ -227,6 +227,16 @@ export async function project(id) {
   return await call(`projects/${encodeURIComponent(id)}`);
 }
 
+/**
+ * Удаляет проект целиком.
+ *
+ * Состав и права уходят каскадом, копии остаются: у копии своя жизнь. Ответа с
+ * телом у ручки нет - удалять нечего дважды.
+ */
+export async function remove(id) {
+  return await call(`projects/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 /** Правит метаданные проекта. */
 export async function patch(id, fields) {
   return await call(`projects/${encodeURIComponent(id)}`, { method: "PATCH", body: fields });
