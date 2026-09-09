@@ -42,7 +42,10 @@ ALLOWED = {
 # Поля шага сценария, где значение может быть массивом значений портов.
 PORT_FIELDS = ("in_ports", "inout", "out", "vars")
 
-SKIP_DIRS = {".git", "target", "node_modules", ".idea", "build"}
+# `.claude` - служебный каталог инструмента: там лежат рабочие копии дерева,
+# заведённые параллельными сессиями. Чужая копия не предмет проверки: её
+# сценарии судятся в своём прогоне, а здесь дают находку на пустом месте.
+SKIP_DIRS = {".git", ".claude", "target", "node_modules", ".idea", "build"}
 
 
 def has_positional(node) -> bool:
