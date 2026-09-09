@@ -5,7 +5,7 @@ use std::sync::Arc;
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
 use axum::response::{IntoResponse, Response};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Json, Router};
 
 use crate::access::Level;
@@ -13,7 +13,8 @@ use crate::db;
 use crate::error::ApiError;
 use crate::limits;
 use crate::projects::{
-    FileJson, PutFileRequest, WriteResponse, body_of, locked, require_level, resolve,
+    FileJson, PutFileRequest, RenameFileRequest, WriteResponse, body_of, locked, require_level,
+    resolve,
 };
 use crate::routes::{AppState, current_user, optional_user};
 use crate::showcase;
@@ -24,10 +25,15 @@ use crate::store::Store;
 /// Путь полный, а роутер примешивается: вложение с внутренним маршрутом `/` дало бы
 /// адрес с хвостовой косой чертой.
 pub fn router() -> Router<Arc<AppState>> {
-    Router::new().route(
-        "/projects/{id}/files/{name}",
-        get(read_file).put(write_file).delete(remove_file),
-    )
+    Router::new()
+        .route(
+            "/projects/{id}/files/{name}",
+            get(read_file).put(write_file).delete(remove_file),
+        )
+        // Переименование - своя ручка, а не пара "записать под новым именем и удалить
+        // старое": пара из двух рейсов рвётся посередине, и проект остаётся либо с
+        // двумя копиями файла, либо без него вовсе.
+        .route("/projects/{id}/files/{name}/rename", post(rename_file))
 }
 
 async fn read_file(
@@ -170,6 +176,87 @@ async fn write_file(
         .store
         .write(&owner, &id, &name, &request.text)
         .map_err(ApiError::Internal)?;
+    let written = bump(&transaction, &id, &state.store, &owner).await?;
+    transaction.commit().await?;
+    Ok(Json(written).into_response())
+}
+
+/// Переименовывает файл проекта: меняется имя, а не содержимое и не род.
+///
+/// Род сохраняется намеренно: расширение ставит страница по роду файла, и смена рода
+/// переименованием означала бы, что сценарий втихую стал моделью - с прежним текстом
+/// внутри. Пара "модель и её раскладка" держится страницей: раскладка парна модели по
+/// имени, и переименовать её обязан тот, кто знает про пару.
+async fn rename_file(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    Path((id, name)): Path<(String, String)>,
+    Json(request): Json<RenameFileRequest>,
+) -> Result<Response, ApiError> {
+    let user = current_user(&state, &headers).await?;
+    let kind = limits::check_file_name(&name)?;
+    let target_kind = limits::check_file_name(&request.to)?;
+    if kind != target_kind {
+        return Err(ApiError::BadRequest(format!(
+            "переименование не меняет род файла: '{name}' и '{}' разных родов",
+            request.to
+        )));
+    }
+    if request.to == name {
+        return Err(ApiError::BadRequest(
+            "новое имя совпадает с прежним".to_string(),
+        ));
+    }
+    let mut client = state.pool.get().await?;
+    let transaction = client.transaction().await?;
+    let (_, level) = locked(&transaction, &state.store, &id, &user).await?;
+    require_level(level, Level::Edit)?;
+    let owner: String = transaction
+        .query_one("SELECT owner_id FROM projects WHERE id = $1", &[&id])
+        .await?
+        .get(0);
+    let taken: i64 = transaction
+        .query_one(
+            "SELECT count(*) FROM project_files WHERE project_id = $1 AND name = $2",
+            &[&id, &request.to],
+        )
+        .await?
+        .get(0);
+    if taken > 0 {
+        return Err(ApiError::BadRequest(format!(
+            "файл '{}' в проекте уже есть",
+            request.to
+        )));
+    }
+    let affected = transaction
+        .execute(
+            "UPDATE project_files SET name = $3 WHERE project_id = $1 AND name = $2",
+            &[&id, &name, &request.to],
+        )
+        .await?;
+    if affected == 0 {
+        return Err(ApiError::NotFound);
+    }
+    // Диск переименовывается до фиксации: отказ диска откатывает транзакцию, и состав
+    // остаётся согласным с тем, что лежит на диске.
+    state
+        .store
+        .rename(&owner, &id, &name, &request.to)
+        .map_err(ApiError::Internal)?;
+    // Активный файл и активный сценарий названы именем: не переставь их - и проект
+    // откроется, показывая пустоту, а прогон пошёл бы по сценарию, которого нет.
+    transaction
+        .execute(
+            "UPDATE projects SET main_file = $3 WHERE id = $1 AND main_file = $2",
+            &[&id, &name, &request.to],
+        )
+        .await?;
+    transaction
+        .execute(
+            "UPDATE projects SET main_scenario = $3 WHERE id = $1 AND main_scenario = $2",
+            &[&id, &name, &request.to],
+        )
+        .await?;
     let written = bump(&transaction, &id, &state.store, &owner).await?;
     transaction.commit().await?;
     Ok(Json(written).into_response())

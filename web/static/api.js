@@ -256,6 +256,20 @@ export async function removeFile(id, name) {
 }
 
 /**
+ * Переименовывает файл проекта.
+ *
+ * Ручка своя, а не пара "записать под новым именем и удалить старое": пара из двух
+ * рейсов рвётся посередине, и проект остаётся либо с двумя копиями файла, либо без
+ * него вовсе.
+ */
+export async function renameFile(id, name, to) {
+  return await call(
+    `projects/${encodeURIComponent(id)}/files/${encodeURIComponent(name)}/rename`,
+    { method: "POST", body: { to } }
+  );
+}
+
+/**
  * Пишет файл.
  *
  * @param {number|null} revision ревизия, которую видел автор; `null` - файл новый

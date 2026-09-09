@@ -73,15 +73,6 @@
   <button id="save" class="icon-btn" type="button" hidden
           data-i18n-attr="data-tip:account.save;aria-label:account.save"
           data-tip="Сохранить" aria-label="Сохранить"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.5v10"/><path d="M8 10l4 4 4-4"/><path d="M4.5 16v4.5h15V16"/></svg></button>
-  <button id="format" class="icon-btn" type="button"
-          data-i18n-attr="data-tip:bar.format;aria-label:bar.format"
-          data-tip="Формат" aria-label="Формат"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16M4 12h16M4 19h16"/><path d="M8 8.5 5.5 12 8 15.5"/></svg></button>
-  <!-- Перенос длинных строк - одна залипающая кнопка на все области кода:
-       исходник, вывод цели, сценарий и трассу (решение заказчика). Нажатое
-       состояние видно (`aria-pressed`), иначе кнопка ничего не сообщает. -->
-  <button id="wrap" class="icon-btn" type="button" aria-pressed="false"
-          data-i18n-attr="data-tip:bar.wrap;aria-label:bar.wrap"
-          data-tip="Переносить длинные строки" aria-label="Переносить длинные строки"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6.5h16"/><path d="M4 12h12.5a3.5 3.5 0 0 1 0 7H9.5"/><path d="M12.5 16.5 9.5 19l3 2.5"/></svg></button>
   <button id="share" class="icon-btn" type="button"
           data-i18n-attr="data-tip:bar.share;aria-label:bar.share"
           data-tip="Поделиться" aria-label="Поделиться"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="6.5" cy="12" r="2.5"/><circle cx="17.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/><path d="M8.8 10.8 15.2 7.7M8.8 13.2l6.4 3.1"/></svg></button>
@@ -116,6 +107,11 @@
 </div>
 
 <main class="work">
+  <!-- Рабочее поле: области кода и вывода рядом, журнал диагностик под обеими.
+       Структура проекта стоит снаружи, поэтому её сторону можно менять, не
+       трогая раскладку самого поля. -->
+  <div class="work-main">
+   <div class="work-panes">
   <section class="pane pane-source">
     <div class="pane-head">
       <!-- Подпись области зависит от рода открытого файла:
@@ -123,6 +119,21 @@
            текстом здесь она завела бы второй словарь. -->
       <span id="sourcetitle" data-i18n="source.title">Модель</span>
       <span id="openfilename" class="muted"></span>
+    </div>
+    <!-- Действия над открытым текстом стоят над ним же - тем же приёмом, что
+         действия над проектом над его составом. В полосе страницы они
+         соседствовали с настройками показа, хотя предмет у них другой:
+         это правка того, что показано ниже. -->
+    <div class="pane-toolbar" data-i18n-attr="aria-label:source.actions" aria-label="Действия над текстом">
+      <button id="format" class="icon-btn" type="button"
+          data-i18n-attr="data-tip:bar.format;aria-label:bar.format"
+          data-tip="Формат" aria-label="Формат"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5h16M4 12h16M4 19h16"/><path d="M8 8.5 5.5 12 8 15.5"/></svg></button>
+      <!-- Перенос длинных строк - одна залипающая кнопка на все области кода:
+       исходник, вывод цели, сценарий и трассу (решение заказчика). Нажатое
+       состояние видно (`aria-pressed`), иначе кнопка ничего не сообщает. -->
+      <button id="wrap" class="icon-btn" type="button" aria-pressed="false"
+          data-i18n-attr="data-tip:bar.wrap;aria-label:bar.wrap"
+          data-tip="Переносить длинные строки" aria-label="Переносить длинные строки"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6.5h16"/><path d="M4 12h12.5a3.5 3.5 0 0 1 0 7H9.5"/><path d="M12.5 16.5 9.5 19l3 2.5"/></svg></button>
     </div>
 
     <!-- Панель учётной записи и проектов. Скрыта, пока её не позвали: без
@@ -181,7 +192,6 @@
     <div id="editor" class="editor" data-i18n-attr="aria-label:source.editor" aria-label="Исходный текст модели"></div>
     <div id="scenario" class="editor scenario" data-i18n-attr="aria-label:trace.scenario"
            aria-label="Сценарий входов"></div>
-    <div id="doc" class="doc" hidden></div>
 <div data-panel="scheme" class="panel panel-scheme" hidden>
       <div id="scheme-notice" class="notice conflict" hidden>
         <span id="scheme-notice-text"></span>
@@ -277,16 +287,6 @@
       <div id="tools-lang-trace" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
       <div id="trace" class="list log trace" aria-live="polite"></div>
     </div>
-    <!-- Разделитель рядов: сколько отдано редактору, сколько диагностикам.
-         Правила те же, что у разделителя колонок, ось другая. -->
-    <div id="hsplit" class="split split-h" role="separator" aria-orientation="horizontal"
-         data-i18n-attr="aria-label:bar.rows" aria-label="Высота диагностик" tabindex="0"></div>
-    <div id="diagnostics-head" class="pane-head"><span data-i18n="diagnostics.title">Диагностики</span></div>
-    <!-- Строка-граница: до фичи сообщения инструментов существуют только
-           по-русски, и при другом языке оболочки смешение НАЗЫВАЕТСЯ, а не
-           прячется (задача 0531-10a). -->
-      <div id="tools-lang" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
-      <div id="diagnostics" class="list log" aria-live="polite"></div>
   </section>
 
 
@@ -299,6 +299,10 @@
       <button class="tab active" data-tab="output" role="tab" aria-selected="true" type="button" data-i18n="tabs.output">Вывод цели</button>
       <button class="tab" data-tab="flags" role="tab" aria-selected="false" type="button" data-i18n="tabs.flags">Ключи сборки</button>
     </nav>
+
+    <!-- Показ пояснения: он занимает место вывода цели, потому что пояснение
+         компилировать нечем, а видеть разметку рядом с текстом надо. -->
+    <div id="doc" class="doc" hidden></div>
 
     <div data-panel="output" class="panel">
       <div class="controls">
@@ -330,6 +334,31 @@
       <div id="flags" class="flags"></div>
     </div>
   </section>
+   </div>
+    <!-- Разделитель рядов: сколько отдано областям, сколько журналу диагностик.
+         Правила те же, что у разделителя колонок, ось другая. -->
+    <div id="hsplit" class="split split-h" role="separator" aria-orientation="horizontal"
+         data-i18n-attr="aria-label:bar.rows" aria-label="Высота диагностик" tabindex="0"></div>
+    <!-- Журнал диагностик: во всю ширину рабочего поля, под обеими областями.
+         Прежде он стоял внутри области кода и обрывался по её границе, тогда
+         как строка диагностики длиннее любой строки кода. -->
+    <section class="pane pane-diag">
+      <div id="diagnostics-head" class="pane-head">
+        <span data-i18n="diagnostics.title">Диагностики</span>
+        <!-- Журнал накапливает, и рано или поздно читателю нужно чистое поле:
+             ротация уносит старое сама, но не по его слову. -->
+        <button id="diagclear" class="icon-btn" type="button"
+                data-i18n-attr="data-tip:diagnostics.clear;aria-label:diagnostics.clear"
+                data-tip="Очистить журнал" aria-label="Очистить журнал"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l1 12.5h9l1-12.5"/></svg></button>
+      </div>
+      <!-- Строка-граница: до фичи сообщения инструментов существуют только
+           по-русски, и при другом языке оболочки смешение НАЗЫВАЕТСЯ, а не
+           прячется (задача 0531-10a). -->
+      <div id="tools-lang" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
+      <div id="diagnostics" class="list log" aria-live="polite"></div>
+    </section>
+  </div>
+
   <!-- Разделитель перед структурой проекта: ширину дерева задаёт читатель, как
        и доли прочих областей. -->
   <div id="treesplit" class="split" role="separator" aria-orientation="vertical"
@@ -364,6 +393,11 @@
       <button id="newfile" class="icon-btn" type="button" hidden
               data-i18n-attr="data-tip:file.add;aria-label:file.add"
               data-tip="Добавить файл" aria-label="Добавить файл"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 3.5h7l5 5v12h-12z"/><path d="M13 3.5v5.5h5.5"/><path d="M12 12v5M9.5 14.5h5"/></svg></button>
+      <!-- Переименование: имя правится без расширения, расширение ставит род
+           файла - как и при заведении. -->
+      <button id="renamefile" class="icon-btn" type="button" hidden
+              data-i18n-attr="data-tip:file.rename;aria-label:file.rename"
+              data-tip="Переименовать файл" aria-label="Переименовать файл"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 16.5l10-10 3 3-10 10h-3z"/><path d="M13.5 7.5l3 3"/><path d="M4.5 20.5h15"/></svg></button>
       <button id="dropfile" class="icon-btn" type="button" hidden
               data-i18n-attr="data-tip:file.drop;aria-label:file.drop"
               data-tip="Удалить файл" aria-label="Удалить файл"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l1 12.5h9l1-12.5"/></svg></button>
@@ -387,6 +421,7 @@
 <nav id="modes" class="modes" role="tablist" data-i18n-attr="aria-label:modes.label" aria-label="Область">
   <button class="tab active" data-mode="source" role="tab" aria-selected="true" type="button" data-i18n="modes.source">Код</button>
   <button class="tab" data-mode="output" role="tab" aria-selected="false" type="button" data-i18n="modes.output">Вывод</button>
+  <button class="tab" data-mode="diag" role="tab" aria-selected="false" type="button" data-i18n="modes.diag">Журнал</button>
   <button class="tab" data-mode="tree" role="tab" aria-selected="false" type="button" data-i18n="modes.tree">Проект</button>
 </nav>
 
@@ -472,6 +507,24 @@
       <div class="modal-actions">
         <button id="filecancel" type="button" data-i18n="account.cancel">Отмена</button>
         <button id="fileok" class="primary" type="button" data-i18n="account.create">Создать</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Переименование файла: имя без расширения, расширение ставит род файла.
+     Род не меняется - иначе сценарий втихую стал бы моделью с прежним текстом. -->
+<div id="rename-modal" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true"
+       data-i18n-attr="aria-label:file.rename" aria-label="Переименовать файл">
+    <div class="modal-head" data-i18n="file.rename">Переименовать файл</div>
+    <div class="modal-body">
+      <input id="renamename" type="text" spellcheck="false"
+             data-i18n-attr="placeholder:file.namePlaceholder" placeholder="Имя без расширения">
+      <span id="renamepreview" class="muted"></span>
+      <div class="modal-actions">
+        <button id="renamecancel" type="button" data-i18n="account.cancel">Отмена</button>
+        <button id="renameok" class="primary" type="button" data-i18n="file.renameOk">Переименовать</button>
       </div>
     </div>
   </div>

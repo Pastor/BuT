@@ -107,12 +107,22 @@ export function attach(nodes, callbacks) {
   dom.filename.addEventListener("keydown", (event) => {
     if (event.key === "Enter") makeFile();
   });
+  dom.renamefile.addEventListener("click", () => openRenameFile());
+  dom.renameok.addEventListener("click", () => renameFile());
+  dom.renamecancel.addEventListener("click", () => closeModal(dom["rename-modal"]));
+  dom.renamename.addEventListener("input", () => showRenamePreview());
+  dom.renamename.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") renameFile();
+  });
   dom.dropfile.addEventListener("click", () => openDropFile());
   dom.dropfileok.addEventListener("click", () => dropFile());
   dom.dropfilecancel.addEventListener("click", () => closeModal(dom["dropfile-modal"]));
   // Выход из разговора не должен требовать попадания в кнопку: щелчок по
   // затемнению и Escape закрывают любое из трёх окон.
-  const MODALS = ["project-modal", "open-modal", "drop-modal", "file-modal", "dropfile-modal"];
+  const MODALS = [
+    "project-modal", "open-modal", "drop-modal", "file-modal", "dropfile-modal",
+    "rename-modal",
+  ];
   for (const id of MODALS) {
     dom[id].addEventListener("click", (event) => {
       if (event.target === dom[id]) closeModal(dom[id]);
@@ -627,6 +637,26 @@ function openNewFile() {
   dom.filename.focus();
 }
 
+/**
+ * Открывает окно переименования открытого файла: имя без расширения.
+ *
+ * Расширение в поле не показывается и не правится: его ставит род файла - как и
+ * при заведении. Дай править его руками - и автор сменил бы род, не сменив
+ * содержимого.
+ */
+function openRenameFile() {
+  if (!state.project) return;
+  if (!state.file) {
+    host.say(t("file.nothingOpen"), "warning");
+    return;
+  }
+  dom.renamename.value = stemOf(state.file);
+  showRenamePreview();
+  dom["rename-modal"].hidden = false;
+  dom.renamename.focus();
+  dom.renamename.select();
+}
+
 /** Открывает окно удаления открытого файла. */
 function openDropFile() {
   if (!state.project) return;
@@ -719,6 +749,7 @@ function closeProject(say = true) {
 /** Роды файлов, которые автор вправе завести, и расширение каждого. */
 const FILE_KINDS = [
   { kind: "takt", label: "file.kind.takt", extension: ".takt" },
+  { kind: "layout", label: "file.kind.layout", extension: layoutFile.EXTENSION },
   { kind: "scenario", label: "file.kind.scenario", extension: ".json" },
   { kind: "markdown", label: "file.kind.markdown", extension: ".md" },
 ];
@@ -726,9 +757,10 @@ const FILE_KINDS = [
 /**
  * Рисует ряд родов файла.
  *
- * Раскладка файла раскладкой не заводится: она парная модели и появляется сама
- * при первом сохранении схемы - заводить её отдельно значило бы предлагать файл,
- * которому нечего описывать.
+ * Раскладка стоит в ряду наравне с прочими: она появляется и сама - при первом
+ * сохранении схемы, - но завести её заранее автор вправе. Файл раскладки парен
+ * модели по имени, и без такой модели схема ему нечего показывать: об этом
+ * страница говорит, а не отказывает - имя модели автор допишет следом.
  */
 function paintFileKinds() {
   dom.filekinds.replaceChildren();
@@ -785,12 +817,83 @@ async function makeFile() {
     host.say(t("file.exists", { name }), "warning");
     return;
   }
+  // Раскладка парна модели: без неё схеме нечего показывать. Это не отказ -
+  // автор вправе завести раскладку заранее, - но сказать об этом надо.
+  const pairless =
+    name.endsWith(layoutFile.EXTENSION) &&
+    !state.project.files?.some((file) => file.name === modelName(name));
   try {
     await api.write(state.project.id, name, "", null);
     closeModal(dom["file-modal"]);
     await openProjectFiles(state.project.id);
     await openFile(state.project.id, name);
-    host.say(t("file.created", { name }), "ok");
+    host.say(
+      pairless ? t("file.layoutWithoutModel", { name: modelName(name) }) : t("file.created", { name }),
+      pairless ? "warning" : "ok"
+    );
+  } catch (error) {
+    fail(error);
+  }
+}
+
+/** Расширение открытого файла: род задаёт его, а не автор. */
+function extensionOf(name) {
+  const kind = FILE_KINDS.find((item) => name.endsWith(item.extension));
+  return kind ? kind.extension : "";
+}
+
+/** Имя файла без расширения. */
+function stemOf(name) {
+  const extension = extensionOf(name);
+  return extension ? name.slice(0, -extension.length) : name;
+}
+
+/** Показывает имя, которое получится при переименовании. */
+function showRenamePreview() {
+  const raw = dom.renamename.value.trim();
+  dom.renamepreview.textContent = raw ? raw + extensionOf(state.file) : "";
+}
+
+/**
+ * Переименовывает открытый файл.
+ *
+ * Вместе с моделью переименовывается её раскладка: файл `.takt-ui` парен модели
+ * по имени, и оставленный под прежним именем он показывал бы схему того, чего
+ * нет. Пару знает страница - сервер видит два независимых файла.
+ */
+async function renameFile() {
+  if (!state.project || !state.file) return;
+  const raw = dom.renamename.value.trim();
+  if (!raw) {
+    host.say(t("file.needName"), "warning");
+    return;
+  }
+  if (!/^[A-Za-z0-9_-]+$/.test(raw)) {
+    host.say(t("file.badName"), "warning");
+    return;
+  }
+  const was = state.file;
+  const name = raw + extensionOf(was);
+  if (name === was) {
+    closeModal(dom["rename-modal"]);
+    return;
+  }
+  if (state.project.files?.some((file) => file.name === name)) {
+    host.say(t("file.exists", { name }), "warning");
+    return;
+  }
+  try {
+    await api.renameFile(state.project.id, was, name);
+    if (was.endsWith(".takt")) {
+      const layout = layoutName(was);
+      if (state.project.files?.some((file) => file.name === layout)) {
+        await api.renameFile(state.project.id, layout, layoutName(name));
+      }
+    }
+    closeModal(dom["rename-modal"]);
+    await openProjectFiles(state.project.id);
+    await openFile(state.project.id, name);
+    host.say(t("file.renamed", { was, name }), "ok");
   } catch (error) {
     fail(error);
   }
@@ -1290,6 +1393,12 @@ function refresh() {
   dom["icon-leave"].hidden = me === null;
   dom["whoami-bar"].textContent = me ? me.login : "";
   dom["whoami-bar"].hidden = me === null;
+  // Длинное имя обрезается по пятнадцати знакам, и хвост его затеняется.
+  // Признак ставится по факту обрезки, а не правилом:
+  // правило блёкло бы и на коротком имени, которое влезло целиком.
+  for (const node of [dom.whoami, dom["whoami-bar"]]) {
+    node.classList.toggle("clipped", node.scrollWidth > node.clientWidth + 1);
+  }
   // Полоса структуры отвечает на один вопрос за раз: пока проекта нет - как его
   // завести или открыть; когда открыт - что делать с ним и его файлами. Обе
   // группы разом заставляли бы искать нужную среди ненужных.
@@ -1302,6 +1411,7 @@ function refresh() {
   // Заводить и удалять файлы вправе тот, кто вправе писать: чужой проект
   // открывается на чтение, и предлагать ему правку значит обещать отказ сервера.
   dom.newfile.hidden = !writes;
+  dom.renamefile.hidden = !writes;
   dom.dropfile.hidden = !writes;
   const writable = editing() && (state.level === "edit" || state.level === "owner");
   dom.save.hidden = !writable;

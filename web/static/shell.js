@@ -28,8 +28,6 @@ export const PANES_KEY = "takt.panes";
 /** Ключ хранилища долей рядов области (редактор и диагностики). */
 export const ROWS_KEY = "takt.rows";
 
-/** Ключ хранилища долей вкладки прогона (сценарий и трасса). */
-export const TRACE_KEY = "takt.rows.trace";
 /** Доля высоты, отданная журналу прогона под холстом схемы. */
 export const LOG_KEY = "takt.rows.log";
 /** Доля высоты, отданная легенде-полке, и доля ширины у легенды-колонки. */
@@ -60,14 +58,6 @@ export const HALF = 0.5;
 export const ROWS_DEFAULT = 0.7;
 
 /**
- * Умолчание вкладки прогона: три десятых - сценарию.
- *
- * Не половина: сценарий короток (несколько строк JSON), а трасса длинна, и
- * читатель, ничего не тронувший, не должен получить полупустое поле ввода над
- * обрезанной трассой.
- */
-export const TRACE_DEFAULT = 0.3;
-/**
  * Умолчания долей схемы: журнал под холстом, легенда полкой и колонкой.
  *
  * Доля считается от начала области (сверху, слева) - это позиция границы, а не
@@ -86,8 +76,22 @@ export const LEGEND_COLS_DEFAULT = 0.7;
  * умолчание, а не "ширину NaN" - вторая область тогда исчезает молча.
  */
 export function clampRatio(ratio, fallback = HALF) {
+  return clampWithin(ratio, fallback, MIN_RATIO, 1 - MIN_RATIO);
+}
+
+/**
+ * Доля в названных границах.
+ *
+ * Границы приходят от того, кто их знает: у областей это общий предел "область,
+ * сжатая в полосу, выглядит пропавшей", а у структуры проекта - ширина самого
+ * длинного имени файла. Общий предел ей не годится: дерево из трёх коротких
+ * имён держало бы пятую часть экрана, а дерево длинных имён не разворачивалось
+ * бы на весь.
+ */
+export function clampWithin(ratio, fallback, min, max) {
   if (!Number.isFinite(ratio)) return fallback;
-  return Math.min(1 - MIN_RATIO, Math.max(MIN_RATIO, ratio));
+  if (max < min) return min;
+  return Math.min(max, Math.max(min, ratio));
 }
 
 /**
@@ -234,37 +238,27 @@ export function attachPanes(split, storage) {
  * второй набор границ, памяти и клавиатуры разошёлся бы с первым на первой же
  * правке. Разница только в оси и в том, что именно ставится в стилях.
  */
-export function attachRows(split, storage) {
+export function attachRows(split, storage, plan = {}) {
   attachDivider(split, {
     storage,
     key: ROWS_KEY,
     axis: "y",
     fallback: ROWS_DEFAULT,
     box: () => split.parentElement.getBoundingClientRect(),
+    // Журнал диагностик ужимается до одной записи, а не до общей пятой части
+    // высоты: читателю, занятому кодом, довольно видеть
+    // последнюю строку - остальное скажет затенение. Сверху граница прежняя:
+    // область кода, сжатая в полосу, выглядит пропавшей.
+    bounds: (rect) => {
+      const room = rect?.height;
+      const least = plan.least?.() ?? 0;
+      if (!room || room <= 0) return {};
+      return { min: MIN_RATIO, max: Math.max(MIN_RATIO, 1 - least / room) };
+    },
     // Доля - часть высоты, отданная верхней области (редактору); нижней достаётся
     // остаток, и он же задаёт высоту списка диагностик.
     apply: (ratio, root) => {
       root.style.setProperty("--rows-b", `${(1 - ratio) * 100}%`);
-    },
-  });
-}
-
-/**
- * Заводит ряды вкладки прогона: сценарий сверху, трасса снизу.
- *
- * Ключ памяти свой: вкладку и область делят разные пары, и общий ключ
- * таскал бы их друг за другом. Правило же одно - та же ручка.
- */
-export function attachTraceRows(split, storage) {
-  attachDivider(split, {
-    storage,
-    key: TRACE_KEY,
-    axis: "y",
-    fallback: TRACE_DEFAULT,
-    box: () => split.parentElement.getBoundingClientRect(),
-    // Доля - часть высоты, отданная сценарию: он стоит сверху.
-    apply: (ratio, root) => {
-      root.style.setProperty("--trace-t", `${ratio * 100}%`);
     },
   });
 }
@@ -307,15 +301,33 @@ export function attachLogRows(split, storage) {
  * растягивают под содержимое, и делить его ширину с выводом значило бы менять
  * два размера одной ручкой.
  */
-export function attachTree(split, storage) {
+export function attachTree(split, storage, plan = {}) {
+  // Сторона решает и ось, и то, какая величина ставится: слева и справа
+  // структура делит ширину, сверху и снизу - высоту. Величины две, а не одна:
+  // читатель, переставивший дерево сверху вниз, ждёт прежней высоты, а не
+  // высоты, пересчитанной из ширины.
+  const sideOf = plan.side ?? (() => "right");
+  const vertical = () => sideOf() === "top" || sideOf() === "bottom";
+  const first = () => sideOf() === "left" || sideOf() === "top";
   attachDivider(split, {
     storage,
     key: TREE_KEY,
-    axis: "x",
+    axis: () => (vertical() ? "y" : "x"),
     fallback: TREE_DEFAULT,
     box: () => split.parentElement.getBoundingClientRect(),
+    // Нижняя граница - размер, при котором видны имена файлов; верхней нет:
+    // читатель вправе развернуть структуру во всю область. Доля считается от
+    // начала области, поэтому у стороны "слева" и "сверху" она обратная.
+    bounds: (rect) => {
+      const room = vertical() ? rect?.height : rect?.width;
+      const need = plan.least?.() ?? 0;
+      if (!room || room <= 0) return { min: 0, max: 1 };
+      const share = Math.min(1, need / room);
+      return first() ? { min: share, max: 1 } : { min: 0, max: 1 - share };
+    },
     apply: (ratio, root) => {
-      root.style.setProperty("--tree-w", `${(1 - ratio) * 100}%`);
+      const share = first() ? ratio : 1 - ratio;
+      root.style.setProperty(vertical() ? "--tree-h" : "--tree-w", `${share * 100}%`);
     },
   });
 }
@@ -355,16 +367,29 @@ const TREE_DEFAULT = 0.84;
 
 function attachDivider(split, plan) {
   const root = split.ownerDocument.documentElement;
-  const vertical = plan.axis === "y";
+  // Ось спрашивается на каждое движение, а не запоминается: у структуры проекта
+  // сторону выбирает читатель, и сверху она делит высоту, а слева - ширину.
+  const axisOf = () => (typeof plan.axis === "function" ? plan.axis() : plan.axis);
   const fallback = plan.fallback ?? HALF;
+  // Границы тоже спрашиваются: у структуры проекта нижняя граница - ширина
+  // самого длинного имени, и она меняется вместе с составом проекта.
+  const limits = () => {
+    const own = plan.bounds?.(plan.box());
+    return {
+      min: Number.isFinite(own?.min) ? own.min : MIN_RATIO,
+      max: Number.isFinite(own?.max) ? own.max : 1 - MIN_RATIO,
+    };
+  };
   let ratio = panes(plan.storage, plan.key, fallback);
 
   const apply = (next) => {
-    ratio = clampRatio(next, fallback);
+    const { min, max } = limits();
+    ratio = clampWithin(next, fallback, min, max);
     plan.apply(ratio, root);
+    split.setAttribute("aria-orientation", axisOf() === "y" ? "horizontal" : "vertical");
     split.setAttribute("aria-valuenow", String(Math.round(ratio * 100)));
-    split.setAttribute("aria-valuemin", String(Math.round(MIN_RATIO * 100)));
-    split.setAttribute("aria-valuemax", String(Math.round((1 - MIN_RATIO) * 100)));
+    split.setAttribute("aria-valuemin", String(Math.round(min * 100)));
+    split.setAttribute("aria-valuemax", String(Math.round(max * 100)));
   };
 
   const remember = () => {
@@ -378,8 +403,10 @@ function attachDivider(split, plan) {
   split.addEventListener("pointerdown", (event) => {
     event.preventDefault();
     split.setPointerCapture(event.pointerId);
-    const move = (moved) =>
-      apply(ratioAt(vertical ? moved.clientY : moved.clientX, plan.box(), plan.axis));
+    const move = (moved) => {
+      const axis = axisOf();
+      apply(ratioAt(axis === "y" ? moved.clientY : moved.clientX, plan.box(), axis));
+    };
     const stop = () => {
       split.removeEventListener("pointermove", move);
       split.removeEventListener("pointerup", stop);
@@ -395,14 +422,15 @@ function attachDivider(split, plan) {
   // Оси таблицей: у горизонтального разделителя "влево" не значит ничего, а тернарник
   // из двух литералов сверка ключей словаря принимает за подписи (нашлось её же
   // прогоном).
-  const [less, more] = ARROWS[plan.axis];
   split.addEventListener("keydown", (event) => {
+    const [less, more] = ARROWS[axisOf()];
+    const { min, max } = limits();
     const step = event.shiftKey ? 0.1 : 0.02;
     switch (event.key) {
       case less: apply(ratio - step); remember(); break;
       case more: apply(ratio + step); remember(); break;
-      case "Home": apply(MIN_RATIO); remember(); break;
-      case "End": apply(1 - MIN_RATIO); remember(); break;
+      case "Home": apply(min); remember(); break;
+      case "End": apply(max); remember(); break;
       default: return;
     }
     event.preventDefault();
@@ -590,7 +618,45 @@ export const UI_KEYS = {
   tree: "takt.ui.tree",
   /** Видна ли структура проекта. */
   treeShown: "takt.ui.treeShown",
+  /** С какой стороны стоит структура проекта: `left`, `right`, `top`, `bottom`. */
+  treeSide: "takt.ui.treeSide",
+  /** Сколько записей держит журнал диагностик до ротации. */
+  diagKeep: "takt.ui.diagKeep",
+  /** Видны ли путь открытого файла и ревизия в шапке. */
+  crumbs: "takt.ui.crumbs",
 };
+
+/** Стороны, на которых может стоять структура проекта. */
+export const TREE_SIDES = ["left", "right", "top", "bottom"];
+
+/** Сторона по умолчанию: справа - там она и стояла до появления выбора. */
+export const TREE_SIDE_DEFAULT = "right";
+
+/**
+ * Сколько записей журнал диагностик держит без ротации.
+ *
+ * Предел нужен потому, что журнал накапливает:
+ * страница живёт часами, компиляция идёт на каждую правку, и список без предела
+ * растёт, пока браузер не начнёт спотыкаться на его отрисовке.
+ */
+export const DIAG_KEEP_DEFAULT = 500;
+
+/** Границы объёма журнала: меньше десятка бесполезно, больше десяти тысяч - тяжело. */
+export const DIAG_KEEP_MIN = 10;
+export const DIAG_KEEP_MAX = 10000;
+
+/** Читает объём журнала из памяти читателя, приводя к границам. */
+export function diagKeep(storage) {
+  const raw = Number(setting(storage, UI_KEYS.diagKeep, String(DIAG_KEEP_DEFAULT)));
+  if (!Number.isFinite(raw)) return DIAG_KEEP_DEFAULT;
+  return Math.min(DIAG_KEEP_MAX, Math.max(DIAG_KEEP_MIN, Math.round(raw)));
+}
+
+/** Читает сторону структуры проекта; незнакомая запись - умолчание. */
+export function treeSide(storage) {
+  const raw = setting(storage, UI_KEYS.treeSide, TREE_SIDE_DEFAULT);
+  return TREE_SIDES.includes(raw) ? raw : TREE_SIDE_DEFAULT;
+}
 
 /** Читает настройку; `fallback` - если её нет либо хранилище недоступно. */
 export function setting(storage, key, fallback) {

@@ -101,6 +101,19 @@ impl Store {
         Ok(())
     }
 
+    /// Переименовывает файл проекта.
+    ///
+    /// Содержимое не читается и не переписывается: имя - свойство места, а не текста.
+    ///
+    /// # Ошибки
+    /// Негодное имя (любой стороны) либо отказ переименования.
+    pub fn rename(&self, owner: &str, project: &str, from: &str, to: &str) -> anyhow::Result<()> {
+        let source = self.file_path(owner, project, from)?;
+        let target = self.file_path(owner, project, to)?;
+        std::fs::rename(&source, &target)
+            .with_context(|| format!("файл '{from}' не переименовывается в '{to}'"))
+    }
+
     /// Убирает файл проекта. Отсутствие файла - не ошибка.
     ///
     /// # Ошибки

@@ -77,6 +77,7 @@ pub const ROUTES: &[(&str, &str)] = &[
     ("GET", "/api/projects/{id}/files/{name}"),
     ("PUT", "/api/projects/{id}/files/{name}"),
     ("DELETE", "/api/projects/{id}/files/{name}"),
+    ("POST", "/api/projects/{id}/files/{name}/rename"),
     ("GET", "/api/public"),
     ("POST", "/api/projects/{id}/fork"),
     ("GET", "/api/projects/{id}/grants/{login}"),
@@ -511,7 +512,7 @@ mod tests {
         }
         assert_eq!(
             seen.len(),
-            27,
+            28,
             "вход, проекты, витрина, копия, права, архив, площадки и запись"
         );
     }

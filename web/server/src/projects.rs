@@ -169,6 +169,13 @@ pub struct PutFileRequest {
     pub revision: Option<i64>,
 }
 
+/// Запрос переименования файла.
+#[derive(Debug, Deserialize)]
+pub struct RenameFileRequest {
+    /// Новое имя целиком, с расширением: род файла им и задаётся.
+    pub to: String,
+}
+
 /// Ответ записи: новая ревизия и новый размер проекта.
 #[derive(Debug, Serialize)]
 pub struct WriteResponse {

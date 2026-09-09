@@ -1068,6 +1068,12 @@ test("файлы проекта: полоса отвечает на один в�
   assert.match(account, /const FILE_KINDS = \[[\s\S]{0,300}?extension: "\.takt"/, "родов файла нет");
   assert.ok(account.includes('extension: ".json"') && account.includes('extension: ".md"'),
     "род сценария или пояснения не заведён");
+  // Раскладка стоит в ряду наравне с прочими: она появляется и сама, но завести
+  // её заранее автор вправе.
+  assert.match(account, /extension: layoutFile\.EXTENSION/, "рода схемы нет в ряду");
+  // Раскладка без своей модели - предупреждение, а не отказ: имя модели автор
+  // допишет следом.
+  assert.ok(account.includes('t("file.layoutWithoutModel"'), "о схеме без модели не сказано");
   assert.match(account, /name = raw \+ chosenFileKind\(\)\.extension/, "расширение берётся не у рода");
 
   // Удаление файла спрашивает и уносит парную раскладку: осиротевшая, она
@@ -1097,9 +1103,7 @@ test("структура проекта: прячется своей кнопк�
   // Прячется состоянием страницы, а не узлами по одному: ручка ширины уходит
   // вместе с областью - иначе она тянула бы долю того, чего на экране нет.
   assert.match(css, /body\[data-tree="off"\][\s\S]{0,120}?display: none/, "область не прячется");
-  assert.match(css, /body\[data-tree="off"\] > \.work > #treesplit/, "ручка ширины остаётся");
-  assert.match(css, /body\[data-panel="none"\]\[data-tree="off"\] \.work/,
-    "обе закрытые области не дают коду всю ширину");
+  assert.match(css, /body\[data-tree="off"\] > \.work > \.split/, "ручка размера остаётся");
   // Выбор переживает перезагрузку: это настройка читателя.
   assert.match(app, /UI_KEYS\.treeShown/, "видимость структуры не запоминается");
 });
@@ -1166,21 +1170,28 @@ test("шапка: две полосы, и каждая отвечает на с�
   // Выгрузка архивом ушла отсюда к структуре проекта: это действие над
   // проектом, а не над страницей.
   assert.ok(!tools.includes('id="download"'), "выгрузка осталась в полосе управления");
-  for (const id of ["account", "showcase", "save", "format", "wrap", "share"]) {
+  for (const id of ["account", "showcase", "save", "share"]) {
     assert.ok(tools.includes(`id="${id}"`), `полоса управления без '${id}'`);
     assert.ok(!brand.includes(`id="${id}"`), `'${id}' остался в верхней полосе`);
   }
   assert.ok(!tools.includes('id="session"'), "кнопка входа уехала в управление");
 
-  // Порядок в полосе управления задан: перенос строк идёт сразу за
-  // форматированием.
-  const order = ["format", "wrap", "share"].map((id) => tools.indexOf(`id="${id}"`));
+  // Действия над открытым текстом стоят у самого текста - тем же приёмом, что
+  // действия над проектом у его состава: предмет у них тот же, что у показанного
+  // ниже, а не у страницы.
+  const source = html.slice(html.indexOf('<section class="pane pane-source">'), html.indexOf('id="split"'));
+  for (const id of ["format", "wrap"]) {
+    assert.ok(!tools.includes(`id="${id}"`), `'${id}' остался в полосе страницы`);
+    assert.ok(source.includes(`id="${id}"`), `'${id}' не переехал в область кода`);
+  }
+  // Порядок задан: перенос строк идёт сразу за форматированием.
+  const order = ["format", "wrap"].map((id) => source.indexOf(`id="${id}"`));
   assert.deepEqual(order.slice().sort((a, b) => a - b), order, "перенос строк не следует за форматом");
 
   // Кнопка залипающая, и нажатое состояние обязано быть видно: без правила
   // она сообщает только заголовком, а включён ли перенос - вопрос к самому
   // тексту, то есть к тому, ради чего её и нажимают.
-  assert.match(tools, /id="wrap"[^>]*aria-pressed/, "кнопка переноса без aria-pressed");
+  assert.match(source, /id="wrap"[^>]*aria-pressed/, "кнопка переноса без aria-pressed");
   // Настройка одна на все области кода: правило переноса обязано покрыть и
   // сценарий с трассой, иначе кнопка на них молчит.
   for (const area of [".editor.wrap", ".output.wrap", ".scenario.wrap", ".trace.wrap"]) {
@@ -1263,7 +1274,7 @@ test("настройки интерфейса живут в localStorage и кл
   // одном месте: придуманный по месту однажды разойдётся с тем, кто его
   // читает, и читатель получит умолчание там, где выбирал сам.
   const keys = [
-    shell.KEY, shell.PANES_KEY, shell.ROWS_KEY, shell.TRACE_KEY,
+    shell.KEY, shell.PANES_KEY, shell.ROWS_KEY,
     shell.FONT_KEY, shell.WRAP_KEY, shell.UI_KEYS.panel,
     shell.UI_KEYS.tab, shell.UI_KEYS.budget,
   ];
@@ -1304,22 +1315,20 @@ test("кегль страницы: шаг в единицу и обе грани
   assert.ok(shell.FONT_MIN < shell.FONT_DEFAULT && shell.FONT_DEFAULT < shell.FONT_MAX);
 });
 
-test("вкладка прогона: у сценария своя доля и свой ключ памяти", () => {
-  // Ключи разные у трёх пар (колонки, ряды области, ряды вкладки): общий
-  // ключ таскал бы их друг за другом, и сдвинув один разделитель, читатель
-  // двигал бы все три.
-  const keys = [shell.PANES_KEY, shell.ROWS_KEY, shell.TRACE_KEY];
-  assert.equal(new Set(keys).size, keys.length, `ключи совпали: ${keys.join(", ")}`);
-  // Умолчание вкладки - не половина: сценарий короток (несколько строк JSON),
-  // а трасса длинна, и полупустое поле над обрезанной трассой читателю не
-  // нужно.
-  assert.ok(shell.TRACE_DEFAULT < shell.HALF, "сценарию отдана меньшая доля");
-  assert.equal(
-    shell.panes({ getItem: () => null }, shell.TRACE_KEY, shell.TRACE_DEFAULT),
-    shell.TRACE_DEFAULT
-  );
-  // Границы - те же: область, сжатая в полосу, выглядит пропавшей.
-  assert.equal(shell.clampRatio(0, shell.TRACE_DEFAULT), shell.MIN_RATIO);
+test("сценарий занимает область кода целиком, как модель", async () => {
+  // Область кода показывает один файл, и место в ней принадлежит показанному:
+  // модель, сценарий и пояснение правятся одним редактором, значит и высота у
+  // них одна. Своя высота досталась сценарию от вкладки прогона, где он делил
+  // место с трассой; вкладки нет, а правило пережило её и держало поле в шестой
+  // части области.
+  const css = await readFile(new URL("../static/app.css", import.meta.url), "utf8");
+  assert.ok(!/--trace-t/.test(css), "у сценария осталась своя высота");
+  const shellText = await readFile(new URL("../static/shell.js", import.meta.url), "utf8");
+  assert.ok(!/TRACE_KEY|attachTraceRows/.test(shellText), "ручка вкладки прогона осталась");
+  // Разметка обязана дать сценарию класс редактора: без него он не получит ни
+  // раскладки, ни оформления, и правило "одна область - один показ" развалится.
+  const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
+  assert.match(html, /id="scenario" class="editor scenario"/, "сценарий не редактор");
 });
 
 test("перенос строк: настройка своя у каждой области и по умолчанию выключена", () => {

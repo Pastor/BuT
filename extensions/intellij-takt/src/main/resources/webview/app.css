@@ -206,6 +206,13 @@
    * ни всплывающих окон, которым нужен второй радиус. Появятся - ступень
    * заводится здесь, а не числом в правиле. */
   --radius: 8px;
+  /* Размер структуры проекта: доля читателя, зажатая между размером содержимого
+   * и всей областью. Нижнюю границу (`--tree-min`, `--tree-min-y`) ставит
+   * страница по самому длинному имени файла, но не больше половины экрана:
+   * дерево, из которого не видно имён, не структура, а полоса. Верхней границы
+   * нет - читатель вправе развернуть его целиком. */
+  --tree-track: clamp(var(--tree-min, 8rem), var(--tree-w, 15rem), 100%);
+  --tree-track-y: clamp(var(--tree-min-y, 6rem), var(--tree-h, 30%), 100%);
   /* Малое скругление - для того, что вложено в скруглённое: обойма сегментов
    * внутри карточки. Оно тоже употреблялось раньше объявления, и сегменты
    * выходили прямоугольными. */
@@ -616,7 +623,8 @@ body {
 
 /* Действия над проектом: ряд кнопок над его составом. Место выбрано по
  * предмету - это действия над тем, что показано ниже. */
-.tree-tools {
+.tree-tools,
+.pane-toolbar {
   display: flex;
   align-items: center;
   gap: var(--gap-half);
@@ -646,7 +654,12 @@ body {
   font-size: var(--text-sm);
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+}
+/* Имя файла, не влезшее в область: затенение вместо многоточия. Многоточие
+ * съедает конец имени, а различаются файлы как раз концом (`heater-run-1.json`
+ * и `heater-run-2.json`); полупрозрачный хвост оставляет его видимым. */
+.tree-file {
+  mask-image: linear-gradient(to right, #000 calc(100% - 1.5rem), transparent);
 }
 .tree-file:hover:not(:disabled) {
   background: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface));
@@ -657,7 +670,9 @@ body {
  * показанный занимает всю её высоту - холсту схемы нужна вертикаль, и без
  * этого правила он схлопывался под легенду. */
 #editor[hidden], #scenario[hidden], #doc[hidden], .panel-scheme[hidden] { display: none; }
-.pane-source > #doc { flex: 1; min-height: 0; overflow: auto; }
+/* Показ пояснения стоит в области вывода: слева его правят как текст, справа
+ * видят разметкой. Место вывода цели свободно - компилировать пояснение нечем. */
+.pane-result > #doc { flex: 1; min-height: 0; overflow: auto; }
 .pane-source > .panel-scheme { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
 /* ── Верхняя строка ─────────────────────────────────────────────────────── */
@@ -744,21 +759,65 @@ button:disabled, select:disabled, input:disabled, textarea:disabled {
   outline-offset: 2px;
 }
 
-/* ── Рабочая область ────────────────────────────────────────────────────── */
-/* Колонок три: между областями стоит разделитель, и доли задаёт читатель
- * . Умолчание - равные половины, то есть ровно то,
- * что было до появления ручки. */
+/* ── Рабочая область ──────────────────────────────────────────────────────
+ * Два уровня, и это не украшение раскладки, а её смысл. Снаружи стоит
+ * структура проекта - её сторону выбирает читатель (слева, справа, сверху,
+ * снизу), и меняется от этого только раскладка `.work`. Внутри - рабочее поле:
+ * области кода и вывода рядом, журнал диагностик под обеими во всю их ширину.
+ * Пока журнал стоял внутри области кода, он обрывался по её границе, хотя
+ * строка диагностики длиннее любой строки кода.
+ * Места названы (`grid-template-areas`): порядок дорожек меняется от стороны, а
+ * порядок узлов в разметке - нет. */
 .work {
   flex: 1;
   display: grid;
-  /* Пять дорожек: код, ручка, вывод, ручка, структура проекта. Ширина
-   * структуры - своя величина: она не делится с прочими долями, потому что
-   * дерево читают, а не растягивают под содержимое. */
-  grid-template-columns:
-    minmax(0, var(--panes-l, 1fr)) auto minmax(0, var(--panes-r, 1fr)) auto var(--tree-w, 15rem);
+  grid-template-areas: "main handle tree";
+  grid-template-columns: minmax(0, 1fr) auto var(--tree-track);
+  grid-template-rows: minmax(0, 1fr);
   gap: 1px;
   background: var(--border);
   min-height: 0;
+}
+.work-main { grid-area: main; }
+.work > .split { grid-area: handle; }
+.pane-tree { grid-area: tree; }
+
+body[data-treeside="left"] .work {
+  grid-template-areas: "tree handle main";
+  grid-template-columns: var(--tree-track) auto minmax(0, 1fr);
+}
+body[data-treeside="top"] .work {
+  grid-template-areas: "tree" "handle" "main";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--tree-track-y) auto minmax(0, 1fr);
+}
+body[data-treeside="bottom"] .work {
+  grid-template-areas: "main" "handle" "tree";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto var(--tree-track-y);
+}
+
+/* Рабочее поле: области сверху, журнал диагностик снизу во всю ширину.
+ * Высоту журнала задаёт читатель (`--rows-b`), а нижняя граница дорожки -
+ * шапка и одна запись: журнал, ужатый в полосу, читается как пустой. */
+.work-main {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto minmax(var(--diag-min, 3.2rem), var(--rows-b, 30%));
+  gap: 1px;
+  background: var(--border);
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Колонки рабочего поля: код, ручка, вывод. Доли задаёт читатель; умолчание -
+ * равные половины, то есть ровно то, что было до появления ручки. */
+.work-panes {
+  display: grid;
+  grid-template-columns: minmax(0, var(--panes-l, 1fr)) auto minmax(0, var(--panes-r, 1fr));
+  gap: 1px;
+  background: var(--border);
+  min-height: 0;
+  min-width: 0;
 }
 
 .pane {
@@ -838,29 +897,31 @@ button:disabled, select:disabled, input:disabled, textarea:disabled {
 }
 
 /* Панели правой области. Обе отжаты - область уходит целиком вместе со своим
- * разделителем, и модель занимает экран.
+ * разделителем, и модель занимает поле.
  * Правило смотрит на состояние страницы (`body[data-panel]`), а не прячет
  * узлы по одному: иначе разделитель остался бы висеть у края. */
 body[data-panel="none"] .pane-result,
-body[data-panel="none"] > .work > #split { display: none; }
-/* Закрытая генерация оставляет две области: код и структуру проекта. Прежнее
- * правило схлопывало сетку в одну дорожку - тогда областей было две, и
- * структура уезжала под них. */
-body[data-panel="none"] .work {
-  grid-template-columns: minmax(0, 1fr) auto var(--tree-w, 15rem);
+body[data-panel="none"] .work-panes > #split { display: none; }
+body[data-panel="none"] .work-panes {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Журнал диагностик прячется своей кнопкой - вместе с шапкой и ручкой: ручка,
+ * которой нечего делить, тянулась бы в пустоту. Дорожка при этом уходит совсем,
+ * иначе её нижняя граница держала бы пустое место. */
+body[data-diag="off"] .work-main {
+  grid-template-rows: minmax(0, 1fr);
 }
 
 /* Структура проекта прячется, как прочие области, - своей кнопкой. Ручка
- * ширины уходит вместе с ней: граница без второй области ничего не делит, а
+ * размера уходит вместе с ней: граница без второй области ничего не делит, а
  * тянуть её всё ещё можно, и доля менялась бы вслепую. */
 body[data-tree="off"] .pane-tree,
-body[data-tree="off"] > .work > #treesplit { display: none; }
+body[data-tree="off"] > .work > .split { display: none; }
 body[data-tree="off"] .work {
-  grid-template-columns: minmax(0, var(--panes-l, 1fr)) auto minmax(0, var(--panes-r, 1fr));
-}
-/* Обе закрыты - остаётся код во всю ширину. */
-body[data-panel="none"][data-tree="off"] .work {
+  grid-template-areas: "main";
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
 }
 
 /* Вкладки нужны только генерации: у симуляции панель одна. */
@@ -1370,15 +1431,25 @@ body[data-panel="none"][data-tree="off"] .work {
 }
 .panel-scheme > .trace[hidden] { display: none; }
 
-/* Высоту списка диагностик задаёт читатель разделителем рядов (`shell.js`).
- * Умолчание - прежние 30 % высоты: пока разделитель не тронут, не меняется
- * ничего. `flex: 0 0 auto` обязателен: без него редактор и список делили бы
- * остаток по своему усмотрению, и заданная высота ничего не значила бы. */
+/* Журнал диагностик занимает свою область целиком: высоту области задаёт
+ * читатель ручкой рядов, а список внутри неё лишь прокручивается. Высота на
+ * самом списке не годится: шапка прибавляется к ней сверху, и ужатая до предела
+ * область оказывается выше названного предела.
+ * Затенение нижней кромки говорит, что записи есть и ниже: класс ставит
+ * страница по факту прокрутки, а не правило - иначе последняя запись
+ * блёкла бы и в конце списка, где ниже ничего нет. */
 #diagnostics {
-  flex: 0 0 auto;
+  flex: 1;
+  min-height: 0;
   max-height: none;
-  height: var(--rows-b, 30%);
+  height: auto;
 }
+#diagnostics.more {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 1.5em), transparent);
+}
+
+/* Область журнала диагностик: шапка и список, прокрутка внутри списка. */
+.pane-diag { min-height: 0; overflow: hidden; }
 
 .row { padding: var(--gap-quarter) var(--gap); white-space: pre-wrap; }
 /* Ошибка кликается: щелчок ведёт к месту в тексте. Тон её несёт колонка рода, а
@@ -1591,21 +1662,11 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  * значит и высота строки у них общая. */
 .file-text .line { min-height: 1.5em; }
 
-/* Сценарий - область кода (номера строк, перенос, подсветка ошибок идут тем же
- * носителем, что у модели). Высоту задаёт читатель разделителем вкладки;
- * умолчание - прежние 6.5 строки. `flex: 0 0 auto` обязателен: без него
- * сценарий и трасса делили бы остаток по своему усмотрению. */
-.scenario {
-  flex: 0 0 auto;
-  height: var(--trace-t, 6.5em);
-  min-height: 3em;
-  padding: var(--gap);
-  font-family: var(--font-code);
-  font-size: var(--text-sm);
-  background: var(--surface-sunken);
-  color: var(--on-surface-sunken);
-  border-radius: var(--radius);
-}
+/* Сценарий - тот же редактор, что модель: класс `editor` даёт ему и раскладку,
+ * и оформление. Своей высоты у него нет - область кода показывает один файл, и
+ * место в ней принадлежит показанному. Прежние 6.5 строки достались от вкладки
+ * прогона, где сценарий делил высоту с трассой; вкладки нет, а правило пережило
+ * её и держало поле в шестой части области, тогда как модель занимала всю. */
 
 .status { font-size: var(--text-sm); }
 
@@ -2415,14 +2476,28 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 
 @media (max-width: 900px) {
   /* Доли читателя здесь не действуют: колонка одна, и `--panes-l` увёл бы
-     единственную область в свою долю окна. */
-  .work { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+     единственную область в свою долю окна. Сторона структуры проекта тоже:
+     области показываются по одной, и "слева" от единственной области ничего
+     нет. */
+  .work,
+  body[data-treeside="left"] .work,
+  body[data-treeside="top"] .work,
+  body[data-treeside="bottom"] .work {
+    grid-template-areas: "main";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .work-panes { grid-template-columns: minmax(0, 1fr); }
+  /* Журнал диагностик - такая же область полки: на узком экране он занимает
+     её целиком, а не делит высоту с кодом. */
+  .work-main { grid-template-rows: minmax(0, 1fr); }
   .pane { display: none; }
   body[data-mode="source"] .pane-source,
   body[data-mode="output"] .pane-result,
+  body[data-mode="diag"] .pane-diag,
   body[data-mode="tree"] .pane-tree { display: flex; }
   /* Ручки долей на узком экране не нужны: область одна, делить нечего. */
-  .work > .split { display: none; }
+  .work .split { display: none; }
   /* Внутренние вкладки дублируют полку - ими управляет она же. */
   .pane-result .tabs { display: none; }
   .modes {
@@ -2521,4 +2596,61 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
     border-top: 1px solid var(--border);
     border-radius: 0;
   }
+}
+
+/* Путь открытого файла и ревизия в шапке - по выбору читателя. Прячутся оба
+ * разом: это одна весть о месте работы, а не две. */
+body[data-crumbs="off"] #openfile,
+body[data-crumbs="off"] #project { display: none; }
+
+/* ── Скруглённые углы областей ───────────────────────────────────────────
+ * Область - карточка, а не кусок сетки: скруглённый угол отделяет её от
+ * соседней вернее, чем линия в один пиксель. Радиус один и тот же у шапки
+ * страницы, полосы кнопок, каждой области рабочего поля и полосы сообщений -
+ * иначе страница читается как набор чужих друг другу прямоугольников.
+ * Скругление стоит на самой области, а внутренние узлы обрезаются по ней
+ * (`overflow: hidden`): угол, нарисованный поверх содержимого, срезал бы
+ * первую строку кода. */
+.bar,
+.pane,
+.say {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+/* Полосы страницы уже несут свою границу снизу - вторая линия рядом с рамкой
+ * читалась бы как шов. */
+.bar { border-bottom-width: 1px; }
+
+/* Промежутки между областями - место, где виден фон страницы: без него
+ * скруглённые углы соседей стыкуются в звёздочку. Линия-разделитель уступает
+ * место промежутку: границу теперь рисует сам угол. */
+.work,
+.work-main,
+.work-panes {
+  gap: var(--gap-half);
+  background: transparent;
+}
+/* Оболочка стоит по центру (`margin-left: auto`), и трогать её поля здесь
+ * нельзя: своё `margin-inline` перебило бы центрирование, и страница прижалась
+ * бы к левому краю монитора. Промежуток между полосами даёт вертикальный
+ * отступ рабочей области. */
+.work { margin-block: var(--gap-quarter); }
+
+/* Имя вошедшего: пятнадцать знаков, дальше затенение.
+ * Мерка в `ch` привязана к шрифту, а не к пикселям: пятнадцать знаков остаются
+ * пятнадцатью и на другом кегле. Затенение вместо многоточия - хвост имени
+ * виден наполовину, и по нему длинное имя опознаётся, а не превращается в
+ * общее имя без конца. */
+#whoami-bar,
+#whoami {
+  display: inline-block;
+  max-width: 15ch;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+#whoami-bar.clipped,
+#whoami.clipped {
+  mask-image: linear-gradient(to right, #000 calc(100% - 2ch), transparent);
 }

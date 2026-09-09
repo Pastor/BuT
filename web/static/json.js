@@ -83,3 +83,26 @@ function closing(row, from) {
   }
   return row.length - 1;
 }
+
+/**
+ * Канон сценария: печать JSON с отступом в два пробела.
+ *
+ * Разбор здесь **строгий**, в отличие от разметки: подсветить недописанное
+ * можно, а напечатать - нет. Печать по половине разбора потеряла бы то, что
+ * автор ещё набирает, и потеряла бы молча, поэтому неразбираемый текст
+ * возвращается отказом с текстом причины от самого разбора.
+ *
+ * @param {string} text текст сценария
+ * @returns {{ok: true, text: string} | {ok: false, error: string}}
+ */
+export function format(text) {
+  let value;
+  try {
+    value = JSON.parse(String(text ?? ""));
+  } catch (error) {
+    return { ok: false, error: String(error?.message ?? error) };
+  }
+  // Хвостовой перевод строки - как у файла на диске: без него канон менял бы
+  // файл при каждом сохранении через инструмент, который его ставит.
+  return { ok: true, text: `${JSON.stringify(value, null, 2)}\n` };
+}

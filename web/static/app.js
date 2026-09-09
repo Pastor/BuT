@@ -89,6 +89,16 @@ const state = {
    */
   diagnostics: [],
   targetDiagnostics: [],
+  // Журнал диагностик: записи копятся, самые старые уходят по ротации. Набор
+  // прошлой отрисовки хранится рядом - по нему видно, что в журнал добавить.
+  diagLast: [],
+  diagKeep: 500,
+  treeSide: "right",
+  crumbsShown: true,
+  // Что показано в области кода: `code`, `scenario` либо `scheme`. Род открытого
+  // файла этого не говорит: сценарий и раскладку открывают, не меняя рода.
+  shown: "code",
+  scenarioFile: "",
   version: "",
   languageVersion: "",
   running: false,
@@ -107,14 +117,20 @@ export async function main() {
   // Разделитель областей: доли внутри оболочки задаёт тот же читатель, что и её ширину, -
   // и той же ручкой правил (границы, память, клавиатура).
   shell.attachPanes(dom.split, localStorage);
-  shell.attachRows(dom.hsplit, localStorage);
+  // Нижняя граница журнала диагностик - шапка и одна запись: столько, чтобы
+  // последняя новость была видна.
+  shell.attachRows(dom.hsplit, localStorage, { least: () => diagLeast() });
   // Схема делится так же: журнал под холстом, легенда полкой либо колонкой. Доли
   // помнит браузер читателя - это его вид, а не свойство проекта.
   shell.attachLogRows(dom.logsplit, localStorage);
   shell.attachLegendRows(dom.legendrows, localStorage);
   shell.attachLegendCols(dom.legendcols, localStorage);
-  // Ширина структуры проекта: та же ручка правил, своя ось и своя память.
-  shell.attachTree(dom.treesplit, localStorage);
+  // Размер структуры проекта: та же ручка правил, а ось и границы у неё свои -
+  // сторону выбирает читатель, а нижнюю границу задаёт длина имён файлов.
+  shell.attachTree(dom.treesplit, localStorage, {
+    side: () => state.treeSide,
+    least: () => measureTree() ?? 0,
+  });
   // Перенос строк - Одна настройка на все области кода: так человек читает код вообще,
   // а не конкретную панель.
   shell.attachWrap(
@@ -133,6 +149,15 @@ export async function main() {
   selectPanel(shell.setting(localStorage, shell.UI_KEYS.panel, "output") === "output" ? "output" : null);
   showDiagnosticsPane(shell.setting(localStorage, shell.UI_KEYS.diagnostics, "1") === "1");
   showTree(shell.setting(localStorage, shell.UI_KEYS.treeShown, "1") === "1");
+  showTreeSide(shell.treeSide(localStorage));
+  showCrumbs(shell.setting(localStorage, shell.UI_KEYS.crumbs, "1") === "1");
+  state.diagKeep = shell.diagKeep(localStorage);
+  // Размер экрана меняется - меняется и половина, которой ограничен минимум
+  // структуры: мерка привязана к окну, а не снята однажды при загрузке.
+  window.addEventListener("resize", () => {
+    measureTree();
+    markDiagnosticsMore();
+  });
   // Подсказки - свои, а не нативные: `title` в разметке нет вовсе.
   tip.attach(document);
   await useLanguage(i18n.pick(i18n.stored(localStorage), navigator.languages ?? []));
@@ -218,6 +243,9 @@ export async function main() {
       pageValues: () => ({
         lang: i18n.language(),
         wrap: dom.wrap.getAttribute("aria-pressed") === "true",
+        treeSide: state.treeSide,
+        diagKeep: state.diagKeep,
+        crumbs: state.crumbsShown,
       }),
       onPage: (key, value) => setPageSetting(key, value),
       // Правка раскладки - такая же работа, как правка текста: черновик пишется по тем
@@ -269,10 +297,12 @@ export async function main() {
     // Список сценариев показывает структура проекта: своего выбора у прогона
     // нет, и второй список разошёлся бы с деревом.
     scenarios: () => {},
-    openScenario: (text) => {
+    openScenario: (text, file) => {
       state.scenario = text;
+      state.scenarioFile = file ?? "";
       state.scenarioEditor.setValue(text);
       paintScenario();
+      if (state.shown === "scenario") showSource("scenario");
     },
     showTrace: () => showSource("scenario"),
     showScheme: () => showSource("scheme"),
@@ -367,6 +397,11 @@ function redraw() {
   // страницы, и отказ выглядел бы отказом модуля.
   if (!state.bridge) return;
   showVersion();
+  // Журнал диагностик - история случившегося, и переписывать его задним числом
+  // нельзя (то же правило, что у трассы). Строка "ошибок нет" историей не
+  // является: это заглушка пустого журнала, и язык у неё сегодняшний.
+  const empty = dom.diagnostics?.querySelector(".row-none .row-text");
+  if (empty) empty.textContent = t("diagnostics.none");
   if (state.editor) refresh();
   // Открытое окно настроек построено кодом: смена языка из него самого оставила
   // бы его подписи на прежнем языке, и читатель увидел бы два языка разом.
@@ -478,6 +513,17 @@ function setPageSetting(key, value) {
     dom.lang.dispatchEvent(new Event("change"));
   } else if (key === "wrap") {
     if ((dom.wrap.getAttribute("aria-pressed") === "true") !== value) dom.wrap.click();
+  } else if (key === "crumbs") {
+    showCrumbs(value !== false);
+  } else if (key === "treeSide") {
+    showTreeSide(value);
+  } else if (key === "diagKeep") {
+    // Объём журнала приводится к границам тем же носителем, что читает его из
+    // памяти: второе правило разошлось бы с первым молча.
+    shell.remember(localStorage, shell.UI_KEYS.diagKeep, value);
+    state.diagKeep = shell.diagKeep(localStorage);
+    rotateDiagnostics();
+    markDiagnosticsMore();
   }
 }
 
@@ -502,12 +548,14 @@ function cache() {
     "setpass", "download", "upload", "showcase", "finder", "query", "findbtn",
     "found", "more", "doc", "sourcetitle", "openfilename",
     "scheme-notice", "scheme-notice-text", "scheme-drop",
-    "tree", "treesplit", "diagnostics-head", "showtree",
+    "tree", "treesplit", "diagnostics-head", "diagclear", "showtree",
     "openproject", "createproject", "createcancel", "opencancel",
     "dropok", "dropcancel", "droptext", "fromsample", "closeproject",
-    "newfile", "dropfile", "filekinds", "filename", "filepreview",
+    "newfile", "dropfile", "renamefile", "filekinds", "filename", "filepreview",
     "fileok", "filecancel", "dropfileok", "dropfilecancel", "dropfiletext",
+    "renamename", "renamepreview", "renameok", "renamecancel",
     "project-modal", "open-modal", "drop-modal", "file-modal", "dropfile-modal",
+    "rename-modal",
     "crumbs", "scheme-up", "stage", "scheme", "sheet", "nav", "map",
     "panel-run", "panel-view", "panel-sheet", "settings",
     "scheme-empty", "legend", "zoom", "alerts",
@@ -585,6 +633,8 @@ function wire() {
   // закрывает область - так автор освобождает экран под модель.
   dom.showgen.addEventListener("click", () => selectPanel(state.panel === "output" ? null : "output"));
   dom.showdiag.addEventListener("click", () => showDiagnosticsPane(dom.diagnostics.hidden));
+  dom.diagclear.addEventListener("click", () => clearDiagnostics());
+  dom.diagnostics.addEventListener("scroll", () => markDiagnosticsMore());
   dom.showtree.addEventListener("click", () => showTree(document.body.dataset.tree === "off"));
   // Запись выделяется щелчком: в длинном списке так не теряют место, к которому
   // вернулись. Выделена всегда одна - это отметка чтения, а не отбор. Правило
@@ -693,6 +743,9 @@ function applyState(restored) {
   showKind();
 }
 
+/** Что имеет канон записи (см. `format` и `canonOf`). */
+const HAS_CANON = new Set(["takt", "scenario"]);
+
 /**
  * Приводит страницу к роду открытого файла.
  *
@@ -700,15 +753,11 @@ function applyState(restored) {
  * точка, и написанная здесь строка была бы вторым словарём.
  */
 function showKind() {
-  const doc = state.kind === "markdown";
-  const key = doc ? "source.titleDoc" : "source.title";
-  dom.sourcetitle.dataset.i18n = key;
-  dom.sourcetitle.textContent = t(key);
-  dom.openfilename.textContent = state.file;
   // Чем показать файл, решает его род: модель правится кодом, сценарий - своим
   // полем, раскладка показывается схемой, пояснение - разметкой. Отдельных
   // областей у них нет: это такие же файлы проекта, как модель.
-  showSource({ scenario: "scenario", layout: "scheme", markdown: "doc" }[state.kind] ?? "code");
+  // Пояснение правится как текст - тем же редактором и с подсветкой разметки.
+  showSource({ scenario: "scenario", layout: "scheme" }[state.kind] ?? "code");
   // Ключи сборки к пояснению отношения не имеют: вкладки уходят вместе с выводом цели,
   // а их место занимает показ.
   if (state.panel === "output") selectPanel("output");
@@ -912,6 +961,29 @@ function showTargetDiagnostics(items) {
  * в окне генерации, автору приходилось смотреть в два места, а сходились они не
  * всегда - окно показывало отказ той сборки, которую строили последней.
  */
+/**
+ * Ключ записи диагностики: род, код, текст и место.
+ *
+ * По нему решается, новая ли это запись. Место входит в ключ намеренно: одна и
+ * та же ошибка в двух строках - две разные новости для читателя.
+ */
+function diagnosticKey(item) {
+  const at = item.range;
+  const where = at ? `${at.start_line}:${at.start_character}` : "";
+  return `${item.severity ?? "error"}|${item.code ?? ""}|${item.message}|${where}`;
+}
+
+/**
+ * Дописывает в журнал диагностик то, чего в нём ещё не было.
+ *
+ * Журнал накапливает, а не перерисовывается: правка идёт за
+ * правкой, и читателю важно видеть, что было сказано раньше. Отсюда два правила.
+ * Первое - в журнал уходят только записи, которых не было в прошлом наборе:
+ * иначе каждая нажатая клавиша дописывала бы туда всё те же три ошибки.
+ * Второе - объём ограничен (настройка читателя, умолчание 500): страница живёт
+ * часами, и список без предела растёт, пока браузер не начнёт спотыкаться на
+ * его отрисовке. Уходят самые старые - новость важнее истории.
+ */
 function drawDiagnostics() {
   // Одна и та же ошибка приходит двумя путями: разбор судит текст, а цель
   // отказывает на нём же - и в списке она стояла бы дважды. Повтор снимается
@@ -923,12 +995,20 @@ function drawDiagnostics() {
       (item) => !state.diagnostics.some((shown) => sameDiagnostic(shown, item))
     ),
   ];
-  dom.diagnostics.replaceChildren();
-  if (items.length === 0) {
-    dom.diagnostics.appendChild(row(t("diagnostics.none"), "ok"));
+  const before = new Set(state.diagLast.map(diagnosticKey));
+  state.diagLast = items;
+  const fresh = items.filter((item) => !before.has(diagnosticKey(item)));
+  if (fresh.length === 0) {
+    paintDiagnosticsEmpty();
     return;
   }
-  for (const item of items) {
+  // Читатель, стоящий внизу, следит за новостями: список довозится к концу.
+  // Отлистанный вверх - читает старое, и уезжать из-под него нельзя.
+  const atEnd =
+    dom.diagnostics.scrollTop + dom.diagnostics.clientHeight >= dom.diagnostics.scrollHeight - 4;
+  const empty = dom.diagnostics.querySelector(".row-none");
+  if (empty) empty.remove();
+  for (const item of fresh) {
     // Диагностика показывается словами, а не только подчёркиванием: цвет - не
     // единственный носитель состояния.
     //
@@ -942,6 +1022,52 @@ function drawDiagnostics() {
     if (at) node.addEventListener("click", () => jump(at.start_line, at.start_character));
     dom.diagnostics.appendChild(node);
   }
+  rotateDiagnostics();
+  if (atEnd) dom.diagnostics.scrollTop = dom.diagnostics.scrollHeight;
+  markDiagnosticsMore();
+}
+
+/** Пустой журнал говорит словами: пустая область читалась бы как поломка. */
+function paintDiagnosticsEmpty() {
+  const shown = dom.diagnostics.querySelector(".row-none .row-text");
+  if (dom.diagnostics.children.length > 0) {
+    // Заглушка переписывается на каждой отрисовке: словарь грузится своим
+    // рейсом, и первая отрисовка успевает случиться раньше него - тогда в
+    // журнале стоял бы ключ вместо слов.
+    if (shown) shown.textContent = t("diagnostics.none");
+    markDiagnosticsMore();
+    return;
+  }
+  const node = row(t("diagnostics.none"), "ok");
+  node.classList.add("row-none");
+  dom.diagnostics.appendChild(node);
+  markDiagnosticsMore();
+}
+
+/** Ротация журнала: сверх объёма уходят самые старые записи. */
+function rotateDiagnostics() {
+  while (dom.diagnostics.children.length > state.diagKeep) {
+    dom.diagnostics.firstElementChild.remove();
+  }
+}
+
+/** Очищает журнал диагностик: набор прошлой отрисовки забывается вместе с ним. */
+function clearDiagnostics() {
+  state.diagLast = [];
+  dom.diagnostics.replaceChildren();
+  paintDiagnosticsEmpty();
+}
+
+/**
+ * Отмечает, что записи есть и ниже видимой кромки.
+ *
+ * Затенение ставится по факту прокрутки, а не правилом: правило блёкло бы и на
+ * последней записи, под которой ничего нет.
+ */
+function markDiagnosticsMore() {
+  const more =
+    dom.diagnostics.scrollHeight - dom.diagnostics.scrollTop - dom.diagnostics.clientHeight > 2;
+  dom.diagnostics.classList.toggle("more", more);
 }
 
 function jump(line, character) {
@@ -1124,7 +1250,24 @@ function note(text) {
   return node;
 }
 
+/**
+ * Приводит открытый файл к канону его языка.
+ *
+ * Кнопка одна, а канонов два: модель приводит к канону компилятор (`taktc fmt`
+ * тем же кодом, что на диске), сценарий - печать JSON. Родов, у которых канона
+ * нет (пояснение, раскладка), кнопка не касается: она гасится в `showKind`, и
+ * этот отказ - защита в глубину.
+ */
 function format() {
+  const canon = canonOf();
+  if (canon === "scenario") {
+    formatScenario();
+    return;
+  }
+  if (canon !== "takt") {
+    say(t("editor.formatNotForKind"), "warning");
+    return;
+  }
   const reply = state.bridge.format(state.editor.value());
   if (!reply.ok) {
     say(reply.error?.message ?? t("editor.formatUnavailable"), "warning");
@@ -1135,6 +1278,30 @@ function format() {
     return;
   }
   state.editor.setValue(reply.text);
+  say(t("editor.formatted"), "ok");
+}
+
+/**
+ * Канон сценария - печать JSON с отступом.
+ *
+ * Неразбираемый текст не форматируется: печать по половине разбора потеряла бы
+ * недописанное, а сценарий правят на странице и почти всегда видят
+ * недописанным. Отказ называет место - разбор JSON его знает.
+ */
+function formatScenario() {
+  const done = jsonSpans.format(state.scenario);
+  if (!done.ok) {
+    say(t("editor.formatBadJson", { error: done.error }), "warning");
+    return;
+  }
+  if (done.text === state.scenario) {
+    say(t("editor.alreadyFormatted"), "ok");
+    return;
+  }
+  state.scenarioEditor.setValue(done.text);
+  state.scenario = done.text;
+  paintScenario();
+  saveDraft();
   say(t("editor.formatted"), "ok");
 }
 
@@ -1345,18 +1512,95 @@ function panels(...names) {
 }
 
 /**
- * Показывает или прячет область диагностик.
+ * Показывает или прячет журнал диагностик.
  *
- * Список - часть области кода, а не самостоятельная область: он говорит о том,
- * что открыто рядом. Прячется он вместе со своей шапкой и разделителем: ручка,
- * которой нечего делить, тянулась бы в пустоту.
+ * Правило смотрит на состояние страницы (`body[data-diag]`), а не прячет узлы
+ * по одному: дорожка сетки, оставшаяся от спрятанной области, держала бы пустое
+ * место, а ручка, которой нечего делить, тянулась бы в пустоту.
  */
 function showDiagnosticsPane(show) {
+  document.body.dataset.diag = show ? "on" : "off";
   dom.diagnostics.hidden = !show;
   dom.hsplit.hidden = !show;
   dom["diagnostics-head"].hidden = !show;
   dom.showdiag.setAttribute("aria-pressed", String(show));
   shell.remember(localStorage, shell.UI_KEYS.diagnostics, show ? "1" : "0");
+}
+
+/**
+ * Показывает или прячет путь открытого файла и ревизию в шапке.
+ *
+ * Это сведения о месте работы, а не о самой работе: кто помнит, где он, вправе
+ * освободить строку. Признак стоит на `body` - показ решает одно правило, а не
+ * перечисление узлов по одному.
+ */
+function showCrumbs(show) {
+  state.crumbsShown = show;
+  document.body.dataset.crumbs = show ? "on" : "off";
+  shell.remember(localStorage, shell.UI_KEYS.crumbs, show ? "1" : "0");
+}
+
+/**
+ * Ставит структуру проекта на выбранную сторону.
+ *
+ * Сторона - настройка читателя: место рабочего инструмента выбирает тот, кто им
+ * работает. Раскладку меняет одно правило по признаку на `body`; ручка размера
+ * спрашивает сторону сама и меняет вместе с ней ось.
+ */
+function showTreeSide(side) {
+  state.treeSide = shell.TREE_SIDES.includes(side) ? side : shell.TREE_SIDE_DEFAULT;
+  document.body.dataset.treeside = state.treeSide;
+  shell.remember(localStorage, shell.UI_KEYS.treeSide, state.treeSide);
+  measureTree();
+}
+
+/**
+ * Наименьший размер структуры проекта: столько, чтобы имена файлов были видны.
+ *
+ * Меряется содержимое, а не берётся число из стиля: имена файлов пишет автор, и
+ * их длину знает только шрифт. Верхняя граница - половина экрана: имя длиннее
+ * неё сокращается затенением, а не растит панель через всю страницу.
+ */
+function measureTree() {
+  if (!dom.tree) return 0;
+  const vertical = state.treeSide === "top" || state.treeSide === "bottom";
+  if (vertical) {
+    // Стоя сверху или снизу, структура делит высоту, и мера у неё другая: шапка,
+    // полоса действий и хотя бы одна запись. Имена там уходят вширь, где места
+    // столько же, сколько у страницы.
+    const head = dom.tree.parentElement?.firstElementChild?.offsetHeight ?? 0;
+    const tools = dom.tree.parentElement?.querySelector(".tree-tools")?.offsetHeight ?? 0;
+    const line = dom.tree.querySelector(".tree-file")?.offsetHeight ?? 24;
+    const room = Math.min(window.innerHeight / 2, head + tools + line * 2);
+    document.documentElement.style.setProperty("--tree-min-y", `${Math.round(room)}px`);
+    return room;
+  }
+  let need = 0;
+  for (const node of dom.tree.querySelectorAll(".tree-file, .tree-kind")) {
+    need = Math.max(need, node.scrollWidth);
+  }
+  // Полоса действий тоже часть области: ужать её ниже своих кнопок нельзя.
+  const tools = dom.tree.parentElement?.querySelector(".tree-tools");
+  const room = Math.min(window.innerWidth / 2, Math.max(need + TREE_PADDING, tools?.scrollWidth ?? 0));
+  document.documentElement.style.setProperty("--tree-min", `${Math.round(room)}px`);
+  return room;
+}
+
+/** Поля области дерева: отступы записи и место под полосу прокрутки. */
+const TREE_PADDING = 32;
+
+/**
+ * Наименьшая высота журнала диагностик: шапка и одна запись.
+ *
+ * Меряется по месту, а не берётся числом: высота шапки и строки зависят от
+ * кегля, а его выбирает читатель.
+ */
+function diagLeast() {
+  const head = dom["diagnostics-head"]?.offsetHeight ?? 0;
+  const line = dom.diagnostics?.firstElementChild?.offsetHeight ?? 22;
+  const least = head + line;
+  document.documentElement.style.setProperty("--diag-min", `${Math.round(least)}px`);
+  return least;
 }
 
 /**
@@ -1381,12 +1625,31 @@ function showTree(show) {
  */
 function showSource(what) {
   const scheme = panel("scheme");
+  state.shown = what;
+  // Подпись области и имя рядом с ней говорят о показанном, а не об открытом
+  // файле: сценарий и раскладку открывают, не меняя рода, и подпись "Модель" над
+  // сценарием читалась бы как потерянная модель.
+  const own = state.kind === "markdown" ? "source.titleDoc" : "source.title";
+  const shownKey = what === "scenario" ? "source.titleScenario" : "source.titleScheme";
+  const key = what === "code" ? own : shownKey;
+  dom.sourcetitle.dataset.i18n = key;
+  dom.sourcetitle.textContent = t(key);
+  dom.openfilename.textContent = what === "scenario" ? state.scenarioFile : state.file;
   dom.editor.hidden = what !== "code";
   dom.scenario.hidden = what !== "scenario";
-  dom.doc.hidden = what !== "doc";
   if (scheme) scheme.hidden = what !== "scheme";
   if (what === "scheme") drawScheme(true);
-  if (what === "doc") showDoc();
+  // Канон применяется к тому, что показано, а не к роду открытого файла: сценарий
+  // и раскладку открывают, не меняя рода (щелчок по сценарию не подменяет модель),
+  // и по роду кнопка судила бы о невидимом тексте.
+  if (dom.format) dom.format.disabled = !HAS_CANON.has(canonOf());
+}
+
+/** Канон того, что показано: `takt` - модель, `scenario` - JSON, иначе - никакого. */
+function canonOf() {
+  if (state.shown === "scenario") return "scenario";
+  if (state.shown === "code" && state.kind !== "markdown") return "takt";
+  return "";
 }
 
 function selectPanel(name) {
@@ -1400,6 +1663,10 @@ function selectPanel(name) {
   if (name !== "output" || doc) {
     for (const hidden of panels("output", "flags")) hidden.hidden = true;
   }
+  // У пояснения место вывода цели занимает показ разметки: компилировать его
+  // нечем, а видеть результат рядом с текстом надо.
+  dom.doc.hidden = !(doc && name === "output");
+  if (doc && name === "output") showDoc();
   document.body.dataset.panel = name ?? "none";
   shell.remember(localStorage, shell.UI_KEYS.panel, name ?? "");
   // Открыли генерацию - вывод обязан быть свежим: пока панель была закрыта, правки

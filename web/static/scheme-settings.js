@@ -60,6 +60,42 @@ const TABS = [
           { value: true, label: "settings.wrap.on" },
         ],
       },
+      {
+        // Путь открытого файла и ревизия в шапке: сведения о месте работы, а не
+        // о самой работе. Читатель, знающий, где он, вправе их убрать.
+        id: "page:crumbs",
+        label: "settings.crumbs",
+        steps: [
+          { value: true, label: "settings.crumbs.on" },
+          { value: false, label: "settings.crumbs.off" },
+        ],
+      },
+      {
+        // Место структуры проекта: рабочий инструмент ставит туда, где им
+        // удобно работать. Ступени названы сторонами, а не "вертикально или
+        // горизонтально": читатель выбирает место, а не ось.
+        id: "page:treeSide",
+        label: "settings.treeSide",
+        steps: [
+          { value: "left", label: "settings.treeSide.left" },
+          { value: "right", label: "settings.treeSide.right" },
+          { value: "top", label: "settings.treeSide.top" },
+          { value: "bottom", label: "settings.treeSide.bottom" },
+        ],
+      },
+      {
+        // Объём журнала диагностик: сверх него уходят самые старые записи.
+        // Ступени, а не поле ввода: окно настроек говорит образцами, и число,
+        // набранное руками, пришлось бы судить отдельно от них.
+        id: "page:diagKeep",
+        label: "settings.diagKeep",
+        steps: [
+          { value: 100, label: "settings.diagKeep.100" },
+          { value: 500, label: "settings.diagKeep.500" },
+          { value: 2000, label: "settings.diagKeep.2000" },
+          { value: 10000, label: "settings.diagKeep.10000" },
+        ],
+      },
     ],
   },
   {
