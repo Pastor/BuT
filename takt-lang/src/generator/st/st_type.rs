@@ -19,6 +19,8 @@
 //!
 //! [`analyze/0041-02`]: ../../../../../../../../docs/features/0041-st-backend.md#анализ
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::semantic::ModelNode;
 use crate::semantic::enum_facts;
@@ -86,28 +88,28 @@ pub(crate) fn get_st_type(typ: &TypeNode, model: &ModelNode) -> Result<String, D
         TypeNode::Struct(name) => struct_type(name, model),
         // Служебные узлы: типом переменной быть не могут. Цель `c` отдаёт здесь `None` -
         // тихий отказ (дефект Д4).
-        TypeNode::Unit => Err(unmapped("unit", "пустой тип не является типом переменной")),
+        TypeNode::Unit => Err(unmapped("unit", &msg!(keys::ST_002_WHY_UNIT))),
         TypeNode::Inference => Err(unmapped(
-            "<не выведен>",
-            "вывод типов не завершён — тип переменной неизвестен",
+            &msg!(keys::ST_002_SHOWN_INFERENCE),
+            &msg!(keys::ST_002_WHY_INFERENCE),
         )),
         TypeNode::Unsupported => Err(unmapped(
-            "<неподдерживаемый>",
-            "тип не поддержан семантикой",
+            &msg!(keys::ST_002_SHOWN_UNSUPPORTED),
+            &msg!(keys::ST_002_WHY_UNSUPPORTED),
         )),
         TypeNode::Address(addr, _) => Err(unmapped(
             &format!("0x{:X}", addr),
-            "адресный литерал порта — внутренний тип, а не тип переменной",
+            &msg!(keys::ST_002_WHY_ADDRESS),
         )),
         TypeNode::BuiltinString => Err(unmapped(
             "string",
-            "строковый тип встроенных функций не транслируется в ST",
+            &msg!(keys::ST_002_WHY_STRING),
         )),
-        TypeNode::BuiltinModel => Err(unmapped("<модель>", "внутренний тип встроенных функций")),
-        TypeNode::BuiltinState => Err(unmapped("<состояние>", "внутренний тип встроенных функций")),
+        TypeNode::BuiltinModel => Err(unmapped(&msg!(keys::ST_002_SHOWN_MODEL), &msg!(keys::ST_002_WHY_BUILTIN))),
+        TypeNode::BuiltinState => Err(unmapped(&msg!(keys::ST_002_SHOWN_STATE), &msg!(keys::ST_002_WHY_BUILTIN))),
         TypeNode::BuiltinNumeric => Err(unmapped(
-            "<числовой>",
-            "внутренний тип встроенных функций: конкретная разрядность неизвестна",
+            &msg!(keys::ST_002_SHOWN_NUMERIC),
+            &msg!(keys::ST_002_WHY_BUILTIN_NUMERIC),
         )),
         // Ветки `_` здесь нет - и это проверенный факт, а не недосмотр.
         //
@@ -131,10 +133,7 @@ pub(crate) fn get_st_type(typ: &TypeNode, model: &ModelNode) -> Result<String, D
 fn unmapped(shown: &str, why: &str) -> Diagnostic {
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
-        format!(
-            "Тип '{}' не имеет представления в IEC 61131-3: {}",
-            shown, why
-        ),
+        msg!(keys::ST_002_UNMAPPED_TYPE, shown = shown, why = why),
     )
     .with_code("ST-002")
 }
@@ -172,7 +171,7 @@ fn integer_type(bits: u8, signed: bool) -> Result<String, Diagnostic> {
         _ => {
             return Err(unmapped(
                 &format!("{}{}", if signed { "i" } else { "u" }, bits),
-                "IEC 61131-3 знает только разрядности 8, 16, 32 и 64",
+                &msg!(keys::ST_002_WHY_INTEGER_WIDTH),
             ));
         }
     };
@@ -223,11 +222,7 @@ fn array_dims_and_base(
         if *size == 0 {
             return Err(Diagnostic::error(
                 crate::generator::site::at(Location::Codegen),
-                format!(
-                    "Массив нулевого размера ('{}') невыразим в IEC 61131-3: \
-                     диапазон 'ARRAY [0..-1]' пуст",
-                    typ
-                ),
+                msg!(keys::ST_007_ZERO_SIZE_ARRAY, ty = typ),
             )
             .with_code("ST-007"));
         }
@@ -253,7 +248,7 @@ fn array_dims_and_base(
 fn enum_type(name: &str, model: &ModelNode) -> Result<String, Diagnostic> {
     let node = model
         .search_enum(name)
-        .ok_or_else(|| unresolved("Перечисление", name))?;
+        .ok_or_else(|| unresolved(&msg!(keys::ST_KIND_ENUM), name))?;
     // Знак и ширина - из общего факта: цель лишь отображает его в имя типа IEC через
     // `integer_type`. Свой каскад извлечения диапазона удалён (в `generator/` не
     // остаётся ни одного - ).
@@ -268,7 +263,7 @@ fn enum_type(name: &str, model: &ModelNode) -> Result<String, Diagnostic> {
 /// `st_decl`.
 fn struct_type(name: &str, model: &ModelNode) -> Result<String, Diagnostic> {
     if model.search_struct(name).is_none() {
-        return Err(unresolved("Структура", name));
+        return Err(unresolved(&msg!(keys::ST_KIND_STRUCT), name));
     }
     Ok(name.to_string())
 }
@@ -277,10 +272,7 @@ fn struct_type(name: &str, model: &ModelNode) -> Result<String, Diagnostic> {
 fn unresolved(kind: &str, name: &str) -> Diagnostic {
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
-        format!(
-            "{} '{}' не найдена в модели: объявление типа для ST построить нельзя",
-            kind, name
-        ),
+        msg!(keys::ST_008_UNRESOLVED_DECLARATION, kind = kind, name = name),
     )
     .with_code("ST-008")
 }

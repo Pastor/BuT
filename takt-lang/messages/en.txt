@@ -517,3 +517,45 @@ verify.predicate-outside-subset = the data predicate is outside the supported su
 verify.domain-not-enumerable = the domain of a tracked variable is not enumerable: `float`, `q(m, n)`, `duration`, an array or a structure — the check enumerates values, and there is nothing to enumerate here
 verify.size-over-limit = the problem size is over the ceiling: the edge count is `graph edges × (product of domains)²`, and beyond 1 000 000 the check is refused before counting. Narrow the domains of the formula variables (for example `u8` → `enum`/`bit`) or take a property over fewer of them
 verify.initial-value-unknown = the initial value of a tracked variable is unknown: the initialiser does not fold to a constant, or the value is outside the domain of its type
+
+# ─── Target st: IEC 61131-3 types (`generator/st/st_type.rs`) ────────────────
+st-002.unmapped-type = the type '{shown}' has no representation in IEC 61131-3: {why}
+st-002.why-unit = the empty type is not a variable type
+st-002.why-inference = type inference is not finished — the variable type is unknown
+st-002.why-unsupported = the type is not supported by semantics
+st-002.why-address = a port address literal is an internal type, not a variable type
+st-002.why-string = the string type of built-in functions is not translated to ST
+st-002.why-builtin = an internal type of built-in functions
+st-002.why-builtin-numeric = an internal type of built-in functions: the exact width is unknown
+st-002.why-integer-width = IEC 61131-3 knows only the widths 8, 16, 32 and 64
+st-002.shown-inference = <not inferred>
+st-002.shown-unsupported = <unsupported>
+st-002.shown-model = <model>
+st-002.shown-state = <state>
+st-002.shown-numeric = <numeric>
+st-007.zero-size-array = a zero-size array ('{ty}') is inexpressible in IEC 61131-3: the range 'ARRAY [0..-1]' is empty
+st-008.unresolved-declaration = {kind} '{name}' is not found in the model: a type declaration for ST cannot be built
+st.kind-enum = enumeration
+st.kind-struct = structure
+
+# ─── Target st: expressions (`generator/st/st_expr.rs`) ──────────────────────
+st-011.refusal = not translated to Structured Text: {what}
+st.what-duration = a duration literal
+st.what-empty-expression = an empty expression
+st.what-unresolved-expression = the expression did not pass semantic lowering (Unresolved)
+st.what-array-slice = an array slice: IEC 61131-3 has no slice operation
+st.what-code-block = a code block as an expression is inexpressible in ST
+st.what-named-call = a call with named arguments is inexpressible in ST
+st.what-string = a string literal: the ST target does not support strings
+st.what-type = a type as an expression
+st.what-address = an address literal in value position: an address is a property of placement (`at`, the `address` statement, the map), not a value
+st.what-model = a model as an expression
+st.what-parameter-list = a parameter list as an expression
+st.what-aggregate = an aggregate in value position: IEC 61131-3 has no array value — assign the elements one by one or pass the array as a `VAR_IN_OUT` parameter
+st.unresolved-variable-comment = (*unresolved variable*)
+st.what-bitwise-unknown-type = a bitwise operation on an operand whose integer type is not determined statically: in IEC 61131-3 such operations need a bit string (BYTE/WORD/DWORD/LWORD), and the width must be known
+st.what-bit-access-unknown-type = a bit access on an operand whose type is not determined statically: the width is needed to build the mask
+st.what-bit-of-bool = bit {bit} of a single-bit value: in IEC 61131-3 a BOOL has no bits other than zero
+st.what-bit-access-type = a bit access on type '{ty}': the mask is built only for IEC integer types (8/16/32/64 bits)
+st.what-bit-out-of-width = bit {bit} is outside the width of type '{ty}' ({bits} bits)
+st.what-cast-unknown-type = a cast of an operand whose type is not determined statically: the name of the IEC conversion function is built from BOTH types (<FROM>_TO_<TO>)
