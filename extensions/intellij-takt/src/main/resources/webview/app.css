@@ -932,22 +932,43 @@ body[data-panel="none"][data-tree="off"] .work {
  * заставляет искать кнопки заново при каждом переключении, а вкладки для того и
  * заведены, чтобы ходить по ним свободно. */
 #scheme-modal .modal-box { width: min(34rem, 100%); }
+/* Полоса вкладок окна прокручивается вбок: шести вкладок на 375 px не хватает
+ * ширины, и последняя уходила за край - вместе со всем, что за ней. Вкладки
+ * при этом не сжимаются: подпись, ужатая до многоточия, вкладку не называет. */
+#scheme-tabs { overflow-x: auto; }
+#scheme-tabs .tab { flex: 0 0 auto; }
 .settings-body {
   gap: var(--gap);
   min-height: 26rem;
   max-height: 60dvh;
   overflow-y: auto;
 }
+/* Ничто в окне настроек не отдаёт высоту: в колонке flex дети по умолчанию
+ * сжимаются, и вкладка из пяти рядов ужимала кнопку-образец до полосы в четыре
+ * пикселя - вместо ряда образцов оставался список слов. Не помещается -
+ * прокручивается, для того у окна и объявлена прокрутка; отдать высоту здесь
+ * значит отдать сам предмет выбора.
+ *
+ * Правило перечисляет все три уровня: ряд, полосу ступеней и саму кнопку.
+ * Сжатие снимается там, где оно применяется, а прямые дети - лишь первый из
+ * трёх уровней. */
+.settings-body > *,
+.settings-body .set-steps,
+.settings-body .set-step { flex: 0 0 auto; }
 .set-row { display: flex; flex-direction: column; gap: var(--gap-quarter); }
 .set-name { font-size: var(--text-sm); color: var(--on-surface-soft); }
 .set-steps { display: flex; gap: var(--gap-half); flex-wrap: wrap; }
 /* Кнопка-образец: рисунок сверху, подпись снизу. Подпись обязательна - рисунок
  * говорит "как", а слово говорит "что", и на образцах "тонкая" и "обычная"
  * разницу в полпикселя глазом ловят не все. */
+/* Высота кнопки-образца - по её содержимому, а не ступень шкалы: у неё внутри
+ * рисунок и подпись, и ступень контрола (ростом с одну строку) обрезала бы
+ * рисунок - тот самый, ради которого кнопку и смотрят. */
 .set-step {
   display: flex;
   flex-direction: column;
   align-items: center;
+  height: auto;
   gap: var(--gap-quarter);
   padding: var(--gap-half);
   border: 1px solid var(--border);
@@ -968,6 +989,7 @@ body[data-panel="none"][data-tree="off"] .work {
  * холсте, а не на поверхности окна. */
 .set-sample {
   display: block;
+  flex: none;
   background: var(--surface-sheet);
   border-radius: var(--radius-sm);
 }
