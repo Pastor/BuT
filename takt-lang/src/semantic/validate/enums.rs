@@ -2,6 +2,8 @@
 //!
 //! Часть модуля `validate`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::*;
 
 /// Проверяет, что инициализатор переменной типа `bit` содержит допустимое значение.
@@ -26,11 +28,7 @@ fn check_bit_variable_value(
     {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "Переменная '{}' имеет тип bit, но инициализирована значением {} \
-                 (допустимые числовые значения: 0 или 1)",
-                name, n
-            ),
+            msg!(keys::SE_035_BIT_VALUE_OUT_OF_SET, name = name, value = n),
         )
         .with_code("SE-035"));
     }
@@ -104,12 +102,7 @@ pub(super) fn validate_empty_enums(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnos
             out.push(
                 Diagnostic::declaration_error(
                     en.loc,
-                    format!(
-                        "перечисление '{}' объявлено без вариантов: \
-                         у перечисления обязан быть хотя бы один вариант \
-                         (добавьте вариант либо удалите объявление)",
-                        en.name
-                    ),
+                    msg!(keys::SE_105_ENUM_WITHOUT_VARIANTS, name = en.name),
                 )
                 .with_code("SE-105"),
             );
@@ -169,11 +162,7 @@ pub(super) fn validate_enum_type_declarations(model: Rc<RefCell<ModelNode>>) -> 
             out.push(
                 Diagnostic::declaration_error(
                     loc,
-                    format!(
-                        "переменная '{}' объявлена с типом '{}', \
-                         но перечисление '{}' не найдено в области видимости",
-                        var_name, enum_name, enum_name
-                    ),
+                    msg!(keys::SE_042_ENUM_TYPE_NOT_FOUND, name = var_name, enum = enum_name),
                 )
                 .with_code("SE-035"),
             );
@@ -213,13 +202,12 @@ fn check_enum_variable_value(
             .unwrap_or_default();
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "переменная '{}' имеет тип '{}', но инициализирована значением {} \
-                 — не является вариантом перечисления (допустимые варианты: {})",
-                name,
-                enum_name,
-                n,
-                valid_values.join(", ")
+            msg!(
+                keys::SE_043_ENUM_INIT_NOT_A_VARIANT,
+                name = name,
+                enum = enum_name,
+                value = n,
+                variants = valid_values.join(", ")
             ),
         )
         .with_code("SE-043"));
@@ -302,14 +290,12 @@ fn check_enum_expr(
                     out.push(
                         Diagnostic::type_error(
                             var_loc,
-                            format!(
-                                "присваивание переменной '{}' типа '{}' \
-                                 значения {} недопустимо — не является вариантом \
-                                 перечисления (допустимые варианты: {})",
-                                name,
-                                enum_name,
-                                n,
-                                valid_values.join(", ")
+                            msg!(
+                                keys::SE_043_ENUM_ASSIGN_NOT_A_VARIANT,
+                                name = name,
+                                enum = enum_name,
+                                value = n,
+                                variants = valid_values.join(", ")
                             ),
                         )
                         .with_code("SE-043"),
@@ -458,14 +444,12 @@ fn collect_enum_type_safety(model: &Rc<RefCell<ModelNode>>, out: &mut Vec<Diagno
             out.push(
                 Diagnostic::type_error(
                     *loc,
-                    format!(
-                        "переменная '{}' имеет тип '{}', но инициализирована \
-                         значением {} — не является вариантом перечисления \
-                         (допустимые варианты: {})",
-                        name,
-                        enum_name,
-                        n,
-                        valid_values.join(", ")
+                    msg!(
+                        keys::SE_043_ENUM_INIT_NOT_A_VARIANT,
+                        name = name,
+                        enum = enum_name,
+                        value = n,
+                        variants = valid_values.join(", ")
                     ),
                 )
                 .with_code("SE-043"),

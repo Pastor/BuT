@@ -3,6 +3,8 @@
 //! "Построить узел объявления" - самостоятельная ответственность, отделимая от обхода
 //! элементов модели.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::parser::ast::{Identifier, VariableDefine};
 mod init_refusal;
@@ -64,7 +66,7 @@ pub(super) fn construct_declaration(
             let type_node = construct_type(typ, Rc::clone(&model_node))?;
             if type_node == TypeNode::Inference {
                 return Err(
-                    Diagnostic::error(loc, "Порт должен иметь конкретный тип".to_string())
+                    Diagnostic::error(loc, msg!(keys::SE_023_PORT_NEEDS_TYPE))
                         .with_code("SE-023"),
                 );
             }
@@ -129,11 +131,7 @@ pub(super) fn construct_declaration(
             if model_node.borrow().upper.is_none() && model_node.borrow().name.is_none() {
                 return Err(Diagnostic::error(
                     loc,
-                    format!(
-                        "Параметр '{name}' объявлен вне модели: \
-                         верхний уровень файла инстанцировать нечем — \
-                         перенесите объявление в модель либо замените на 'var'"
-                    ),
+                    msg!(keys::SE_075_PARAMETER_OUTSIDE_MODEL, name = name),
                 )
                 .with_code("SE-075"));
             }
@@ -204,11 +202,7 @@ pub(super) fn local_declaration(
         // в локальную переменную.
         VariableDefine::Parameter { name, .. } => Err(Diagnostic::error(
             loc,
-            format!(
-                "Параметр '{}' объявлен внутри блока: параметр задаётся в месте \
-                 инстанцирования модели, поэтому объявляется только на уровне модели",
-                named(name)
-            ),
+            msg!(keys::SE_075_PARAMETER_INSIDE_BLOCK, name = named(name)),
         )
         .with_code("SE-075")),
     }
@@ -219,7 +213,7 @@ fn extract_name(id: Option<Identifier>, loc: Location) -> Result<String, Diagnos
     match id {
         Some(id) => Ok(id.name.clone()),
         None => {
-            Err(Diagnostic::error(loc, "Идентификатор не задан".to_string()).with_code("SE-021"))
+            Err(Diagnostic::error(loc, msg!(keys::SE_021_IDENTIFIER_MISSING)).with_code("SE-021"))
         }
     }
 }
@@ -322,10 +316,10 @@ fn resolve_port_init(
     let literal = const_eval::fold_to_literal(raw, model).map_err(|cause| {
         Diagnostic::error(
             loc,
-            format!(
-                "начальное значение порта '{name}' выставляется до первого такта, \
-                 поэтому обязано быть известно при компиляции: {}",
-                cause.message
+            msg!(
+                keys::SE_094_PORT_INITIAL_VALUE_NOT_CONSTANT,
+                name = name,
+                cause = cause.message
             ),
         )
         .with_code("SE-094")
@@ -409,12 +403,7 @@ pub(crate) fn fold_variable_initializers(
                 if let Some(func) = initializer_calls_extern(source, model) {
                     return Err(Diagnostic::error(
                         loc,
-                        format!(
-                            "инициализатор '{name}' зовёт внешнюю функцию '{func}': её значение \
-                             при компиляции неизвестно — тело живёт вне программы, и начальное \
-                             значение выставляется до первого такта. Присвойте в теле состояния: \
-                             'always {{ {name} := {func}(); }}'"
-                        ),
+                        msg!(keys::SE_084_INITIALIZER_CALLS_EXTERN, name = name, func = func),
                     )
                     .with_code("SE-084"));
                 }

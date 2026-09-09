@@ -16,3 +16,91 @@ lang.unknown = unknown message language '{name}'; known: {known}
 # ─── Trial codes ─────────────────────────────────────────────────────────────
 se-034.local-type-not-found = local type '{name}' not found
 se-034.parameter-type-unrecognised = parameter type '{name}' is not recognised: expected a type name, '[type; N]' or 'q(m, n)'
+
+# ─── Semantics: model tree (`semantic/tree.rs`) ──────────────────────────────
+se-021.identifier-missing = the identifier is missing
+se-013.import-cycle = import cycle: {chain}
+se-013.import-path-invalid = invalid import file path: “{file}”
+se-006.model-already-declared = a model named '{name}' is already declared
+se-019.condition-needs-name = a condition in a definition must have a name
+se-019.invariant-needs-name = an invariant must have a name
+se-054.invariant-name-taken = the invariant name '{name}' clashes with an existing condition or variable
+se-018.block-needs-name = a named code block in a definition must have a name
+se-022.function-needs-name = a function in a definition must have a name
+se-009.function-already-defined = a function named '{name}' is already defined
+se-020.state-name-missing = the state name is missing
+se-012.state-has-next = state '{name}' already has a next statement
+se-021.next-state-not-a-definition = a next-typed state is not supported as a definition
+se-002.reference-not-found = reference '{name}' not found
+
+# ─── Semantics: durations and time (`semantic/duration.rs`) ──────────────────
+se-063.duration-negative = {what}: a negative duration is not representable
+se-063.duration-not-whole-ms = {what}: the duration is not a whole number of milliseconds — a duration value is representable as whole milliseconds (rounding would silently change the delay)
+se-064.duration-unrepresentable = {what}: the duration is not representable
+se-064.duration-too-large = {what}: the duration exceeds {max} ms — it does not fit the {bits}-bit value representation (about 49.7 days)
+se-073.tick-rate-not-multiple = a computed delay needs a rate that is a multiple of 1000 Hz: at {hertz} Hz a millisecond is not a whole number of ticks, and the comparison would round silently. Either use a multiple rate or keep the delay constant (the compiler converts that one exactly)
+se-063.duration-profile-unrepresentable = {what}: the duration of {nanos} ns is not representable in the “{profile}” profile — {detail}
+se-064.duration-counter-overflow = {what}: the duration of {nanos} ns does not fit the time counter (“{profile}” profile, 64 bits at most)
+se-063.duration-negative-nanos = {what}: a negative duration ({nanos} ns) makes no sense
+se-069.tick-hz-missing = the model requires a {declared} Hz clock; pass --tick-hz={declared}
+se-070.tick-hz-mismatch = the model requires a {declared} Hz clock, the build sets {flag} Hz; bring --tick-hz to the declared rate
+se-071.after-note = after delay → {name}: {nanos} ns = {units} {unit} (“{profile}” profile{suffix})
+
+# ─── Semantics: common checks (`semantic/validate/common.rs`) ────────────────
+se-033.state-not-in-model = state '{name}' not found in model '{model}': to the right of '=' in the check 'S(Model) = State' stands a state of the named model, not an arbitrary name
+se-025.condition-unresolved = unresolved transition condition{quoted}: the name is not among variables, ports, `cond` conditions and states
+se-027.output-port-read = reading from output port '{name}' is not allowed
+se-026.input-port-write = writing to input port '{name}' is not allowed
+se-110.model-name-not-a-condition = the model name '{name}' is not a condition by itself: write 'S({name}) = State' or the short form '{name} = State'
+se-110.state-name-not-a-condition = the state name '{name}' is not a condition by itself: a state check is written as 'S(Model) = {name}' or in the short form 'Model = {name}'
+
+# ─── Semantics: address cell access (`semantic/anon_port.rs`) ────────────────
+se-098.address-too-wide = the address '{addr}' of an anonymous access does not fit a 64-bit signed integer: the cell address is wider than representable
+se-098.bit-given-twice = the bit position is given twice: by an address literal (':{literal}') and by bit access ('.'). Keep one form: '#0x{addr}.N' — a single bit, '#0x{addr}:N as TYPE' — a field starting at bit N
+se-098.bit-position-is-a-name = the bit position of an anonymous access is given by the name '{name}': a number was expected
+se-098.type-without-width = type '{ty}' does not set the access width for a cell: the width of an address access is not guessed. Allowed are 'bit', 'bool', integer types and 'q(m, n)'
+se-098.bit-out-of-range = bit position {bit} is out of the range [0, {max}]: the access word is no wider than 64 bits
+se-098.field-out-of-word = a field of width {width} starting at bit {bit} runs past the access word: {bit} + {width} > {max}
+se-097.access-without-width = the access '{written}' does not set the cell access width: add a cast ('{written} as u32') or take a single bit ('#0x{addr}.N')
+
+# ─── Semantics: expressions (`semantic/expression/mod.rs`) ───────────────────
+se-003.identifier-not-in-scope = identifier '{name}' not found in scope
+se-028.index-out-of-bounds = index {index} is out of the array bounds (size {size})
+se-030.not-an-array = {what} is not an array
+se-029.slice-start-out-of-bounds = slice start {start} is out of the bounds of array '{name}' (size {size})
+se-029.slice-end-out-of-bounds = slice end {end} is out of the bounds of array '{name}' (size {size})
+se-029.slice-start-after-end = slice start {start} is greater than the end {end} for array '{name}'
+
+# ─── Semantics: bits and enumerations (`semantic/validate/enums.rs`) ─────────
+se-035.bit-value-out-of-set = variable '{name}' has type bit but is initialised with {value} (allowed numeric values: 0 or 1)
+se-105.enum-without-variants = enumeration '{name}' is declared without variants: an enumeration must have at least one variant (add a variant or drop the declaration)
+se-042.enum-type-not-found = variable '{name}' is declared with type '{enum}', but the enumeration '{enum}' is not found in scope
+se-043.enum-init-not-a-variant = variable '{name}' has type '{enum}' but is initialised with {value} — not a variant of the enumeration (allowed variants: {variants})
+se-043.enum-assign-not-a-variant = assigning {value} to variable '{name}' of type '{enum}' is not allowed — not a variant of the enumeration (allowed variants: {variants})
+
+# ─── Semantics: name selection on import (`semantic/import/select.rs`) ───────
+se-007.type-already-declared = type '{name}' is already declared
+se-005.variable-already-declared = variable '{name}' is already declared
+se-008.condition-already-declared = condition '{name}' is already declared
+se-017.identifier-not-in-imported-file = identifier '{name}' not found in the imported file
+
+# ─── Semantics: instantiation arguments (`semantic/extend_args.rs`) ──────────
+se-080.argument-given-twice = parameter '{name}' is given twice in this call
+se-076.argument-form = an instantiation argument is written as 'name := value'
+se-076.argument-name-expected = a parameter name must stand to the left of ':=' in an instantiation argument
+se-077.model-without-parameters = model '{model}' declares no parameters, there is nothing to set '{name}' to
+se-079.not-a-parameter = '{name}' in model '{model}' is not declared as a parameter — only parameters are set on instantiation
+se-078.parameter-not-found = model '{model}' has no parameter '{name}' (declared: {known})
+
+# ─── Semantics: declarations (`semantic/declaration/mod.rs`) ─────────────────
+se-023.port-needs-type = a port must have a concrete type
+se-075.parameter-outside-model = parameter '{name}' is declared outside a model: the top level of a file cannot be instantiated — move the declaration into a model or make it a 'var'
+se-075.parameter-inside-block = parameter '{name}' is declared inside a block: a parameter is set where the model is instantiated, so it is declared at model level only
+se-094.port-initial-value-not-constant = the initial value of port '{name}' is set before the first tick, so it must be known at compile time: {cause}
+se-084.initializer-calls-extern = the initialiser of '{name}' calls the external function '{func}': its value is unknown at compile time — the body lives outside the program, and the initial value is set before the first tick. Assign it in a state body: 'always {{ {name} := {func}(); }}'
+
+# ─── Semantics: states (`semantic/validate/states.rs`) ───────────────────────
+se-011.multiple-start-states = model '{name}' must have exactly one start state (found: {count})
+se-010.no-terminal-states = {prefix}the model has no terminal states (states without transitions); the automaton cannot finish
+se-010.no-path-to-terminal = {prefix}state '{name}' has no path to a terminal state
+se-012.ref-with-next = {prefix}state '{name}' has ref transitions together with next: the ref transitions are unreachable after next runs

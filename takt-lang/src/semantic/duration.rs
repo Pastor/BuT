@@ -24,6 +24,8 @@
 //! `SE-058` для fixed-point: непредставимый литерал `q(8,8) := 0.001` отвергается, а не
 //! округляется. Округление здесь означало бы выдержку, не равную заявленной, - молча.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 
 /// Квант профиля "часы" - миллисекунда, выраженная в наносекундах.
@@ -184,31 +186,28 @@ pub fn value_millis(nanos: i64, loc: Location, what: &str) -> Result<u64, Diagno
     if nanos < 0 {
         return Err(Diagnostic::error(
             loc,
-            format!("{what}: отрицательная длительность не представима"),
+            msg!(keys::SE_063_DURATION_NEGATIVE, what = what),
         )
         .with_code("SE-063"));
     }
     if nanos % CLOCK_QUANTUM_NS != 0 {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "{what}: длительность не кратна миллисекунде — значение типа \
-                 duration представимо целым числом миллисекунд (округление молча \
-                 изменило бы выдержку)"
-            ),
+            msg!(keys::SE_063_DURATION_NOT_WHOLE_MS, what = what),
         )
         .with_code("SE-063"));
     }
     let millis = u64::try_from(nanos / CLOCK_QUANTUM_NS).map_err(|_| {
-        Diagnostic::error(loc, format!("{what}: длительность не представима")).with_code("SE-064")
+        Diagnostic::error(loc, msg!(keys::SE_064_DURATION_UNREPRESENTABLE, what = what)).with_code("SE-064")
     })?;
     if millis > u64::from(u32::MAX) {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "{what}: длительность больше {} мс — не помещается в {VALUE_BITS}-битное \
-                 представление значения (около 49.7 суток)",
-                u32::MAX
+            msg!(
+                keys::SE_064_DURATION_TOO_LARGE,
+                what = what,
+                max = u32::MAX,
+                bits = VALUE_BITS
             ),
         )
         .with_code("SE-064"));
@@ -236,12 +235,7 @@ pub fn ticks_per_milli(profile: TimeProfile, loc: Location) -> Result<Option<u64
         TimeProfile::Ticks { hertz } if hertz % 1_000 == 0 => Ok(Some(hertz / 1_000)),
         TimeProfile::Ticks { hertz } => Err(Diagnostic::error(
             loc,
-            format!(
-                "вычисляемая выдержка требует частоты, кратной 1000 Гц: при {hertz} Гц \
-                 миллисекунда — не целое число тактов, и сравнение округлялось бы молча. \
-                 Либо задайте кратную частоту, либо оставьте выдержку константной \
-                 (её компилятор пересчитывает точно)"
-            ),
+            msg!(keys::SE_073_TICK_RATE_NOT_MULTIPLE, hertz = hertz),
         )
         .with_code("SE-073")),
     }
@@ -289,25 +283,29 @@ pub fn units_or_diagnostic(
             };
             Diagnostic::error(
                 loc,
-                format!(
-                    "{what}: длительность {nanos} нс непредставима в профиле «{}» — {detail}",
-                    profile.name()
+                msg!(
+                    keys::SE_063_DURATION_PROFILE_UNREPRESENTABLE,
+                    what = what,
+                    nanos = nanos,
+                    profile = profile.name(),
+                    detail = detail
                 ),
             )
             .with_code("SE-063")
         }
         DurationError::TooLarge => Diagnostic::error(
             loc,
-            format!(
-                "{what}: длительность {nanos} нс не помещается в счётчик времени \
-                 (профиль «{}», максимум — 64 бита)",
-                profile.name()
+            msg!(
+                keys::SE_064_DURATION_COUNTER_OVERFLOW,
+                what = what,
+                nanos = nanos,
+                profile = profile.name()
             ),
         )
         .with_code("SE-064"),
         DurationError::Negative => Diagnostic::error(
             loc,
-            format!("{what}: отрицательная длительность ({nanos} нс) не имеет смысла"),
+            msg!(keys::SE_063_DURATION_NEGATIVE_NANOS, what = what, nanos = nanos),
         )
         .with_code("SE-063"),
     })
@@ -341,15 +339,12 @@ pub fn resolve_profile(
     match (model_clock_hz, flag_tick_hz) {
         (Some(declared), None) => Err(Diagnostic::error(
             Location::Implicit,
-            format!("модель требует тактирования {declared} Гц; передайте --tick-hz={declared}"),
+            msg!(keys::SE_069_TICK_HZ_MISSING, declared = declared),
         )
         .with_code("SE-069")),
         (Some(declared), Some(flag)) if declared != flag => Err(Diagnostic::error(
             Location::Implicit,
-            format!(
-                "модель требует тактирования {declared} Гц, сборка задаёт {flag} Гц; \
-                 приведите --tick-hz к объявленной частоте"
-            ),
+            msg!(keys::SE_070_TICK_HZ_MISMATCH, declared = declared, flag = flag),
         )
         .with_code("SE-070")),
         // Объявление подтверждено флагом (declared == flag).
@@ -395,14 +390,14 @@ fn collect_duration_notes(
                 out.push(
                     Diagnostic::warning(
                         reference.location,
-                        format!(
-                            "выдержка after → {}: {} нс = {} {} (профиль «{}»{})",
-                            reference.name,
-                            nanos,
-                            units,
-                            profile.unit_name(),
-                            profile.name(),
-                            suffix,
+                        msg!(
+                            keys::SE_071_AFTER_NOTE,
+                            name = reference.name,
+                            nanos = nanos,
+                            units = units,
+                            unit = profile.unit_name(),
+                            profile = profile.name(),
+                            suffix = suffix
                         ),
                     )
                     .with_code("SE-071"),

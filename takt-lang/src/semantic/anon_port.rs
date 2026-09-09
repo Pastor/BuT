@@ -16,6 +16,8 @@
 //! порт, размещённый по тому же адресу, - одна и та же память: два закона для неё
 //! недопустимы.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::parser::ast;
 use crate::semantic::type_inference::ast_type_to_node;
@@ -196,10 +198,7 @@ fn build(
     let addr = i64::try_from(addr).map_err(|_| {
         Diagnostic::error(
             loc,
-            format!(
-                "адрес '{addr}' анонимного обращения не помещается в 64-разрядное \
-                 знаковое целое: адрес ячейки шире представимого"
-            ),
+            msg!(keys::SE_098_ADDRESS_TOO_WIDE, addr = addr),
         )
         .with_code("SE-098")
     })?;
@@ -208,10 +207,10 @@ fn build(
         (Some(literal), Some(_)) => {
             return Err(Diagnostic::error(
                 loc,
-                format!(
-                    "позиция бита задана дважды: адресным литералом (':{literal}') и \
-                     битовым доступом ('.'). Оставьте одну форму: '#0x{addr:X}.N' — \
-                     один бит, '#0x{addr:X}:N as ТИП' — поле с бита N"
+                msg!(
+                    keys::SE_098_BIT_GIVEN_TWICE,
+                    literal = literal,
+                    addr = format!("{addr:X}")
                 ),
             )
             .with_code("SE-098"));
@@ -220,11 +219,7 @@ fn build(
         (_, Some(ast::Member::Identifier(id))) => {
             return Err(Diagnostic::error(
                 loc,
-                format!(
-                    "позиция бита анонимного обращения задана именем '{}': \
-                     ожидалось число",
-                    id.name
-                ),
+                msg!(keys::SE_098_BIT_POSITION_IS_A_NAME, name = id.name),
             )
             .with_code("SE-098"));
         }
@@ -235,11 +230,7 @@ fn build(
     let width = width_of(&ty).ok_or_else(|| {
         Diagnostic::error(
             loc,
-            format!(
-                "тип '{ty}' не задаёт разрядности доступа к ячейке: ширина обращения \
-                 по адресу угадыванию не подлежит. Допустимы 'bit', 'bool', целые \
-                 типы и 'q(m, n)'"
-            ),
+            msg!(keys::SE_098_TYPE_WITHOUT_WIDTH, ty = ty),
         )
         .with_code("SE-098")
     })?;
@@ -247,19 +238,18 @@ fn build(
     if !(0..=MAX_ANON_BIT).contains(&bit) {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "позиция бита {bit} вне диапазона [0, {MAX_ANON_BIT}]: слово доступа \
-                 не шире 64 разрядов"
-            ),
+            msg!(keys::SE_098_BIT_OUT_OF_RANGE, bit = bit, max = MAX_ANON_BIT),
         )
         .with_code("SE-098"));
     }
     if bit + i64::from(width) > i64::from(MAX_ANON_WIDTH) {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "поле разрядности {width} с бита {bit} выходит за слово доступа: \
-                 {bit} + {width} > {MAX_ANON_WIDTH}"
+            msg!(
+                keys::SE_098_FIELD_OUT_OF_WORD,
+                width = width,
+                bit = bit,
+                max = MAX_ANON_WIDTH
             ),
         )
         .with_code("SE-098"));
@@ -281,11 +271,10 @@ pub(crate) fn width_missing(loc: Location, addr: i128, bit: Option<i64>) -> Diag
     };
     Diagnostic::error(
         loc,
-        format!(
-            "обращение '{written}' не задаёт ширины доступа к ячейке: припишите \
-             приведение ('{written} as u32') либо возьмите один бит \
-             ('#0x{:X}.N')",
-            addr as u64
+        msg!(
+            keys::SE_097_ACCESS_WITHOUT_WIDTH,
+            written = written,
+            addr = format!("{:X}", addr as u64)
         ),
     )
     .with_code("SE-097")

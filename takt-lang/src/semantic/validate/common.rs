@@ -2,6 +2,8 @@
 //!
 //! Часть модуля `validate`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::*;
 use crate::semantic::condition::state_of::state_of_model;
 
@@ -31,11 +33,10 @@ pub(super) fn validate_cond(
                     model.search_state(&id.name).ok_or_else(|| {
                         Diagnostic::error(
                             id.loc,
-                            format!(
-                                "Состояние '{}' не найдено в модели '{}': справа от \
-                                 '=' в проверке 'S(Модель) = Состояние' стоит состояние \
-                                 названной модели, а не любое имя",
-                                id.name, model_name
+                            msg!(
+                                keys::SE_033_STATE_NOT_IN_MODEL,
+                                name = id.name,
+                                model = model_name
                             ),
                         )
                         .with_code("SE-033")
@@ -55,10 +56,7 @@ pub(super) fn validate_cond(
                     .unwrap_or_default();
                 return Err(Diagnostic::error(
                     cond.loc(),
-                    format!(
-                        "неразрешённое условие перехода{quoted}: имя не найдено среди \
-                         переменных, портов, условий `cond` и состояний"
-                    ),
+                    msg!(keys::SE_025_CONDITION_UNRESOLVED, quoted = quoted),
                 )
                 .with_code("SE-025"));
             }
@@ -153,7 +151,7 @@ pub(super) fn validate_cond(
             {
                 return Err(Diagnostic::error(
                     *loc,
-                    format!("Чтение из выходного порта '{}' запрещено", name),
+                    msg!(keys::SE_027_OUTPUT_PORT_READ, name = name),
                 )
                 .with_code("SE-027"));
             }
@@ -174,11 +172,7 @@ pub(super) fn validate_cond(
                 .unwrap_or_else(|| "?".to_string());
             return Err(Diagnostic::error(
                 loc,
-                format!(
-                    "имя модели '{name}' само по себе условием не является: \
-                     напишите 'S({name}) = Состояние' или краткую форму \
-                     '{name} = Состояние'"
-                ),
+                msg!(keys::SE_110_MODEL_NAME_NOT_A_CONDITION, name = name),
             )
             .with_code("SE-110"));
         }
@@ -186,11 +180,7 @@ pub(super) fn validate_cond(
             let name = state_rc.borrow().name().to_string();
             return Err(Diagnostic::error(
                 loc,
-                format!(
-                    "имя состояния '{name}' само по себе условием не является: \
-                     проверка состояния записывается как 'S(Модель) = {name}' \
-                     или краткой формой 'Модель = {name}'"
-                ),
+                msg!(keys::SE_110_STATE_NAME_NOT_A_CONDITION, name = name),
             )
             .with_code("SE-110"));
         }
@@ -284,7 +274,7 @@ pub(super) fn validate_expression(
             {
                 return Err(Diagnostic::error(
                     *loc,
-                    format!("Запись во входной порт '{}' запрещена", name),
+                    msg!(keys::SE_026_INPUT_PORT_WRITE, name = name),
                 )
                 .with_code("SE-026"));
             }
@@ -331,7 +321,7 @@ pub(super) fn validate_expression(
             {
                 return Err(Diagnostic::error(
                     *loc,
-                    format!("Чтение из выходного порта '{}' запрещено", name),
+                    msg!(keys::SE_027_OUTPUT_PORT_READ, name = name),
                 )
                 .with_code("SE-027"));
             }

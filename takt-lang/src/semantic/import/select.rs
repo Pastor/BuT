@@ -9,6 +9,8 @@
 //! размера, которому расти нельзя. Заодно приём стал видимым: перенос имён и их
 //! **привязка** к импортёру - одна операция, и жить ей вместе.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::Diagnostic;
 use crate::parser::ast::Identifier;
 use crate::semantic::import::adopt;
@@ -64,7 +66,7 @@ pub(in crate::semantic) fn apply(
                 if models.contains_key(&alias) {
                     return Err(Diagnostic::declaration_error(
                         sym_loc,
-                        format!("Модель с именем '{}' уже объявлена", alias),
+                        msg!(keys::SE_006_MODEL_ALREADY_DECLARED, name = alias),
                     )
                     .with_code("SE-006"));
                 }
@@ -74,7 +76,7 @@ pub(in crate::semantic) fn apply(
                 if model_node.borrow().types.contains_key(&alias) {
                     return Err(Diagnostic::declaration_error(
                         sym_loc,
-                        format!("Тип '{}' уже объявлен", alias),
+                        msg!(keys::SE_007_TYPE_ALREADY_DECLARED, name = alias),
                     )
                     .with_code("SE-007"));
                 }
@@ -94,7 +96,7 @@ pub(in crate::semantic) fn apply(
                 if variables.contains_key(&alias) {
                     return Err(Diagnostic::declaration_error(
                         sym_loc,
-                        format!("Переменная '{}' уже объявлена", alias),
+                        msg!(keys::SE_005_VARIABLE_ALREADY_DECLARED, name = alias),
                     )
                     .with_code("SE-005"));
                 }
@@ -106,7 +108,7 @@ pub(in crate::semantic) fn apply(
                 if model_node.borrow().functions.contains_key(&alias) {
                     return Err(Diagnostic::declaration_error(
                         sym_loc,
-                        format!("Функция с именем '{}' уже определена", alias),
+                        msg!(keys::SE_009_FUNCTION_ALREADY_DEFINED, name = alias),
                     )
                     .with_code("SE-009"));
                 }
@@ -120,7 +122,7 @@ pub(in crate::semantic) fn apply(
                 if conditions.contains_key(&alias) {
                     return Err(Diagnostic::declaration_error(
                         sym_loc,
-                        format!("Условие '{}' уже объявлено", alias),
+                        msg!(keys::SE_008_CONDITION_ALREADY_DECLARED, name = alias),
                     )
                     .with_code("SE-008"));
                 }
@@ -128,7 +130,7 @@ pub(in crate::semantic) fn apply(
             } else {
                 return Err(Diagnostic::declaration_error(
                     orig_id.loc,
-                    format!("Идентификатор '{}' не найден в импортируемом файле", orig),
+                    msg!(keys::SE_017_IDENTIFIER_NOT_IN_IMPORTED_FILE, name = orig),
                 )
                 .with_code("SE-017"));
             }

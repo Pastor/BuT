@@ -9,6 +9,8 @@
 //! разные ошибки автора (опечатка против попытки задать переменную), и общий текст
 //! "плохой аргумент" заставил бы гадать.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::parser::ast;
 use crate::semantic::ModelNode;
@@ -50,7 +52,7 @@ pub(super) fn parse_arguments(
         if let Some(first) = seen.get(&name) {
             return Err(Diagnostic::error(
                 loc,
-                format!("Параметр '{name}' задан в этом вызове дважды"),
+                msg!(keys::SE_080_ARGUMENT_GIVEN_TWICE, name = name),
             )
             .with_code("SE-080")
             .with_note(*first, format!("первое задание '{name}'")));
@@ -172,7 +174,7 @@ fn destructure(
     let ast::Expression::Assign(assign_loc, target, value) = arg else {
         return Err(Diagnostic::error(
             arg_loc(arg).unwrap_or(call_loc),
-            "Аргумент инстанцирования задаётся формой 'имя := значение'".to_string(),
+            msg!(keys::SE_076_ARGUMENT_FORM),
         )
         .with_code("SE-076"));
     };
@@ -180,7 +182,7 @@ fn destructure(
         ast::Expression::Variable(id) => Ok((id.loc, id.name.clone(), (**value).clone())),
         other => Err(Diagnostic::error(
             arg_loc(other).unwrap_or(*assign_loc),
-            "Слева от ':=' в аргументе инстанцирования обязано стоять имя параметра".to_string(),
+            msg!(keys::SE_076_ARGUMENT_NAME_EXPECTED),
         )
         .with_code("SE-076")),
     }
@@ -202,7 +204,7 @@ fn check_declared(
     if target.parameters.is_empty() {
         return Err(Diagnostic::error(
             loc,
-            format!("Модель '{model_name}' не объявляет параметров, задать '{name}' нечем"),
+            msg!(keys::SE_077_MODEL_WITHOUT_PARAMETERS, model = model_name, name = name),
         )
         .with_code("SE-077"));
     }
@@ -211,10 +213,7 @@ fn check_declared(
     if target.variables.contains_key(name) {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "'{name}' в модели '{model_name}' объявлен не как parameter — \
-                 при инстанцировании задаются только параметры"
-            ),
+            msg!(keys::SE_079_NOT_A_PARAMETER, name = name, model = model_name),
         )
         .with_code("SE-079"));
     }
@@ -226,7 +225,12 @@ fn check_declared(
         .join(", ");
     Err(Diagnostic::error(
         loc,
-        format!("Модель '{model_name}' не имеет параметра '{name}' (объявлены: {known})"),
+        msg!(
+            keys::SE_078_PARAMETER_NOT_FOUND,
+            model = model_name,
+            name = name,
+            known = known
+        ),
     )
     .with_code("SE-078"))
 }

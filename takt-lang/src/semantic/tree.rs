@@ -7,7 +7,9 @@
 //! - [`construct_context_state`] - строит контекст для состояния (заглушка).
 //! - [`construct_condition`] - преобразует условие АСД в семантическое условие.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, FileTable, Location};
+use crate::msg;
 use crate::parse;
 use crate::parser::ast;
 use crate::parser::ast::{Identifier, ImportDefine, Model, ModelElement, StateElement, StateKind};
@@ -44,7 +46,7 @@ fn extract_name(id: Option<Identifier>, loc: Location) -> Result<String, Diagnos
     if let Some(id) = id {
         Ok(id.name.clone())
     } else {
-        Err(Diagnostic::error(loc, "Идентификатор не задан".to_string()).with_code("SE-021"))
+        Err(Diagnostic::error(loc, msg!(keys::SE_021_IDENTIFIER_MISSING)).with_code("SE-021"))
     }
 }
 
@@ -69,7 +71,7 @@ fn check_import_cycle(
         let mut chain: Vec<&str> = import_stack[pos..].iter().map(|s| s.as_str()).collect();
         chain.push(new_file);
         return Err(
-            Diagnostic::error(loc, format!("Циклический импорт: {}", chain.join(" → ")))
+            Diagnostic::error(loc, msg!(keys::SE_013_IMPORT_CYCLE, chain = chain.join(" → ")))
                 .with_code("SE-013"),
         );
     }
@@ -229,7 +231,7 @@ pub(super) fn construct_model_stage0(
             if models.contains_key(&model_name) {
                 return Err(Diagnostic::declaration_error(
                     model.borrow().loc,
-                    format!("Модель с именем '{}' уже объявлена", model_name),
+                    msg!(keys::SE_006_MODEL_ALREADY_DECLARED, name = model_name),
                 )
                 .with_code("SE-006"));
             }
@@ -247,7 +249,7 @@ pub(super) fn construct_model_stage0(
                         .ok_or_else(|| {
                             Diagnostic::error(
                                 *import_loc,
-                                format!("Неверный путь к файлу импорта: «{}»", filename),
+                                msg!(keys::SE_013_IMPORT_PATH_INVALID, file = filename),
                             )
                             .with_code("SE-013")
                         })?
@@ -256,7 +258,7 @@ pub(super) fn construct_model_stage0(
                     if models.contains_key(&model_name) {
                         return Err(Diagnostic::declaration_error(
                             *import_loc,
-                            format!("Модель с именем '{}' уже объявлена", model_name),
+                            msg!(keys::SE_006_MODEL_ALREADY_DECLARED, name = model_name),
                         )
                         .with_code("SE-006"));
                     }
@@ -308,7 +310,7 @@ pub(super) fn construct_model_stage0(
                     if models.contains_key(&model_name) {
                         return Err(Diagnostic::declaration_error(
                             id.loc,
-                            format!("Модель с именем '{}' уже объявлена", model_name),
+                            msg!(keys::SE_006_MODEL_ALREADY_DECLARED, name = model_name),
                         )
                         .with_code("SE-006"));
                     }
@@ -426,7 +428,7 @@ pub(super) fn construct_model_stage0(
                 .ok_or_else(|| {
                     Diagnostic::error(
                         def_loc,
-                        "Условие при определении должно иметь имя".to_string(),
+                        msg!(keys::SE_019_CONDITION_NEEDS_NAME),
                     )
                     .with_code("SE-019")
                 })?
@@ -456,7 +458,7 @@ pub(super) fn construct_model_stage0(
                 .clone()
                 .name
                 .ok_or_else(|| {
-                    Diagnostic::error(inv_loc, "Инвариант должен иметь имя".to_string())
+                    Diagnostic::error(inv_loc, msg!(keys::SE_019_INVARIANT_NEEDS_NAME))
                         .with_code("SE-019")
                 })?
                 .name;
@@ -466,10 +468,7 @@ pub(super) fn construct_model_stage0(
             if conditions.contains_key(&name) || variables.contains_key(&name) {
                 return Err(Diagnostic::error(
                     inv_loc,
-                    format!(
-                        "Имя инварианта '{}' конфликтует с существующим условием или переменной",
-                        name
-                    ),
+                    msg!(keys::SE_054_INVARIANT_NAME_TAKEN, name = name),
                 )
                 .with_code("SE-054"));
             }
@@ -492,7 +491,7 @@ pub(super) fn construct_model_stage0(
                 .ok_or_else(|| {
                     Diagnostic::error(
                         def.loc,
-                        "Именованный блок кода при определении должен иметь имя".to_string(),
+                        msg!(keys::SE_018_BLOCK_NEEDS_NAME),
                     )
                     .with_code("SE-018")
                 })?
@@ -544,7 +543,7 @@ pub(super) fn construct_model_stage0(
                 .ok_or_else(|| {
                     Diagnostic::error(
                         def.loc,
-                        "При определении функция должна иметь имя".to_string(),
+                        msg!(keys::SE_022_FUNCTION_NEEDS_NAME),
                     )
                     .with_code("SE-022")
                 })?
@@ -557,7 +556,7 @@ pub(super) fn construct_model_stage0(
             if functions.contains_key(&name) {
                 return Err(Diagnostic::error(
                     def.loc,
-                    format!("Функция с именем '{}' уже определена", name),
+                    msg!(keys::SE_009_FUNCTION_ALREADY_DEFINED, name = name),
                 )
                 .with_code("SE-009"));
             }
@@ -1028,7 +1027,7 @@ pub fn construct_states(
                 .clone()
                 .name
                 .ok_or_else(|| {
-                    Diagnostic::error(def.loc, "Имя состояния не задано".to_string())
+                    Diagnostic::error(def.loc, msg!(keys::SE_020_STATE_NAME_MISSING))
                         .with_code("SE-020")
                 })?
                 .name;
@@ -1054,7 +1053,7 @@ pub fn construct_states(
                     if next.is_some() {
                         return Err(Diagnostic::error(
                             id.loc,
-                            format!("Состояние '{}' уже содержит оператор next", id.name),
+                            msg!(keys::SE_012_STATE_HAS_NEXT, name = id.name),
                         )
                         .with_code("SE-012"));
                     }
@@ -1107,8 +1106,7 @@ pub fn construct_states(
                     StateKind::Next => {
                         return Err(Diagnostic::error(
                             def.loc,
-                            "Состояние с типом next не поддерживается в качестве определения"
-                                .to_string(),
+                            msg!(keys::SE_021_NEXT_STATE_NOT_A_DEFINITION),
                         )
                         .with_code("SE-021"));
                     }
@@ -1201,7 +1199,7 @@ pub fn construct_states(
                             let target = states.get(&r.name).ok_or_else(|| {
                                 Diagnostic::error(
                                     r.location,
-                                    format!("Ссылка '{}' не найдена", r.name),
+                                    msg!(keys::SE_002_REFERENCE_NOT_FOUND, name = r.name),
                                 )
                                 .with_code("SE-002")
                             })?;
@@ -1252,7 +1250,7 @@ fn resolve_references(
         .map(|r| {
             if let StateNode::Unresolved = *r.object {
                 let target = states.get(&r.name).ok_or_else(|| {
-                    Diagnostic::error(r.location, format!("Ссылка '{}' не найдена", r.name))
+                    Diagnostic::error(r.location, msg!(keys::SE_002_REFERENCE_NOT_FOUND, name = r.name))
                         .with_code("SE-002")
                 })?;
                 Ok(ReferenceNode {

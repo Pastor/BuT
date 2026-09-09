@@ -2,6 +2,8 @@
 //!
 //! Часть модуля `validate`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::*;
 
 /// Проверяет, что модель содержит ровно одно начальное состояние.
@@ -43,10 +45,7 @@ pub(super) fn model_only_one_start_state(model: Rc<RefCell<ModelNode>>) -> Vec<D
         return vec![
             Diagnostic::error(
                 borrowed.loc,
-                format!(
-                    "В модели '{}' должно быть только одно начальное состояние (найдено: {})",
-                    name, start_count
-                ),
+                msg!(keys::SE_011_MULTIPLE_START_STATES, name = name, count = start_count),
             )
             .with_code("SE-011"),
         ];
@@ -142,11 +141,7 @@ fn collect_transition_completeness(model: &Rc<RefCell<ModelNode>>, out: &mut Vec
         out.push(
             Diagnostic::warning(
                 model_loc,
-                format!(
-                    "{}в модели нет терминальных состояний (состояний без переходов); \
-                     автомат не может завершить работу",
-                    model_prefix
-                ),
+                msg!(keys::SE_010_NO_TERMINAL_STATES, prefix = model_prefix),
             )
             .with_code("SE-010"),
         );
@@ -209,9 +204,10 @@ fn collect_transition_completeness(model: &Rc<RefCell<ModelNode>>, out: &mut Vec
                 out.push(
                     Diagnostic::warning(
                         state.loc(),
-                        format!(
-                            "{}состояние '{}' не имеет пути к терминальному состоянию",
-                            model_prefix, state_name
+                        msg!(
+                            keys::SE_010_NO_PATH_TO_TERMINAL,
+                            prefix = model_prefix,
+                            name = state_name
                         ),
                     )
                     .with_code("SE-010"),
@@ -234,11 +230,7 @@ fn collect_transition_completeness(model: &Rc<RefCell<ModelNode>>, out: &mut Vec
                 out.push(
                     Diagnostic::warning(
                         state.loc(),
-                        format!(
-                            "{}состояние '{}' содержит ref-переходы совместно с next: \
-                             переходы ref недостижимы после выполнения next",
-                            model_prefix, name
-                        ),
+                        msg!(keys::SE_012_REF_WITH_NEXT, prefix = model_prefix, name = name),
                     )
                     .with_code("SE-012"),
                 );

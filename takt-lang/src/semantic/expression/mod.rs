@@ -18,6 +18,8 @@
 //! - [`resolve_bin`] - разрешает бинарное выражение (оба операнда).
 //! - [`resolve_elems`] - разрешает все элементы вектора выражений.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::parser::ast;
 use crate::semantic::builtin::builtin_function;
@@ -154,7 +156,7 @@ pub fn construct_expression(
             // искать.
             Err(Diagnostic::error(
                 id.loc,
-                format!("Идентификатор '{}' не найден в области видимости", name),
+                msg!(keys::SE_003_IDENTIFIER_NOT_IN_SCOPE, name = name),
             )
             .with_code("SE-003"))
         }
@@ -189,7 +191,7 @@ pub fn construct_expression(
                     {
                         return Err(Diagnostic::error(
                             loc,
-                            format!("Индекс {} выходит за границы массива (размер {})", n, size),
+                            msg!(keys::SE_028_INDEX_OUT_OF_BOUNDS, index = n, size = size),
                         )
                         .with_code("SE-028"));
                     }
@@ -199,7 +201,7 @@ pub fn construct_expression(
                 Some(_) => {
                     return Err(Diagnostic::error(
                         loc,
-                        format!("{} не является массивом", base_label(&base)),
+                        msg!(keys::SE_030_NOT_AN_ARRAY, what = base_label(&base)),
                     )
                     .with_code("SE-030"));
                 }
@@ -228,7 +230,7 @@ pub fn construct_expression(
                 Some(_) => {
                     return Err(Diagnostic::error(
                         loc,
-                        format!("{} не является массивом", base_label(&base)),
+                        msg!(keys::SE_030_NOT_AN_ARRAY, what = base_label(&base)),
                     )
                     .with_code("SE-030"));
                 }
@@ -466,9 +468,11 @@ fn check_slice_bounds(
     {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "Начало среза {} выходит за границы массива '{}' (размер {})",
-                s, name, size
+            msg!(
+                keys::SE_029_SLICE_START_OUT_OF_BOUNDS,
+                start = s,
+                name = name,
+                size = size
             ),
         )
         .with_code("SE-029"));
@@ -478,9 +482,11 @@ fn check_slice_bounds(
     {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "Конец среза {} выходит за границы массива '{}' (размер {})",
-                e, name, size
+            msg!(
+                keys::SE_029_SLICE_END_OUT_OF_BOUNDS,
+                end = e,
+                name = name,
+                size = size
             ),
         )
         .with_code("SE-029"));
@@ -490,10 +496,7 @@ fn check_slice_bounds(
     {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "Начало среза {} больше конца {} для массива '{}'",
-                s, e, name
-            ),
+            msg!(keys::SE_029_SLICE_START_AFTER_END, start = s, end = e, name = name),
         )
         .with_code("SE-029"));
     }
