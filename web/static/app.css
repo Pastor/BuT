@@ -1517,15 +1517,20 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
   position: absolute;
   z-index: 3;
   display: flex;
-  flex-direction: column;
+  /* Панели одного места стоят в линию: читатель, сложивший две панели в один
+   * угол, ждёт полосу, а не башню. Линия не переносится - не поместившись в
+   * ширину холста, панели ужимаются, и кнопка за краем достаётся прокруткой
+   * внутри панели (тот же приём, что у одиночной панели схемы). */
+  flex-direction: row;
+  flex-wrap: nowrap;
   gap: var(--gap-half);
   max-width: calc(100% - var(--gap) * 2);
 }
 .tool-dock:empty { display: none; }
-.tool-dock-tl { left: var(--gap); top: var(--gap); align-items: flex-start; }
-.tool-dock-tr { right: calc(var(--h-control) + var(--gap) * 2); top: var(--gap); align-items: flex-end; }
-.tool-dock-bl { left: var(--gap); bottom: var(--gap); align-items: flex-start; }
-.tool-dock-br { right: var(--gap); bottom: calc(var(--map-h) + var(--gap) * 2); align-items: flex-end; }
+.tool-dock-tl { left: var(--gap); top: var(--gap); }
+.tool-dock-tr { right: calc(var(--h-control) + var(--gap) * 2); top: var(--gap); justify-content: flex-end; }
+.tool-dock-bl { left: var(--gap); bottom: var(--gap); }
+.tool-dock-br { right: var(--gap); bottom: calc(var(--map-h) + var(--gap) * 2); justify-content: flex-end; }
 .scheme.docking .tool-dock:empty {
   display: block;
   min-width: 6rem;
@@ -1945,6 +1950,9 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
   background: var(--surface);
 }
 .tool-panel[hidden] { display: none; }
+/* Панель в общей линии ужимается: без этого содержимое держало бы её ширину, и
+ * соседка уехала бы за край холста. */
+.tool-dock > .tool-panel { min-width: 0; }
 .tool-panel .icon-btn { border-radius: var(--radius-sm); }
 
 /* Ступень словесного выбора: у полей без образца рисовать нечего, и кнопка
