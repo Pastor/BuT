@@ -16,6 +16,8 @@
 //! упасть списком, если какой-то потеряет текст или причину. Образец - `UnresolvedNode`
 //! и `format::unsupported`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 
 /// Конструкция языка, которую цель `c` не переводит.
@@ -52,19 +54,17 @@ impl UnsupportedNode {
     /// Название конструкции для текста диагностики.
     pub(in crate::generator::c) fn phrase(self) -> String {
         match self {
-            UnsupportedNode::Model => "ссылка на модель в выражении".to_string(),
-            UnsupportedNode::ArraySlice => "срез массива".to_string(),
-            UnsupportedNode::CodeBlock => "блок кода в позиции выражения".to_string(),
-            UnsupportedNode::NamedFunction => "именованная функция как значение".to_string(),
-            UnsupportedNode::ParameterList => "список параметров в позиции выражения".to_string(),
-            UnsupportedNode::Type => "тип в позиции выражения".to_string(),
-            UnsupportedNode::Address => "адресный литерал в выражении".to_string(),
-            UnsupportedNode::Builtin(name) => format!("встроенная функция '{name}'"),
-            UnsupportedNode::UnknownBuiltin => "неизвестная встроенная функция".to_string(),
-            UnsupportedNode::BitBeyondVector => "разряд за пределом бит-вектора".to_string(),
-            UnsupportedNode::WideBitVector(op) => {
-                format!("операция '{op}' над бит-вектором шире 64 бит")
-            }
+            UnsupportedNode::Model => msg!(keys::CC_022_NODE_MODEL),
+            UnsupportedNode::ArraySlice => msg!(keys::CC_022_NODE_ARRAY_SLICE),
+            UnsupportedNode::CodeBlock => msg!(keys::CC_022_NODE_CODE_BLOCK),
+            UnsupportedNode::NamedFunction => msg!(keys::CC_022_NODE_NAMED_FUNCTION),
+            UnsupportedNode::ParameterList => msg!(keys::CC_022_NODE_PARAMETER_LIST),
+            UnsupportedNode::Type => msg!(keys::CC_022_NODE_TYPE),
+            UnsupportedNode::Address => msg!(keys::CC_022_NODE_ADDRESS),
+            UnsupportedNode::Builtin(name) => msg!(keys::CC_022_NODE_BUILTIN, name = name),
+            UnsupportedNode::UnknownBuiltin => msg!(keys::CC_022_NODE_UNKNOWN_BUILTIN),
+            UnsupportedNode::BitBeyondVector => msg!(keys::CC_022_NODE_BIT_BEYOND_VECTOR),
+            UnsupportedNode::WideBitVector(op) => msg!(keys::CC_022_NODE_WIDE_BIT_VECTOR, op = op),
         }
     }
 
@@ -72,26 +72,14 @@ impl UnsupportedNode {
     ///
     /// Пустая строка означает "причина в самой конструкции и добавить нечего"; у
     /// остальных причина названа, как это делают `ST-011` и `RS-011`.
-    pub(in crate::generator::c) fn reason(self) -> &'static str {
+    pub(in crate::generator::c) fn reason(self) -> String {
         match self {
-            UnsupportedNode::Model => {
-                "обращение к переменной под-модели через имя модели языком не поддержано \
-                 ни одним потребителем: значение под-модели читают через её порт"
-            }
-            UnsupportedNode::ArraySlice => {
-                "в C нет операции среза, а тип-владелец у среза в Takt отсутствует"
-            }
-            UnsupportedNode::Builtin(_) => "она служит отладке и кода не порождает",
-            UnsupportedNode::BitBeyondVector => {
-                "разрядов за объявленной шириной у вектора нет, а доступ за границу \
-                 массива слов — неопределённое поведение в порождённой прошивке"
-            }
-            UnsupportedNode::WideBitVector(_) => {
-                "вектор шире 64 бит представлен массивом слов, и такой операции над \
-                 словами не существует; её не поддерживает и эталон (SIM-005) — \
-                 работайте с отдельными разрядами либо разбейте вектор на поля"
-            }
-            _ => "",
+            UnsupportedNode::Model => msg!(keys::CC_022_WHY_MODEL),
+            UnsupportedNode::ArraySlice => msg!(keys::CC_022_WHY_ARRAY_SLICE),
+            UnsupportedNode::Builtin(_) => msg!(keys::CC_022_WHY_BUILTIN),
+            UnsupportedNode::BitBeyondVector => msg!(keys::CC_022_WHY_BIT_BEYOND_VECTOR),
+            UnsupportedNode::WideBitVector(_) => msg!(keys::CC_022_WHY_WIDE_BIT_VECTOR),
+            _ => String::new(),
         }
     }
 
@@ -122,9 +110,9 @@ impl UnsupportedNode {
 pub(in crate::generator::c) fn refuse(node: UnsupportedNode, loc: Location) -> Diagnostic {
     let reason = node.reason();
     let message = if reason.is_empty() {
-        format!("{} не транслируется в C целью 'c'", node.phrase())
+        msg!(keys::CC_022_REFUSAL, what = node.phrase())
     } else {
-        format!("{} не транслируется в C целью 'c': {reason}", node.phrase())
+        msg!(keys::CC_022_REFUSAL_WITH_REASON, what = node.phrase(), reason = reason)
     };
     Diagnostic::error(loc, message).with_code("CC-022")
 }

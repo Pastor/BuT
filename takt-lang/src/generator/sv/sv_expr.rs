@@ -44,6 +44,8 @@
 // цели.
 pub(crate) use crate::generator::sv::sv_scope::Scope;
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::sv::sv_names::{print_member, signal_of_in, sv_enum_variant_name};
 use crate::generator::sv::sv_state_of;
@@ -54,14 +56,12 @@ use crate::semantic::{ConditionNode, ExpressionNode};
 pub(crate) fn sv002(what: &str) -> Diagnostic {
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
-        format!("Не транслируется в SystemVerilog: {what}"),
+        msg!(keys::SV_002_REFUSAL, what = what),
     )
     .with_code("SV-002")
     .with_note(
         Location::Codegen,
-        "молчаливо пропустить конструкцию нельзя: порождённый модуль вёл бы \
-         себя иначе, чем модель"
-            .to_string(),
+        msg!(keys::SV_002_NOTE),
     )
 }
 
@@ -69,16 +69,7 @@ pub(crate) fn sv002(what: &str) -> Diagnostic {
 pub(in crate::generator::sv) fn sv005(name: &str, loc: Location) -> Diagnostic {
     Diagnostic::error(
         loc,
-        format!(
-            "внешняя функция '{}' (extern fn) целью 'sv' не поддерживается: в \
-             синтезируемом RTL вызова внешнего кода не существует. DPI-C — \
-             механизм симуляции, синтезатору он недоступен; аппаратный аналог \
-             «внешней функции» — отдельный модуль со своим интерфейсом, а \
-             extern fn языка Takt не описывает ни портов, ни тактов, ни \
-             латентности, и вывести их нельзя. Используйте цель 'c'/'st'/'rust' \
-             либо выразите логику на Takt",
-            name
-        ),
+        msg!(keys::SV_005_EXTERN_FUNCTION, name = name),
     )
     .with_code("SV-005")
 }
@@ -96,13 +87,7 @@ pub(in crate::generator::sv) fn sv005(name: &str, loc: Location) -> Diagnostic {
 fn sv009() -> Diagnostic {
     Diagnostic::warning(
         crate::generator::site::at(Location::Codegen),
-        "деление или остаток по переменному делителю: в синтезируемом RTL нет \
-         аппаратного делителя, поэтому '/' и '%' разворачиваются в крупный \
-         комбинационный блок (на порядок больше сложения) с длинным путём — это \
-         снижает достижимый потолок тактовой частоты. Делитель-константа так не \
-         стоит (сворачивается в сдвиги/умножение на обратное); если делитель по \
-         существу постоянен, вынесите его в константу"
-            .to_string(),
+        msg!(keys::SV_009_VARIABLE_DIVISOR),
     )
     .with_code("SV-009")
 }
@@ -192,7 +177,7 @@ pub(crate) fn print_condition(node: &ConditionNode, scope: &Scope) -> Result<Str
         ConditionNode::Duration(nanos) => Ok(crate::semantic::duration::value_millis(
             *nanos,
             crate::generator::site::at(Location::Codegen),
-            "литерал длительности в условии",
+            &msg!(keys::SV_WHAT_DURATION_IN_CONDITION),
         )?
         .to_string()),
         // Выдержка (константная и вычисляемая) печатается `sv_time`: только у него есть
@@ -200,7 +185,7 @@ pub(crate) fn print_condition(node: &ConditionNode, scope: &Scope) -> Result<Str
         ConditionNode::After(_) | ConditionNode::AfterTicks(_) | ConditionNode::AfterExpr(_) => {
             Err(Diagnostic::error(
                 crate::generator::site::at(Location::Codegen),
-                "выдержка 'after' обязана печататься через sv_time, а не как условие".to_string(),
+                msg!(keys::SV_015_AFTER_OUTSIDE_TIME),
             )
             .with_code("SV-015"))
         }
@@ -221,7 +206,7 @@ pub(crate) fn print_condition(node: &ConditionNode, scope: &Scope) -> Result<Str
         ConditionNode::NotEqual(l, r) => cmp(l, "!=", r),
         ConditionNode::Variable(var, _) => signal_of_in(var, scope)
             .map(|name| scope.read(&name))
-            .ok_or_else(|| sv002("неразрешённая переменная в условии")),
+            .ok_or_else(|| sv002(&msg!(keys::SV_WHAT_UNRESOLVED_VARIABLE_IN_CONDITION))),
         // База - выражение: печатается тем же печатником условий, поэтому `b.data[1]`
         // выходит через ту же форму доступа к полю. Печатников два, и сужение индекса
         // нужно обоим.
@@ -248,13 +233,13 @@ pub(crate) fn print_condition(node: &ConditionNode, scope: &Scope) -> Result<Str
         // Ветки `_` нет намеренно: `ConditionNode` объявлен в этом же крейте, поэтому
         // исчерпывающий разбор возможен - и обязан валить сборку при добавлении
         // варианта, а не проглатывать его молча.
-        ConditionNode::Unresolved(_) => Err(sv002("неразрешённое условие")),
+        ConditionNode::Unresolved(_) => Err(sv002(&msg!(keys::SV_WHAT_UNRESOLVED_CONDITION))),
         ConditionNode::Rational(_, _) => Err(sv002(
-            "вещественный литерал: в синтезируемом RTL плавающей точки нет (см. SV-003)",
+            &msg!(keys::SV_WHAT_RATIONAL),
         )),
-        ConditionNode::String(_) => Err(sv002("строковый литерал")),
-        ConditionNode::Model(_, _) => Err(sv002("ссылка на модель в условии")),
-        ConditionNode::State(..) => Err(sv002("ссылка на состояние в условии")),
+        ConditionNode::String(_) => Err(sv002(&msg!(keys::SV_WHAT_STRING))),
+        ConditionNode::Model(_, _) => Err(sv002(&msg!(keys::SV_WHAT_MODEL_IN_CONDITION))),
+        ConditionNode::State(..) => Err(sv002(&msg!(keys::SV_WHAT_STATE_IN_CONDITION))),
         // Анонимное обращение - см. оговорку у печатника выражений.
         ConditionNode::AnonPort(access) => Ok(scope.read(&access.synthetic_name())),
     }
@@ -313,7 +298,7 @@ pub(crate) fn print_expression(node: &ExpressionNode, scope: &Scope) -> Result<S
         ExpressionNode::Duration(nanos) => Ok(crate::semantic::duration::value_millis(
             *nanos,
             crate::generator::site::at(Location::Codegen),
-            "литерал длительности",
+            &msg!(keys::SV_WHAT_DURATION),
         )?
         .to_string()),
         ExpressionNode::Number(n) => Ok(n.to_string()),
@@ -372,7 +357,7 @@ pub(crate) fn print_expression(node: &ExpressionNode, scope: &Scope) -> Result<S
         )),
         ExpressionNode::Variable(var) => signal_of_in(var, scope)
             .map(|name| scope.read(&name))
-            .ok_or_else(|| sv002("неразрешённая переменная")),
+            .ok_or_else(|| sv002(&msg!(keys::SV_WHAT_UNRESOLVED_VARIABLE))),
         // Индекс сужается до ширины, которую требует размер массива: иначе verilator
         // отвечает `WIDTHTRUNC`, а проверка цели считает предупреждение ошибкой. Правило -
         // общий носитель `sv_array`.
@@ -422,36 +407,35 @@ pub(crate) fn print_expression(node: &ExpressionNode, scope: &Scope) -> Result<S
         // Присваивание - оператор, а не выражение: печатается в `sv_stmt`. Здесь оно
         // означало бы `x = (y = 1)`, чего Takt не строит.
         ExpressionNode::Assign(_, _) => Err(sv002(
-            "присваивание внутри выражения (в SystemVerilog присваивание — оператор)",
+            &msg!(keys::SV_WHAT_ASSIGN_IN_EXPRESSION),
         )),
         // Степень с литеральным показателем разворачивается в умножения - синтезатору
         // нужна константа, и она здесь есть.
         ExpressionNode::Power(base, exp) => super::sv_cast::power(base, exp, scope),
         ExpressionNode::Rational(_, _) => Err(sv002(
-            "вещественный литерал: в синтезируемом RTL плавающей точки нет (см. SV-003)",
+            &msg!(keys::SV_WHAT_RATIONAL),
         )),
-        ExpressionNode::None => Err(sv002("пустое выражение")),
-        ExpressionNode::Unresolved(_) => Err(sv002("неразрешённое выражение")),
-        ExpressionNode::ArraySlice(_, _, _) => Err(sv002("срез массива")),
-        ExpressionNode::CodeBlock(_, _) => Err(sv002("блок кода в выражении")),
-        ExpressionNode::NamedFunctionBox(_, _) => Err(sv002("вызов с именованными аргументами")),
-        ExpressionNode::String(_) => Err(sv002("строковый литерал")),
-        ExpressionNode::Type(_) => Err(sv002("тип в позиции выражения")),
+        ExpressionNode::None => Err(sv002(&msg!(keys::SV_WHAT_EMPTY_EXPRESSION))),
+        ExpressionNode::Unresolved(_) => Err(sv002(&msg!(keys::SV_WHAT_UNRESOLVED_EXPRESSION))),
+        ExpressionNode::ArraySlice(_, _, _) => Err(sv002(&msg!(keys::SV_WHAT_ARRAY_SLICE))),
+        ExpressionNode::CodeBlock(_, _) => Err(sv002(&msg!(keys::SV_WHAT_CODE_BLOCK))),
+        ExpressionNode::NamedFunctionBox(_, _) => Err(sv002(&msg!(keys::SV_WHAT_NAMED_CALL))),
+        ExpressionNode::String(_) => Err(sv002(&msg!(keys::SV_WHAT_STRING))),
+        ExpressionNode::Type(_) => Err(sv002(&msg!(keys::SV_WHAT_TYPE))),
         ExpressionNode::Address(_, _) => Err(sv002(
-            "адрес порта: для RTL адрес бессмыслен — сигнал приходит на вывод \
-             кристалла, а не по адресу",
+            &msg!(keys::SV_WHAT_ADDRESS),
         )),
         // Ячейка по адресу - сигнал регистрового файла; `read` даёт `_next` (капкан ).
         // Сюда доходит только `sv-mmio`: цель `sv` отвергает такую модель в точке входа
         // (`SV-017`).
         ExpressionNode::AnonPort(access) => Ok(scope.read(&access.synthetic_name())),
-        ExpressionNode::Model(_) => Err(sv002("ссылка на модель в выражении")),
+        ExpressionNode::Model(_) => Err(sv002(&msg!(keys::SV_WHAT_MODEL))),
         // Именованное условие печатается своим печатником условий: своего разбора здесь
         // нет - второе знание об условии разошлось бы с первым.
         ExpressionNode::Condition(cond) => print_condition(&cond.borrow().value, scope),
-        ExpressionNode::List(_) => Err(sv002("список параметров в позиции выражения")),
-        ExpressionNode::Array(_) => Err(sv002("литерал массива")),
-        ExpressionNode::Initializer(_) => Err(sv002("инициализатор структуры")),
+        ExpressionNode::List(_) => Err(sv002(&msg!(keys::SV_WHAT_PARAMETER_LIST))),
+        ExpressionNode::Array(_) => Err(sv002(&msg!(keys::SV_WHAT_ARRAY_LITERAL))),
+        ExpressionNode::Initializer(_) => Err(sv002(&msg!(keys::SV_WHAT_STRUCT_INITIALIZER))),
         // Fixed-point: масштабирующее приведение, когда источник либо цель - q(m, n).
         // Прочие `as` целью sv по-прежнему не транслируются.
         ExpressionNode::Cast(inner, ty) => {

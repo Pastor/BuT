@@ -13,6 +13,8 @@
 //! печатника, и до этой воронки она не доходит. Заводя новую форму, проверь порядок:
 //! сначала разбор законной формы, потом отказ.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 
 /// Вид узла, дошедшего до печатника цели `c` неразрешённым.
@@ -52,20 +54,20 @@ impl UnresolvedNode {
     /// Название вида узла для текста диагностики (с согласованным родом).
     pub(in crate::generator::c) fn phrase(&self) -> String {
         match self {
-            UnresolvedNode::Condition => "неразрешённое условие".to_string(),
-            UnresolvedNode::Expression => "неразрешённое выражение".to_string(),
-            UnresolvedNode::Statement => "неразрешённый оператор".to_string(),
-            UnresolvedNode::EmptyExpression => "пустое выражение".to_string(),
-            UnresolvedNode::Variable => "неразрешённая переменная".to_string(),
+            UnresolvedNode::Condition => msg!(keys::CC_023_NODE_CONDITION),
+            UnresolvedNode::Expression => msg!(keys::CC_023_NODE_EXPRESSION),
+            UnresolvedNode::Statement => msg!(keys::CC_023_NODE_STATEMENT),
+            UnresolvedNode::EmptyExpression => msg!(keys::CC_023_NODE_EMPTY_EXPRESSION),
+            UnresolvedNode::Variable => msg!(keys::CC_023_NODE_VARIABLE),
             UnresolvedNode::PortOwner(where_) => {
-                format!("неразрешённый владелец порта ({where_})")
+                msg!(keys::CC_023_NODE_PORT_OWNER, r#where = where_)
             }
             UnresolvedNode::Function(Some(name)) => {
-                format!("неразрешённое определение функции '{name}'")
+                msg!(keys::CC_023_NODE_FUNCTION_NAMED, name = name)
             }
-            UnresolvedNode::Function(None) => "неразрешённое определение функции".to_string(),
+            UnresolvedNode::Function(None) => msg!(keys::CC_023_NODE_FUNCTION),
             UnresolvedNode::ConstantValue(name) => {
-                format!("невычисленное значение константы '{name}'")
+                msg!(keys::CC_023_NODE_CONST_VALUE, name = name)
             }
         }
     }
@@ -100,10 +102,7 @@ impl UnresolvedNode {
 pub(in crate::generator::c) fn refuse(loc: Location, node: UnresolvedNode) -> Diagnostic {
     Diagnostic::error(
         loc,
-        format!(
-            "{}: узел не прошёл семантическое понижение и в C не переводится",
-            node.phrase()
-        ),
+        msg!(keys::CC_023_REFUSAL, what = node.phrase()),
     )
     .with_code("CC-023")
 }

@@ -113,7 +113,7 @@ fn reason_texts_are_distinct_and_nonempty() {
         UnsupportedReason::SizeOverLimit,
         UnsupportedReason::InitialValueUnknown,
     ];
-    let mut seen: Vec<&str> = Vec::new();
+    let mut seen: Vec<String> = Vec::new();
     for r in all {
         let text = r.text();
         assert!(!text.trim().is_empty(), "причина {r:?} без текста");

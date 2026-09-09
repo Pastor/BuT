@@ -29,6 +29,8 @@
 //!   быть недостижим (ложное срабатывание). Такой вердикт помечается словами
 //!   "абстракция управления": читатель обязан видеть, чему верить.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::semantic::ModelNode;
 use crate::verification::buchi::{BuchiAutomaton, build_buchi};
 use crate::verification::check::emptiness;
@@ -144,36 +146,13 @@ impl UnsupportedReason {
     ///
     /// Текст **называет причину и следствие**, а не вид варианта Rust: читателю нужно
     /// понять, что делать.
-    pub const fn text(self) -> &'static str {
+    pub fn text(self) -> String {
         match self {
-            Self::UnknownAtom => concat!(
-                "атом не является ни именем состояния этой модели, ни предикатом ",
-                "над её данными: опечатка в имени либо состояние вложенной модели ",
-                "(состояния вложенных моделей в охват не входят)"
-            ),
-            Self::PredicateOutsideSubset => concat!(
-                "предикат над данными вне поддержанного подмножества: в нём есть ",
-                "арифметика, вызов функции, обращение к порту, доступ к биту либо ",
-                "неперечислимый тип (`float`, `q`, `duration`, массив, структура) — ",
-                "отслеживаются сравнения и логические связки над переменными"
-            ),
-            Self::DomainNotEnumerable => concat!(
-                "домен отслеживаемой переменной не перечислим: `float`, `q(m, n)`, ",
-                "`duration`, массив или структура — проверка перебирает значения, а ",
-                "перебирать здесь нечего"
-            ),
-            Self::SizeOverLimit => concat!(
-                "размер задачи за потолком: рёбер получается ",
-                "`рёбра графа × (произведение доменов)²`, и при более чем 1 000 000 ",
-                "проверка отвергается до счёта. Сузьте домены переменных формулы ",
-                "(например `u8` → `enum`/`bit`) либо возьмите свойство над меньшим ",
-                "их числом"
-            ),
-            Self::InitialValueUnknown => concat!(
-                "начальное значение отслеживаемой переменной неизвестно: ",
-                "инициализатор не сворачивается в константу либо значение вне ",
-                "домена своего типа"
-            ),
+            Self::UnknownAtom => msg!(keys::VERIFY_UNKNOWN_ATOM),
+            Self::PredicateOutsideSubset => msg!(keys::VERIFY_PREDICATE_OUTSIDE_SUBSET),
+            Self::DomainNotEnumerable => msg!(keys::VERIFY_DOMAIN_NOT_ENUMERABLE),
+            Self::SizeOverLimit => msg!(keys::VERIFY_SIZE_OVER_LIMIT),
+            Self::InitialValueUnknown => msg!(keys::VERIFY_INITIAL_VALUE_UNKNOWN),
         }
     }
 }

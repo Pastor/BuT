@@ -16,6 +16,8 @@
 pub(crate) use crate::generator::rust::rust_coerce::{coerce_to, enum_variant_literal};
 pub(crate) use crate::generator::rust::rust_text::unwrap_outer;
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::rust::rust_fixed::{self, FixedOp};
 use crate::generator::rust::rust_name::{rust_type_name, rust_value_name};
@@ -41,7 +43,7 @@ pub(crate) use crate::generator::rust::rust_cond::{condition_as_bool, print_as_b
 pub(crate) fn unsupported(what: &str) -> Diagnostic {
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
-        format!("Не транслируется в Rust: {}", what),
+        msg!(keys::RS_011_REFUSAL, what = what),
     )
     .with_code("RS-011")
 }
@@ -160,10 +162,7 @@ impl Scope<'_> {
         if self.hal.is_empty() {
             return Err(Diagnostic::error(
                 Location::Codegen,
-                format!(
-                    "{} требует доступа к HAL, но он в этой области недоступен",
-                    what
-                ),
+                msg!(keys::RS_022_HAL_UNAVAILABLE, what = what),
             )
             .with_code("RS-022"));
         }
@@ -188,12 +187,7 @@ impl Scope<'_> {
         if !self.has_self {
             return Err(Diagnostic::error(
                 loc,
-                format!(
-                    "Обращение к переменной '{}' модели из тела функции не \
-                     транслируется в Rust: функция порождается свободной и \
-                     состояния модели не видит. Передайте значение параметром",
-                    raw
-                ),
+                msg!(keys::RS_017_MODEL_VARIABLE_IN_FUNCTION, name = raw),
             )
             .with_code("RS-017"));
         }
@@ -212,18 +206,14 @@ fn read_port(
     if direction == PortDirection::Out {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "Чтение выходного порта '{}' не транслируется в Rust: \
-                 HAL-трейт даёт выходному порту только запись",
-                name
-            ),
+            msg!(keys::RS_018_OUTPUT_PORT_READ, name = name),
         )
         .with_code("RS-018"));
     }
     let class = port_class(ty, name, loc, scope.model)?;
     let read = format!(
         "{}.{}({}::{})",
-        scope.hal_receiver(&format!("чтение порта '{}'", name))?,
+        scope.hal_receiver(&msg!(keys::RS_WHAT_PORT_READ, name = name))?,
         class.read_fn(),
         class.in_enum(),
         rust_type_name(name, loc)?
@@ -253,11 +243,7 @@ pub(crate) fn write_port(
     if direction == PortDirection::In {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "Запись во входной порт '{}' не транслируется в Rust: \
-                 HAL-трейт даёт входному порту только чтение",
-                name
-            ),
+            msg!(keys::RS_018_INPUT_PORT_WRITE, name = name),
         )
         .with_code("RS-018"));
     }
@@ -269,7 +255,7 @@ pub(crate) fn write_port(
         TypeNode::Enum(_) => format!("{value} as {}", class.value_type()),
         _ => value.to_string(),
     };
-    let receiver = scope.hal_receiver(&format!("запись в порт '{}'", name))?;
+    let receiver = scope.hal_receiver(&msg!(keys::RS_WHAT_PORT_WRITE, name = name))?;
     let call = format!(
         "{}.{}({}::{}, {})",
         receiver,
@@ -319,7 +305,7 @@ pub(crate) fn variable(var: &VariableNode, scope: &Scope) -> Result<String, Diag
             loc,
             ..
         } => read_port(name, ty, *direction, scope, *loc),
-        VariableNode::Unresolved => Err(unsupported("неразрешённая переменная")),
+        VariableNode::Unresolved => Err(unsupported(&msg!(keys::RS_WHAT_UNRESOLVED_VARIABLE))),
     }
 }
 
@@ -425,9 +411,7 @@ fn binary(
         || crate::generator::rust::rust_bit::words_of(b).is_some()
     {
         return Err(unsupported(&format!(
-            "операция '{op}' над бит-вектором шире 64 бит: он представлен массивом \
-             слов, и такой операции над словами не существует — её не поддерживает \
-             и эталон (SIM-005); работайте с отдельными разрядами"
+            "{}", msg!(keys::RS_WHAT_WIDE_BIT_VECTOR, op = op)
         )));
     }
     Ok(format!(
@@ -520,7 +504,7 @@ pub(crate) fn print_expression(expr: &ExpressionNode, scope: &Scope) -> Result<S
         ExpressionNode::Duration(nanos) => Ok(crate::semantic::duration::value_millis(
             *nanos,
             Location::Codegen,
-            "литерал длительности",
+            &msg!(keys::RS_WHAT_DURATION),
         )?
         .to_string()),
         ExpressionNode::Number(n) => Ok(n.to_string()),
@@ -622,7 +606,7 @@ pub(crate) fn print_expression(expr: &ExpressionNode, scope: &Scope) -> Result<S
                 // валидной.
                 print_expression(inner, scope)
             } else {
-                let target = crate::generator::rust::rust_type::rust_type(ty, "приведение типа")?;
+                let target = crate::generator::rust::rust_type::rust_type(ty, &msg!(keys::RS_WHAT_CAST))?;
                 Ok(format!(
                     "({} as {})",
                     print_expression(inner, scope)?,
@@ -641,14 +625,14 @@ pub(crate) fn print_expression(expr: &ExpressionNode, scope: &Scope) -> Result<S
 
         // Ниже - непереводимое. Ветки `_` нет намеренно: добавление
         // варианта в `ExpressionNode` обязано валить сборку.
-        ExpressionNode::None => Err(unsupported("пустое выражение")),
-        ExpressionNode::Unresolved(_) => Err(unsupported("неразрешённое выражение")),
+        ExpressionNode::None => Err(unsupported(&msg!(keys::RS_WHAT_EMPTY_EXPRESSION))),
+        ExpressionNode::Unresolved(_) => Err(unsupported(&msg!(keys::RS_WHAT_UNRESOLVED_EXPRESSION))),
         ExpressionNode::ArraySlice(_, _, _) => Err(unsupported(
-            "срез массива: в Takt он не имеет типа-владельца, а в no_std нет alloc",
+            &msg!(keys::RS_WHAT_ARRAY_SLICE),
         )),
-        ExpressionNode::CodeBlock(_, _) => Err(unsupported("блок кода в позиции выражения")),
+        ExpressionNode::CodeBlock(_, _) => Err(unsupported(&msg!(keys::RS_WHAT_CODE_BLOCK))),
         ExpressionNode::NamedFunctionBox(_, _) => {
-            Err(unsupported("вызов с именованными аргументами"))
+            Err(unsupported(&msg!(keys::RS_WHAT_NAMED_CALL)))
         }
         // Целая степень - `wrapping_pow`; довод - в заголовке
         // `rust_shift`.
@@ -658,20 +642,18 @@ pub(crate) fn print_expression(expr: &ExpressionNode, scope: &Scope) -> Result<S
             crate::generator::rust::rust_shift::power(base, exp, scope, scope.power_target.as_ref())
         }
         ExpressionNode::String(_) => Err(unsupported(
-            "строковый литерал вне вызова debug: в no_std нет владеющей строки",
+            &msg!(keys::RS_WHAT_STRING),
         )),
-        ExpressionNode::Type(_) => Err(unsupported("тип в позиции выражения")),
+        ExpressionNode::Type(_) => Err(unsupported(&msg!(keys::RS_WHAT_TYPE))),
         ExpressionNode::Address(_, _) => Err(unsupported(
-            "адресный литерал: цель rust карту адресов не потребляет \
-             (порты идут через HAL-трейт)",
+            &msg!(keys::RS_WHAT_ADDRESS),
         )),
         // Анонимное обращение: у цели `rust` порт - метод
         // HAL-трейта, адреса она не знает.
         ExpressionNode::AnonPort(_) => Err(unsupported(
-            "обращение к ячейке по адресу ('#0x…'): цель rust адресов не знает — \
-             доступ по адресу дают цели 'c-hal', 'st-at' и 'sv-mmio'",
+            &msg!(keys::RS_WHAT_ANON_PORT),
         )),
-        ExpressionNode::Model(_) => Err(unsupported("модель в позиции выражения")),
+        ExpressionNode::Model(_) => Err(unsupported(&msg!(keys::RS_WHAT_MODEL))),
         // Именованное условие печатается печатником условий;
         // `condition_as_bool` тут не годится - довод в.
         ExpressionNode::Condition(cond) => {
@@ -827,8 +809,8 @@ fn call(
             rust_value_name(name, *loc)?,
             printed.join(", ")
         )),
-        FunctionDefinitionNode::None => Err(unsupported("пустое определение функции")),
-        FunctionDefinitionNode::Unresolved(_) => Err(unsupported("неразрешённая функция")),
+        FunctionDefinitionNode::None => Err(unsupported(&msg!(keys::RS_WHAT_EMPTY_FUNCTION))),
+        FunctionDefinitionNode::Unresolved(_) => Err(unsupported(&msg!(keys::RS_WHAT_UNRESOLVED_FUNCTION))),
     }
 }
 
@@ -876,7 +858,7 @@ pub(crate) fn call_arguments(
             FunctionDefinitionNode::Local { name, .. } => name.clone(),
             _ => String::new(),
         };
-        args.push(scope.hal_argument(&format!("вызов функции '{}'", name))?);
+        args.push(scope.hal_argument(&msg!(keys::RS_WHAT_FUNCTION_CALL, name = name))?);
     }
     Ok(args)
 }
@@ -905,22 +887,22 @@ fn builtin(
         ("debug", 1) => {
             let ExpressionNode::String(parts) = &args[0] else {
                 return Err(unsupported(
-                    "debug с нестроковым аргументом: в no_std форматирования нет, \
-                     HAL-метод принимает готовую строку",
+                    &msg!(keys::RS_WHAT_DEBUG_NON_STRING),
                 ));
             };
             Ok(format!(
                 "{}.debug(\"{}\")",
-                scope.hal_receiver("встроенная функция 'debug'")?,
+                scope.hal_receiver(&msg!(keys::RS_WHAT_BUILTIN_DEBUG))?,
                 escape(&parts.join(""))
             ))
         }
         ("S", 1) => Err(unsupported(
-            "встроенная функция S вне условия 'S(Модель) = Состояние'",
+            &msg!(keys::RS_WHAT_BUILTIN_S_OUTSIDE),
         )),
-        (other, n) => Err(unsupported(&format!(
-            "встроенная функция '{}' с {} аргументами",
-            other, n
+        (other, n) => Err(unsupported(&msg!(
+            keys::RS_WHAT_BUILTIN_ARITY,
+            name = other,
+            count = n
         ))),
     }
 }

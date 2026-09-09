@@ -420,3 +420,100 @@ se-119.named-block-without-body = a named block without a body
 se-081.implementation-not-a-composition = the implementation expression does not reduce to a composition of models
 what.anonymous-model = <anonymous>
 minimap.model-needs-start = the model must have a start state
+
+# ─── Target c: unsupported construct (`generator/c/c_unsupported.rs`) ────────
+cc-022.refusal = {what} is not translated to C by the 'c' target
+cc-022.refusal-with-reason = {what} is not translated to C by the 'c' target: {reason}
+cc-022.node-model = a model reference in an expression
+cc-022.node-array-slice = an array slice
+cc-022.node-code-block = a code block in expression position
+cc-022.node-named-function = a named function as a value
+cc-022.node-parameter-list = a parameter list in expression position
+cc-022.node-type = a type in expression position
+cc-022.node-address = an address literal in an expression
+cc-022.node-builtin = the built-in function '{name}'
+cc-022.node-unknown-builtin = an unknown built-in function
+cc-022.node-bit-beyond-vector = a bit beyond the bit vector
+cc-022.node-wide-bit-vector = the operation '{op}' on a bit vector wider than 64 bits
+cc-022.why-model = accessing a sub-model variable through the model name is not supported by the language in any consumer: a sub-model value is read through its port
+cc-022.why-array-slice = C has no slice operation, and a slice in Takt has no owning type
+cc-022.why-builtin = it serves debugging and generates no code
+cc-022.why-bit-beyond-vector = a vector has no bits beyond its declared width, and access past the word array is undefined behaviour in the generated firmware
+cc-022.why-wide-bit-vector = a vector wider than 64 bits is represented as an array of words, and no such operation on words exists; the reference does not support it either (SIM-005) — work with individual bits or split the vector into fields
+
+# ─── Target c: unresolved node (`generator/c/c_unresolved.rs`) ───────────────
+cc-023.refusal = {what}: the node did not pass semantic lowering and is not translated to C
+cc-023.node-condition = an unresolved condition
+cc-023.node-expression = an unresolved expression
+cc-023.node-statement = an unresolved statement
+cc-023.node-empty-expression = an empty expression
+cc-023.node-variable = an unresolved variable
+cc-023.node-port-owner = an unresolved port owner ({where})
+cc-023.node-function-named = an unresolved function definition '{name}'
+cc-023.node-function = an unresolved function definition
+cc-023.node-const-value = an uncomputed constant value '{name}'
+
+# ─── Target sv: uncovered node and refusals (`generator/sv/sv_expr.rs`) ──────
+sv-002.refusal = not translated to SystemVerilog: {what}
+sv-002.note = the construct cannot be skipped silently: the generated module would behave differently from the model
+sv-005.extern-function = the external function '{name}' (extern fn) is not supported by the 'sv' target: synthesisable RTL has no call to external code. DPI-C is a simulation mechanism unavailable to a synthesiser; the hardware counterpart of an “external function” is a separate module with its own interface, while Takt's extern fn describes neither ports, nor ticks, nor latency, and they cannot be inferred. Use the 'c'/'st'/'rust' target or express the logic in Takt
+sv-009.variable-divisor = division or remainder by a variable divisor: synthesisable RTL has no hardware divider, so '/' and '%' expand into a large combinational block (an order of magnitude larger than addition) with a long path — this lowers the achievable clock ceiling. A constant divisor does not cost that (it folds into shifts and multiplication by the reciprocal); if the divisor is constant in essence, move it to a constant
+sv-015.after-outside-time = an 'after' delay must be printed through sv_time, not as a condition
+sv.what-duration-in-condition = a duration literal in a condition
+sv.what-duration = a duration literal
+sv.what-unresolved-variable-in-condition = an unresolved variable in a condition
+sv.what-unresolved-condition = an unresolved condition
+sv.what-rational = a rational literal: synthesisable RTL has no floating point (see SV-003)
+sv.what-string = a string literal
+sv.what-model-in-condition = a model reference in a condition
+sv.what-state-in-condition = a state reference in a condition
+sv.what-unresolved-variable = an unresolved variable
+sv.what-assign-in-expression = an assignment inside an expression (in SystemVerilog assignment is a statement)
+sv.what-empty-expression = an empty expression
+sv.what-unresolved-expression = an unresolved expression
+sv.what-array-slice = an array slice
+sv.what-code-block = a code block in an expression
+sv.what-named-call = a call with named arguments
+sv.what-type = a type in expression position
+sv.what-address = a port address: an address is meaningless for RTL — the signal arrives at a chip pin, not at an address
+sv.what-model = a model reference in an expression
+sv.what-parameter-list = a parameter list in expression position
+sv.what-array-literal = an array literal
+sv.what-struct-initializer = a structure initialiser
+
+# ─── Target rust: untranslatable and refusals (`generator/rust/rust_expr.rs`) ─
+rs-011.refusal = not translated to Rust: {what}
+rs-022.hal-unavailable = {what} requires access to the HAL, but it is unavailable in this scope
+rs-017.model-variable-in-function = accessing the model variable '{name}' from a function body is not translated to Rust: a function does not see the model state. Pass the value as a parameter
+rs-018.output-port-read = reading the output port '{name}' is not translated to Rust: the HAL trait gives an output port only writing
+rs-018.input-port-write = writing to the input port '{name}' is not translated to Rust: the HAL trait gives an input port only reading
+rs.what-port-read = reading port '{name}'
+rs.what-port-write = writing to port '{name}'
+rs.what-function-call = a call to the function '{name}'
+rs.what-builtin-debug = the built-in function 'debug'
+rs.what-unresolved-variable = an unresolved variable
+rs.what-wide-bit-vector = the operation '{op}' on a bit vector wider than 64 bits: it is represented as an array of words, and no such operation on words exists — the reference does not support it either (SIM-005); work with individual bits
+rs.what-duration = a duration literal
+rs.what-cast = a type cast
+rs.what-empty-expression = an empty expression
+rs.what-unresolved-expression = an unresolved expression
+rs.what-array-slice = an array slice: in Takt it has no owning type, and no_std has no alloc
+rs.what-code-block = a code block in expression position
+rs.what-named-call = a call with named arguments
+rs.what-string = a string literal outside a debug call: no_std has no owned string
+rs.what-type = a type in expression position
+rs.what-address = an address literal: the rust target does not consume the address map (ports go through the HAL trait)
+rs.what-anon-port = an address cell access ('#0x…'): the rust target does not know addresses — address access is given by the 'c-hal', 'st-at' and 'sv-mmio' targets
+rs.what-model = a model in expression position
+rs.what-empty-function = an empty function definition
+rs.what-unresolved-function = an unresolved function
+rs.what-debug-non-string = debug with a non-string argument: no_std has no formatting, the HAL method takes a ready string
+rs.what-builtin-s-outside = the built-in function S outside the condition 'S(Model) = State'
+rs.what-builtin-arity = the built-in function '{name}' with {count} arguments
+
+# ─── Verification: why a check is refused (`verification/verify.rs`) ─────────
+verify.unknown-atom = the atom is neither a state name of this model nor a predicate over its data: a typo in the name, or a state of a nested model (states of nested models are out of scope)
+verify.predicate-outside-subset = the data predicate is outside the supported subset: it contains arithmetic, a function call, a port access, a bit access or a non-enumerable type (`float`, `q`, `duration`, array, structure) — comparisons and logical connectives over variables are tracked
+verify.domain-not-enumerable = the domain of a tracked variable is not enumerable: `float`, `q(m, n)`, `duration`, an array or a structure — the check enumerates values, and there is nothing to enumerate here
+verify.size-over-limit = the problem size is over the ceiling: the edge count is `graph edges × (product of domains)²`, and beyond 1 000 000 the check is refused before counting. Narrow the domains of the formula variables (for example `u8` → `enum`/`bit`) or take a property over fewer of them
+verify.initial-value-unknown = the initial value of a tracked variable is unknown: the initialiser does not fold to a constant, or the value is outside the domain of its type
