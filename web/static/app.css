@@ -417,7 +417,7 @@ body {
  * и "сколько нужно" зависит от монитора и от модели.
  * Ширина одна на все три полосы: разъедься они - вкладки перестали бы
  * стоять над своей областью. */
-.bar, .work, .modes {
+.bar, .work, .modes, .say {
   width: 100%;
   max-width: var(--shell-w);
   margin-left: auto;
@@ -457,7 +457,7 @@ body {
  * который спорит с прокруткой. */
 @media (max-width: 900px), (hover: none) {
   .grip { display: none; }
-  .bar, .work, .modes { max-width: none; }
+  .bar, .work, .modes, .say { max-width: none; }
 }
 
 /* Разделитель областей: та же полоса, что у ручки ширины, но не у края окна, а
@@ -1521,9 +1521,32 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 }
 
 .status { font-size: var(--text-sm); }
-.status-ok { color: var(--yes); }
-.status-warning { color: var(--on-surface-warn); }
-.status-error { color: var(--on-surface-alarm); }
+
+/* ── Полоса сообщений (`.say`) ───────────────────────────────────────────
+ * Одна на страницу, внизу, во всю ширину оболочки. Высота постоянная и равна
+ * плотному контролу: полоса, растущая под текст, двигала бы рабочую область на
+ * каждое сообщение. Отсюда и запрет на длинный текст - он не переносится, а
+ * обрезается многоточием, и всё, что не поместилось, читателю не достанется. */
+.say {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  height: var(--h-dense);
+  padding: 0 var(--gap);
+  border-top: 1px solid var(--border);
+  background: var(--surface-sunken);
+  color: var(--on-surface-sunken);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Род сообщения - чернила, а не заливка: полоса стоит постоянно, и заливка
+ * тревожного тона во всю ширину звучала бы громче содержимого страницы. */
+.say-ok { color: var(--yes); }
+.say-warning { color: var(--on-surface-warn); }
+.say-error { color: var(--on-surface-alarm); }
 
 /* Движение гасится по просьбе системы. */
 @media (prefers-reduced-motion: reduce) {

@@ -476,6 +476,43 @@ const PAGE_SCRIPTS = [
  */
 const TEXT_EXEMPT = ["sample.js", "i18n.js"];
 
+/**
+ * Предел длины сообщения полосы - правило книги оформления.
+ *
+ * Полоса постоянной высоты не переносит строку: всё, что длиннее, обрезается
+ * многоточием, и читателю не достаётся.
+ */
+const SAY_LIMIT = 40;
+
+/**
+ * Тела вызовов, начинающихся с `head`, - до сбалансированной закрывающей скобки.
+ *
+ * Регулярное выражение здесь не годится: вызов бывает разбит на строки, а
+ * поиск "до первой скобки" обрывает его на вложенном вызове - и половина
+ * сообщений просто не попала бы в проверку.
+ */
+function calls(source, head) {
+  const found = [];
+  let at = source.indexOf(head);
+  while (at >= 0) {
+    let depth = 0;
+    let end = at + head.length - 1;
+    for (; end < source.length; end += 1) {
+      if (source[end] === "(") depth += 1;
+      else if (source[end] === ")") {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    // Тело функции лежит за списком её аргументов: `function f()` кончается
+    // пустыми скобками, и без хвоста проверять было бы нечего.
+    const tail = head.startsWith("function") ? source.slice(end, source.indexOf("\n}", end)) : "";
+    found.push(source.slice(at, end + 1) + tail);
+    at = source.indexOf(head, end + 1);
+  }
+  return found;
+}
+
 /** Путь к собранной статике; проверки сборки без него пропускаются. */
 const DIST = process.argv[3] ?? process.env.TAKT_WEB_DIST ?? null;
 
@@ -824,6 +861,91 @@ test("области: генерация и диагностика открыв�
   // Обе отжаты - область уходит вместе со своим разделителем.
   assert.match(css, /body\[data-panel="none"\][\s\S]{0,200}?display: none/,
     "закрытая область остаётся на экране");
+});
+
+test("сообщения: одна полоса внизу, а в шапке области их нет", async () => {
+  // Предмет - место. Сообщение об удавшемся действии и об отказе застаёт автора
+  // в любой из областей, и строка в шапке одной из них оставалась бы
+  // незамеченной в двух других. Машинно это не ломает ничего, и потому невидимо
+  // всем прочим проверкам.
+  const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
+  const app = await readFile(new URL("../static/app.js", import.meta.url), "utf8");
+  const css = await readFile(new URL("../static/app.css", import.meta.url), "utf8");
+
+  // Полоса стоит после рабочей области и перед полкой режимов: внизу страницы,
+  // но не под зоной жестов телефона.
+  const order = ["</main>", 'id="say"', 'id="modes"'].map((mark) => html.indexOf(mark));
+  assert.ok(order.every((at) => at >= 0), "полосы сообщений в разметке нет");
+  assert.deepEqual(order.slice().sort((a, b) => a - b), order, "полоса стоит не внизу страницы");
+
+  // Строки состояния в шапке области кода не осталось: два места для одного
+  // сообщения означали бы, что в одном из них оно устаревает.
+  const source = html.slice(html.indexOf('class="pane pane-source"'), html.indexOf('id="split"'));
+  assert.ok(!source.includes('id="status"'), "строка состояния осталась в шапке области");
+  assert.ok(!app.includes("dom.status"), "страница всё ещё пишет в строку состояния");
+
+  // Ширина - та же, что у прочих полос страницы: разъедься они, полоса
+  // сообщений встала бы шире шапки.
+  assert.match(css, /\.bar, \.work, \.modes, \.say \{/, "полоса вне ширины оболочки");
+  // Высота постоянная: растущая под текст полоса двигала бы рабочую область на
+  // каждое сообщение.
+  assert.match(css, /\.say \{[^}]*height: var\(--h-dense\)/, "высота полосы не постоянна");
+  assert.match(css, /\.say \{[^}]*white-space: nowrap/, "полоса переносит строку");
+});
+
+test("сообщения: текст короток, и список ключей берётся из кода", async () => {
+  // Предел не украшение: полоса не переносит строку, а обрезает её многоточием,
+  // и всё, что не поместилось, читателю не достаётся. Список ключей берётся из
+  // вызовов `say` - свой список разошёлся бы с кодом молча.
+  const sources = await Promise.all(
+    PAGE_SCRIPTS.map((name) => readFile(new URL(`../static/${name}`, import.meta.url), "utf8"))
+  );
+  const keys = new Set();
+  for (const source of sources) {
+    for (const call of calls(source, "say(")) {
+      for (const [, key] of call.matchAll(/\bt\(\s*"([\w.]+)"/g)) keys.add(key);
+    }
+  }
+  assert.ok(keys.size >= 20, `сообщений найдено ${keys.size} — разбор вызовов не сработал`);
+
+  for (const lang of Object.keys(i18n.LANGUAGES)) {
+    const dict = await dictionary(lang);
+    const long = [...keys]
+      .filter((key) => (dict[key] ?? "").length > SAY_LIMIT)
+      .map((key) => `${key} (${dict[key].length})`);
+    assert.deepEqual(long, [], `в '${lang}' сообщения длиннее ${SAY_LIMIT} знаков: ${long.join(", ")}`);
+  }
+});
+
+test("диагностика компилятора: одно место — панель диагностики", async () => {
+  // Пока отказ цели печатался ещё и в окне генерации, автор смотрел в два
+  // места, а сходились они не всегда: окно показывало отказ последней сборки.
+  const app = await readFile(new URL("../static/app.js", import.meta.url), "utf8");
+  const body = calls(app, "function compile()")[0] ?? "";
+
+  assert.ok(body.includes("showTargetDiagnostics([refusal("), "отказ цели не уходит в диагностики");
+  assert.ok(!/dom\.output\.appendChild\(row\([^)]*error/.test(body),
+    "отказ цели всё ещё печатается в области вывода");
+  // Пустая область читается как поломка: она обязана сказать о себе сама.
+  assert.ok(body.includes('t("output.empty")'), "область вывода молчит при отказе");
+  // Предупреждения цели - те же её замечания к модели.
+  assert.ok(/showTargetDiagnostics\(\s*\(reply\.warnings/.test(body),
+    "предупреждения цели не доходят до диагностик");
+  // Закрытая панель снимает и замечания: висящее замечание от сборки, которой
+  // не строят, читатель отнёс бы к модели.
+  assert.match(app, /state\.panel !== "output"\) \{\s*showTargetDiagnostics\(\[\]\);/,
+    "закрытая генерация оставляет свои замечания висеть");
+
+  // Позиция печатается, только когда она есть: "1:1" у отказа без координаты
+  // указывало бы на начало файла.
+  assert.match(app, /const where = at \? `\$\{at\.start_line \+ 1\}/,
+    "позиция диагностики печатается безусловно");
+
+  // Одна ошибка - одна строка. Разбор судит текст, и цель отказывает на нём же:
+  // нашлось прогоном страницы, когда синтаксическая ошибка встала в списке
+  // дважды - первой строкой от разбора и последней от цели.
+  assert.ok(app.includes("sameDiagnostic("), "повтор диагностики не снимается");
+  assert.match(app, /state\.targetDiagnostics\.filter\(/, "замечания цели не сверяются с показанными");
 });
 
 test("структура проекта: область справа, файлы по родам", async () => {

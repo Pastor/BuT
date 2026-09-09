@@ -80,6 +80,15 @@ const state = {
   panel: "output",
   /** Вкладка внутри панели генерации. */
   tab: "output",
+  /**
+   * Замечания к модели: от моста (разбор, семантика) и от цели генерации.
+   *
+   * Списка два, потому что обновляются они порознь: разбор идёт на каждую
+   * правку текста, генерация - ещё и на смену цели или ключей сборки. Показ у
+   * них один: место замечания компилятора - панель диагностики, и только она.
+   */
+  diagnostics: [],
+  targetDiagnostics: [],
   version: "",
   languageVersion: "",
   running: false,
@@ -471,7 +480,7 @@ function docks() {
 function cache() {
   for (const id of [
     "editor", "diagnostics", "output", "trace", "version", "target", "args",
-    "scenario", "budget", "share", "format", "status", "tabs", "modes",
+    "scenario", "budget", "share", "format", "say", "tabs", "modes",
     "lang", "tools-lang", "tools-lang-trace", "update", "showgen", "showdiag", "grip", "split", "hsplit", "wrap", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
     "account", "session", "icon-enter", "icon-leave",
     "save", "openfile", "panel", "signedout", "signedin", "whoami",
@@ -869,7 +878,36 @@ function showDoc() {
   dom.doc.replaceChildren(md.render(state.editor.value(), document));
 }
 
+/** Замечания разбора и семантики: приходят на каждую правку текста. */
 function showDiagnostics(items) {
+  state.diagnostics = items;
+  drawDiagnostics();
+}
+
+/** Замечания цели генерации: приходят на сборку, а не на правку. */
+function showTargetDiagnostics(items) {
+  state.targetDiagnostics = items;
+  drawDiagnostics();
+}
+
+/**
+ * Рисует список диагностик - оба их источника разом.
+ *
+ * Место замечания компилятора одно, и это оно: пока отказ цели печатался ещё и
+ * в окне генерации, автору приходилось смотреть в два места, а сходились они не
+ * всегда - окно показывало отказ той сборки, которую строили последней.
+ */
+function drawDiagnostics() {
+  // Одна и та же ошибка приходит двумя путями: разбор судит текст, а цель
+  // отказывает на нём же - и в списке она стояла бы дважды. Повтор снимается
+  // сравнением, а не запретом показывать отказ при живых диагностиках: цель
+  // отказывает и там, где разбор молчит.
+  const items = [
+    ...state.diagnostics,
+    ...state.targetDiagnostics.filter(
+      (item) => !state.diagnostics.some((shown) => sameDiagnostic(shown, item))
+    ),
+  ];
   dom.diagnostics.replaceChildren();
   if (items.length === 0) {
     dom.diagnostics.appendChild(row(t("diagnostics.none"), "ok"));
@@ -878,11 +916,15 @@ function showDiagnostics(items) {
   for (const item of items) {
     // Диагностика показывается словами, а не только подчёркиванием: цвет - не
     // единственный носитель состояния.
-    const line = (item.range?.start_line ?? 0) + 1;
-    const column = (item.range?.start_character ?? 0) + 1;
+    //
+    // Позиция печатается, только когда она есть: у отказа цели координаты
+    // может не быть вовсе, и "1:1" указывало бы на начало файла - место
+    // достовернее отсутствующего лишь на вид.
+    const at = item.range;
+    const where = at ? `${at.start_line + 1}:${at.start_character + 1}: ` : "";
     const code = item.code ? `[${item.code}] ` : "";
-    const node = row(`${line}:${column}: ${code}${item.message}`, item.severity ?? "error");
-    node.addEventListener("click", () => jump(item.range?.start_line ?? 0, item.range?.start_character ?? 0));
+    const node = row(`${where}${code}${item.message}`, item.severity ?? "error");
+    if (at) node.addEventListener("click", () => jump(at.start_line, at.start_character));
     dom.diagnostics.appendChild(node);
   }
 }
@@ -965,15 +1007,18 @@ function compile() {
   // может быть ещё не загружен: панель выбирается до модуля (страница помнит её с
   // прошлого раза), и без этой проверки старт падает целиком - страница показывает
   // "модуль не загрузился" при живом модуле.
-  if (!state.bridge || state.panel !== "output") return;
+  if (!state.bridge || state.panel !== "output") {
+    showTargetDiagnostics([]);
+    return;
+  }
   const reply = state.bridge.compile(state.target, state.args, state.editor.value());
   dom.output.replaceChildren();
   if (!reply.ok) {
-    // Отказ цели показывается как её диагностика (критерий 5 фичи): код, позиция и
-    // текст - те же, что печатает `taktc`.
-    const code = reply.error?.code ? `[${reply.error.code}] ` : "";
-    const where = reply.error?.line ? `${reply.error.line}:${reply.error.column}: ` : "";
-    dom.output.appendChild(row(`${where}${code}${reply.error?.message ?? t("output.refused")}`, "error"));
+    // Отказ цели - замечание к модели, и место у него то же, что у прочих:
+    // панель диагностики. Область вывода при этом не молчит - пустая область
+    // читается как поломка, - но говорит она о себе: строить нечего.
+    showTargetDiagnostics([refusal(reply.error)]);
+    dom.output.appendChild(row(t("output.empty"), "ok"));
     return;
   }
   for (const file of reply.files ?? []) {
@@ -985,9 +1030,44 @@ function compile() {
     paintOutput(body, file.text, header);
     dom.output.append(header, body);
   }
-  for (const warning of reply.warnings ?? []) {
-    dom.output.appendChild(row(`[${warning.code ?? "?"}] ${warning.message}`, "warning"));
-  }
+  // Предупреждения цели - тоже её замечания к модели: они идут туда же, куда
+  // отказ, и рядом с ними стоят замечания разбора.
+  showTargetDiagnostics(
+    (reply.warnings ?? []).map((warning) => ({
+      code: warning.code,
+      message: warning.message,
+      severity: "warning",
+    }))
+  );
+}
+
+/** Две диагностики об одном: код, место и текст. */
+function sameDiagnostic(a, b) {
+  return (
+    a.code === b.code &&
+    a.message === b.message &&
+    a.range?.start_line === b.range?.start_line &&
+    a.range?.start_character === b.range?.start_character
+  );
+}
+
+/**
+ * Отказ цели в форме диагностики.
+ *
+ * Координата у цели считается от единицы (её печатает `taktc`), а список
+ * диагностик - от нуля: разница снимается здесь, в одном месте. Отказ без
+ * координаты остаётся без неё - выдуманное место хуже отсутствующего.
+ */
+function refusal(error) {
+  const at = error?.line
+    ? { start_line: error.line - 1, start_character: (error.column ?? 1) - 1 }
+    : null;
+  return {
+    code: error?.code,
+    message: error?.message ?? t("output.refused"),
+    severity: "error",
+    ...(at ? { range: at } : {}),
+  };
 }
 
 /**
@@ -1390,7 +1470,17 @@ function showLog(shown) {
   shell.remember(localStorage, shell.UI_KEYS.log, shown ? "1" : "0");
 }
 
+/**
+ * Говорит автору, что инструмент сделал и чего не смог.
+ *
+ * Место одно - полоса внизу страницы: сообщение застаёт автора в любой из
+ * областей, и строка в шапке одной из них оставалась бы незамеченной в двух
+ * других. Текст короток по правилу книги оформления: полоса постоянной высоты
+ * не переносит строку, а обрезает её.
+ *
+ * Замечания к модели сюда не попадают: их место - панель диагностики.
+ */
 function say(text, kind) {
-  dom.status.textContent = text;
-  dom.status.className = `status status-${kind}`;
+  dom.say.textContent = text;
+  dom.say.className = `say say-${kind}`;
 }
