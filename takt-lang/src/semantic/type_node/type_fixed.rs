@@ -4,6 +4,8 @@
 //! ширина хранения, диапазон представления и понижение вещественного литерала
 //! (`SE-058`).
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::TypeNode;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::semantic::{ExpressionNode, VariableNode};
@@ -25,11 +27,7 @@ pub(crate) fn construct_fixed(
     if ctor != "q" {
         return Err(Diagnostic::declaration_error(
             loc,
-            format!(
-                "неизвестный конструктор типа '{}(…, …)'; единственный параметрический \
-                 тип — fixed-point 'q(m, n)'",
-                ctor
-            ),
+            msg!(keys::SE_057_UNKNOWN_TYPE_CONSTRUCTOR, ctor = ctor),
         )
         .with_code("SE-057"));
     }
@@ -39,10 +37,7 @@ pub(crate) fn construct_fixed(
     let bound = |what: &str| {
         Diagnostic::declaration_error(
             loc,
-            format!(
-                "fixed-point 'q({}, {})': {} (требуется m ≥ 1, n ≥ 1, m + n ≤ 64)",
-                m, n, what
-            ),
+            msg!(keys::SE_057_FIXED_FORMAT_INVALID, m = m, n = n, what = what),
         )
         .with_code("SE-057")
     };
@@ -65,11 +60,7 @@ pub(crate) fn construct_fixed(
         Some(other) => {
             return Err(Diagnostic::declaration_error(
                 loc,
-                format!(
-                    "после формата fixed-point 'q({}, {})' допустим только модификатор \
-                     'sat' (насыщение вместо переноса), получено '{}'",
-                    m, n, other
-                ),
+                msg!(keys::SE_104_FIXED_MODIFIER_UNKNOWN, m = m, n = n, other = other),
             )
             .with_code("SE-104"));
         }
@@ -243,9 +234,12 @@ pub(crate) fn lower_fixed_var(var: &VariableNode) -> Result<Option<VariableNode>
 fn se058(loc: Location, m: u8, n: u8, lit: &str, why: &str) -> Diagnostic {
     Diagnostic::declaration_error(
         loc,
-        format!(
-            "литерал '{}' не представим в fixed-point 'q({}, {})': {}",
-            lit, m, n, why
+        msg!(
+            keys::SE_058_FIXED_LITERAL_UNREPRESENTABLE,
+            literal = lit,
+            m = m,
+            n = n,
+            why = why
         ),
     )
     .with_code("SE-058")

@@ -55,7 +55,7 @@ pub(super) fn parse_arguments(
                 msg!(keys::SE_080_ARGUMENT_GIVEN_TWICE, name = name),
             )
             .with_code("SE-080")
-            .with_note(*first, format!("первое задание '{name}'")));
+            .with_note(*first, msg!(keys::NOTE_FIRST_ASSIGNMENT, name = name)));
         }
         seen.insert(name.clone(), loc);
         parsed.push(ParameterArgument { name, loc, value });

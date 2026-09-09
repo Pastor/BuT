@@ -2,6 +2,8 @@
 //!
 //! Часть модуля `validate`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::*;
 
 /// Структура без полей - `SE-115`.
@@ -16,13 +18,7 @@ pub fn validate_empty_structs(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> 
         .map(|st| {
             Diagnostic::declaration_error(
                 st.loc,
-                format!(
-                    "структура '{}' объявлена без полей: у структуры обязано быть \
-                     хотя бы одно поле (добавьте поле либо удалите объявление). \
-                     Пустая запись невалидна по стандарту C (6.7.2.1) и отвергается \
-                     компилятором ST",
-                    st.name
-                ),
+                msg!(keys::SE_115_STRUCT_WITHOUT_FIELDS, name = st.name),
             )
             .with_code("SE-115")
         })
@@ -60,10 +56,7 @@ pub fn check_duplicate_struct_fields(model: Rc<RefCell<ModelNode>>) -> Option<Di
                 return Some(
                     Diagnostic::error(
                         s.loc,
-                        format!(
-                            "структура '{}' содержит дублирующееся поле '{}'",
-                            s.name, field_name
-                        ),
+                        msg!(keys::SE_040_STRUCT_DUPLICATE_FIELD, name = s.name, field = field_name),
                     )
                     .with_code("SE-040"),
                 );
@@ -116,9 +109,11 @@ pub fn check_struct_field_types(model: Rc<RefCell<ModelNode>>) -> Option<Diagnos
                     return Some(
                         Diagnostic::error(
                             s.loc,
-                            format!(
-                                "поле '{}' структуры '{}' ссылается на неизвестный тип '{}'",
-                                field_name, s.name, type_name
+                            msg!(
+                                keys::SE_041_STRUCT_FIELD_UNKNOWN_TYPE,
+                                field = field_name,
+                                name = s.name,
+                                ty = type_name
                             ),
                         )
                         .with_code("SE-041"),

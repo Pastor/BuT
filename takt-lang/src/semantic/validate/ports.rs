@@ -2,6 +2,8 @@
 //!
 //! Часть модуля `validate`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::*;
 
 pub(super) fn validate_variables(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> {
@@ -75,11 +77,7 @@ fn collect_incomplete_addresses(
         if !has_inline && !has_operator && !has_external {
             let mut diagnostic = Diagnostic::warning(
                 *loc,
-                format!(
-                    "порт '{}' используется в кодогенерации, но не имеет адреса \
-                     (ни inline, ни оператором `address`, ни во внешней карте)",
-                    name
-                ),
+                msg!(keys::SE_052_PORT_WITHOUT_ADDRESS, name = name),
             )
             .with_code("SE-052");
             // Порт, заведённый компилятором, автор в тексте не найдёт: отказ без этой
@@ -124,10 +122,7 @@ pub(super) fn check_port_addresses(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnos
             out.push(
                 Diagnostic::error(
                     def.loc,
-                    format!(
-                        "оператор `address` ссылается на несуществующий порт '{}'",
-                        def.port
-                    ),
+                    msg!(keys::SE_048_ADDRESS_PORT_NOT_FOUND, name = def.port),
                 )
                 .with_code("SE-048"),
             );
@@ -138,10 +133,7 @@ pub(super) fn check_port_addresses(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnos
             out.push(
                 Diagnostic::error(
                     def.loc,
-                    format!(
-                        "адрес порта '{}' задан оператором `address` более одного раза",
-                        def.port
-                    ),
+                    msg!(keys::SE_049_ADDRESS_GIVEN_TWICE, name = def.port),
                 )
                 .with_code("SE-049"),
             );
@@ -152,10 +144,7 @@ pub(super) fn check_port_addresses(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnos
             out.push(
                 Diagnostic::error(
                     def.loc,
-                    format!(
-                        "адрес порта '{}' задан одновременно inline и оператором `address`",
-                        def.port
-                    ),
+                    msg!(keys::SE_049_ADDRESS_INLINE_AND_OPERATOR, name = def.port),
                 )
                 .with_code("SE-049"),
             );
@@ -181,11 +170,10 @@ pub fn warn_nested_model_ports(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnostic>
                 if let VariableNode::Port { name, loc, .. } = var {
                     result.push(Diagnostic::warning(
                         *loc,
-                        format!(
-                            "Порт '{}' объявлен во вложенной модели '{}' и будет виден \
-                             всем моделям через перечисления портов корневой модели",
-                            name,
-                            borrowed.name()
+                        msg!(
+                            keys::PORT_NESTED_MODEL_VISIBLE,
+                            name = name,
+                            model = borrowed.name()
                         ),
                     ));
                 }

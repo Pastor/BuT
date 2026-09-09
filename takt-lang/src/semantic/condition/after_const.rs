@@ -40,7 +40,9 @@
 //! выдержка недостижима. Именно поэтому `time_ast::raw_has_after_kind` относит эту
 //! форму к **длительностным**.
 
+use crate::diagnostics::lang::{Key, keys, render};
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::parser::ast;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ConditionNode, ExpressionNode, ModelNode, VariableNode};
@@ -61,7 +63,7 @@ enum Cause {
     /// Имени нет в области видимости (ни своей, ни родительских).
     Undeclared(String),
     /// Имя есть, но это переменная, порт или неразрешённое объявление.
-    NotConst(String, &'static str),
+    NotConst(String, Key),
     /// Имя есть, и это **параметр модели**.
     ///
     /// Отдельная причина, а не разновидность [`Cause::NotConst`], по двум доводам.
@@ -81,7 +83,7 @@ enum Cause {
     FunctionCall(String),
     /// Форма, которой в константной выдержке быть не может (сравнение, логика, строка,
     /// доступ к биту и т.
-    NotConstantForm(&'static str),
+    NotConstantForm(Key),
     /// Результат отрицателен - выдержки "минус две секунды" не бывает.
     Negative(i64),
     /// Переполнение при сложении/вычитании наносекунд.
@@ -93,57 +95,26 @@ enum Cause {
 impl Cause {
     fn message(&self) -> String {
         match self {
-            Cause::Undeclared(name) => format!(
-                "выдержка 'after': константа '{name}' не объявлена — 'after' принимает \
-                 литерал длительности (after 3m), литерал тактов (after 3t), имя \
-                 константы типа duration либо константное выражение над \
-                 длительностями (after (BASE + 30s))"
-            ),
+            Cause::Undeclared(name) => msg!(keys::AFTER_UNDECLARED, name = name),
             Cause::Parameter(name) => {
                 crate::semantic::parameter_const::compile_time_parameter_text(
                     name,
-                    "выдержка 'after'",
+                    &msg!(keys::AFTER_SUBJECT),
                 )
             }
-            Cause::NotConst(name, kind) => format!(
-                "выдержка 'after': '{name}' — это {kind}, а выдержке нужна константа \
-                 типа duration (const {name} := 3m;); значение, известное только в \
-                 такте, компилятор подставить не может"
+            Cause::NotConst(name, kind) => msg!(
+                keys::AFTER_NOT_CONST,
+                name = name,
+                kind = render(*kind, &[])
             ),
-            Cause::WrongType(name, ty) => format!(
-                "выдержка 'after': константа '{name}' имеет тип {ty}, а выдержке нужен \
-                 duration"
-            ),
-            Cause::NotLiteral(name) => format!(
-                "выдержка 'after': значение константы '{name}' не сводится к литералу \
-                 длительности — допустимы литерал (const {name} := 3m;), имя другой \
-                 такой константы либо их сумма и разность"
-            ),
-            Cause::BareNumber(n) => format!(
-                "выдержка 'after': число {n} без единицы времени — длительность \
-                 сочетается только с длительностью (напишите {n}s, {n}ms или {n}us)"
-            ),
-            Cause::FunctionCall(name) => format!(
-                "выдержка 'after': вызов функции '{name}' в выражении выдержки \
-                 недопустим — её значение компилятору неизвестно"
-            ),
-            Cause::NotConstantForm(what) => format!(
-                "выдержка 'after': {what} в выражении выдержки недопустимо — \
-                 допустимы литералы длительности, константы типа duration, скобки \
-                 и операторы '+' и '-'"
-            ),
-            Cause::Negative(nanos) => format!(
-                "выдержка 'after': выражение даёт {nanos} нс — отрицательной выдержки \
-                 не бывает"
-            ),
-            Cause::Overflow => "выдержка 'after': переполнение при вычислении \
-                 длительности (наносекунды не укладываются в 64-битное целое)"
-                .to_string(),
-            Cause::Cycle => format!(
-                "выдержка 'after': вычисление глубже {MAX_DEPTH} уровней не \
-                 заканчивается литералом длительности — вероятно, константы \
-                 ссылаются друг на друга"
-            ),
+            Cause::WrongType(name, ty) => msg!(keys::AFTER_WRONG_TYPE, name = name, ty = ty),
+            Cause::NotLiteral(name) => msg!(keys::AFTER_NOT_LITERAL, name = name),
+            Cause::BareNumber(n) => msg!(keys::AFTER_BARE_NUMBER, value = n),
+            Cause::FunctionCall(name) => msg!(keys::AFTER_FUNCTION_CALL, name = name),
+            Cause::NotConstantForm(what) => msg!(keys::AFTER_NOT_CONSTANT_FORM, what = render(*what, &[])),
+            Cause::Negative(nanos) => msg!(keys::AFTER_NEGATIVE, nanos = nanos),
+            Cause::Overflow => msg!(keys::AFTER_OVERFLOW),
+            Cause::Cycle => msg!(keys::AFTER_CYCLE, depth = MAX_DEPTH),
         }
     }
 }
@@ -243,7 +214,7 @@ fn check_duration_operand(
         VariableNode::Unresolved => {
             return Err((
                 id.loc,
-                Cause::NotConst(id.name.clone(), "неразрешённое объявление"),
+                Cause::NotConst(id.name.clone(), keys::KIND_UNRESOLVED_DECLARATION),
             ));
         }
     };
@@ -310,36 +281,36 @@ fn nanos_of_cond(
         ast::Condition::After(loc, _, _)
         | ast::Condition::AfterTicks(loc, _, _)
         | ast::Condition::AfterExpr(loc, _) => {
-            Err((*loc, Cause::NotConstantForm("вложенная выдержка 'after'")))
+            Err((*loc, Cause::NotConstantForm(keys::AFTER_FORM_NESTED_AFTER)))
         }
-        ast::Condition::Not(loc, _) => Err((*loc, Cause::NotConstantForm("логическое отрицание"))),
+        ast::Condition::Not(loc, _) => Err((*loc, Cause::NotConstantForm(keys::AFTER_FORM_NOT))),
         ast::Condition::And(loc, _, _) | ast::Condition::Or(loc, _, _) => {
-            Err((*loc, Cause::NotConstantForm("побитовая операция")))
+            Err((*loc, Cause::NotConstantForm(keys::AFTER_FORM_BITWISE)))
         }
         ast::Condition::Less(loc, _, _)
         | ast::Condition::More(loc, _, _)
         | ast::Condition::LessEqual(loc, _, _)
         | ast::Condition::MoreEqual(loc, _, _)
         | ast::Condition::Equal(loc, _, _)
-        | ast::Condition::NotEqual(loc, _, _) => Err((*loc, Cause::NotConstantForm("сравнение"))),
+        | ast::Condition::NotEqual(loc, _, _) => Err((*loc, Cause::NotConstantForm(keys::AFTER_FORM_COMPARISON))),
         ast::Condition::BitAccess(loc, _, _) => {
-            Err((*loc, Cause::NotConstantForm("обращение к биту")))
+            Err((*loc, Cause::NotConstantForm(keys::AFTER_FORM_BIT_ACCESS)))
         }
         ast::Condition::ArraySubscript(loc, _, _) => {
-            Err((*loc, Cause::NotConstantForm("обращение к элементу массива")))
+            Err((*loc, Cause::NotConstantForm(keys::AFTER_FORM_ARRAY_ELEMENT)))
         }
         ast::Condition::Rational(loc, _, _) => {
-            Err((*loc, Cause::NotConstantForm("вещественное число")))
+            Err((*loc, Cause::NotConstantForm(keys::AFTER_FORM_RATIONAL)))
         }
-        ast::Condition::Bool(loc, _) => Err((*loc, Cause::NotConstantForm("булев литерал"))),
+        ast::Condition::Bool(loc, _) => Err((*loc, Cause::NotConstantForm(keys::AFTER_FORM_BOOL))),
         // Значение ячейки известно только во время работы автомата - выдержка,
         // вычисляемая компилятором, из него сложиться не может.
         ast::Condition::AnonAddress(loc, _, _) => {
-            Err((*loc, Cause::NotConstantForm("обращение к ячейке по адресу")))
+            Err((*loc, Cause::NotConstantForm(keys::AFTER_FORM_ADDRESS_CELL)))
         }
         ast::Condition::String(parts) => Err((
             parts.first().map(|p| p.loc).unwrap_or(Location::Implicit),
-            Cause::NotConstantForm("строка"),
+            Cause::NotConstantForm(keys::AFTER_FORM_STRING),
         )),
     }
 }
@@ -379,15 +350,15 @@ fn nanos_of_var(
             if crate::semantic::parameter_const::is_parameter(var) {
                 return Err((loc, Cause::Parameter(name.to_string())));
             }
-            return Err((loc, Cause::NotConst(name.to_string(), "переменная")));
+            return Err((loc, Cause::NotConst(name.to_string(), keys::KIND_VARIABLE)));
         }
         VariableNode::Port { .. } => {
-            return Err((loc, Cause::NotConst(name.to_string(), "порт")));
+            return Err((loc, Cause::NotConst(name.to_string(), keys::KIND_PORT)));
         }
         VariableNode::Unresolved => {
             return Err((
                 loc,
-                Cause::NotConst(name.to_string(), "неразрешённое объявление"),
+                Cause::NotConst(name.to_string(), keys::KIND_UNRESOLVED_DECLARATION),
             ));
         }
     };

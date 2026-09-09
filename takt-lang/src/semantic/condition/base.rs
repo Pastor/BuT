@@ -8,6 +8,8 @@
 //! Живёт отдельным модулем: знание о базе индексации самостоятельно и к разбору
 //! условия целиком не относится.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::*;
 
 /// Как назвать базу условия в диагностике.
@@ -19,12 +21,12 @@ pub(super) fn cond_base_label(base: &ConditionNode) -> String {
         ConditionNode::Variable(var, _) => format!("'{}'", var.borrow().name()),
         ConditionNode::Parenthesis(inner) => cond_base_label(inner),
         ConditionNode::BitAccess(_, crate::parser::ast::Member::Identifier(field)) => {
-            format!("поле '{}'", field.name)
+            msg!(keys::COND_BASE_FIELD, name = field.name)
         }
         ConditionNode::Unresolved(crate::parser::ast::Condition::Variable(id)) => {
             format!("'{}'", id.name)
         }
-        _ => "индексируемое значение".to_string(),
+        _ => msg!(keys::COND_BASE_INDEXABLE),
     }
 }
 

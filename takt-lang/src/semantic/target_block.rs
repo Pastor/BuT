@@ -11,6 +11,8 @@
 //! метка у них общая (`"c"`). Режимное имя отвергается с подсказкой - молчаливо
 //! недействующая метка хуже отказа.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::Diagnostic;
 #[cfg(test)]
 use crate::diagnostics::Location;
@@ -43,15 +45,12 @@ pub(crate) fn check_target(dialect: &ast::StringLiteral) -> Result<String, Diagn
         return Ok(name);
     }
     let hint = match TARGET_MODES.iter().find(|(mode, _)| *mode == name) {
-        Some((mode, base)) => format!(
-            "'{mode}' — режим сборки, а не язык вывода: тот же язык печатает цель '{base}'. \
-             Напишите \"{base}\""
-        ),
-        None => format!("допустимые имена: {}", TARGET_LANGUAGES.join(", ")),
+        Some((mode, base)) => msg!(keys::SE_129_ASSEMBLY_TARGET_IS_A_MODE, mode = mode, base = base),
+        None => msg!(keys::SE_129_ASSEMBLY_KNOWN_TARGETS, known = TARGET_LANGUAGES.join(", ")),
     };
     Err(Diagnostic::error(
         dialect.loc,
-        format!("вставка assembly адресована неизвестной цели '{name}': {hint}"),
+        msg!(keys::SE_129_ASSEMBLY_UNKNOWN_TARGET, name = name, hint = hint),
     )
     .with_code("SE-129"))
 }

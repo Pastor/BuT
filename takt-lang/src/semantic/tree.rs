@@ -135,8 +135,8 @@ fn note_imported_here(
     let message = match importer.map(crate::semantic::import::short_name) {
         // Сообщение самодостаточно: `taktc` печатает текст заметки, но не её позицию,
         // поэтому "импортировано здесь" без имён не сказало бы ничего.
-        Some(where_) => format!("'{what}' импортирован в '{where_}'"),
-        None => format!("'{what}' импортирован здесь"),
+        Some(where_) => msg!(keys::NOTE_IMPORTED_INTO, what = what, r#where = where_),
+        None => msg!(keys::NOTE_IMPORTED_HERE, what = what),
     };
     d.with_note(import_loc, message)
 }

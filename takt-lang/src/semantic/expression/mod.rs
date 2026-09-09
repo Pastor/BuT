@@ -58,12 +58,12 @@ fn static_index(expr: &ast::Expression, model: &ModelNode) -> Option<i128> {
 
 fn base_label(base: &ExpressionNode) -> String {
     match base {
-        ExpressionNode::Variable(var) => format!("Переменная '{}'", var.borrow().name()),
+        ExpressionNode::Variable(var) => msg!(keys::WHAT_VARIABLE_UPPER, name = var.borrow().name()),
         ExpressionNode::Parenthesis(inner) => base_label(inner),
         ExpressionNode::BitAccess(_, crate::parser::ast::Member::Identifier(field)) => {
-            format!("Поле '{}'", field.name)
+            msg!(keys::WHAT_FIELD_UPPER, name = field.name)
         }
-        _ => "Индексируемое значение".to_string(),
+        _ => msg!(keys::WHAT_INDEXABLE_UPPER),
     }
 }
 

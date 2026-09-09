@@ -7,6 +7,8 @@
 //! выход учитывается **автоматически** при разрушении [`DepthGuard`], поэтому ранний
 //! возврат по `?` не "залипает" на счётчике.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use std::cell::Cell;
 
 use crate::diagnostics::{Diagnostic, Location};
@@ -46,10 +48,7 @@ pub fn enter(loc: Option<Location>) -> Result<DepthGuard, Diagnostic> {
         if next > MAX_NESTING_DEPTH {
             return Err(Diagnostic::error(
                 loc.unwrap_or(Location::Implicit),
-                format!(
-                    "превышен предел вложенности ({MAX_NESTING_DEPTH}): \
-                     выражение, условие или оператор вложены слишком глубоко"
-                ),
+                msg!(keys::SE_062_NESTING_TOO_DEEP, limit = MAX_NESTING_DEPTH),
             )
             .with_code("SE-062"));
         }

@@ -14,6 +14,8 @@
 //! 2. Следит, что `after` стоит **только** в условии перехода `ref` (`SE-068`);
 //!    `every 100ms { ... }` - разворачивается семантикой в блок.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::Diagnostic;
 use crate::parser::ast::{Condition, InlineFormulaDefine, Model, ModelElement, StateElement};
 use crate::semantic::ModelNode;
@@ -64,10 +66,10 @@ pub(crate) fn adopt_clock(
     match known {
         Some(previous) if previous != hertz => Err(Diagnostic::error(
             loc,
-            format!(
-                "частота тактирования объявлена дважды и по-разному: \
-                 {previous} Гц и {hertz} Гц (вторая — в подключённом файле) — \
-                 какая из них настоящая, знает только автор"
+            msg!(
+                keys::SE_067_CLOCK_DECLARED_TWICE_IMPORTED,
+                previous = previous,
+                hertz = hertz
             ),
         )
         .with_code("SE-067")),
@@ -114,10 +116,7 @@ fn reject_after(cond: &Condition, place: &str) -> Result<(), Diagnostic> {
     if let Some(loc) = find_after(cond) {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "выдержка 'after' допустима только в условии перехода 'ref'; в {place} \
-у неё нет состояния-источника, от входа в которое ведётся отсчёт"
-            ),
+            msg!(keys::SE_068_AFTER_OUTSIDE_REF, place = place),
         )
         .with_code("SE-068"));
     }
@@ -297,11 +296,10 @@ fn walk(ast: &Model, found: &mut Option<u64>) -> Result<(), Diagnostic> {
                 Some(previous) if previous != def.hertz => {
                     return Err(Diagnostic::error(
                         def.loc,
-                        format!(
-                            "частота тактирования объявлена дважды и по-разному: \
-                             {previous} Гц и {} Гц — какая из них настоящая, \
-                             знает только автор",
-                            def.hertz
+                        msg!(
+                            keys::SE_067_CLOCK_DECLARED_TWICE,
+                            previous = previous,
+                            hertz = def.hertz
                         ),
                     )
                     .with_code("SE-067"));

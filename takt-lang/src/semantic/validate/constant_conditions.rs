@@ -2,6 +2,8 @@
 //!
 //! Часть модуля `validate`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::*;
 
 /// SE-047: предупреждения об очевидно константных условиях переходов.
@@ -56,7 +58,7 @@ fn eval_condition_const(cond: &ConditionNode, loc: Location, out: &mut Vec<Diagn
             out.push(
                 Diagnostic::warning(
                     loc,
-                    "условие перехода всегда истинно — переход безусловный".to_string(),
+                    msg!(keys::SE_047_CONDITION_ALWAYS_TRUE),
                 )
                 .with_code("SE-047"),
             );
@@ -65,7 +67,7 @@ fn eval_condition_const(cond: &ConditionNode, loc: Location, out: &mut Vec<Diagn
             out.push(
                 Diagnostic::warning(
                     loc,
-                    "условие перехода всегда ложно — переход недостижим".to_string(),
+                    msg!(keys::SE_047_CONDITION_ALWAYS_FALSE),
                 )
                 .with_code("SE-047"),
             );

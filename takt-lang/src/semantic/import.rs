@@ -8,6 +8,8 @@ pub(in crate::semantic) mod build;
 pub mod importers; // "кто подключает эту библиотеку" - подсказка SE-102
 pub(in crate::semantic) mod select;
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::Diagnostic;
 use crate::parser::ast::ImportPath;
 use itertools::Itertools;
@@ -105,10 +107,7 @@ pub(crate) fn read_import_file(
         };
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "Файл импорта не найден: «{}». Пути поиска: {}",
-                path_str, paths_str
-            ),
+            msg!(keys::SE_013_IMPORT_FILE_NOT_FOUND, file = path_str, paths = paths_str),
         )
         .with_code("SE-013"));
     }
@@ -122,7 +121,7 @@ pub(crate) fn read_import_file(
         let canonical_file = std::fs::canonicalize(filename).map_err(|e| {
             Diagnostic::error(
                 loc,
-                format!("Не удалось канонизировать путь «{}»: {}", filename, e),
+                msg!(keys::SE_016_IMPORT_PATH_NOT_CANONICAL, file = filename, cause = e),
             )
             .with_code("SE-016")
         })?;
@@ -135,9 +134,10 @@ pub(crate) fn read_import_file(
         if !is_allowed {
             return Err(Diagnostic::error(
                 loc,
-                format!(
-                    "Путь импорта «{}» выходит за пределы разрешённых директорий поиска: {:?}",
-                    filename, search_paths
+                msg!(
+                    keys::SE_016_IMPORT_PATH_OUTSIDE,
+                    file = filename,
+                    paths = format!("{search_paths:?}")
                 ),
             )
             .with_code("SE-016"));
@@ -148,7 +148,7 @@ pub(crate) fn read_import_file(
     if !filename.ends_with(".takt") {
         return Err(Diagnostic::error(
             loc,
-            format!("Недопустимое расширение файла импорта: «{}»", filename),
+            msg!(keys::SE_014_IMPORT_EXTENSION, file = filename),
         )
         .with_code("SE-014"));
     }
@@ -156,7 +156,7 @@ pub(crate) fn read_import_file(
     let content = read_to_string(filename).map_err(|e| {
         Diagnostic::error(
             loc,
-            format!("Ошибка чтения файла импорта «{}»: {}", filename, e),
+            msg!(keys::SE_015_IMPORT_READ_FAILED, file = filename, cause = e),
         )
         .with_code("SE-015")
     })?;

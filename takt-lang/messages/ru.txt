@@ -110,3 +110,204 @@ se-011.multiple-start-states = В модели '{name}' должно быть т
 se-010.no-terminal-states = {prefix}в модели нет терминальных состояний (состояний без переходов); автомат не может завершить работу
 se-010.no-path-to-terminal = {prefix}состояние '{name}' не имеет пути к терминальному состоянию
 se-012.ref-with-next = {prefix}состояние '{name}' содержит ref-переходы совместно с next: переходы ref недостижимы после выполнения next
+
+# ─── Семантика: порты и адреса (`semantic/validate/ports.rs`) ────────────────
+se-052.port-without-address = порт '{name}' используется в кодогенерации, но не имеет адреса (ни inline, ни оператором `address`, ни во внешней карте)
+se-048.address-port-not-found = оператор `address` ссылается на несуществующий порт '{name}'
+se-049.address-given-twice = адрес порта '{name}' задан оператором `address` более одного раза
+se-049.address-inline-and-operator = адрес порта '{name}' задан одновременно inline и оператором `address`
+port.nested-model-visible = Порт '{name}' объявлен во вложенной модели '{model}' и будет виден всем моделям через перечисления портов корневой модели
+
+# ─── Семантика: обращение к члену (`semantic/validate/member_access.rs`) ─────
+se-125.bit-beyond-width = разряд {index} за объявленной шириной значения ({width} бит): обращаться можно к разрядам 0..{last}
+se-061.struct-without-field = структура '{name}' не содержит поля '{field}'
+se-030.field-access-needs-struct = обращение к полю '{field}' возможно только у структуры
+
+# ─── Семантика: импорт файлов (`semantic/import.rs`) ─────────────────────────
+se-013.import-file-not-found = Файл импорта не найден: «{file}». Пути поиска: {paths}
+se-016.import-path-not-canonical = Не удалось канонизировать путь «{file}»: {cause}
+se-016.import-path-outside = Путь импорта «{file}» выходит за пределы разрешённых директорий поиска: {paths}
+se-014.import-extension = Недопустимое расширение файла импорта: «{file}»
+se-015.import-read-failed = Ошибка чтения файла импорта «{file}»: {cause}
+
+# ─── Семантика: функции (`semantic/function.rs`) ─────────────────────────────
+se-126.unknown-function-attribute = неизвестный атрибут функции '{name}': допустимы 'inline' (подставлять тело в место вызова) и 'noinline' (не подставлять)
+se-127.inline-on-extern = атрибут 'inline' на внешней функции: тела у неё нет, подставлять нечего — её вызов остаётся вызовом в порождённом коде
+se-022.function-needs-name-lower = при определении функция должна иметь имя
+se-118.function-without-body = локальная функция '{name}' объявлена без тела: тело обязательно (внешнюю функцию объявляют как 'extern fn')
+
+# ─── Семантика: тип q(m, n) (`semantic/type_node/type_fixed.rs`) ─────────────
+se-057.unknown-type-constructor = неизвестный конструктор типа '{ctor}(…, …)'; единственный параметрический тип — fixed-point 'q(m, n)'
+se-057.fixed-format-invalid = fixed-point 'q({m}, {n})': {what} (требуется m ≥ 1, n ≥ 1, m + n ≤ 64)
+se-104.fixed-modifier-unknown = после формата fixed-point 'q({m}, {n})' допустим только модификатор 'sat' (насыщение вместо переноса), получено '{other}'
+se-058.fixed-literal-unrepresentable = литерал '{literal}' не представим в fixed-point 'q({m}, {n})': {why}
+
+# ─── Семантика: специализация моделей (`semantic/specialize.rs`) ─────────────
+se-087.specialize-with-nested = Специализация модели '{name}' с вложенными моделями не поддерживается: задайте значения параметров вложенных моделей в их собственных инстанцированиях либо соберите в режиме --parameters=assign
+se-086.specialize-without-parent = Специализируемая модель не имеет родителя в дереве
+se-086.specialize-name-taken = Имя специализации '{name}' уже занято моделью — переименуйте её: пространство имён кодогена общее, и молчаливое переименование специализации скрыло бы коллизию в выводе
+se-086.specialize-parameter-not-found = Параметр '{name}' не найден в специализируемой модели
+
+# ─── Семантика: усыновление объявлений импорта (`semantic/import/adopt.rs`) ──
+se-005.variable-declared-in-included = Переменная '{name}' уже объявлена (подключённый файл '{file}' объявляет её же)
+se-108.type-declared-in-included = тип с именем '{name}' уже объявлен: подключённый файл                      '{file}' объявляет его же
+se-108.type-declared-in-included-note = объявление типа '{name}' в подключённом файле — здесь
+se-009.function-defined-in-included = Функция '{name}' уже определена (подключённый файл '{file}' определяет её же)
+se-074.imported-model-needs-declarations = импортированная модель использует объявления подключаемого файла, не импортированные вместе с ней: {list}. Добавьте их в список импорта
+
+# ─── Семантика: вычисление констант (`semantic/const_eval/mod.rs`) ───────────
+se-083.not-a-constant-expression = выражение не вычисляется при компиляции: {reason}
+se-121.duration-cast-overflow = приведение длительности к знаковому {bits}-битному типу переполняет его: {value} мс в него не помещаются
+se-121.cast-overflow = приведение 'as' переполняет знаковый {bits}-битный тип: значение {value} в него не помещается, а знаковое переполнение — ошибка программы (в C это неопределённое поведение). Возьмите тип шире либо беззнаковый — у него перенос определён
+
+# ─── Семантика: структуры (`semantic/validate/structs.rs`) ───────────────────
+se-115.struct-without-fields = структура '{name}' объявлена без полей: у структуры обязано быть хотя бы одно поле (добавьте поле либо удалите объявление). Пустая запись невалидна по стандарту C (6.7.2.1) и отвергается компилятором ST
+se-040.struct-duplicate-field = структура '{name}' содержит дублирующееся поле '{field}'
+se-041.struct-field-unknown-type = поле '{field}' структуры '{name}' ссылается на неизвестный тип '{ty}'
+
+# ─── Семантика: недетерминизм переходов (`semantic/validate/nondeterminism.rs`)
+se-037.unconditional-transitions = {prefix}: {count} безусловных перехода(ов) — недетерминированное поведение
+se-042.same-condition = {prefix}: переходы в '{first}' и '{second}' имеют одинаковое условие — гарантированное недетерминированное поведение
+se-042.conditions-may-overlap = {prefix}: условия переходов в '{first}' и '{second}' могут одновременно выполняться — возможное перекрытие
+
+# ─── Семантика: время в дереве (`semantic/time_ast.rs`) ──────────────────────
+se-067.clock-declared-twice-imported = частота тактирования объявлена дважды и по-разному: {previous} Гц и {hertz} Гц (вторая — в подключённом файле) — какая из них настоящая, знает только автор
+se-067.clock-declared-twice = частота тактирования объявлена дважды и по-разному: {previous} Гц и {hertz} Гц — какая из них настоящая, знает только автор
+se-068.after-outside-ref = выдержка 'after' допустима только в условии перехода 'ref'; в {place}\nу неё нет состояния-источника, от входа в которое ведётся отсчёт
+
+# ─── Семантика: реализация модели (`semantic/extend.rs`) ─────────────────────
+se-001.model-not-found = Модель '{name}' не найдена
+se-081.implementation-form = Реализация модели задаётся именем модели, композицией '+'/'|' или инстанцированием 'M(параметр := значение)'
+se-101.implementation-with-own-state = модель '{model}' объявлена с реализацией ('= …') и одновременно содержит собственное состояние '{name}': модель не может быть и композицией, и автоматом. Уберите реализацию и объявите её состоянием ('start Имя = …;') либо уберите собственные состояния
+se-101.own-state-note = состояние '{name}' здесь
+
+# ─── Семантика: реестр типов (`semantic/type_registry.rs`) ───────────────────
+se-107.builtin-type-name = имя '{name}' принадлежит встроенному типу языка и не может быть объявлено заново: выберите другое имя (встроенный тип иначе станет недоступен во всём файле)
+se-108.type-already-declared-here = тип с именем '{name}' уже объявлен
+se-108.type-already-declared-imported = тип с именем '{name}' уже объявлен — он пришёл из подключённого файла
+se-108.first-type-declaration-note = первое объявление типа '{name}' — здесь
+
+# ─── Семантика: неиспользуемые объявления (`semantic/unused.rs`) ─────────────
+se-036.variable-unused = переменная '{name}' объявлена, но нигде не используется
+
+# ─── Семантика: неявная булевость (`semantic/validate/implicit_bool.rs`) ─────
+se-037.implicit-bool = {prefix}: условие перехода {verb} '{target}' содержит {summary} — рекомендуется явное сравнение (например, '!= 0')
+
+# ─── Семантика: место присваивания (`semantic/validate/assignment_position.rs`)
+se-095.assignment-in-value-position = {what} стоит там, где вычисляется значение: в языке присваивание — оператор, а не выражение. Запись порта или переменной обязана быть отдельным оператором: сперва `цель := значение;`, затем использование цели
+
+# ─── Семантика: модель как реализация (`semantic/validate/implemented.rs`) ───
+se-106.model-without-states = модель '{name}' не содержит ни одного состояния, поэтому не может быть реализацией: исполнять в ней нечего. Добавьте в неё стартовое состояние ('start Имя {{ … }}') либо уберите её из реализации
+
+# ─── Семантика: коллизии имён (`semantic/validate/name_collisions.rs`) ───────
+se-100.state-named-as-model = состояние '{name}' названо так же, как модель '{model}', которую оно реализует: имя состояния и имя модели попадают в одно пространство имён цели, и ни одна из целей такой вход не переводит. Переименуйте состояние
+
+# ─── Семантика: диапазон литерала (`semantic/validate/literal_range.rs`) ─────
+se-089.literal-out-of-range = литерал {value} не помещается в тип '{ty}' {what}: допустимо [{lo}, {hi}]
+
+# ─── Семантика: глубина вложенности (`semantic/validate/depth.rs`) ───────────
+se-062.nesting-too-deep = превышен предел вложенности ({limit}): выражение, условие или оператор вложены слишком глубоко
+
+# ─── Семантика: постоянные условия (`semantic/validate/constant_conditions.rs`)
+se-047.condition-always-true = условие перехода всегда истинно — переход безусловный
+se-047.condition-always-false = условие перехода всегда ложно — переход недостижим
+
+# ─── Семантика: длина агрегата (`semantic/validate/aggregate_length.rs`) ─────
+se-123.aggregate-length-mismatch = {what}: объявлено элементов {expected}, в инициализаторе {got}. Прежде такая запись означала разное: эталон хранил лишние, цель 'rust' печатала невалидный код, а 'st' теряла инициализатор без единого слова
+
+# ─── Семантика: вычисление вызова (`semantic/const_eval/call.rs`) ────────────
+se-084.function-not-constant = функция '{name}' не вычисляется при компиляции: {reason}
+
+# ─── Семантика: предмет условия (`semantic/condition/base.rs`) ───────────────
+cond.base-field = поле '{name}'
+cond.base-indexable = индексируемое значение
+
+# ─── Семантика: вставка по цели (`semantic/target_block.rs`) ─────────────────
+se-129.assembly-unknown-target = вставка assembly адресована неизвестной цели '{name}': {hint}
+se-129.assembly-target-is-a-mode = '{mode}' — режим сборки, а не язык вывода: тот же язык печатает цель '{base}'. Напишите "{base}"
+se-129.assembly-known-targets = допустимые имена: {known}
+
+# ─── Семантика: кто подключает библиотеку (`semantic/import/importers.rs`) ───
+import.importers-note = эту библиотеку подключает: {listed}
+import.importers-more =  (и ещё {count})
+
+# ─── Семантика: встроенные функции (`semantic/builtin.rs`) ───────────────────
+se-004.unknown-function = Неизвестная функция '{name}'
+
+# ─── Семантика: разворот составного порта (`semantic/condition/port_split.rs`) ─
+se-119.struct-not-declared = структура '{name}' не объявлена: порт не разворачивается
+
+# ─── Семантика: предметы сообщений проверок ──────────────────────────────────
+what.array = массив '{name}'
+what.struct-of-type = структура '{name}' типа '{ty}'
+what.assignment-named = присваивание '{name}'
+what.assignment = присваивание
+what.variable = переменной '{name}'
+what.state = состояние '{name}'
+what.model-state = модель '{model}', состояние '{state}'
+what.model-prefix = модель '{name}': 
+note.model-declared-here = модель '{name}' объявлена здесь
+note.model-used-here = модель '{name}' используется здесь
+se-010.state-unreachable = состояние '{name}' недостижимо из начального состояния
+
+# ─── Семантика: неявная булевость — предметы (`validate/implicit_bool.rs`) ───
+bool.number-literal = числовой литерал {value}
+bool.rational-literal = вещественный литерал {sign}{value}
+bool.string-literal = строковый литерал
+bool.variable-unknown-type = переменная (неизвестный тип)
+bool.variable-of-type = переменная '{name}' типа {ty}
+bool.add = арифметическое сложение
+bool.subtract = арифметическое вычитание
+bool.bitand = побитовое И
+bool.bitor = побитовое ИЛИ
+bool.expression = выражение
+bool.array-element = элемент массива '{name}[{index}]'
+bool.bit-access = доступ к битовому полю
+bool.numeric-expression = числовое выражение
+
+# ─── Семантика: причины «не константа» (`semantic/const_eval/`) ──────────────
+const.op-on-durations = операция '{op}' над длительностями не определена
+const.op-on-booleans = операция '{op}' над булевыми не определена
+const.op-not-evaluated = операция '{op}' при компиляции не вычисляется
+const.name-not-declared = имя '{name}' в области видимости не объявлено
+const.name-is-a-variable = '{name}' — переменная: её значение известно только в такте
+const.name-is-a-port = '{name}' — порт: его значение приходит извне во время работы
+const.declaration-unresolved = объявление '{name}' не разрешено
+const.function-not-found = функция '{name}' в области видимости не найдена
+const.no-initializer = у '{name}' нет инициализатора: при компиляции значение неизвестно
+const.not-a-condition = значение вида «{kind}» условием быть не может
+
+# ─── Семантика: заметки и части сообщений ────────────────────────────────────
+time.hertz-suffix = , {hertz} Гц
+note.imported-into = '{what}' импортирован в '{where}'
+note.imported-here = '{what}' импортирован здесь
+note.first-assignment = первое задание '{name}'
+what.variable-upper = Переменная '{name}'
+what.field-upper = Поле '{name}'
+what.indexable-upper = Индексируемое значение
+
+# ─── Семантика: константная выдержка (`semantic/condition/after_const.rs`) ───
+after.undeclared = выдержка 'after': константа '{name}' не объявлена — 'after' принимает литерал длительности (after 3m), литерал тактов (after 3t), имя константы типа duration либо константное выражение над длительностями (after (BASE + 30s))
+after.not-const = выдержка 'after': '{name}' — это {kind}, а выдержке нужна константа типа duration (const {name} := 3m;); значение, известное только в такте, компилятор подставить не может
+after.wrong-type = выдержка 'after': константа '{name}' имеет тип {ty}, а выдержке нужен duration
+after.not-literal = выдержка 'after': значение константы '{name}' не сводится к литералу длительности — допустимы литерал (const {name} := 3m;), имя другой такой константы либо их сумма и разность
+after.bare-number = выдержка 'after': число {value} без единицы времени — длительность сочетается только с длительностью (напишите {value}s, {value}ms или {value}us)
+after.function-call = выдержка 'after': вызов функции '{name}' в выражении выдержки недопустим — её значение компилятору неизвестно
+after.not-constant-form = выдержка 'after': {what} в выражении выдержки недопустимо — допустимы литералы длительности, константы типа duration, скобки и операторы '+' и '-'
+after.negative = выдержка 'after': выражение даёт {nanos} нс — отрицательной выдержки не бывает
+after.overflow = выдержка 'after': переполнение при вычислении длительности (наносекунды не укладываются в 64-битное целое)
+after.cycle = выдержка 'after': вычисление глубже {depth} уровней не заканчивается литералом длительности — вероятно, константы ссылаются друг на друга
+after.subject = выдержка 'after'
+after.form-nested-after = вложенная выдержка 'after'
+after.form-not = логическое отрицание
+after.form-bitwise = побитовая операция
+after.form-comparison = сравнение
+after.form-bit-access = обращение к биту
+after.form-array-element = обращение к элементу массива
+after.form-rational = вещественное число
+after.form-bool = булев литерал
+after.form-address-cell = обращение к ячейке по адресу
+after.form-string = строка
+kind.variable = переменная
+kind.port = порт
+kind.unresolved-declaration = неразрешённое объявление

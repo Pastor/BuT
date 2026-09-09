@@ -104,3 +104,203 @@ se-011.multiple-start-states = model '{name}' must have exactly one start state 
 se-010.no-terminal-states = {prefix}the model has no terminal states (states without transitions); the automaton cannot finish
 se-010.no-path-to-terminal = {prefix}state '{name}' has no path to a terminal state
 se-012.ref-with-next = {prefix}state '{name}' has ref transitions together with next: the ref transitions are unreachable after next runs
+
+# ─── Semantics: ports and addresses (`semantic/validate/ports.rs`) ───────────
+se-052.port-without-address = port '{name}' is used in code generation but has no address (neither inline, nor by the `address` statement, nor in an external map)
+se-048.address-port-not-found = the `address` statement refers to a port '{name}' that does not exist
+se-049.address-given-twice = the address of port '{name}' is given by the `address` statement more than once
+se-049.address-inline-and-operator = the address of port '{name}' is given inline and by the `address` statement at once
+port.nested-model-visible = port '{name}' is declared in the nested model '{model}' and will be visible to every model through the root model's port enumerations
+
+# ─── Semantics: member access (`semantic/validate/member_access.rs`) ─────────
+se-125.bit-beyond-width = bit {index} is beyond the declared value width ({width} bits): bits 0..{last} are addressable
+se-061.struct-without-field = structure '{name}' has no field '{field}'
+se-030.field-access-needs-struct = field access '{field}' is possible only on a structure
+
+# ─── Semantics: file imports (`semantic/import.rs`) ──────────────────────────
+se-013.import-file-not-found = import file not found: “{file}”. Search paths: {paths}
+se-016.import-path-not-canonical = failed to canonicalise the path “{file}”: {cause}
+se-016.import-path-outside = the import path “{file}” leaves the allowed search directories: {paths}
+se-014.import-extension = invalid import file extension: “{file}”
+se-015.import-read-failed = failed to read the import file “{file}”: {cause}
+
+# ─── Semantics: functions (`semantic/function.rs`) ───────────────────────────
+se-126.unknown-function-attribute = unknown function attribute '{name}': allowed are 'inline' (substitute the body at the call site) and 'noinline' (do not substitute)
+se-127.inline-on-extern = the 'inline' attribute on an external function: it has no body, there is nothing to substitute — its call stays a call in the generated code
+se-022.function-needs-name-lower = a function in a definition must have a name
+se-118.function-without-body = the local function '{name}' is declared without a body: the body is required (an external function is declared as 'extern fn')
+
+# ─── Semantics: the q(m, n) type (`semantic/type_node/type_fixed.rs`) ────────
+se-057.unknown-type-constructor = unknown type constructor '{ctor}(…, …)'; the only parametric type is the fixed-point 'q(m, n)'
+se-057.fixed-format-invalid = fixed-point 'q({m}, {n})': {what} (m ≥ 1, n ≥ 1, m + n ≤ 64 are required)
+se-104.fixed-modifier-unknown = only the 'sat' modifier (saturation instead of wrapping) may follow the fixed-point format 'q({m}, {n})', got '{other}'
+se-058.fixed-literal-unrepresentable = the literal '{literal}' is not representable in fixed-point 'q({m}, {n})': {why}
+
+# ─── Semantics: model specialisation (`semantic/specialize.rs`) ──────────────
+se-087.specialize-with-nested = specialising model '{name}' with nested models is not supported: set the parameters of the nested models at their own instantiations, or build with --parameters=assign
+se-086.specialize-without-parent = the model being specialised has no parent in the tree
+se-086.specialize-name-taken = the specialisation name '{name}' is already taken by a model — rename it: the code generation namespace is shared, and renaming the specialisation silently would hide the clash in the output
+se-086.specialize-parameter-not-found = parameter '{name}' not found in the model being specialised
+
+# ─── Semantics: adopting imported declarations (`semantic/import/adopt.rs`) ──
+se-005.variable-declared-in-included = variable '{name}' is already declared (the included file '{file}' declares it too)
+se-108.type-declared-in-included = a type named '{name}' is already declared: the included file                      '{file}' declares it too
+se-108.type-declared-in-included-note = the declaration of type '{name}' in the included file is here
+se-009.function-defined-in-included = function '{name}' is already defined (the included file '{file}' defines it too)
+se-074.imported-model-needs-declarations = the imported model uses declarations of the included file that were not imported with it: {list}. Add them to the import list
+
+# ─── Semantics: constant evaluation (`semantic/const_eval/mod.rs`) ───────────
+se-083.not-a-constant-expression = the expression is not evaluated at compile time: {reason}
+se-121.duration-cast-overflow = casting a duration to a signed {bits}-bit type overflows it: {value} ms do not fit
+se-121.cast-overflow = the 'as' cast overflows the signed {bits}-bit type: the value {value} does not fit, and signed overflow is a program error (undefined behaviour in C). Take a wider type or an unsigned one — wrapping is defined there
+# ─── Semantics: structures (`semantic/validate/structs.rs`) ──────────────────
+se-115.struct-without-fields = structure '{name}' is declared without fields: a structure must have at least one field (add a field or drop the declaration). An empty record is invalid per the C standard (6.7.2.1) and is rejected by the ST compiler
+se-040.struct-duplicate-field = structure '{name}' has a duplicate field '{field}'
+se-041.struct-field-unknown-type = field '{field}' of structure '{name}' refers to the unknown type '{ty}'
+
+# ─── Semantics: transition non-determinism (`semantic/validate/nondeterminism.rs`)
+se-037.unconditional-transitions = {prefix}: {count} unconditional transition(s) — non-deterministic behaviour
+se-042.same-condition = {prefix}: transitions to '{first}' and '{second}' have the same condition — guaranteed non-deterministic behaviour
+se-042.conditions-may-overlap = {prefix}: the conditions of transitions to '{first}' and '{second}' may hold at once — a possible overlap
+
+# ─── Semantics: time in the tree (`semantic/time_ast.rs`) ────────────────────
+se-067.clock-declared-twice-imported = the clock rate is declared twice and differently: {previous} Hz and {hertz} Hz (the second one in an included file) — only the author knows which is the real one
+se-067.clock-declared-twice = the clock rate is declared twice and differently: {previous} Hz and {hertz} Hz — only the author knows which is the real one
+se-068.after-outside-ref = an 'after' delay is allowed only in a 'ref' transition condition; in {place}\nit has no source state to count from
+
+# ─── Semantics: model implementation (`semantic/extend.rs`) ──────────────────
+se-001.model-not-found = model '{name}' not found
+se-081.implementation-form = a model implementation is given by a model name, a composition '+'/'|' or an instantiation 'M(parameter := value)'
+se-101.implementation-with-own-state = model '{model}' is declared with an implementation ('= …') and also has its own state '{name}': a model cannot be both a composition and an automaton. Drop the implementation and declare it as a state ('start Name = …;'), or drop the own states
+se-101.own-state-note = the state '{name}' is here
+
+# ─── Semantics: type registry (`semantic/type_registry.rs`) ──────────────────
+se-107.builtin-type-name = the name '{name}' belongs to a built-in type of the language and cannot be redeclared: pick another name (otherwise the built-in type becomes unavailable in the whole file)
+se-108.type-already-declared-here = a type named '{name}' is already declared
+se-108.type-already-declared-imported = a type named '{name}' is already declared — it came from an included file
+se-108.first-type-declaration-note = the first declaration of type '{name}' is here
+
+# ─── Semantics: unused declarations (`semantic/unused.rs`) ───────────────────
+se-036.variable-unused = variable '{name}' is declared but never used
+
+# ─── Semantics: implicit truthiness (`semantic/validate/implicit_bool.rs`) ───
+se-037.implicit-bool = {prefix}: the transition condition {verb} '{target}' contains {summary} — an explicit comparison is recommended (for example, '!= 0')
+
+# ─── Semantics: assignment position (`semantic/validate/assignment_position.rs`)
+se-095.assignment-in-value-position = {what} stands where a value is computed: in this language assignment is a statement, not an expression. Writing a port or a variable must be a separate statement: first `target := value;`, then use of the target
+
+# ─── Semantics: a model as an implementation (`semantic/validate/implemented.rs`)
+se-106.model-without-states = model '{name}' has no states, so it cannot be an implementation: there is nothing to run in it. Add a start state to it ('start Name {{ … }}') or drop it from the implementation
+
+# ─── Semantics: name collisions (`semantic/validate/name_collisions.rs`) ─────
+se-100.state-named-as-model = state '{name}' has the same name as the model '{model}' it implements: the state name and the model name land in one target namespace, and none of the targets translates such input. Rename the state
+
+# ─── Semantics: literal range (`semantic/validate/literal_range.rs`) ─────────
+se-089.literal-out-of-range = the literal {value} does not fit the type '{ty}' {what}: [{lo}, {hi}] is allowed
+
+# ─── Semantics: nesting depth (`semantic/validate/depth.rs`) ─────────────────
+se-062.nesting-too-deep = the nesting limit ({limit}) is exceeded: an expression, a condition or a statement is nested too deeply
+
+# ─── Semantics: constant conditions (`semantic/validate/constant_conditions.rs`)
+se-047.condition-always-true = the transition condition always holds — the transition is unconditional
+se-047.condition-always-false = the transition condition never holds — the transition is unreachable
+
+# ─── Semantics: aggregate length (`semantic/validate/aggregate_length.rs`) ───
+se-123.aggregate-length-mismatch = {what}: {expected} elements are declared, {got} are given in the initialiser. This used to mean different things: the reference kept the extra ones, the 'rust' target printed invalid code, and 'st' lost the initialiser without a word
+
+# ─── Semantics: call evaluation (`semantic/const_eval/call.rs`) ──────────────
+se-084.function-not-constant = the function '{name}' is not evaluated at compile time: {reason}
+
+# ─── Semantics: the subject of a condition (`semantic/condition/base.rs`) ────
+cond.base-field = field '{name}'
+cond.base-indexable = an indexable value
+
+# ─── Semantics: target-addressed inserts (`semantic/target_block.rs`) ────────
+se-129.assembly-unknown-target = the assembly insert is addressed to an unknown target '{name}': {hint}
+se-129.assembly-target-is-a-mode = '{mode}' is a build mode, not an output language: the same language is printed by the target '{base}'. Write "{base}"
+se-129.assembly-known-targets = allowed names: {known}
+
+# ─── Semantics: who includes the library (`semantic/import/importers.rs`) ────
+import.importers-note = this library is included by: {listed}
+import.importers-more =  (and {count} more)
+
+# ─── Semantics: built-in functions (`semantic/builtin.rs`) ───────────────────
+se-004.unknown-function = unknown function '{name}'
+
+# ─── Semantics: composite port split (`semantic/condition/port_split.rs`) ────
+se-119.struct-not-declared = structure '{name}' is not declared: the port is not split
+
+# ─── Semantics: subjects of check messages ───────────────────────────────────
+what.array = array '{name}'
+what.struct-of-type = structure '{name}' of type '{ty}'
+what.assignment-named = the assignment '{name}'
+what.assignment = the assignment
+what.variable = variable '{name}'
+what.state = state '{name}'
+what.model-state = model '{model}', state '{state}'
+what.model-prefix = model '{name}': 
+note.model-declared-here = model '{name}' is declared here
+note.model-used-here = model '{name}' is used here
+se-010.state-unreachable = state '{name}' is unreachable from the start state
+
+# ─── Semantics: implicit truthiness — subjects (`validate/implicit_bool.rs`) ─
+bool.number-literal = the numeric literal {value}
+bool.rational-literal = the rational literal {sign}{value}
+bool.string-literal = a string literal
+bool.variable-unknown-type = a variable (unknown type)
+bool.variable-of-type = variable '{name}' of type {ty}
+bool.add = arithmetic addition
+bool.subtract = arithmetic subtraction
+bool.bitand = bitwise AND
+bool.bitor = bitwise OR
+bool.expression = an expression
+bool.array-element = the array element '{name}[{index}]'
+bool.bit-access = a bit-field access
+bool.numeric-expression = a numeric expression
+
+# ─── Semantics: reasons for “not a constant” (`semantic/const_eval/`) ────────
+const.op-on-durations = the operation '{op}' on durations is not defined
+const.op-on-booleans = the operation '{op}' on booleans is not defined
+const.op-not-evaluated = the operation '{op}' is not evaluated at compile time
+const.name-not-declared = the name '{name}' is not declared in scope
+const.name-is-a-variable = '{name}' is a variable: its value is known only within a tick
+const.name-is-a-port = '{name}' is a port: its value arrives from outside at run time
+const.declaration-unresolved = the declaration '{name}' is unresolved
+const.function-not-found = the function '{name}' is not found in scope
+const.no-initializer = '{name}' has no initialiser: its value is unknown at compile time
+const.not-a-condition = a value of kind “{kind}” cannot be a condition
+
+# ─── Semantics: notes and message parts ──────────────────────────────────────
+time.hertz-suffix = , {hertz} Hz
+note.imported-into = '{what}' is imported into '{where}'
+note.imported-here = '{what}' is imported here
+note.first-assignment = the first assignment of '{name}'
+what.variable-upper = variable '{name}'
+what.field-upper = field '{name}'
+what.indexable-upper = an indexable value
+
+# ─── Semantics: constant delay (`semantic/condition/after_const.rs`) ─────────
+after.undeclared = the 'after' delay: the constant '{name}' is not declared — 'after' takes a duration literal (after 3m), a tick literal (after 3t), the name of a duration constant, or a constant expression over durations (after (BASE + 30s))
+after.not-const = the 'after' delay: '{name}' is a {kind}, and the delay needs a constant of type duration (const {name} := 3m;); a value known only within a tick cannot be substituted by the compiler
+after.wrong-type = the 'after' delay: the constant '{name}' has type {ty}, and the delay needs a duration
+after.not-literal = the 'after' delay: the value of the constant '{name}' does not reduce to a duration literal — a literal (const {name} := 3m;), the name of another such constant, or their sum and difference are allowed
+after.bare-number = the 'after' delay: the number {value} without a time unit — a duration combines only with a duration (write {value}s, {value}ms or {value}us)
+after.function-call = the 'after' delay: a call to the function '{name}' is not allowed in a delay expression — its value is unknown to the compiler
+after.not-constant-form = the 'after' delay: {what} is not allowed in a delay expression — duration literals, duration constants, parentheses and the operators '+' and '-' are allowed
+after.negative = the 'after' delay: the expression yields {nanos} ns — there is no negative delay
+after.overflow = the 'after' delay: overflow while computing the duration (nanoseconds do not fit a 64-bit integer)
+after.cycle = the 'after' delay: evaluation deeper than {depth} levels does not end in a duration literal — the constants probably refer to each other
+after.subject = the 'after' delay
+after.form-nested-after = a nested 'after' delay
+after.form-not = a logical negation
+after.form-bitwise = a bitwise operation
+after.form-comparison = a comparison
+after.form-bit-access = a bit access
+after.form-array-element = an array element access
+after.form-rational = a rational number
+after.form-bool = a boolean literal
+after.form-address-cell = an address cell access
+after.form-string = a string
+kind.variable = a variable
+kind.port = a port
+kind.unresolved-declaration = an unresolved declaration

@@ -380,7 +380,7 @@ fn collect_duration_notes(
 ) {
     let suffix = match profile {
         TimeProfile::Clock => String::new(),
-        TimeProfile::Ticks { hertz } => format!(", {hertz} Гц"),
+        TimeProfile::Ticks { hertz } => msg!(keys::TIME_HERTZ_SUFFIX, hertz = hertz),
     };
     for state in model.states.values() {
         for reference in state.references() {

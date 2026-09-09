@@ -12,6 +12,8 @@
 //! булева, семантическое - нет), и проверка стала неотдаваемой - 16 ложных срабатываний
 //! на примерах документа. Теперь расходиться нечему.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::*;
 
 /// Добавляет предупреждение Се11 в `out`.
@@ -32,10 +34,12 @@ fn emit_implicit_bool_warning(
     out.push(
         Diagnostic::warning(
             loc,
-            format!(
-                "{}: условие перехода {} '{}' содержит {} — \
-                 рекомендуется явное сравнение (например, '!= 0')",
-                prefix, verb, target_name, summary
+            msg!(
+                keys::SE_037_IMPLICIT_BOOL,
+                prefix = prefix,
+                verb = verb,
+                target = target_name,
+                summary = summary
             ),
         )
         .with_code("SE-037"),
@@ -118,25 +122,29 @@ fn is_boolean_semantic_condition(cond: &ConditionNode) -> bool {
 /// покрывает только "числовые" ветви.
 fn semantic_condition_summary(cond: &ConditionNode) -> String {
     match cond {
-        ConditionNode::Number(n) => format!("числовой литерал {}", n),
+        ConditionNode::Number(n) => msg!(keys::BOOL_NUMBER_LITERAL, value = n),
         ConditionNode::Rational(s, neg) => {
-            format!("вещественный литерал {}{}", if *neg { "-" } else { "" }, s)
+            msg!(
+                keys::BOOL_RATIONAL_LITERAL,
+                sign = if *neg { "-" } else { "" },
+                value = s
+            )
         }
-        ConditionNode::String(_) => "строковый литерал".to_string(),
+        ConditionNode::String(_) => msg!(keys::BOOL_STRING_LITERAL),
         ConditionNode::Variable(v, _) => {
             let borrowed = v.borrow();
             let (name_str, ty) = match &*borrowed {
                 VariableNode::Simple { name, ty, .. }
                 | VariableNode::Port { name, ty, .. }
                 | VariableNode::Const { name, ty, .. } => (name.clone(), ty.clone()),
-                VariableNode::Unresolved => return "переменная (неизвестный тип)".to_string(),
+                VariableNode::Unresolved => return msg!(keys::BOOL_VARIABLE_UNKNOWN_TYPE),
             };
-            format!("переменная '{}' типа {}", name_str, ty)
+            msg!(keys::BOOL_VARIABLE_OF_TYPE, name = name_str, ty = ty)
         }
-        ConditionNode::Add(_, _) => "арифметическое сложение".to_string(),
-        ConditionNode::Subtract(_, _) => "арифметическое вычитание".to_string(),
-        ConditionNode::And(_, _) => "побитовое И".to_string(),
-        ConditionNode::Or(_, _) => "побитовое ИЛИ".to_string(),
+        ConditionNode::Add(_, _) => msg!(keys::BOOL_ADD),
+        ConditionNode::Subtract(_, _) => msg!(keys::BOOL_SUBTRACT),
+        ConditionNode::And(_, _) => msg!(keys::BOOL_BITAND),
+        ConditionNode::Or(_, _) => msg!(keys::BOOL_BITOR),
         // База - выражение: имя берётся у неё, когда оно есть.
         ConditionNode::ArraySubscript(base, idx) => {
             let name = match base.as_ref() {
@@ -146,16 +154,16 @@ fn semantic_condition_summary(cond: &ConditionNode) -> String {
                     | VariableNode::Const { name, .. } => name.clone(),
                     VariableNode::Unresolved => "?".to_string(),
                 },
-                _ => "выражение".to_string(),
+                _ => msg!(keys::BOOL_EXPRESSION),
             };
             let idx_str = match idx.as_ref() {
                 ConditionNode::Number(n) => n.to_string(),
                 _ => "expr".to_string(),
             };
-            format!("элемент массива '{}[{}]'", name, idx_str)
+            msg!(keys::BOOL_ARRAY_ELEMENT, name = name, index = idx_str)
         }
-        ConditionNode::BitAccess(_, _) => "доступ к битовому полю".to_string(),
-        _ => "числовое выражение".to_string(),
+        ConditionNode::BitAccess(_, _) => msg!(keys::BOOL_BIT_ACCESS),
+        _ => msg!(keys::BOOL_NUMERIC_EXPRESSION),
     }
 }
 
@@ -196,9 +204,9 @@ fn collect_implicit_bool_warnings(model: &Rc<RefCell<ModelNode>>, out: &mut Vec<
     // состояние 'S'".
     let prefix_for = |state_name: &str| -> String {
         if model_name.is_empty() {
-            format!("состояние '{}'", state_name)
+            msg!(keys::WHAT_STATE, name = state_name)
         } else {
-            format!("модель '{}', состояние '{}'", model_name, state_name)
+            msg!(keys::WHAT_MODEL_STATE, model = model_name, state = state_name)
         }
     };
 

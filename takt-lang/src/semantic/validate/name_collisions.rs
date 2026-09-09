@@ -6,6 +6,8 @@
 //! пойдёт разбираться в порождённый код - ровно то, ради устранения чего фича и
 //! заведена.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::Diagnostic;
 use crate::semantic::extend::Extend;
 use crate::semantic::{ModelNode, StateNode};
@@ -61,17 +63,12 @@ fn state_model_collisions(model: &Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> {
         found.push(
             Diagnostic::error(
                 *loc,
-                format!(
-                    "состояние '{name}' названо так же, как модель \
-                     '{target_name}', которую оно реализует: имя состояния и имя \
-                     модели попадают в одно пространство имён цели, и ни одна из \
-                     целей такой вход не переводит. Переименуйте состояние"
-                ),
+                msg!(keys::SE_100_STATE_NAMED_AS_MODEL, name = name, model = target_name),
             )
             .with_code("SE-100")
             .with_note(
                 *use_loc,
-                format!("модель '{target_name}' используется здесь"),
+                msg!(keys::NOTE_MODEL_USED_HERE, name = target_name),
             ),
         );
     }

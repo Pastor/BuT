@@ -15,6 +15,8 @@
 //! (`takt-lang/tests/const_eval_tests.rs` +
 //! `takt-sim/tests/conformance_const_param_tests.rs`).
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::{Budget, ConstValue, Locals, eval_in, expr_loc, not_constant};
 use crate::diagnostics::{Diagnostic, Location};
 use crate::parser::ast;
@@ -26,10 +28,7 @@ use std::rc::Rc;
 fn not_const_fn(loc: Location, name: &str, reason: impl AsRef<str>) -> Diagnostic {
     Diagnostic::error(
         loc,
-        format!(
-            "функция '{name}' не вычисляется при компиляции: {}",
-            reason.as_ref()
-        ),
+        msg!(keys::SE_084_FUNCTION_NOT_CONSTANT, name = name, reason = reason.as_ref()),
     )
     .with_code("SE-084")
 }
@@ -72,7 +71,7 @@ pub(super) fn eval_call(
             ),
             _ => not_constant(
                 loc,
-                format!("функция '{name}' в области видимости не найдена"),
+                msg!(keys::CONST_FUNCTION_NOT_FOUND, name = name),
             ),
         }
     })?;
@@ -291,7 +290,7 @@ fn local_declaration(
     let init = init.ok_or_else(|| {
         not_constant(
             loc,
-            format!("у '{name}' нет инициализатора: при компиляции значение неизвестно"),
+            msg!(keys::CONST_NO_INITIALIZER, name = name),
         )
     })?;
     Ok((name, init))
@@ -304,7 +303,7 @@ fn truthy(value: &ConstValue, loc: Location) -> Result<bool, Diagnostic> {
         ConstValue::Int(v) => Ok(*v != 0),
         other => Err(not_constant(
             loc,
-            format!("значение вида «{}» условием быть не может", kind_of(other)),
+            msg!(keys::CONST_NOT_A_CONDITION, kind = kind_of(other)),
         )),
     }
 }

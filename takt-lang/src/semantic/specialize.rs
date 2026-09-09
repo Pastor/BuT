@@ -15,6 +15,8 @@
 //! пространство имён порождённого кода проверок не имеет, и молчание здесь стоило бы
 //! коллизии в выводе.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::semantic::extend::{Extend, ParameterArgument};
 use crate::semantic::import::adopt::adopt_declaration;
@@ -112,11 +114,9 @@ fn specialize_one(
     if !source.borrow().models.is_empty() {
         return Err(Diagnostic::error(
             call_loc,
-            format!(
-                "Специализация модели '{}' с вложенными моделями не поддерживается: \
-                 задайте значения параметров вложенных моделей в их собственных \
-                 инстанцированиях либо соберите в режиме --parameters=assign",
-                source.borrow().name.clone().unwrap_or_default()
+            msg!(
+                keys::SE_087_SPECIALIZE_WITH_NESTED,
+                name = source.borrow().name.clone().unwrap_or_default()
             ),
         )
         .with_code("SE-087"));
@@ -130,7 +130,7 @@ fn specialize_one(
         .ok_or_else(|| {
             Diagnostic::error(
                 call_loc,
-                "Специализируемая модель не имеет родителя в дереве".to_string(),
+                msg!(keys::SE_086_SPECIALIZE_WITHOUT_PARENT),
             )
             .with_code("SE-086")
         })?;
@@ -143,11 +143,7 @@ fn specialize_one(
     if parent.borrow().models.contains_key(&new_name) {
         return Err(Diagnostic::error(
             call_loc,
-            format!(
-                "Имя специализации '{new_name}' уже занято моделью — переименуйте её: \
-                 пространство имён кодогена общее, и молчаливое переименование \
-                 специализации скрыло бы коллизию в выводе"
-            ),
+            msg!(keys::SE_086_SPECIALIZE_NAME_TAKEN, name = new_name),
         )
         .with_code("SE-086"));
     }
@@ -246,7 +242,7 @@ fn set_initializer(
         // означает регресс конвейера.
         _ => Err(Diagnostic::error(
             loc,
-            format!("Параметр '{param}' не найден в специализируемой модели"),
+            msg!(keys::SE_086_SPECIALIZE_PARAMETER_NOT_FOUND, name = param),
         )
         .with_code("SE-086")),
     }

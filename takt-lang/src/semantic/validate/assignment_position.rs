@@ -46,6 +46,8 @@
 //! `a := b := c`), сюда не доходят - они не разбираются. Судья остаётся страховкой на
 //! достижимом остатке.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::semantic::validate::bodies::Position;
 use crate::semantic::{ExpressionNode, VariableNode};
@@ -82,17 +84,12 @@ pub(super) fn check_expression(
 /// `SE-095`: присваивание стоит там, где вычисляется значение.
 fn diagnostic(loc: Location, target: Option<&str>) -> Diagnostic {
     let what = match target {
-        Some(name) => format!("присваивание '{name}'"),
-        None => "присваивание".to_string(),
+        Some(name) => msg!(keys::WHAT_ASSIGNMENT_NAMED, name = name),
+        None => msg!(keys::WHAT_ASSIGNMENT),
     };
     Diagnostic::error(
         loc,
-        format!(
-            "{what} стоит там, где вычисляется значение: в языке присваивание — \
-             оператор, а не выражение. Запись порта или переменной обязана быть \
-             отдельным оператором: сперва `цель := значение;`, затем \
-             использование цели"
-        ),
+        msg!(keys::SE_095_ASSIGNMENT_IN_VALUE_POSITION, what = what),
     )
     .with_code("SE-095")
 }

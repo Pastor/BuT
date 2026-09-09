@@ -22,6 +22,8 @@
 //! попадает** - встроенным он не является, и `type u128 = [bit; 128];` остаётся
 //! законным.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::semantic::ModelNode;
 use crate::semantic::type_node::builtin_type_by_name;
@@ -49,11 +51,7 @@ pub(crate) fn claim_type_name(
     if builtin_type_by_name(name).is_some() {
         return Err(Diagnostic::declaration_error(
             loc,
-            format!(
-                "имя '{name}' принадлежит встроенному типу языка и не может быть \
-                 объявлено заново: выберите другое имя (встроенный тип иначе \
-                 станет недоступен во всём файле)"
-            ),
+            msg!(keys::SE_107_BUILTIN_TYPE_NAME, name = name),
         )
         .with_code("SE-107"));
     }
@@ -68,15 +66,15 @@ pub(crate) fn claim_type_name(
             (Location::Source(a, _, _), Location::Source(b, _, _)) if a == b
         );
         let message = if same_file {
-            format!("тип с именем '{name}' уже объявлен")
+            msg!(keys::SE_108_TYPE_ALREADY_DECLARED_HERE, name = name)
         } else {
-            format!("тип с именем '{name}' уже объявлен — он пришёл из подключённого файла")
+            msg!(keys::SE_108_TYPE_ALREADY_DECLARED_IMPORTED, name = name)
         };
         return Err(Diagnostic::error_with_note(
             loc,
             message,
             first_loc,
-            format!("первое объявление типа '{name}' — здесь"),
+            msg!(keys::SE_108_FIRST_TYPE_DECLARATION_NOTE, name = name),
         )
         .with_code("SE-108"));
     }

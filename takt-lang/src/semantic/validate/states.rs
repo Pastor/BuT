@@ -117,7 +117,7 @@ fn collect_transition_completeness(model: &Rc<RefCell<ModelNode>>, out: &mut Vec
     let model_prefix = if model_name.is_empty() {
         String::new()
     } else {
-        format!("модель '{}': ", model_name)
+        msg!(keys::WHAT_MODEL_PREFIX, name = model_name)
     };
 
     // Вычисляем множество терминальных состояний (без исходящих переходов)
@@ -302,7 +302,7 @@ fn collect_unreachable_states(model: &Rc<RefCell<ModelNode>>, out: &mut Vec<Diag
                 out.push(
                     Diagnostic::warning(
                         loc,
-                        format!("состояние '{}' недостижимо из начального состояния", name),
+                        msg!(keys::SE_010_STATE_UNREACHABLE, name = name),
                     )
                     .with_code("SE-046"),
                 );

@@ -4,6 +4,8 @@
 //! - [`unroll_extend_expression`] - разворачивает выражение в плоскую
 //!   структуру [`Extend::Concatenation`] / [`Extend::Parallel`].
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::parser::ast;
 use crate::semantic::extend_args;
@@ -211,7 +213,7 @@ fn nested_owner_of(
 /// Строит `SE-001` - и добавляет подсказку, если модель есть внутри соседней.
 fn model_not_found(model: &Rc<RefCell<ModelNode>>, id: &ast::Identifier) -> Diagnostic {
     let diagnostic =
-        Diagnostic::error(id.loc, format!("Модель '{}' не найдена", id.name)).with_code("SE-001");
+        Diagnostic::error(id.loc, msg!(keys::SE_001_MODEL_NOT_FOUND, name = id.name)).with_code("SE-001");
     match nested_owner_of(model, &id.name) {
         // Позиция заметки - Объявление вложенной модели, то есть чужой файл. Координата
         // там не печатается, и текст остаётся чистым - а сама позиция доезжает до
@@ -273,9 +275,7 @@ fn unroll_ast_extend(
         // автора.
         other => Err(Diagnostic::error(
             arg_loc(&other).unwrap_or(Location::Implicit),
-            "Реализация модели задаётся именем модели, композицией '+'/'|' или \
-             инстанцированием 'M(параметр := значение)'"
-                .to_string(),
+            msg!(keys::SE_081_IMPLEMENTATION_FORM),
         )
         .with_code("SE-081")),
     }
@@ -364,16 +364,14 @@ pub(super) fn expand_model_implement(model: &Rc<RefCell<ModelNode>>) -> Result<(
     {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "модель '{}' объявлена с реализацией ('= …') и одновременно \
-                 содержит собственное состояние '{name}': модель не может быть \
-                 и композицией, и автоматом. Уберите реализацию и объявите её \
-                 состоянием ('start Имя = …;') либо уберите собственные состояния",
-                model.borrow().name.clone().unwrap_or_default()
+            msg!(
+                keys::SE_101_IMPLEMENTATION_WITH_OWN_STATE,
+                model = model.borrow().name.clone().unwrap_or_default(),
+                name = name
             ),
         )
         .with_code("SE-101")
-        .with_note(state_loc, format!("состояние '{name}' здесь")));
+        .with_note(state_loc, msg!(keys::SE_101_OWN_STATE_NOTE, name = name)));
     }
     let state = StateNode::Implement {
         upper: Some(Rc::downgrade(model)),

@@ -53,20 +53,14 @@ fn check_attribute(def: &ast::FunctionDefine) -> Result<(), Diagnostic> {
     if !matches!(attribute.name.as_str(), "inline" | "noinline") {
         return Err(Diagnostic::error(
             attribute.loc,
-            format!(
-                "неизвестный атрибут функции '{}': допустимы 'inline' (подставлять тело \
-                 в место вызова) и 'noinline' (не подставлять)",
-                attribute.name
-            ),
+            msg!(keys::SE_126_UNKNOWN_FUNCTION_ATTRIBUTE, name = attribute.name),
         )
         .with_code("SE-126"));
     }
     if def.external && attribute.name == "inline" {
         return Err(Diagnostic::error(
             attribute.loc,
-            "атрибут 'inline' на внешней функции: тела у неё нет, подставлять нечего — \
-             её вызов остаётся вызовом в порождённом коде"
-                .to_string(),
+            msg!(keys::SE_127_INLINE_ON_EXTERN),
         )
         .with_code("SE-127"));
     }
@@ -98,7 +92,7 @@ pub fn construct_function(
             .ok_or_else(|| {
                 Diagnostic::error(
                     def.loc,
-                    "при определении функция должна иметь имя".to_string(),
+                    msg!(keys::SE_022_FUNCTION_NEEDS_NAME_LOWER),
                 )
                 .with_code("SE-022")
             })?
@@ -188,10 +182,7 @@ pub fn construct_function(
                     // SE-118: код и позиция объявления.
                     return Err(Diagnostic::error(
                         def.loc,
-                        format!(
-                            "локальная функция '{name}' объявлена без тела: тело обязательно \
-                             (внешнюю функцию объявляют как 'extern fn')"
-                        ),
+                        msg!(keys::SE_118_FUNCTION_WITHOUT_BODY, name = name),
                     )
                     .with_code("SE-118"));
                 };

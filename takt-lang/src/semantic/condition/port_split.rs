@@ -18,6 +18,8 @@
 //! регистр, и раскладка обязана быть предсказуемой. Знание о размере типа берётся у
 //! общего носителя `type_size::bytes_of`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashSet};
 use std::rc::Rc;
@@ -299,7 +301,7 @@ fn collect_leaves(
     let def = model.search_struct(name).ok_or_else(|| {
         Diagnostic::error(
             Location::Codegen,
-            format!("структура '{name}' не объявлена: порт не разворачивается"),
+            msg!(keys::SE_119_STRUCT_NOT_DECLARED, name = name),
         )
         .with_code("SE-119")
     })?;

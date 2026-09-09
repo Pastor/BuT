@@ -15,6 +15,8 @@
 //! | `abs` | `x: BuiltinNumeric` | `BuiltinNumeric` | Абсолютное значение числа |
 //! | `clamp` | `x, lo, hi: BuiltinNumeric` | `BuiltinNumeric` | Ограничение значения в диапазон |
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::Diagnostic;
 use crate::semantic::FunctionDefinitionNode;
 use crate::semantic::type_node::TypeNode;
@@ -52,7 +54,7 @@ pub fn builtin_function(name: &str) -> Result<&FunctionDefinitionNode, Diagnosti
         // бы `Source(0, 0, 0)`, то есть "начало первого файла".
         Diagnostic::error(
             crate::diagnostics::Location::Builtin,
-            format!("Неизвестная функция '{}'", name),
+            msg!(keys::SE_004_UNKNOWN_FUNCTION, name = name),
         )
         .with_code("SE-004")
     })

@@ -13,6 +13,8 @@
 //!   та же библиотека подключается и как `"helper.takt"`, и как `"./helper.takt"`,
 //!   и через `-I`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::read_import_file;
 use crate::parser::ast;
 use crate::parser::ast::ImportPath;
@@ -138,9 +140,9 @@ pub fn importers_note(target: &str, search_paths: &[String]) -> Option<String> {
         return None;
     }
     let listed: Vec<&str> = found.iter().take(MAX_LISTED).map(String::as_str).collect();
-    let mut text = format!("эту библиотеку подключает: {}", listed.join(", "));
+    let mut text = msg!(keys::IMPORT_IMPORTERS_NOTE, listed = listed.join(", "));
     if found.len() > MAX_LISTED {
-        text.push_str(&format!(" (и ещё {})", found.len() - MAX_LISTED));
+        text.push_str(&msg!(keys::IMPORT_IMPORTERS_MORE, count = found.len() - MAX_LISTED));
     }
     Some(text)
 }

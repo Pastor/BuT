@@ -2,6 +2,8 @@
 //!
 //! Часть модуля `validate`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::*;
 
 /// Одностороннее ограничение переменной относительно целочисленного литерала.
@@ -169,9 +171,9 @@ fn check_nondeterministic_model(model: Rc<RefCell<ModelNode>>, warnings: &mut Ve
         };
 
         let prefix = if model_name.is_empty() {
-            format!("состояние '{}'", state_name)
+            msg!(keys::WHAT_STATE, name = state_name)
         } else {
-            format!("модель '{}', состояние '{}'", model_name, state_name)
+            msg!(keys::WHAT_MODEL_STATE, model = model_name, state = state_name)
         };
 
         // Ce14: подсчёт безусловных переходов. Что считать безусловным - решает
@@ -186,9 +188,10 @@ fn check_nondeterministic_model(model: Rc<RefCell<ModelNode>>, warnings: &mut Ve
             warnings.push(
                 Diagnostic::warning(
                     state.loc(),
-                    format!(
-                        "{}: {} безусловных перехода(ов) — недетерминированное поведение",
-                        prefix, unconditional_count
+                    msg!(
+                        keys::SE_037_UNCONDITIONAL_TRANSITIONS,
+                        prefix = prefix,
+                        count = unconditional_count
                     ),
                 )
                 .with_code("SE-037"),
@@ -211,10 +214,11 @@ fn check_nondeterministic_model(model: Rc<RefCell<ModelNode>>, warnings: &mut Ve
                     warnings.push(
                         Diagnostic::warning(
                             conditional[i].location,
-                            format!(
-                                "{}: переходы в '{}' и '{}' имеют одинаковое условие — \
-                                 гарантированное недетерминированное поведение",
-                                prefix, conditional[i].name, conditional[j].name
+                            msg!(
+                                keys::SE_042_SAME_CONDITION,
+                                prefix = prefix,
+                                first = conditional[i].name,
+                                second = conditional[j].name
                             ),
                         )
                         .with_code("SE-042"),
@@ -232,10 +236,11 @@ fn check_nondeterministic_model(model: Rc<RefCell<ModelNode>>, warnings: &mut Ve
                         warnings.push(
                             Diagnostic::warning(
                                 conditional[i].location,
-                                format!(
-                                    "{}: условия переходов в '{}' и '{}' могут одновременно \
-                                     выполняться — возможное перекрытие",
-                                    prefix, conditional[i].name, conditional[j].name
+                                msg!(
+                                    keys::SE_042_CONDITIONS_MAY_OVERLAP,
+                                    prefix = prefix,
+                                    first = conditional[i].name,
+                                    second = conditional[j].name
                                 ),
                             )
                             .with_code("SE-042"),

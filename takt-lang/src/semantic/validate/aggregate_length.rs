@@ -1,5 +1,7 @@
 //! Число элементов агрегата обязано отвечать объявлению - `SE-123`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::*;
 use crate::semantic::type_node::TypeNode;
 
@@ -28,7 +30,7 @@ pub(super) fn check_aggregate_lengths(model: Rc<RefCell<ModelNode>>) -> Vec<Diag
                 if items.len() != expected {
                     found.push(mismatch(
                         var.loc(),
-                        &format!("массив '{name}'"),
+                        &msg!(keys::WHAT_ARRAY, name = name),
                         expected,
                         items.len(),
                     ));
@@ -43,7 +45,7 @@ pub(super) fn check_aggregate_lengths(model: Rc<RefCell<ModelNode>>) -> Vec<Diag
                 if items.len() != def.fields.len() {
                     found.push(mismatch(
                         var.loc(),
-                        &format!("структура '{name}' типа '{struct_name}'"),
+                        &msg!(keys::WHAT_STRUCT_OF_TYPE, name = name, ty = struct_name),
                         def.fields.len(),
                         items.len(),
                     ));
@@ -59,10 +61,11 @@ pub(super) fn check_aggregate_lengths(model: Rc<RefCell<ModelNode>>) -> Vec<Diag
 fn mismatch(loc: Location, what: &str, expected: usize, got: usize) -> Diagnostic {
     Diagnostic::error(
         loc,
-        format!(
-            "{what}: объявлено элементов {expected}, в инициализаторе {got}. Прежде такая \
-             запись означала разное: эталон хранил лишние, цель 'rust' печатала невалидный \
-             код, а 'st' теряла инициализатор без единого слова"
+        msg!(
+            keys::SE_123_AGGREGATE_LENGTH_MISMATCH,
+            what = what,
+            expected = expected,
+            got = got
         ),
     )
     .with_code("SE-123")

@@ -30,6 +30,8 @@
 //! проверка консервативна, и там остаётся `SIM-011` эталона. Переменного индекса в
 //! языке нет вовсе: `w.idx` разбирается как доступ к полю с именем `idx`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::*;
 use crate::parser::ast::{Identifier, Member};
 use crate::semantic::type_node::TypeNode;
@@ -116,10 +118,11 @@ fn check_bit_index(
     }
     Err(Diagnostic::error(
         loc,
-        format!(
-            "разряд {index} за объявленной шириной значения ({width} бит): \
-             обращаться можно к разрядам 0..{}",
-            width - 1
+        msg!(
+            keys::SE_125_BIT_BEYOND_WIDTH,
+            index = index,
+            width = width,
+            last = width - 1
         ),
     )
     .with_code("SE-125"))
@@ -138,7 +141,7 @@ fn check_member(
             {
                 return Err(Diagnostic::error(
                     field.loc,
-                    format!("структура '{}' не содержит поля '{}'", name, field.name),
+                    msg!(keys::SE_061_STRUCT_WITHOUT_FIELD, name = name, field = field.name),
                 )
                 .with_code("SE-061"));
             }
@@ -158,10 +161,7 @@ fn check_member(
         {
             return Err(Diagnostic::error(
                 field.loc,
-                format!(
-                    "обращение к полю '{}' возможно только у структуры",
-                    field.name
-                ),
+                msg!(keys::SE_030_FIELD_ACCESS_NEEDS_STRUCT, field = field.name),
             )
             .with_code("SE-030"));
         }
@@ -250,10 +250,11 @@ fn check_cond(cond: &ConditionNode, model: &ModelNode) -> Result<(), Diagnostic>
                 {
                     return Err(Diagnostic::error(
                         crate::diagnostics::Location::Codegen,
-                        format!(
-                            "разряд {index} за объявленной шириной значения ({width} бит): \
-                             обращаться можно к разрядам 0..{}",
-                            width - 1
+                        msg!(
+                            keys::SE_125_BIT_BEYOND_WIDTH,
+                            index = index,
+                            width = width,
+                            last = width - 1
                         ),
                     )
                     .with_code("SE-125"));
@@ -304,7 +305,7 @@ fn check_cond_member(
     {
         return Err(Diagnostic::error(
             field.loc,
-            format!("структура '{}' не содержит поля '{}'", name, field.name),
+            msg!(keys::SE_061_STRUCT_WITHOUT_FIELD, name = name, field = field.name),
         )
         .with_code("SE-061"));
     }

@@ -15,6 +15,8 @@
 //! литерал автора она не трогает вовсе, и его выход за границы остаётся ошибкой. В
 //! присваивании внутри тела свёртки нет - там проверяется именно записанный литерал.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{
@@ -27,7 +29,14 @@ use std::rc::Rc;
 fn se089(loc: Location, what: &str, value: i128, ty: &TypeNode, lo: i128, hi: i128) -> Diagnostic {
     Diagnostic::error(
         loc,
-        format!("литерал {value} не помещается в тип '{ty}' {what}: допустимо [{lo}, {hi}]"),
+        msg!(
+            keys::SE_089_LITERAL_OUT_OF_RANGE,
+            value = value,
+            ty = ty,
+            what = what,
+            lo = lo,
+            hi = hi
+        ),
     )
     .with_code("SE-089")
 }
@@ -112,7 +121,7 @@ pub(super) fn check_literal_ranges(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnos
                 value,
                 ty,
                 var.loc(),
-                &format!("переменной '{name}'"),
+                &msg!(keys::WHAT_VARIABLE, name = name),
                 &mut found,
             );
         }
@@ -180,7 +189,7 @@ fn check_stmt(stmt: &StatementNode, found: &mut Vec<Diagnostic>) {
                     value,
                     ty,
                     Location::Implicit,
-                    &format!("переменной '{name}'"),
+                    &msg!(keys::WHAT_VARIABLE, name = name),
                     found,
                 );
             }
@@ -201,7 +210,7 @@ fn check_expr(expr: &ExpressionNode, found: &mut Vec<Diagnostic>) {
             {
                 let borrowed = var_rc.borrow();
                 if let Some((ty, name)) = var_type(&borrowed) {
-                    let what = format!("переменной '{name}'");
+                    let what = msg!(keys::WHAT_VARIABLE, name = name);
                     check(literal_value, ty, borrowed.loc(), &what, found);
                 }
             }

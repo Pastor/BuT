@@ -7,6 +7,8 @@
 //! Функция [`compute_usage`] вычисляет множество используемых имён по всем категориям
 //! элементов модели.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::Diagnostic;
 use crate::semantic::{
     ConditionDefinitionNode, ConditionNode, ExpressionNode, Formula, FunctionDefinitionNode,
@@ -562,7 +564,7 @@ fn check_model_unused(model: Rc<RefCell<ModelNode>>, warnings: &mut Vec<Diagnost
             warnings.push(
                 Diagnostic::warning(
                     var.loc(),
-                    format!("переменная '{}' объявлена, но нигде не используется", name),
+                    msg!(keys::SE_036_VARIABLE_UNUSED, name = name),
                 )
                 .with_code("SE-036"),
             );
@@ -620,7 +622,7 @@ fn check_unused_locals(stmt: &StatementNode, warnings: &mut Vec<Diagnostic>) {
             warnings.push(
                 Diagnostic::warning(
                     loc,
-                    format!("переменная '{name}' объявлена, но нигде не используется"),
+                    msg!(keys::SE_036_VARIABLE_UNUSED, name = name),
                 )
                 .with_code("SE-036"),
             );

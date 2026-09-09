@@ -54,6 +54,8 @@ pub mod fixed_repr;
 pub mod int_cast;
 pub(crate) mod int_ops;
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::parser::ast;
 use crate::semantic::type_node::TypeNode;
@@ -221,10 +223,7 @@ pub fn is_not_constant(diagnostic: &Diagnostic) -> bool {
 pub fn not_constant(loc: Location, reason: impl AsRef<str>) -> Diagnostic {
     Diagnostic::error(
         loc,
-        format!(
-            "выражение не вычисляется при компиляции: {}",
-            reason.as_ref()
-        ),
+        msg!(keys::SE_083_NOT_A_CONSTANT_EXPRESSION, reason = reason.as_ref()),
     )
     .with_code("SE-083")
 }
@@ -455,7 +454,7 @@ fn apply_binary(
             ">=" => Ok(V::Bool(a >= b)),
             _ => Err(not_constant(
                 loc,
-                format!("операция '{op}' над длительностями не определена"),
+                msg!(keys::CONST_OP_ON_DURATIONS, op = op),
             )),
         },
         // -- Булевы ------------------------------------------------------------
@@ -466,7 +465,7 @@ fn apply_binary(
             "!=" => Ok(V::Bool(a != b)),
             _ => Err(not_constant(
                 loc,
-                format!("операция '{op}' над булевыми не определена"),
+                msg!(keys::CONST_OP_ON_BOOLEANS, op = op),
             )),
         },
         // -- Дробные: считается точное, отвергается округляемое --
@@ -565,7 +564,7 @@ fn int_op(op: &str, a: i128, b: i128, loc: Location) -> Result<ConstValue, Diagn
         )),
         Err(IntOpError::UnsupportedOperator) => Err(not_constant(
             loc,
-            format!("операция '{op}' при компиляции не вычисляется"),
+            msg!(keys::CONST_OP_NOT_EVALUATED, op = op),
         )),
     }
 }
@@ -592,22 +591,22 @@ fn resolve_name(
         }
         return Err(not_constant(
             loc,
-            format!("имя '{name}' в области видимости не объявлено"),
+            msg!(keys::CONST_NAME_NOT_DECLARED, name = name),
         ));
     };
     match found {
         VariableNode::Const { expr, .. } => eval_node(&expr, loc, scope, budget),
         VariableNode::Simple { .. } => Err(not_constant(
             loc,
-            format!("'{name}' — переменная: её значение известно только в такте"),
+            msg!(keys::CONST_NAME_IS_A_VARIABLE, name = name),
         )),
         VariableNode::Port { .. } => Err(not_constant(
             loc,
-            format!("'{name}' — порт: его значение приходит извне во время работы"),
+            msg!(keys::CONST_NAME_IS_A_PORT, name = name),
         )),
         VariableNode::Unresolved => Err(not_constant(
             loc,
-            format!("объявление '{name}' не разрешено"),
+            msg!(keys::CONST_DECLARATION_UNRESOLVED, name = name),
         )),
     }
 }
@@ -776,10 +775,10 @@ fn cast_identity(
             Ok(value) => Ok(ConstValue::Int(value)),
             Err(overflow) => Err(Diagnostic::error(
                 loc,
-                format!(
-                    "приведение длительности к знаковому {}-битному типу переполняет его: \
-                     {} мс в него не помещаются",
-                    overflow.bits, overflow.value
+                msg!(
+                    keys::SE_121_DURATION_CAST_OVERFLOW,
+                    bits = overflow.bits,
+                    value = overflow.value
                 ),
             )
             .with_code("SE-121")),
@@ -819,13 +818,7 @@ fn cast_identity(
             // `c`/`rust` - `44`, `st` потеряла бы инициализатор.
             Err(overflow) => Err(Diagnostic::error(
                 loc,
-                format!(
-                    "приведение 'as' переполняет знаковый {}-битный тип: значение {} \
-                     в него не помещается, а знаковое переполнение — ошибка программы \
-                     (в C это неопределённое поведение). Возьмите тип шире либо \
-                     беззнаковый — у него перенос определён",
-                    overflow.bits, overflow.value
-                ),
+                msg!(keys::SE_121_CAST_OVERFLOW, bits = overflow.bits, value = overflow.value),
             )
             .with_code("SE-121")),
         };

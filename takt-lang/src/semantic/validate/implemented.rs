@@ -26,6 +26,8 @@
 //!
 //! [`SE-011`]: super::states::model_only_one_start_state
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use super::*;
 use crate::semantic::extend::Extend;
 
@@ -83,11 +85,7 @@ fn empty_model_diagnostic(target: &Rc<RefCell<ModelNode>>, usage: Location) -> O
     let name = target.name.clone().unwrap_or_default();
     let diagnostic = Diagnostic::error(
         usage,
-        format!(
-            "модель '{name}' не содержит ни одного состояния, поэтому не может быть \
-             реализацией: исполнять в ней нечего. Добавьте в неё стартовое состояние \
-             ('start Имя {{ … }}') либо уберите её из реализации"
-        ),
+        msg!(keys::SE_106_MODEL_WITHOUT_STATES, name = name),
     )
     .with_code("SE-106");
     Some(match nested_with_states(&target) {
@@ -99,7 +97,7 @@ fn empty_model_diagnostic(target: &Rc<RefCell<ModelNode>>, usage: Location) -> O
                  верхний уровень"
             ),
         ),
-        None => diagnostic.with_note(target.loc, format!("модель '{name}' объявлена здесь")),
+        None => diagnostic.with_note(target.loc, msg!(keys::NOTE_MODEL_DECLARED_HERE, name = name)),
     })
 }
 
