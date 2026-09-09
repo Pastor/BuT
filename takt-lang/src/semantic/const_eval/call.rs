@@ -15,10 +15,10 @@
 //! (`takt-lang/tests/const_eval_tests.rs` +
 //! `takt-sim/tests/conformance_const_param_tests.rs`).
 
-use crate::diagnostics::lang::keys;
-use crate::msg;
 use super::{Budget, ConstValue, Locals, eval_in, expr_loc, not_constant};
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::parser::ast;
 use crate::semantic::{FunctionDefinitionNode, ModelNode};
 use std::cell::RefCell;
@@ -28,7 +28,11 @@ use std::rc::Rc;
 fn not_const_fn(loc: Location, name: &str, reason: impl AsRef<str>) -> Diagnostic {
     Diagnostic::error(
         loc,
-        msg!(keys::SE_084_FUNCTION_NOT_CONSTANT, name = name, reason = reason.as_ref()),
+        msg!(
+            keys::SE_084_FUNCTION_NOT_CONSTANT,
+            name = name,
+            reason = reason.as_ref()
+        ),
     )
     .with_code("SE-084")
 }
@@ -59,28 +63,17 @@ pub(super) fn eval_call(
         // Функция в области видимости есть, но тела у неё нет: назвать причину точно
         // полезнее, чем "не найдена".
         match scope.borrow().search_func(name).map(|f| f.borrow().clone()) {
-            Some(FunctionDefinitionNode::External { .. }) => not_const_fn(
-                loc,
-                name,
-                "объявлена как extern — её значение даёт внешний код во время работы",
-            ),
-            Some(FunctionDefinitionNode::Builtin(_, _, _)) => not_const_fn(
-                loc,
-                name,
-                "встроенная функция языка при компиляции не исполняется",
-            ),
-            _ => not_constant(
-                loc,
-                msg!(keys::CONST_FUNCTION_NOT_FOUND, name = name),
-            ),
+            Some(FunctionDefinitionNode::External { .. }) => {
+                not_const_fn(loc, name, msg!(keys::CONST_FN_EXTERN))
+            }
+            Some(FunctionDefinitionNode::Builtin(_, _, _)) => {
+                not_const_fn(loc, name, msg!(keys::CONST_FN_BUILTIN))
+            }
+            _ => not_constant(loc, msg!(keys::CONST_FUNCTION_NOT_FOUND, name = name)),
         }
     })?;
     if define.external {
-        return Err(not_const_fn(
-            loc,
-            name,
-            "объявлена как extern — её значение даёт внешний код во время работы",
-        ));
+        return Err(not_const_fn(loc, name, msg!(keys::CONST_FN_EXTERN)));
     }
 
     // Аргументы вычисляются в области видимости **вызывающего**: они его выражения, а
@@ -91,10 +84,10 @@ pub(super) fn eval_call(
         return Err(not_const_fn(
             loc,
             name,
-            format!(
-                "передано аргументов: {}, объявлено параметров: {}",
-                args.len(),
-                params.len()
+            msg!(
+                keys::CONST_FN_ARITY,
+                given = args.len(),
+                declared = params.len()
             ),
         ));
     }
@@ -106,7 +99,7 @@ pub(super) fn eval_call(
     let body = define
         .body
         .as_ref()
-        .ok_or_else(|| not_const_fn(loc, name, "у функции нет тела"))?;
+        .ok_or_else(|| not_const_fn(loc, name, msg!(keys::CONST_FN_NO_BODY)))?;
 
     budget.deeper(loc)?;
     let flow = exec(body, scope, &mut frame, budget);
@@ -116,13 +109,9 @@ pub(super) fn eval_call(
         Flow::Return(None) => Err(not_const_fn(
             loc,
             name,
-            "выполнен 'return' без значения — параметру нечего присвоить",
+            msg!(keys::CONST_FN_RETURN_WITHOUT_VALUE),
         )),
-        Flow::Next => Err(not_const_fn(
-            loc,
-            name,
-            "тело завершилось без 'return' — значения нет",
-        )),
+        Flow::Next => Err(not_const_fn(loc, name, msg!(keys::CONST_FN_NO_RETURN))),
     }
 }
 
@@ -150,12 +139,22 @@ fn parameter_names(
 ) -> Result<Vec<String>, Diagnostic> {
     let mut names = Vec::with_capacity(define.params.len());
     for (param_loc, param) in &define.params {
-        let param = param
-            .as_ref()
-            .ok_or_else(|| not_const_fn(*param_loc, name, "параметр объявлен без имени"))?;
+        let param = param.as_ref().ok_or_else(|| {
+            not_const_fn(
+                *param_loc,
+                name,
+                msg!(keys::CONST_FN_PARAMETER_WITHOUT_NAME),
+            )
+        })?;
         match &param.name {
             Some(id) => names.push(id.name.clone()),
-            None => return Err(not_const_fn(loc, name, "параметр объявлен без имени")),
+            None => {
+                return Err(not_const_fn(
+                    loc,
+                    name,
+                    msg!(keys::CONST_FN_PARAMETER_WITHOUT_NAME),
+                ));
+            }
         }
     }
     Ok(names)
@@ -230,10 +229,7 @@ fn exec(
         S::Expression(loc, ast::Expression::Assign(_, target, value)) => {
             budget.step(*loc)?;
             let ast::Expression::Variable(id) = target.as_ref() else {
-                return Err(not_constant(
-                    *loc,
-                    "слева от ':=' в константном вычислении обязано стоять имя",
-                ));
+                return Err(not_constant(*loc, msg!(keys::CONST_ASSIGN_TARGET_NAME)));
             };
             let value = eval_in(value, scope, locals, budget)?;
             if locals.assign(&id.name, value) {
@@ -241,23 +237,16 @@ fn exec(
             } else {
                 Err(not_constant(
                     id.loc,
-                    format!(
-                        "'{}' не локальное имя функции: при компиляции менять \
-                         состояние модели нельзя",
-                        id.name
-                    ),
+                    msg!(keys::CONST_NOT_A_LOCAL_FUNCTION, name = id.name),
                 ))
             }
         }
         // Оператор-выражение без присваивания: значение отбрасывается, то есть смысл
         // его - побочное действие, которого здесь быть не может.
-        S::Expression(loc, _) => Err(not_constant(
-            *loc,
-            "оператор-выражение без присваивания в константном вычислении бессмыслен",
-        )),
+        S::Expression(loc, _) => Err(not_constant(*loc, msg!(keys::CONST_EXPRESSION_STATEMENT))),
         other => Err(not_constant(
             other.loc(),
-            "оператор в константном вычислении не поддержан",
+            msg!(keys::CONST_STATEMENT_UNSUPPORTED),
         )),
     }
 }
@@ -277,22 +266,15 @@ fn local_declaration(
             name, initializer, ..
         } => (name, Some(initializer.clone())),
         V::Port { .. } | V::Parameter { .. } => {
-            return Err(not_constant(
-                loc,
-                "внутри функции объявляются только локальные значения",
-            ));
+            return Err(not_constant(loc, msg!(keys::CONST_LOCAL_VALUES_ONLY)));
         }
     };
     let name = name
         .as_ref()
         .map(|id| id.name.clone())
-        .ok_or_else(|| not_constant(loc, "объявление без имени"))?;
-    let init = init.ok_or_else(|| {
-        not_constant(
-            loc,
-            msg!(keys::CONST_NO_INITIALIZER, name = name),
-        )
-    })?;
+        .ok_or_else(|| not_constant(loc, msg!(keys::CONST_DECLARATION_WITHOUT_NAME)))?;
+    let init =
+        init.ok_or_else(|| not_constant(loc, msg!(keys::CONST_NO_INITIALIZER, name = name)))?;
     Ok((name, init))
 }
 
@@ -309,13 +291,13 @@ fn truthy(value: &ConstValue, loc: Location) -> Result<bool, Diagnostic> {
 }
 
 /// Вид значения - для текста диагностики.
-fn kind_of(value: &ConstValue) -> &'static str {
+fn kind_of(value: &ConstValue) -> String {
     match value {
-        ConstValue::Int(_) => "целое",
-        ConstValue::Bool(_) => "булево",
-        ConstValue::Duration(_) => "длительность",
-        ConstValue::Rational(_, _) => "дробное",
-        ConstValue::List(_) => "агрегат",
+        ConstValue::Int(_) => msg!(keys::KIND_INTEGER),
+        ConstValue::Bool(_) => msg!(keys::KIND_BOOLEAN),
+        ConstValue::Duration(_) => msg!(keys::KIND_DURATION),
+        ConstValue::Rational(_, _) => msg!(keys::KIND_RATIONAL),
+        ConstValue::List(_) => msg!(keys::KIND_AGGREGATE),
     }
 }
 

@@ -2,9 +2,9 @@
 //!
 //! Часть модуля `validate`.
 
+use super::*;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use super::*;
 
 /// Проверяет, что инициализатор переменной типа `bit` содержит допустимое значение.
 ///

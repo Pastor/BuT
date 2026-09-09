@@ -12,9 +12,9 @@
 //! булева, семантическое - нет), и проверка стала неотдаваемой - 16 ложных срабатываний
 //! на примерах документа. Теперь расходиться нечему.
 
+use super::*;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use super::*;
 
 /// Добавляет предупреждение Се11 в `out`.
 ///
@@ -30,7 +30,11 @@ fn emit_implicit_bool_warning(
     is_next: bool,
     out: &mut Vec<Diagnostic>,
 ) {
-    let verb = if is_next { "next к" } else { "к" };
+    let verb = if is_next {
+        msg!(keys::BOOL_VERB_NEXT)
+    } else {
+        msg!(keys::BOOL_VERB_TO)
+    };
     out.push(
         Diagnostic::warning(
             loc,
@@ -206,7 +210,11 @@ fn collect_implicit_bool_warnings(model: &Rc<RefCell<ModelNode>>, out: &mut Vec<
         if model_name.is_empty() {
             msg!(keys::WHAT_STATE, name = state_name)
         } else {
-            msg!(keys::WHAT_MODEL_STATE, model = model_name, state = state_name)
+            msg!(
+                keys::WHAT_MODEL_STATE,
+                model = model_name,
+                state = state_name
+            )
         }
     };
 

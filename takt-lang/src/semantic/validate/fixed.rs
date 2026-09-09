@@ -15,6 +15,8 @@
 //! [`wider_type`]: crate::semantic::type_inference::wider_type
 
 use super::*;
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::semantic::type_inference::extract_type;
 
 /// Проверяет запрет смешения `q(m, n)` во всех выражениях **уровня** модели.
@@ -281,10 +283,7 @@ fn check_mixing(
 fn se065(loc: Location, lt: &TypeNode, rt: &TypeNode) -> Diagnostic {
     Diagnostic::declaration_error(
         loc,
-        format!(
-            "смешение типов '{}' и '{}' в арифметике запрещено: длительность              сочетается только с длительностью",
-            lt, rt
-        ),
+        msg!(keys::SE_065_DURATION_MIXED, left = lt, right = rt),
     )
     .with_code("SE-065")
 }

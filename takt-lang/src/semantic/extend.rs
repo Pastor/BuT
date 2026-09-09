@@ -5,8 +5,8 @@
 //!   структуру [`Extend::Concatenation`] / [`Extend::Parallel`].
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::parser::ast;
 use crate::semantic::extend_args;
 use crate::semantic::{ExpressionNode, ModelNode, StateNode, StateNodeKind};
@@ -212,8 +212,8 @@ fn nested_owner_of(
 
 /// Строит `SE-001` - и добавляет подсказку, если модель есть внутри соседней.
 fn model_not_found(model: &Rc<RefCell<ModelNode>>, id: &ast::Identifier) -> Diagnostic {
-    let diagnostic =
-        Diagnostic::error(id.loc, msg!(keys::SE_001_MODEL_NOT_FOUND, name = id.name)).with_code("SE-001");
+    let diagnostic = Diagnostic::error(id.loc, msg!(keys::SE_001_MODEL_NOT_FOUND, name = id.name))
+        .with_code("SE-001");
     match nested_owner_of(model, &id.name) {
         // Позиция заметки - Объявление вложенной модели, то есть чужой файл. Координата
         // там не печатается, и текст остаётся чистым - а сама позиция доезжает до
@@ -325,9 +325,9 @@ pub(crate) fn unroll_extend_expression(
         // Защитная ветвь без `Debug`-дампа: форму реализации проверяет `SE-081` раньше
         // и называет допустимые записи, поэтому сюда доходит только то, что семантика
         // уже пропустила.
-        _ => Err(crate::semantic::internal::internal(
-            "выражение реализации не сводится к композиции моделей",
-        )),
+        _ => Err(crate::semantic::internal::internal(&msg!(
+            keys::SE_081_IMPLEMENTATION_NOT_A_COMPOSITION
+        ))),
     }
 }
 

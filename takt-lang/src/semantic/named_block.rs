@@ -8,6 +8,8 @@
 //! разрешается в конкретный вариант: `Enter`, `Exit`, `Always` или `Unknown`.
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::semantic::statement::resolve_statement;
 use crate::semantic::{ModelNode, NamedCodeBlockDefinitionNode, StatementNode};
 use std::cell::RefCell;
@@ -32,9 +34,9 @@ pub fn resolve_named_blocks(
             NamedCodeBlockDefinitionNode::None => {
                 // Внутренний инвариант: неразрешённый блок сюда не доходит - его форму
                 // проверяет разбор именованных блоков (`SE-045`).
-                return Err(crate::semantic::internal::internal(
-                    "именованный блок без тела",
-                ));
+                return Err(crate::semantic::internal::internal(&msg!(
+                    keys::SE_119_NAMED_BLOCK_WITHOUT_BODY
+                )));
             }
             NamedCodeBlockDefinitionNode::Unresolved(name, stmt) => {
                 let stmt =

@@ -47,7 +47,9 @@
 
 #![deny(clippy::wildcard_enum_match_arm)]
 
+use crate::diagnostics::lang::{Key, keys, render};
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::validate::bodies::Position;
 use crate::semantic::{ExpressionNode, VariableNode};
 
@@ -137,24 +139,13 @@ fn judge(left: &ExpressionNode, whole: &ExpressionNode, stmt_loc: Location) -> O
         Err(kind) => Some(
             Diagnostic::error(
                 loc,
-                format!(
-                    "левая часть присваивания — {kind}, а не место записи: писать можно в \
-                     переменную, поле структуры, элемент или срез массива, отдельный бит, \
-                     порт либо ячейку '#АДРЕС'"
-                ),
+                msg!(keys::SE_111_NOT_A_PLACE, kind = render(kind, &[])),
             )
             .with_code("SE-111"),
         ),
         Ok(Place::ReadOnly(name)) => Some(
-            Diagnostic::error(
-                loc,
-                format!(
-                    "целью записи назначена константа '{name}': константа обозначает \
-                     величину, а не хранилище. Объявите её как 'var {name}: …', если \
-                     значение должно меняться"
-                ),
-            )
-            .with_code("SE-112"),
+            Diagnostic::error(loc, msg!(keys::SE_112_CONSTANT_TARGET, name = name))
+                .with_code("SE-112"),
         ),
         Ok(Place::Writable | Place::Silent) => None,
     }
@@ -166,7 +157,7 @@ fn judge(left: &ExpressionNode, whole: &ExpressionNode, stmt_loc: Location) -> O
 /// **завалить сборку** этого модуля, а не молча выйти из-под правила. Тот же
 /// приём, что у `semantic/usages/walk.rs`, `parser/depth` и соседнего
 /// `assignment_position`.
-fn classify(expr: &ExpressionNode) -> Result<Place, &'static str> {
+fn classify(expr: &ExpressionNode) -> Result<Place, Key> {
     match expr {
         // Скобки прозрачны, доступ к члену и биту - место, если место основание.
         ExpressionNode::Parenthesis(inner) | ExpressionNode::BitAccess(inner, _) => classify(inner),
@@ -186,45 +177,47 @@ fn classify(expr: &ExpressionNode) -> Result<Place, &'static str> {
         // Сырой АСД: до понижения формы левой части не видно.
         ExpressionNode::Unresolved(_) => Ok(Place::Silent),
 
-        ExpressionNode::Function(_, _) => Err("вызов функции"),
-        ExpressionNode::NamedFunctionBox(_, _) => Err("вызов с именованными аргументами"),
-        ExpressionNode::CodeBlock(_, _) => Err("блок кода"),
+        ExpressionNode::Function(_, _) => Err(keys::PLACE_CALL),
+        ExpressionNode::NamedFunctionBox(_, _) => Err(keys::PLACE_NAMED_CALL),
+        ExpressionNode::CodeBlock(_, _) => Err(keys::PLACE_CODE_BLOCK),
         ExpressionNode::Number(_)
         | ExpressionNode::Duration(_)
         | ExpressionNode::Rational(_, _)
         | ExpressionNode::String(_)
-        | ExpressionNode::Bool(_) => Err("литерал"),
-        ExpressionNode::Address(_, _) => Err("адресный литерал"),
-        ExpressionNode::Array(_) | ExpressionNode::Initializer(_) => Err("составной литерал"),
-        ExpressionNode::Type(_) => Err("имя типа"),
-        ExpressionNode::Model(_) => Err("модель"),
-        ExpressionNode::Condition(_) => Err("именованное условие"),
-        ExpressionNode::List(_) => Err("список параметров"),
-        ExpressionNode::None => Err("пустое выражение"),
-        ExpressionNode::Not(_) => Err("логическое отрицание"),
-        ExpressionNode::BitwiseNot(_) => Err("побитовое отрицание"),
-        ExpressionNode::UnaryPlus(_) => Err("унарный плюс"),
-        ExpressionNode::Negate(_) => Err("смена знака"),
-        ExpressionNode::Cast(_, _) => Err("приведение типа"),
+        | ExpressionNode::Bool(_) => Err(keys::PLACE_LITERAL),
+        ExpressionNode::Address(_, _) => Err(keys::PLACE_ADDRESS_LITERAL),
+        ExpressionNode::Array(_) | ExpressionNode::Initializer(_) => {
+            Err(keys::PLACE_AGGREGATE_LITERAL)
+        }
+        ExpressionNode::Type(_) => Err(keys::PLACE_TYPE_NAME),
+        ExpressionNode::Model(_) => Err(keys::PLACE_MODEL),
+        ExpressionNode::Condition(_) => Err(keys::PLACE_NAMED_CONDITION),
+        ExpressionNode::List(_) => Err(keys::PLACE_PARAMETER_LIST),
+        ExpressionNode::None => Err(keys::PLACE_EMPTY),
+        ExpressionNode::Not(_) => Err(keys::PLACE_NOT),
+        ExpressionNode::BitwiseNot(_) => Err(keys::PLACE_BITWISE_NOT),
+        ExpressionNode::UnaryPlus(_) => Err(keys::PLACE_UNARY_PLUS),
+        ExpressionNode::Negate(_) => Err(keys::PLACE_NEGATE),
+        ExpressionNode::Cast(_, _) => Err(keys::PLACE_CAST),
         ExpressionNode::Power(_, _)
         | ExpressionNode::Multiply(_, _)
         | ExpressionNode::Divide(_, _)
         | ExpressionNode::Modulo(_, _)
         | ExpressionNode::Add(_, _)
-        | ExpressionNode::Subtract(_, _) => Err("арифметическое выражение"),
+        | ExpressionNode::Subtract(_, _) => Err(keys::PLACE_ARITHMETIC),
         ExpressionNode::ShiftLeft(_, _)
         | ExpressionNode::ShiftRight(_, _)
         | ExpressionNode::BitwiseAnd(_, _)
         | ExpressionNode::BitwiseXor(_, _)
-        | ExpressionNode::BitwiseOr(_, _) => Err("побитовое выражение"),
+        | ExpressionNode::BitwiseOr(_, _) => Err(keys::PLACE_BITWISE),
         ExpressionNode::Less(_, _)
         | ExpressionNode::More(_, _)
         | ExpressionNode::LessEqual(_, _)
         | ExpressionNode::MoreEqual(_, _)
         | ExpressionNode::Equal(_, _)
-        | ExpressionNode::NotEqual(_, _) => Err("сравнение"),
-        ExpressionNode::And(_, _) | ExpressionNode::Or(_, _) => Err("логическое выражение"),
-        ExpressionNode::ConditionalOperator(_, _, _) => Err("условный оператор"),
-        ExpressionNode::Assign(_, _) => Err("присваивание"),
+        | ExpressionNode::NotEqual(_, _) => Err(keys::PLACE_COMPARISON),
+        ExpressionNode::And(_, _) | ExpressionNode::Or(_, _) => Err(keys::PLACE_LOGICAL),
+        ExpressionNode::ConditionalOperator(_, _, _) => Err(keys::PLACE_CONDITIONAL),
+        ExpressionNode::Assign(_, _) => Err(keys::PLACE_ASSIGNMENT),
     }
 }

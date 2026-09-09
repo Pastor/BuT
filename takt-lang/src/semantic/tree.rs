@@ -70,10 +70,11 @@ fn check_import_cycle(
         // Строим цепочку начиная с точки входа цикла
         let mut chain: Vec<&str> = import_stack[pos..].iter().map(|s| s.as_str()).collect();
         chain.push(new_file);
-        return Err(
-            Diagnostic::error(loc, msg!(keys::SE_013_IMPORT_CYCLE, chain = chain.join(" → ")))
-                .with_code("SE-013"),
-        );
+        return Err(Diagnostic::error(
+            loc,
+            msg!(keys::SE_013_IMPORT_CYCLE, chain = chain.join(" → ")),
+        )
+        .with_code("SE-013"));
     }
     Ok(())
 }
@@ -426,11 +427,8 @@ pub(super) fn construct_model_stage0(
                 .clone()
                 .name
                 .ok_or_else(|| {
-                    Diagnostic::error(
-                        def_loc,
-                        msg!(keys::SE_019_CONDITION_NEEDS_NAME),
-                    )
-                    .with_code("SE-019")
+                    Diagnostic::error(def_loc, msg!(keys::SE_019_CONDITION_NEEDS_NAME))
+                        .with_code("SE-019")
                 })?
                 .name
                 .clone();
@@ -489,11 +487,8 @@ pub(super) fn construct_model_stage0(
                 .clone()
                 .name
                 .ok_or_else(|| {
-                    Diagnostic::error(
-                        def.loc,
-                        msg!(keys::SE_018_BLOCK_NEEDS_NAME),
-                    )
-                    .with_code("SE-018")
+                    Diagnostic::error(def.loc, msg!(keys::SE_018_BLOCK_NEEDS_NAME))
+                        .with_code("SE-018")
                 })?
                 .name
                 .clone();
@@ -541,11 +536,8 @@ pub(super) fn construct_model_stage0(
                 .clone()
                 .name
                 .ok_or_else(|| {
-                    Diagnostic::error(
-                        def.loc,
-                        msg!(keys::SE_022_FUNCTION_NEEDS_NAME),
-                    )
-                    .with_code("SE-022")
+                    Diagnostic::error(def.loc, msg!(keys::SE_022_FUNCTION_NEEDS_NAME))
+                        .with_code("SE-022")
                 })?
                 .name
                 .clone();
@@ -1250,8 +1242,11 @@ fn resolve_references(
         .map(|r| {
             if let StateNode::Unresolved = *r.object {
                 let target = states.get(&r.name).ok_or_else(|| {
-                    Diagnostic::error(r.location, msg!(keys::SE_002_REFERENCE_NOT_FOUND, name = r.name))
-                        .with_code("SE-002")
+                    Diagnostic::error(
+                        r.location,
+                        msg!(keys::SE_002_REFERENCE_NOT_FOUND, name = r.name),
+                    )
+                    .with_code("SE-002")
                 })?;
                 Ok(ReferenceNode {
                     location: r.location,

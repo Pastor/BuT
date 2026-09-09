@@ -2,9 +2,9 @@
 //!
 //! Часть модуля `validate`.
 
+use super::*;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use super::*;
 
 /// Структура без полей - `SE-115`.
 pub fn validate_empty_structs(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> {
@@ -56,7 +56,11 @@ pub fn check_duplicate_struct_fields(model: Rc<RefCell<ModelNode>>) -> Option<Di
                 return Some(
                     Diagnostic::error(
                         s.loc,
-                        msg!(keys::SE_040_STRUCT_DUPLICATE_FIELD, name = s.name, field = field_name),
+                        msg!(
+                            keys::SE_040_STRUCT_DUPLICATE_FIELD,
+                            name = s.name,
+                            field = field_name
+                        ),
                     )
                     .with_code("SE-040"),
                 );

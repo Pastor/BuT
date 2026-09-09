@@ -243,7 +243,7 @@ note.model-declared-here = model '{name}' is declared here
 note.model-used-here = model '{name}' is used here
 se-010.state-unreachable = state '{name}' is unreachable from the start state
 
-# ─── Semantics: implicit truthiness — subjects (`validate/implicit_bool.rs`) ─
+# ─── Semantics: subjects of implicit truthiness (`validate/implicit_bool.rs`) ─
 bool.number-literal = the numeric literal {value}
 bool.rational-literal = the rational literal {sign}{value}
 bool.string-literal = a string literal
@@ -258,7 +258,7 @@ bool.array-element = the array element '{name}[{index}]'
 bool.bit-access = a bit-field access
 bool.numeric-expression = a numeric expression
 
-# ─── Semantics: reasons for “not a constant” (`semantic/const_eval/`) ────────
+# ─── Semantics: reasons for non-constness (`semantic/const_eval/`) ──────────
 const.op-on-durations = the operation '{op}' on durations is not defined
 const.op-on-booleans = the operation '{op}' on booleans is not defined
 const.op-not-evaluated = the operation '{op}' is not evaluated at compile time
@@ -304,3 +304,119 @@ after.form-string = a string
 kind.variable = a variable
 kind.port = a port
 kind.unresolved-declaration = an unresolved declaration
+
+# ─── Semantics: assignment target (`semantic/validate/assignment_place.rs`) ─
+se-111.not-a-place = the left-hand side of the assignment is {kind}, not a storage location: you can write to a variable, a structure field, an array element or slice, a single bit, a port or a '#ADDRESS' cell
+se-112.constant-target = the target of the write is the constant '{name}': a constant denotes a value, not storage. Declare it as 'var {name}: …' if the value must change
+place.call = a function call
+place.named-call = a call with named arguments
+place.code-block = a code block
+place.literal = a literal
+place.address-literal = an address literal
+place.aggregate-literal = an aggregate literal
+place.type-name = a type name
+place.model = a model
+place.named-condition = a named condition
+place.parameter-list = a parameter list
+place.empty = an empty expression
+place.not = a logical negation
+place.bitwise-not = a bitwise negation
+place.unary-plus = a unary plus
+place.negate = a sign change
+place.cast = a type cast
+place.arithmetic = an arithmetic expression
+place.bitwise = a bitwise expression
+place.comparison = a comparison
+place.logical = a logical expression
+place.conditional = a conditional operator
+place.assignment = an assignment
+
+# ─── Semantics: why a call is not constant (`semantic/const_eval/call.rs`) ───
+const.fn-extern = declared as extern — its value comes from external code at run time
+const.fn-builtin = a built-in function of the language is not executed at compile time
+const.fn-arity = arguments given: {given}, parameters declared: {declared}
+const.fn-no-body = the function has no body
+const.fn-return-without-value = a 'return' without a value was executed — there is nothing to assign
+const.fn-no-return = the body ended without a 'return' — there is no value
+const.fn-parameter-without-name = a parameter is declared without a name
+const.assign-target-name = a name must stand to the left of ':=' in constant evaluation
+const.not-a-local-function = '{name}' is not a local function name: the model state cannot be changed at compile time
+const.expression-statement = an expression statement without an assignment is meaningless in constant evaluation
+const.statement-unsupported = the statement is not supported in constant evaluation
+const.local-values-only = only local values are declared inside a function
+const.declaration-without-name = a declaration without a name
+kind.integer = an integer
+kind.boolean = a boolean
+kind.duration = a duration
+kind.rational = a rational
+kind.aggregate = an aggregate
+
+# ─── Semantics: why an expression is not constant (`const_eval/mod.rs`) ──────
+const.steps-exhausted = the evaluation step limit is exceeded
+const.depth-exhausted = the evaluation depth limit is exceeded (a cycle of definitions is possible)
+const.negate-not-applicable = a unary minus does not apply to a value of kind “{kind}”
+const.bitwise-not-not-applicable = a bitwise NOT does not apply to a value of kind “{kind}”
+const.not-not-applicable = a logical NOT does not apply to a value of kind “{kind}”
+const.expression-form = this form of expression is not evaluated at compile time
+const.rational-op-inexact = the operation '{op}' on rationals is not performed exactly at compile time: the representation of a rational is chosen by build flags (--float-as-q / --float-embedded), and q rounding is set by the simulator reference — computing it here would give a value the simulator does not produce. Write a ready literal
+const.rational-mixed = the operation '{op}' on a rational and “{kind}” is not performed at compile time
+const.mixed-kinds = the operation '{op}' on values of different kinds: “{left}” and “{right}”
+const.division-by-zero = division by zero
+const.remainder-by-zero = remainder of a division by zero
+const.shift-out-of-range = a shift is defined only for 0..63 bits
+const.exponent-out-of-range = the exponent is negative or wider than 32 bits
+const.not-a-constant-name = '{name}' is not a constant: its value is known only within a tick
+const.constant-value-not-evaluated = the constant value is not evaluated at compile time
+const.cast-needs-integer = a cast is evaluated only over an integer value
+const.cast-type-not-evaluated = a cast to this type is not evaluated at compile time: the rule for changing the value (truncation, wrapping, q scaling) is set by the reference
+const.cast-changes-value = the cast would change the value {value} (type range: {min}..={max}), and the rule for the change is set by the reference — it cannot be computed at compile time
+
+# ─── Semantics: why q(m, n) is not representable (`type_node/type_fixed.rs`) ─
+fixed.m-too-small = integer bits m < 1 (m includes the sign bit)
+fixed.n-too-small = fractional bits n < 1
+fixed.width-too-large = total width m + n > 64
+fixed.not-a-number = not a number
+fixed.bad-exponent = an invalid exponent
+fixed.exponent-too-large = the exponent is too large
+fixed.literal-too-large = the literal is too large
+fixed.not-exact = not exactly representable (the fraction is not a multiple of 2⁻ⁿ)
+fixed.out-of-range = out of the type range
+fixed.expression-placeholder = <expression>
+
+# ─── Semantics: time profiles (`semantic/duration.rs`) ───────────────────────
+time.profile-clock = clock
+time.profile-ticks = ticks
+time.unit-ms = ms
+time.unit-ticks = ticks
+time.clock-quantum = the quantum of the “clock” profile is 1 ms; express the duration as a whole number of milliseconds
+
+# ─── Semantics: places where 'after' is not allowed (`semantic/time_ast.rs`) ─
+after-place.guard-formula = a Guard formula
+after-place.named-condition = a named condition
+after-place.invariant = an invariant
+after-place.state-invariant = a state invariant
+
+# ─── Semantics: miscellaneous ────────────────────────────────────────────────
+import.no-search-paths = (no search paths given)
+bool.verb-next = next to
+bool.verb-to = to
+se-053.recursion-forbidden = function recursion is forbidden: the call chain {chain}
+
+# ─── Semantics: type mixing and aliases ──────────────────────────────────────
+se-065.duration-mixed = mixing the types '{left}' and '{right}' in arithmetic is forbidden: a duration              combines only with a duration
+se-039.type-alias-cycle = the type alias '{name}' forms a cyclic dependency
+
+# ─── Semantics: function body inlining (`semantic/inline/`) ──────────────────
+se-128.inline-refusal = the function '{name}' is marked with the 'inline' attribute, but its body does not reduce to a substitution: {why}
+inline.no-return = the body has no 'return' at all, and there is nowhere to take the value from
+inline.return-in-open-loop = the 'return' stands inside a loop whose iteration count is not known in advance: substitution suppresses the body by an exit flag, and such a loop would become infinite (in a 'for' with a counter from literal to literal the return is substituted)
+inline.no-default-value = the result type has no initial value to declare the temporary with (arrays and structures are not included here)
+
+# ─── Semantics: internal refusals (`semantic/internal.rs` and neighbours) ────
+se-119.no-diagnostic = {what} failed without leaving a diagnostic
+se-119.function-parameter-without-type = a function parameter without a type
+se-119.function-node-undefined = the function node is undefined
+se-119.named-block-without-body = a named block without a body
+se-081.implementation-not-a-composition = the implementation expression does not reduce to a composition of models
+what.anonymous-model = <anonymous>
+minimap.model-needs-start = the model must have a start state

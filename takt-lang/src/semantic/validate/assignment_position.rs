@@ -47,8 +47,8 @@
 //! достижимом остатке.
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::validate::bodies::Position;
 use crate::semantic::{ExpressionNode, VariableNode};
 

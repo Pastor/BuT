@@ -2,9 +2,9 @@
 //!
 //! Часть модуля `validate`.
 
+use super::*;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use super::*;
 use crate::semantic::condition::state_of::state_of_model;
 
 pub(super) fn validate_cond(
@@ -29,7 +29,7 @@ pub(super) fn validate_cond(
                     let model_name = model
                         .name
                         .clone()
-                        .unwrap_or_else(|| "<анонимная>".to_string());
+                        .unwrap_or_else(|| msg!(keys::WHAT_ANONYMOUS_MODEL));
                     model.search_state(&id.name).ok_or_else(|| {
                         Diagnostic::error(
                             id.loc,

@@ -250,7 +250,7 @@ note.model-declared-here = модель '{name}' объявлена здесь
 note.model-used-here = модель '{name}' используется здесь
 se-010.state-unreachable = состояние '{name}' недостижимо из начального состояния
 
-# ─── Семантика: неявная булевость — предметы (`validate/implicit_bool.rs`) ───
+# ─── Семантика: предметы неявной булевости (`validate/implicit_bool.rs`) ────
 bool.number-literal = числовой литерал {value}
 bool.rational-literal = вещественный литерал {sign}{value}
 bool.string-literal = строковый литерал
@@ -265,7 +265,7 @@ bool.array-element = элемент массива '{name}[{index}]'
 bool.bit-access = доступ к битовому полю
 bool.numeric-expression = числовое выражение
 
-# ─── Семантика: причины «не константа» (`semantic/const_eval/`) ──────────────
+# ─── Семантика: причины невычислимости (`semantic/const_eval/`) ─────────────
 const.op-on-durations = операция '{op}' над длительностями не определена
 const.op-on-booleans = операция '{op}' над булевыми не определена
 const.op-not-evaluated = операция '{op}' при компиляции не вычисляется
@@ -311,3 +311,119 @@ after.form-string = строка
 kind.variable = переменная
 kind.port = порт
 kind.unresolved-declaration = неразрешённое объявление
+
+# ─── Семантика: место записи (`semantic/validate/assignment_place.rs`) ──────
+se-111.not-a-place = левая часть присваивания — {kind}, а не место записи: писать можно в переменную, поле структуры, элемент или срез массива, отдельный бит, порт либо ячейку '#АДРЕС'
+se-112.constant-target = целью записи назначена константа '{name}': константа обозначает величину, а не хранилище. Объявите её как 'var {name}: …', если значение должно меняться
+place.call = вызов функции
+place.named-call = вызов с именованными аргументами
+place.code-block = блок кода
+place.literal = литерал
+place.address-literal = адресный литерал
+place.aggregate-literal = составной литерал
+place.type-name = имя типа
+place.model = модель
+place.named-condition = именованное условие
+place.parameter-list = список параметров
+place.empty = пустое выражение
+place.not = логическое отрицание
+place.bitwise-not = побитовое отрицание
+place.unary-plus = унарный плюс
+place.negate = смена знака
+place.cast = приведение типа
+place.arithmetic = арифметическое выражение
+place.bitwise = побитовое выражение
+place.comparison = сравнение
+place.logical = логическое выражение
+place.conditional = условный оператор
+place.assignment = присваивание
+
+# ─── Семантика: причины невычислимости вызова (`semantic/const_eval/call.rs`) ─
+const.fn-extern = объявлена как extern — её значение даёт внешний код во время работы
+const.fn-builtin = встроенная функция языка при компиляции не исполняется
+const.fn-arity = передано аргументов: {given}, объявлено параметров: {declared}
+const.fn-no-body = у функции нет тела
+const.fn-return-without-value = выполнен 'return' без значения — параметру нечего присвоить
+const.fn-no-return = тело завершилось без 'return' — значения нет
+const.fn-parameter-without-name = параметр объявлен без имени
+const.assign-target-name = слева от ':=' в константном вычислении обязано стоять имя
+const.not-a-local-function = '{name}' не локальное имя функции: при компиляции менять состояние модели нельзя
+const.expression-statement = оператор-выражение без присваивания в константном вычислении бессмыслен
+const.statement-unsupported = оператор в константном вычислении не поддержан
+const.local-values-only = внутри функции объявляются только локальные значения
+const.declaration-without-name = объявление без имени
+kind.integer = целое
+kind.boolean = булево
+kind.duration = длительность
+kind.rational = дробное
+kind.aggregate = агрегат
+
+# ─── Семантика: причины невычислимости выражения (`const_eval/mod.rs`) ───────
+const.steps-exhausted = превышен предел шагов вычисления
+const.depth-exhausted = превышен предел глубины вычисления (возможен цикл определений)
+const.negate-not-applicable = унарный минус не применим к значению вида «{kind}»
+const.bitwise-not-not-applicable = побитовое НЕ не применимо к значению вида «{kind}»
+const.not-not-applicable = логическое НЕ не применимо к значению вида «{kind}»
+const.expression-form = форма выражения при компиляции не вычисляется
+const.rational-op-inexact = операция '{op}' над дробными при компиляции не выполняется точно: представление дробного выбирают флаги сборки (--float-as-q / --float-embedded), а округление q задано эталоном симулятора — посчитав здесь, компилятор дал бы значение, которого симулятор не вычислит. Задайте готовый литерал
+const.rational-mixed = операция '{op}' над дробным и «{kind}» при компиляции не выполняется
+const.mixed-kinds = операция '{op}' над значениями разных видов: «{left}» и «{right}»
+const.division-by-zero = деление на ноль
+const.remainder-by-zero = остаток от деления на ноль
+const.shift-out-of-range = сдвиг определён только на 0..63 бит
+const.exponent-out-of-range = показатель степени отрицателен либо шире 32 бит
+const.not-a-constant-name = '{name}' — не константа: значение известно только в такте
+const.constant-value-not-evaluated = значение константы при компиляции не вычисляется
+const.cast-needs-integer = приведение вычисляется только над целым значением
+const.cast-type-not-evaluated = приведение к этому типу при компиляции не вычисляется: правило изменения значения (усечение, обёртка, масштаб q) задано эталоном
+const.cast-changes-value = приведение изменит значение {value} (диапазон типа: {min}..={max}), а правило изменения задано эталоном — вычислить его при компиляции нельзя
+
+# ─── Семантика: причины непредставимости q(m, n) (`type_node/type_fixed.rs`) ─
+fixed.m-too-small = целых бит m < 1 (m включает знаковый бит)
+fixed.n-too-small = дробных бит n < 1
+fixed.width-too-large = полная ширина m + n > 64
+fixed.not-a-number = не число
+fixed.bad-exponent = неверный показатель степени
+fixed.exponent-too-large = слишком большой показатель степени
+fixed.literal-too-large = слишком большой литерал
+fixed.not-exact = не представим точно (дробь не кратна 2⁻ⁿ)
+fixed.out-of-range = вне диапазона типа
+fixed.expression-placeholder = <выражение>
+
+# ─── Семантика: профили времени (`semantic/duration.rs`) ─────────────────────
+time.profile-clock = часы
+time.profile-ticks = такты
+time.unit-ms = мс
+time.unit-ticks = тактов
+time.clock-quantum = квант профиля «часы» — 1 мс; выразите длительность целым числом миллисекунд
+
+# ─── Семантика: места, где 'after' недопустима (`semantic/time_ast.rs`) ──────
+after-place.guard-formula = Guard-формуле
+after-place.named-condition = именованном условии
+after-place.invariant = инварианте
+after-place.state-invariant = инварианте состояния
+
+# ─── Семантика: прочее ──────────────────────────────────────────────────────
+import.no-search-paths = (пути не заданы)
+bool.verb-next = next к
+bool.verb-to = к
+se-053.recursion-forbidden = Рекурсия функций запрещена: цепочка вызовов {chain}
+
+# ─── Семантика: смешение типов и псевдонимы ──────────────────────────────────
+se-065.duration-mixed = смешение типов '{left}' и '{right}' в арифметике запрещено: длительность              сочетается только с длительностью
+se-039.type-alias-cycle = псевдоним типа '{name}' образует циклическую зависимость
+
+# ─── Семантика: подстановка тела функции (`semantic/inline/`) ────────────────
+se-128.inline-refusal = функция '{name}' помечена атрибутом 'inline', но её тело не сводится к подстановке: {why}
+inline.no-return = в теле нет ни одного 'return', и значение брать неоткуда
+inline.return-in-open-loop = 'return' стоит внутри цикла, число итераций которого неизвестно заранее: подстановка гасит тело признаком выхода, и такой цикл стал бы бесконечным (у 'for' со счётчиком от литерала до литерала возврат подставляется)
+inline.no-default-value = у типа результата нет начального значения, с которым объявляется временная (массив и структура сюда не входят)
+
+# ─── Семантика: внутренние отказы (`semantic/internal.rs` и соседи) ──────────
+se-119.no-diagnostic = {what} завершилось неудачей, не оставив диагностики
+se-119.function-parameter-without-type = параметр функции без типа
+se-119.function-node-undefined = узел функции не определён
+se-119.named-block-without-body = именованный блок без тела
+se-081.implementation-not-a-composition = выражение реализации не сводится к композиции моделей
+what.anonymous-model = <анонимная>
+minimap.model-needs-start = Модель должна содержать начальное состояние

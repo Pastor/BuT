@@ -6,9 +6,9 @@
 //! пойдёт разбираться в порождённый код - ровно то, ради устранения чего фича и
 //! заведена.
 
+use crate::diagnostics::Diagnostic;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use crate::diagnostics::Diagnostic;
 use crate::semantic::extend::Extend;
 use crate::semantic::{ModelNode, StateNode};
 use std::cell::RefCell;
@@ -63,7 +63,11 @@ fn state_model_collisions(model: &Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> {
         found.push(
             Diagnostic::error(
                 *loc,
-                msg!(keys::SE_100_STATE_NAMED_AS_MODEL, name = name, model = target_name),
+                msg!(
+                    keys::SE_100_STATE_NAMED_AS_MODEL,
+                    name = name,
+                    model = target_name
+                ),
             )
             .with_code("SE-100")
             .with_note(

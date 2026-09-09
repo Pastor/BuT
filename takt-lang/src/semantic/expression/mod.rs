@@ -19,8 +19,8 @@
 //! - [`resolve_elems`] - разрешает все элементы вектора выражений.
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::parser::ast;
 use crate::semantic::builtin::builtin_function;
 use crate::semantic::type_inference::ast_type_to_node;
@@ -58,7 +58,9 @@ fn static_index(expr: &ast::Expression, model: &ModelNode) -> Option<i128> {
 
 fn base_label(base: &ExpressionNode) -> String {
     match base {
-        ExpressionNode::Variable(var) => msg!(keys::WHAT_VARIABLE_UPPER, name = var.borrow().name()),
+        ExpressionNode::Variable(var) => {
+            msg!(keys::WHAT_VARIABLE_UPPER, name = var.borrow().name())
+        }
         ExpressionNode::Parenthesis(inner) => base_label(inner),
         ExpressionNode::BitAccess(_, crate::parser::ast::Member::Identifier(field)) => {
             msg!(keys::WHAT_FIELD_UPPER, name = field.name)
@@ -496,7 +498,12 @@ fn check_slice_bounds(
     {
         return Err(Diagnostic::error(
             loc,
-            msg!(keys::SE_029_SLICE_START_AFTER_END, start = s, end = e, name = name),
+            msg!(
+                keys::SE_029_SLICE_START_AFTER_END,
+                start = s,
+                end = e,
+                name = name
+            ),
         )
         .with_code("SE-029"));
     }

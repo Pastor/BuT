@@ -34,8 +34,8 @@
 //! уже нельзя.
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::formula::Formula;
 use crate::semantic::{
     ConditionNode, ExpressionNode, FunctionDefinitionNode, MatchPatternNode, ModelNode,
@@ -200,7 +200,11 @@ pub(in crate::semantic) fn adopt_whole_file(
         if let Some(existing) = variables.get(&var_name) {
             return Err(Diagnostic::declaration_error(
                 existing.loc(),
-                msg!(keys::SE_005_VARIABLE_DECLARED_IN_INCLUDED, name = var_name, file = name),
+                msg!(
+                    keys::SE_005_VARIABLE_DECLARED_IN_INCLUDED,
+                    name = var_name,
+                    file = name
+                ),
             )
             .with_code("SE-005"));
         }
@@ -238,9 +242,16 @@ pub(in crate::semantic) fn adopt_whole_file(
         if let Some(local_loc) = clash {
             return Err(Diagnostic::error_with_note(
                 local_loc,
-                msg!(keys::SE_108_TYPE_DECLARED_IN_INCLUDED, name = type_name, file = name),
+                msg!(
+                    keys::SE_108_TYPE_DECLARED_IN_INCLUDED,
+                    name = type_name,
+                    file = name
+                ),
                 *first_loc,
-                msg!(keys::SE_108_TYPE_DECLARED_IN_INCLUDED_NOTE, name = type_name),
+                msg!(
+                    keys::SE_108_TYPE_DECLARED_IN_INCLUDED_NOTE,
+                    name = type_name
+                ),
             )
             .with_code("SE-108"));
         }
@@ -259,7 +270,11 @@ pub(in crate::semantic) fn adopt_whole_file(
         if importer.borrow().functions.contains_key(&fn_name) {
             return Err(Diagnostic::declaration_error(
                 Location::default(),
-                msg!(keys::SE_009_FUNCTION_DEFINED_IN_INCLUDED, name = fn_name, file = name),
+                msg!(
+                    keys::SE_009_FUNCTION_DEFINED_IN_INCLUDED,
+                    name = fn_name,
+                    file = name
+                ),
             )
             .with_code("SE-009"));
         }

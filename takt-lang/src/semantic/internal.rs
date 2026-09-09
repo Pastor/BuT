@@ -1,6 +1,8 @@
 //! Внутренний инвариант семантики нарушен: `SE-119`.
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
+use crate::msg;
 
 /// Строит `SE-119` - нарушен внутренний инвариант семантики.
 ///
@@ -27,7 +29,5 @@ pub(crate) fn internal(what: &str) -> Diagnostic {
 /// `unwrap_or_else` в три строки раздувал бы `tree.rs`, который и так стоит в реестре
 /// узаконенного долга по размеру.
 pub(crate) fn no_diagnostic(what: &str) -> Diagnostic {
-    internal(&format!(
-        "{what} завершилось неудачей, не оставив диагностики"
-    ))
+    internal(&msg!(keys::SE_119_NO_DIAGNOSTIC, what = what))
 }

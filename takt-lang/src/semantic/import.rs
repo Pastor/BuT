@@ -8,9 +8,9 @@ pub(in crate::semantic) mod build;
 pub mod importers; // "кто подключает эту библиотеку" - подсказка SE-102
 pub(in crate::semantic) mod select;
 
+use crate::diagnostics::Diagnostic;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use crate::diagnostics::Diagnostic;
 use crate::parser::ast::ImportPath;
 use itertools::Itertools;
 use std::fs::{exists, read_to_string};
@@ -101,13 +101,17 @@ pub(crate) fn read_import_file(
                 .join("::"),
         };
         let paths_str = if search_paths.is_empty() {
-            "(пути не заданы)".to_string()
+            msg!(keys::IMPORT_NO_SEARCH_PATHS)
         } else {
             search_paths.join(", ")
         };
         return Err(Diagnostic::error(
             loc,
-            msg!(keys::SE_013_IMPORT_FILE_NOT_FOUND, file = path_str, paths = paths_str),
+            msg!(
+                keys::SE_013_IMPORT_FILE_NOT_FOUND,
+                file = path_str,
+                paths = paths_str
+            ),
         )
         .with_code("SE-013"));
     }
@@ -121,7 +125,11 @@ pub(crate) fn read_import_file(
         let canonical_file = std::fs::canonicalize(filename).map_err(|e| {
             Diagnostic::error(
                 loc,
-                msg!(keys::SE_016_IMPORT_PATH_NOT_CANONICAL, file = filename, cause = e),
+                msg!(
+                    keys::SE_016_IMPORT_PATH_NOT_CANONICAL,
+                    file = filename,
+                    cause = e
+                ),
             )
             .with_code("SE-016")
         })?;
@@ -146,11 +154,10 @@ pub(crate) fn read_import_file(
 
     // Проверяем, что файл имеет расширение.takt
     if !filename.ends_with(".takt") {
-        return Err(Diagnostic::error(
-            loc,
-            msg!(keys::SE_014_IMPORT_EXTENSION, file = filename),
-        )
-        .with_code("SE-014"));
+        return Err(
+            Diagnostic::error(loc, msg!(keys::SE_014_IMPORT_EXTENSION, file = filename))
+                .with_code("SE-014"),
+        );
     }
 
     let content = read_to_string(filename).map_err(|e| {

@@ -2,9 +2,9 @@
 //!
 //! Часть модуля `validate`.
 
+use super::*;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use super::*;
 
 pub(super) fn validate_variables(model: Rc<RefCell<ModelNode>>) -> Vec<Diagnostic> {
     let borrowed = model.borrow();
@@ -75,11 +75,9 @@ fn collect_incomplete_addresses(
         let has_operator = borrowed.address_defs.iter().any(|d| &d.port == name);
         let has_external = external_ports.contains(name);
         if !has_inline && !has_operator && !has_external {
-            let mut diagnostic = Diagnostic::warning(
-                *loc,
-                msg!(keys::SE_052_PORT_WITHOUT_ADDRESS, name = name),
-            )
-            .with_code("SE-052");
+            let mut diagnostic =
+                Diagnostic::warning(*loc, msg!(keys::SE_052_PORT_WITHOUT_ADDRESS, name = name))
+                    .with_code("SE-052");
             // Порт, заведённый компилятором, автор в тексте не найдёт: отказ без этой
             // заметки читался как "исправьте то, чего вы не писали".
             if let Some(note) = crate::semantic::bounds_guard::synthetic_port_note(name) {

@@ -10,8 +10,8 @@
 //! "плохой аргумент" заставил бы гадать.
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::parser::ast;
 use crate::semantic::ModelNode;
 use crate::semantic::const_eval;
@@ -204,7 +204,11 @@ fn check_declared(
     if target.parameters.is_empty() {
         return Err(Diagnostic::error(
             loc,
-            msg!(keys::SE_077_MODEL_WITHOUT_PARAMETERS, model = model_name, name = name),
+            msg!(
+                keys::SE_077_MODEL_WITHOUT_PARAMETERS,
+                model = model_name,
+                name = name
+            ),
         )
         .with_code("SE-077"));
     }
@@ -213,7 +217,11 @@ fn check_declared(
     if target.variables.contains_key(name) {
         return Err(Diagnostic::error(
             loc,
-            msg!(keys::SE_079_NOT_A_PARAMETER, name = name, model = model_name),
+            msg!(
+                keys::SE_079_NOT_A_PARAMETER,
+                name = name,
+                model = model_name
+            ),
         )
         .with_code("SE-079"));
     }

@@ -2,9 +2,9 @@
 //!
 //! Часть модуля `validate`.
 
+use super::*;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use super::*;
 
 /// Проверяет, что модель содержит ровно одно начальное состояние.
 ///
@@ -45,7 +45,11 @@ pub(super) fn model_only_one_start_state(model: Rc<RefCell<ModelNode>>) -> Vec<D
         return vec![
             Diagnostic::error(
                 borrowed.loc,
-                msg!(keys::SE_011_MULTIPLE_START_STATES, name = name, count = start_count),
+                msg!(
+                    keys::SE_011_MULTIPLE_START_STATES,
+                    name = name,
+                    count = start_count
+                ),
             )
             .with_code("SE-011"),
         ];
@@ -230,7 +234,11 @@ fn collect_transition_completeness(model: &Rc<RefCell<ModelNode>>, out: &mut Vec
                 out.push(
                     Diagnostic::warning(
                         state.loc(),
-                        msg!(keys::SE_012_REF_WITH_NEXT, prefix = model_prefix, name = name),
+                        msg!(
+                            keys::SE_012_REF_WITH_NEXT,
+                            prefix = model_prefix,
+                            name = name
+                        ),
                     )
                     .with_code("SE-012"),
                 );
@@ -300,11 +308,8 @@ fn collect_unreachable_states(model: &Rc<RefCell<ModelNode>>, out: &mut Vec<Diag
             if !reachable.contains(name.as_str()) {
                 let loc = get_state_loc(state);
                 out.push(
-                    Diagnostic::warning(
-                        loc,
-                        msg!(keys::SE_010_STATE_UNREACHABLE, name = name),
-                    )
-                    .with_code("SE-046"),
+                    Diagnostic::warning(loc, msg!(keys::SE_010_STATE_UNREACHABLE, name = name))
+                        .with_code("SE-046"),
                 );
             }
         }

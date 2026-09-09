@@ -23,8 +23,8 @@
 //! законным.
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::ModelNode;
 use crate::semantic::type_node::builtin_type_by_name;
 use std::cell::RefCell;

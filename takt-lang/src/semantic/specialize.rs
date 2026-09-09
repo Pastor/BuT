@@ -16,8 +16,8 @@
 //! коллизии в выводе.
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::extend::{Extend, ParameterArgument};
 use crate::semantic::import::adopt::adopt_declaration;
 use crate::semantic::{ExpressionNode, ModelNode, StateNode, VariableNode};
@@ -128,11 +128,8 @@ fn specialize_one(
         .as_ref()
         .and_then(|weak| weak.upgrade())
         .ok_or_else(|| {
-            Diagnostic::error(
-                call_loc,
-                msg!(keys::SE_086_SPECIALIZE_WITHOUT_PARENT),
-            )
-            .with_code("SE-086")
+            Diagnostic::error(call_loc, msg!(keys::SE_086_SPECIALIZE_WITHOUT_PARENT))
+                .with_code("SE-086")
         })?;
 
     // Порядковый номер различного набора - имя специализации.

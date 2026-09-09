@@ -3,9 +3,9 @@
 //! Слой один: блоки тела состояния (`enter`, `exit`, `always`, `every`) и вставка
 //! `assembly`, которая разворачивается в блок `always` того же состояния.
 
+use crate::diagnostics::Diagnostic;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use crate::diagnostics::Diagnostic;
 use crate::parser::ast::{StateDefine, StateElement};
 use crate::semantic::{ModelNode, NamedCodeBlockDefinitionNode, StatementNode};
 use std::cell::RefCell;
@@ -25,11 +25,8 @@ pub(crate) fn construct_named_blocks(
                 .name
                 .as_ref()
                 .ok_or_else(|| {
-                    Diagnostic::error(
-                        def.loc,
-                        msg!(keys::SE_018_BLOCK_NEEDS_NAME),
-                    )
-                    .with_code("SE-018")
+                    Diagnostic::error(def.loc, msg!(keys::SE_018_BLOCK_NEEDS_NAME))
+                        .with_code("SE-018")
                 })?
                 .name
                 .clone();

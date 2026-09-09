@@ -30,9 +30,9 @@
 //! проверка консервативна, и там остаётся `SIM-011` эталона. Переменного индекса в
 //! языке нет вовсе: `w.idx` разбирается как доступ к полю с именем `idx`.
 
+use super::*;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use super::*;
 use crate::parser::ast::{Identifier, Member};
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::validate::base_type::{base_type, cond_base_type};
@@ -141,7 +141,11 @@ fn check_member(
             {
                 return Err(Diagnostic::error(
                     field.loc,
-                    msg!(keys::SE_061_STRUCT_WITHOUT_FIELD, name = name, field = field.name),
+                    msg!(
+                        keys::SE_061_STRUCT_WITHOUT_FIELD,
+                        name = name,
+                        field = field.name
+                    ),
                 )
                 .with_code("SE-061"));
             }
@@ -305,7 +309,11 @@ fn check_cond_member(
     {
         return Err(Diagnostic::error(
             field.loc,
-            msg!(keys::SE_061_STRUCT_WITHOUT_FIELD, name = name, field = field.name),
+            msg!(
+                keys::SE_061_STRUCT_WITHOUT_FIELD,
+                name = name,
+                field = field.name
+            ),
         )
         .with_code("SE-061"));
     }

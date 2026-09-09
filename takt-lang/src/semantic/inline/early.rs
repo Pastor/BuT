@@ -37,6 +37,8 @@
 //! разворачивается при элаборации. Тип результата, у которого нет представимого
 //! начального значения (массив, структура), - тоже.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -57,17 +59,14 @@ pub(crate) enum Obstacle {
 
 impl Obstacle {
     /// Текст причины для диагностики `SE-128`.
-    pub(crate) fn text(self) -> &'static str {
+    pub(crate) fn text(self) -> String {
         match self {
-            Obstacle::NoReturn => "в теле нет ни одного 'return', и значение брать неоткуда",
+            Obstacle::NoReturn => msg!(keys::INLINE_NO_RETURN),
             Obstacle::ReturnInOpenLoop => {
-                "'return' стоит внутри цикла, число итераций которого неизвестно заранее: \
-                 подстановка гасит тело признаком выхода, и такой цикл стал бы бесконечным \
-                 (у 'for' со счётчиком от литерала до литерала возврат подставляется)"
+                msg!(keys::INLINE_RETURN_IN_OPEN_LOOP)
             }
             Obstacle::NoDefaultValue => {
-                "у типа результата нет начального значения, с которым объявляется временная \
-                 (массив и структура сюда не входят)"
+                msg!(keys::INLINE_NO_DEFAULT_VALUE)
             }
         }
     }

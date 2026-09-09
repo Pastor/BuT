@@ -26,9 +26,9 @@
 //!
 //! [`SE-011`]: super::states::model_only_one_start_state
 
+use super::*;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use super::*;
 use crate::semantic::extend::Extend;
 
 /// Проверяет реализации состояний модели (`SE-106`).
@@ -83,11 +83,8 @@ fn empty_model_diagnostic(target: &Rc<RefCell<ModelNode>>, usage: Location) -> O
         return None;
     }
     let name = target.name.clone().unwrap_or_default();
-    let diagnostic = Diagnostic::error(
-        usage,
-        msg!(keys::SE_106_MODEL_WITHOUT_STATES, name = name),
-    )
-    .with_code("SE-106");
+    let diagnostic = Diagnostic::error(usage, msg!(keys::SE_106_MODEL_WITHOUT_STATES, name = name))
+        .with_code("SE-106");
     Some(match nested_with_states(&target) {
         Some(nested) => diagnostic.with_note(
             target.loc,
@@ -97,7 +94,10 @@ fn empty_model_diagnostic(target: &Rc<RefCell<ModelNode>>, usage: Location) -> O
                  верхний уровень"
             ),
         ),
-        None => diagnostic.with_note(target.loc, msg!(keys::NOTE_MODEL_DECLARED_HERE, name = name)),
+        None => diagnostic.with_note(
+            target.loc,
+            msg!(keys::NOTE_MODEL_DECLARED_HERE, name = name),
+        ),
     })
 }
 

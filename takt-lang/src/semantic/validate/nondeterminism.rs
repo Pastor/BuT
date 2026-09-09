@@ -2,9 +2,9 @@
 //!
 //! Часть модуля `validate`.
 
+use super::*;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use super::*;
 
 /// Одностороннее ограничение переменной относительно целочисленного литерала.
 ///
@@ -173,7 +173,11 @@ fn check_nondeterministic_model(model: Rc<RefCell<ModelNode>>, warnings: &mut Ve
         let prefix = if model_name.is_empty() {
             msg!(keys::WHAT_STATE, name = state_name)
         } else {
-            msg!(keys::WHAT_MODEL_STATE, model = model_name, state = state_name)
+            msg!(
+                keys::WHAT_MODEL_STATE,
+                model = model_name,
+                state = state_name
+            )
         };
 
         // Ce14: подсчёт безусловных переходов. Что считать безусловным - решает

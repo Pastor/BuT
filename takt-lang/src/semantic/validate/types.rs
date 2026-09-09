@@ -3,6 +3,8 @@
 //! Часть модуля `validate`.
 
 use super::*;
+use crate::diagnostics::lang::keys;
+use crate::msg;
 
 /// Запускает все семантические проверки для модели и всех вложенных моделей.
 ///
@@ -142,14 +144,8 @@ pub fn check_type_alias_cycles_ast(
                 .copied()
                 .unwrap_or(Location::Implicit);
             diags.push(
-                Diagnostic::error(
-                    loc,
-                    format!(
-                        "псевдоним типа '{}' образует циклическую зависимость",
-                        cycle_start
-                    ),
-                )
-                .with_code("SE-039"),
+                Diagnostic::error(loc, msg!(keys::SE_039_TYPE_ALIAS_CYCLE, name = cycle_start))
+                    .with_code("SE-039"),
             );
         }
     }

@@ -1,8 +1,8 @@
 //! Число элементов агрегата обязано отвечать объявлению - `SE-123`.
 
+use super::*;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use super::*;
 use crate::semantic::type_node::TypeNode;
 
 /// Проверяет длину агрегатов в инициализаторах объявлений модели.

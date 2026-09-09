@@ -111,7 +111,9 @@ impl Cause {
             Cause::NotLiteral(name) => msg!(keys::AFTER_NOT_LITERAL, name = name),
             Cause::BareNumber(n) => msg!(keys::AFTER_BARE_NUMBER, value = n),
             Cause::FunctionCall(name) => msg!(keys::AFTER_FUNCTION_CALL, name = name),
-            Cause::NotConstantForm(what) => msg!(keys::AFTER_NOT_CONSTANT_FORM, what = render(*what, &[])),
+            Cause::NotConstantForm(what) => {
+                msg!(keys::AFTER_NOT_CONSTANT_FORM, what = render(*what, &[]))
+            }
             Cause::Negative(nanos) => msg!(keys::AFTER_NEGATIVE, nanos = nanos),
             Cause::Overflow => msg!(keys::AFTER_OVERFLOW),
             Cause::Cycle => msg!(keys::AFTER_CYCLE, depth = MAX_DEPTH),
@@ -292,7 +294,9 @@ fn nanos_of_cond(
         | ast::Condition::LessEqual(loc, _, _)
         | ast::Condition::MoreEqual(loc, _, _)
         | ast::Condition::Equal(loc, _, _)
-        | ast::Condition::NotEqual(loc, _, _) => Err((*loc, Cause::NotConstantForm(keys::AFTER_FORM_COMPARISON))),
+        | ast::Condition::NotEqual(loc, _, _) => {
+            Err((*loc, Cause::NotConstantForm(keys::AFTER_FORM_COMPARISON)))
+        }
         ast::Condition::BitAccess(loc, _, _) => {
             Err((*loc, Cause::NotConstantForm(keys::AFTER_FORM_BIT_ACCESS)))
         }

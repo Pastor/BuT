@@ -42,6 +42,8 @@
 //!   выражение вычисляется многократно либо вне тела, и вынести объявление
 //!   перед ним нельзя.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
@@ -572,10 +574,7 @@ pub(crate) fn inline_obstacle(
 pub(crate) fn inline_refusal(loc: Location, name: &str, why: early::Obstacle) -> Diagnostic {
     Diagnostic::error(
         loc,
-        format!(
-            "функция '{name}' помечена атрибутом 'inline', но её тело не сводится к подстановке: {}",
-            why.text()
-        ),
+        msg!(keys::SE_128_INLINE_REFUSAL, name = name, why = why.text()),
     )
     .with_code("SE-128")
 }

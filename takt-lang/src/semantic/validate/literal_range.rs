@@ -16,8 +16,8 @@
 //! присваивании внутри тела свёртки нет - там проверяется именно записанный литерал.
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{
     ExpressionNode, FunctionDefinitionNode, ModelNode, StateNode, StatementNode, VariableNode,

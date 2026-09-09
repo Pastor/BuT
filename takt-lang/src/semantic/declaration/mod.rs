@@ -4,8 +4,8 @@
 //! элементов модели.
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::parser::ast::{Identifier, VariableDefine};
 mod init_refusal;
 
@@ -66,8 +66,7 @@ pub(super) fn construct_declaration(
             let type_node = construct_type(typ, Rc::clone(&model_node))?;
             if type_node == TypeNode::Inference {
                 return Err(
-                    Diagnostic::error(loc, msg!(keys::SE_023_PORT_NEEDS_TYPE))
-                        .with_code("SE-023"),
+                    Diagnostic::error(loc, msg!(keys::SE_023_PORT_NEEDS_TYPE)).with_code("SE-023")
                 );
             }
             // Два независимых выражения: размещение `at <адрес>` и начальное значение
@@ -403,7 +402,11 @@ pub(crate) fn fold_variable_initializers(
                 if let Some(func) = initializer_calls_extern(source, model) {
                     return Err(Diagnostic::error(
                         loc,
-                        msg!(keys::SE_084_INITIALIZER_CALLS_EXTERN, name = name, func = func),
+                        msg!(
+                            keys::SE_084_INITIALIZER_CALLS_EXTERN,
+                            name = name,
+                            func = func
+                        ),
                     )
                     .with_code("SE-084"));
                 }

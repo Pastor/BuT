@@ -4,10 +4,10 @@
 //! ширина хранения, диапазон представления и понижение вещественного литерала
 //! (`SE-058`).
 
-use crate::diagnostics::lang::keys;
-use crate::msg;
 use super::TypeNode;
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::{ExpressionNode, VariableNode};
 
 /// Строит [`TypeNode::Fixed`] из `q(m, n)`, проверяя конструктор и границы: `ctor ==
@@ -42,13 +42,13 @@ pub(crate) fn construct_fixed(
         .with_code("SE-057")
     };
     if m < 1 {
-        return Err(bound("целых бит m < 1 (m включает знаковый бит)"));
+        return Err(bound(&msg!(keys::FIXED_M_TOO_SMALL)));
     }
     if n < 1 {
-        return Err(bound("дробных бит n < 1"));
+        return Err(bound(&msg!(keys::FIXED_N_TOO_SMALL)));
     }
     if m + n > 64 {
-        return Err(bound("полная ширина m + n > 64"));
+        return Err(bound(&msg!(keys::FIXED_WIDTH_TOO_LARGE)));
     }
     // Постфиксный модификатор: единственное допустимое слово - `sat`. Отвергать прочие
     // Обязательно: опечатка (`q(8,8) sta`) иначе дала бы молчаливый перенос там, где
@@ -60,7 +60,12 @@ pub(crate) fn construct_fixed(
         Some(other) => {
             return Err(Diagnostic::declaration_error(
                 loc,
-                msg!(keys::SE_104_FIXED_MODIFIER_UNKNOWN, m = m, n = n, other = other),
+                msg!(
+                    keys::SE_104_FIXED_MODIFIER_UNKNOWN,
+                    m = m,
+                    n = n,
+                    other = other
+                ),
             )
             .with_code("SE-104"));
         }
@@ -124,7 +129,7 @@ pub(crate) fn lower_fixed_literal(
             let digits = format!("{}{}", int_part, frac_part);
             let raw: i128 = digits
                 .parse()
-                .map_err(|_| se058(loc, m, n, s, "не число"))?;
+                .map_err(|_| se058(loc, m, n, s, &msg!(keys::FIXED_NOT_A_NUMBER)))?;
             let raw = if *neg { -raw } else { raw };
 
             // Десятичный порядок: дробная часть его повышает, показатель - понижает.
@@ -135,26 +140,26 @@ pub(crate) fn lower_fixed_literal(
             } else {
                 exp_text
                     .parse()
-                    .map_err(|_| se058(loc, m, n, s, "неверный показатель степени"))?
+                    .map_err(|_| se058(loc, m, n, s, &msg!(keys::FIXED_BAD_EXPONENT)))?
             };
             let scale = frac_len.saturating_sub(e);
             if scale < 0 {
                 // Показатель перевесил дробную часть: значение целое, домножаем.
                 let up = u32::try_from(-scale)
-                    .map_err(|_| se058(loc, m, n, s, "слишком большой показатель степени"))?;
+                    .map_err(|_| se058(loc, m, n, s, &msg!(keys::FIXED_EXPONENT_TOO_LARGE)))?;
                 let factor = 10i128
                     .checked_pow(up)
-                    .ok_or_else(|| se058(loc, m, n, s, "слишком большой показатель степени"))?;
+                    .ok_or_else(|| se058(loc, m, n, s, &msg!(keys::FIXED_EXPONENT_TOO_LARGE)))?;
                 (
                     raw.checked_mul(factor)
-                        .ok_or_else(|| se058(loc, m, n, s, "слишком большой литерал"))?,
+                        .ok_or_else(|| se058(loc, m, n, s, &msg!(keys::FIXED_LITERAL_TOO_LARGE)))?,
                     0,
                 )
             } else {
                 (
                     raw,
                     u32::try_from(scale)
-                        .map_err(|_| se058(loc, m, n, s, "слишком большой показатель степени"))?,
+                        .map_err(|_| se058(loc, m, n, s, &msg!(keys::FIXED_EXPONENT_TOO_LARGE)))?,
                 )
             }
         }
@@ -162,9 +167,15 @@ pub(crate) fn lower_fixed_literal(
     };
 
     // v = мантисса · 2^n / 10^exp - целое ⟺ делится нацело.
-    let num = mantissa
-        .checked_mul(1i128 << n)
-        .ok_or_else(|| se058(loc, m, n, &expr_text(expr), "слишком большой литерал"))?;
+    let num = mantissa.checked_mul(1i128 << n).ok_or_else(|| {
+        se058(
+            loc,
+            m,
+            n,
+            &expr_text(expr),
+            &msg!(keys::FIXED_LITERAL_TOO_LARGE),
+        )
+    })?;
     let den = 10i128.checked_pow(exp).unwrap_or(i128::MAX);
     if num % den != 0 {
         return Err(se058(
@@ -172,13 +183,19 @@ pub(crate) fn lower_fixed_literal(
             m,
             n,
             &expr_text(expr),
-            "не представим точно (дробь не кратна 2⁻ⁿ)",
+            &msg!(keys::FIXED_NOT_EXACT),
         ));
     }
     let v = num / den;
     let (min, max) = fixed_repr_range(m, n);
     if v < min || v > max {
-        return Err(se058(loc, m, n, &expr_text(expr), "вне диапазона типа"));
+        return Err(se058(
+            loc,
+            m,
+            n,
+            &expr_text(expr),
+            &msg!(keys::FIXED_OUT_OF_RANGE),
+        ));
     }
     Ok(Some(v))
 }
@@ -256,7 +273,7 @@ fn expr_text(expr: &ExpressionNode) -> String {
                 s.clone()
             }
         }
-        _ => "<выражение>".to_string(),
+        _ => msg!(keys::FIXED_EXPRESSION_PLACEHOLDER),
     }
 }
 

@@ -25,8 +25,8 @@
 //! округляется. Округление здесь означало бы выдержку, не равную заявленной, - молча.
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 
 /// Квант профиля "часы" - миллисекунда, выраженная в наносекундах.
 ///
@@ -53,18 +53,18 @@ pub enum TimeProfile {
 
 impl TimeProfile {
     /// Название профиля для сообщений (единая формулировка на весь проект).
-    pub fn name(self) -> &'static str {
+    pub fn name(self) -> String {
         match self {
-            Self::Clock => "часы",
-            Self::Ticks { .. } => "такты",
+            Self::Clock => msg!(keys::TIME_PROFILE_CLOCK),
+            Self::Ticks { .. } => msg!(keys::TIME_PROFILE_TICKS),
         }
     }
 
     /// Название единицы профиля в родительном падеже: "мс" либо "тактов".
-    pub fn unit_name(self) -> &'static str {
+    pub fn unit_name(self) -> String {
         match self {
-            Self::Clock => "мс",
-            Self::Ticks { .. } => "тактов",
+            Self::Clock => msg!(keys::TIME_UNIT_MS),
+            Self::Ticks { .. } => msg!(keys::TIME_UNIT_TICKS),
         }
     }
 }
@@ -184,21 +184,23 @@ pub const VALUE_BITS: u8 = 32;
 /// сравнивают со счётчиком выдержки.
 pub fn value_millis(nanos: i64, loc: Location, what: &str) -> Result<u64, Diagnostic> {
     if nanos < 0 {
-        return Err(Diagnostic::error(
-            loc,
-            msg!(keys::SE_063_DURATION_NEGATIVE, what = what),
-        )
-        .with_code("SE-063"));
+        return Err(
+            Diagnostic::error(loc, msg!(keys::SE_063_DURATION_NEGATIVE, what = what))
+                .with_code("SE-063"),
+        );
     }
     if nanos % CLOCK_QUANTUM_NS != 0 {
-        return Err(Diagnostic::error(
-            loc,
-            msg!(keys::SE_063_DURATION_NOT_WHOLE_MS, what = what),
-        )
-        .with_code("SE-063"));
+        return Err(
+            Diagnostic::error(loc, msg!(keys::SE_063_DURATION_NOT_WHOLE_MS, what = what))
+                .with_code("SE-063"),
+        );
     }
     let millis = u64::try_from(nanos / CLOCK_QUANTUM_NS).map_err(|_| {
-        Diagnostic::error(loc, msg!(keys::SE_064_DURATION_UNREPRESENTABLE, what = what)).with_code("SE-064")
+        Diagnostic::error(
+            loc,
+            msg!(keys::SE_064_DURATION_UNREPRESENTABLE, what = what),
+        )
+        .with_code("SE-064")
     })?;
     if millis > u64::from(u32::MAX) {
         return Err(Diagnostic::error(
@@ -273,8 +275,7 @@ pub fn units_or_diagnostic(
         DurationError::NotRepresentable => {
             let detail = match profile {
                 TimeProfile::Clock => {
-                    "квант профиля «часы» — 1 мс; выразите длительность целым числом миллисекунд"
-                        .to_string()
+                    msg!(keys::TIME_CLOCK_QUANTUM)
                 }
                 TimeProfile::Ticks { hertz } => format!(
                     "при частоте {hertz} Гц длительность не кратна периоду такта; \
@@ -305,7 +306,11 @@ pub fn units_or_diagnostic(
         .with_code("SE-064"),
         DurationError::Negative => Diagnostic::error(
             loc,
-            msg!(keys::SE_063_DURATION_NEGATIVE_NANOS, what = what, nanos = nanos),
+            msg!(
+                keys::SE_063_DURATION_NEGATIVE_NANOS,
+                what = what,
+                nanos = nanos
+            ),
         )
         .with_code("SE-063"),
     })
@@ -344,7 +349,11 @@ pub fn resolve_profile(
         .with_code("SE-069")),
         (Some(declared), Some(flag)) if declared != flag => Err(Diagnostic::error(
             Location::Implicit,
-            msg!(keys::SE_070_TICK_HZ_MISMATCH, declared = declared, flag = flag),
+            msg!(
+                keys::SE_070_TICK_HZ_MISMATCH,
+                declared = declared,
+                flag = flag
+            ),
         )
         .with_code("SE-070")),
         // Объявление подтверждено флагом (declared == flag).

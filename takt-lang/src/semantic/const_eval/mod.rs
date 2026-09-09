@@ -55,8 +55,8 @@ pub mod int_cast;
 pub(crate) mod int_ops;
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::parser::ast;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ExpressionNode, ModelNode, VariableNode};
@@ -115,13 +115,13 @@ impl ConstValue {
     }
 
     /// Имя вида значения - для текста диагностики.
-    fn kind(&self) -> &'static str {
+    fn kind(&self) -> String {
         match self {
-            ConstValue::Int(_) => "целое",
-            ConstValue::Bool(_) => "булево",
-            ConstValue::Duration(_) => "длительность",
-            ConstValue::Rational(_, _) => "дробное",
-            ConstValue::List(_) => "агрегат",
+            ConstValue::Int(_) => msg!(keys::KIND_INTEGER),
+            ConstValue::Bool(_) => msg!(keys::KIND_BOOLEAN),
+            ConstValue::Duration(_) => msg!(keys::KIND_DURATION),
+            ConstValue::Rational(_, _) => msg!(keys::KIND_RATIONAL),
+            ConstValue::List(_) => msg!(keys::KIND_AGGREGATE),
         }
     }
 
@@ -163,7 +163,7 @@ impl Budget {
     fn step(&mut self, loc: Location) -> Result<(), Diagnostic> {
         self.steps += 1;
         if self.steps > MAX_STEPS {
-            return Err(limit_exceeded(loc, "превышен предел шагов вычисления"));
+            return Err(limit_exceeded(loc, msg!(keys::CONST_STEPS_EXHAUSTED)));
         }
         Ok(())
     }
@@ -172,10 +172,7 @@ impl Budget {
     fn deeper(&mut self, loc: Location) -> Result<(), Diagnostic> {
         self.depth += 1;
         if self.depth > MAX_DEPTH {
-            return Err(limit_exceeded(
-                loc,
-                "превышен предел глубины вычисления (возможен цикл определений)",
-            ));
+            return Err(limit_exceeded(loc, msg!(keys::CONST_DEPTH_EXHAUSTED)));
         }
         Ok(())
     }
@@ -187,8 +184,8 @@ impl Budget {
 }
 
 /// `SE-085` - предел вычисления исчерпан.
-fn limit_exceeded(loc: Location, what: &str) -> Diagnostic {
-    Diagnostic::error(loc, what.to_string()).with_code("SE-085")
+fn limit_exceeded(loc: Location, what: impl AsRef<str>) -> Diagnostic {
+    Diagnostic::error(loc, what.as_ref().to_string()).with_code("SE-085")
 }
 
 /// `SE-083` - выражение не сворачивается в константу; причина **названа**. Означает ли
@@ -223,7 +220,10 @@ pub fn is_not_constant(diagnostic: &Diagnostic) -> bool {
 pub fn not_constant(loc: Location, reason: impl AsRef<str>) -> Diagnostic {
     Diagnostic::error(
         loc,
-        msg!(keys::SE_083_NOT_A_CONSTANT_EXPRESSION, reason = reason.as_ref()),
+        msg!(
+            keys::SE_083_NOT_A_CONSTANT_EXPRESSION,
+            reason = reason.as_ref()
+        ),
     )
     .with_code("SE-083")
 }
@@ -345,20 +345,14 @@ pub fn eval_in(
             ConstValue::Rational(text, negative) => Ok(ConstValue::Rational(text, !negative)),
             other => Err(not_constant(
                 *loc,
-                format!(
-                    "унарный минус не применим к значению вида «{}»",
-                    other.kind()
-                ),
+                msg!(keys::CONST_NEGATE_NOT_APPLICABLE, kind = other.kind()),
             )),
         },
         E::BitwiseNot(loc, inner) => match eval_in(inner, scope, locals, budget)? {
             ConstValue::Int(v) => Ok(ConstValue::Int(!v)),
             other => Err(not_constant(
                 *loc,
-                format!(
-                    "побитовое НЕ не применимо к значению вида «{}»",
-                    other.kind()
-                ),
+                msg!(keys::CONST_BITWISE_NOT_NOT_APPLICABLE, kind = other.kind()),
             )),
         },
         E::Not(loc, inner) => match eval_in(inner, scope, locals, budget)? {
@@ -366,10 +360,7 @@ pub fn eval_in(
             ConstValue::Int(v) => Ok(ConstValue::Bool(v == 0)),
             other => Err(not_constant(
                 *loc,
-                format!(
-                    "логическое НЕ не применимо к значению вида «{}»",
-                    other.kind()
-                ),
+                msg!(keys::CONST_NOT_NOT_APPLICABLE, kind = other.kind()),
             )),
         },
         E::Variable(id) => match locals.get(&id.name) {
@@ -402,7 +393,7 @@ pub fn eval_in(
         // присваивания. Причина называется формой, а не "не годится".
         other => Err(not_constant(
             expr_loc(other),
-            "форма выражения при компиляции не вычисляется",
+            msg!(keys::CONST_EXPRESSION_FORM),
         )),
     })();
     budget.shallower();
@@ -463,10 +454,7 @@ fn apply_binary(
             "||" => Ok(V::Bool(*a || *b)),
             "=" => Ok(V::Bool(a == b)),
             "!=" => Ok(V::Bool(a != b)),
-            _ => Err(not_constant(
-                loc,
-                msg!(keys::CONST_OP_ON_BOOLEANS, op = op),
-            )),
+            _ => Err(not_constant(loc, msg!(keys::CONST_OP_ON_BOOLEANS, op = op))),
         },
         // -- Дробные: считается точное, отвергается округляемое --
         //
@@ -509,13 +497,7 @@ fn apply_binary(
                 }
                 None => Err(not_constant(
                     loc,
-                    format!(
-                        "операция '{op}' над дробными при компиляции не выполняется точно: \
-                         представление дробного выбирают флаги сборки (--float-as-q / \
-                         --float-embedded), а округление q задано эталоном симулятора — \
-                         посчитав здесь, компилятор дал бы значение, которого симулятор не \
-                         вычислит. Задайте готовый литерал"
-                    ),
+                    msg!(keys::CONST_RATIONAL_OP_INEXACT, op = op),
                 )),
             }
         }
@@ -523,9 +505,10 @@ fn apply_binary(
         // отвергает вывод типов (`SE-059`, `SE-065`) раньше.
         (V::Rational(_, _), _) | (_, V::Rational(_, _)) => Err(not_constant(
             loc,
-            format!(
-                "операция '{op}' над дробным и «{}» при компиляции не выполняется",
-                if matches!(left, V::Rational(_, _)) {
+            msg!(
+                keys::CONST_RATIONAL_MIXED,
+                op = op,
+                kind = if matches!(left, V::Rational(_, _)) {
                     right.kind()
                 } else {
                     left.kind()
@@ -535,10 +518,11 @@ fn apply_binary(
         // -- Смешение видов ----------------------------------------------------
         _ => Err(not_constant(
             loc,
-            format!(
-                "операция '{op}' над значениями разных видов: «{}» и «{}»",
-                left.kind(),
-                right.kind()
+            msg!(
+                keys::CONST_MIXED_KINDS,
+                op = op,
+                left = left.kind(),
+                right = right.kind()
             ),
         )),
     }
@@ -550,18 +534,21 @@ fn int_op(op: &str, a: i128, b: i128, loc: Location) -> Result<ConstValue, Diagn
     match int_ops::int_binary(op, a, b) {
         Ok(IntOutcome::Int(v)) => Ok(ConstValue::Int(v)),
         Ok(IntOutcome::Bool(v)) => Ok(ConstValue::Bool(v)),
-        Err(IntOpError::DivisionByZero) => Err(not_constant(loc, "деление на ноль")),
-        Err(IntOpError::RemainderByZero) => Err(not_constant(loc, "остаток от деления на ноль")),
+        Err(IntOpError::DivisionByZero) => {
+            Err(not_constant(loc, msg!(keys::CONST_DIVISION_BY_ZERO)))
+        }
+        Err(IntOpError::RemainderByZero) => {
+            Err(not_constant(loc, msg!(keys::CONST_REMAINDER_BY_ZERO)))
+        }
         // Та же граница, что у выражения адреса и у нормы переполнения.
         Err(IntOpError::ShiftOutOfRange) => {
-            Err(not_constant(loc, "сдвиг определён только на 0..63 бит"))
+            Err(not_constant(loc, msg!(keys::CONST_SHIFT_OUT_OF_RANGE)))
         }
         // Показатель степени вне `u32`: значение остаётся невычисленным - то есть
         // поведение прежнее, а не новый отказ.
-        Err(IntOpError::ExponentOutOfRange) => Err(not_constant(
-            loc,
-            "показатель степени отрицателен либо шире 32 бит",
-        )),
+        Err(IntOpError::ExponentOutOfRange) => {
+            Err(not_constant(loc, msg!(keys::CONST_EXPONENT_OUT_OF_RANGE)))
+        }
         Err(IntOpError::UnsupportedOperator) => Err(not_constant(
             loc,
             msg!(keys::CONST_OP_NOT_EVALUATED, op = op),
@@ -646,16 +633,13 @@ fn eval_node(
                 VariableNode::Const { expr, .. } => eval_node(&expr, loc, scope, budget),
                 other => Err(not_constant(
                     loc,
-                    format!(
-                        "'{}' — не константа: значение известно только в такте",
-                        other.name()
-                    ),
+                    msg!(keys::CONST_NOT_A_CONSTANT_NAME, name = other.name()),
                 )),
             }
         }
         _ => Err(not_constant(
             loc,
-            "значение константы при компиляции не вычисляется",
+            msg!(keys::CONST_CONSTANT_VALUE_NOT_EVALUATED),
         )),
     };
     budget.shallower();
@@ -801,10 +785,7 @@ fn cast_identity(
         return Ok(folded);
     }
     let ConstValue::Int(n) = value else {
-        return Err(not_constant(
-            loc,
-            "приведение вычисляется только над целым значением",
-        ));
+        return Err(not_constant(loc, msg!(keys::CONST_CAST_NEEDS_INTEGER)));
     };
     let target = target_of(ty, scope);
     // Целочисленная цель считается общим носителем правила: беззнаковое оборачивается
@@ -818,7 +799,11 @@ fn cast_identity(
             // `c`/`rust` - `44`, `st` потеряла бы инициализатор.
             Err(overflow) => Err(Diagnostic::error(
                 loc,
-                msg!(keys::SE_121_CAST_OVERFLOW, bits = overflow.bits, value = overflow.value),
+                msg!(
+                    keys::SE_121_CAST_OVERFLOW,
+                    bits = overflow.bits,
+                    value = overflow.value
+                ),
             )
             .with_code("SE-121")),
         };
@@ -827,19 +812,16 @@ fn cast_identity(
     // приведение ничего не меняет: правила их изменения завязаны на представление
     // значения эталона, и копия здесь разошлась бы значениями (довод - он в силе).
     let Some((min, max)) = crate::semantic::validate::literal_range::type_range(&target) else {
-        return Err(not_constant(
-            loc,
-            "приведение к этому типу при компиляции не вычисляется: правило \
-             изменения значения (усечение, обёртка, масштаб q) задано эталоном",
-        ));
+        return Err(not_constant(loc, msg!(keys::CONST_CAST_TYPE_NOT_EVALUATED)));
     };
     if *n < min || *n > max {
         return Err(not_constant(
             loc,
-            format!(
-                "приведение изменит значение {n} (диапазон типа: {min}..={max}), \
-                 а правило изменения задано эталоном — вычислить его при \
-                 компиляции нельзя"
+            msg!(
+                keys::CONST_CAST_CHANGES_VALUE,
+                value = n,
+                min = min,
+                max = max
             ),
         ));
     }

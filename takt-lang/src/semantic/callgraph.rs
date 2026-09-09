@@ -15,7 +15,9 @@
 //! доменом - отвергается
 //! диагностикой **SE-053** с цепочкой вызовов.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::parser::ast;
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -224,10 +226,7 @@ pub fn topological_order(graph: &CallGraph, loc: Location) -> Result<Vec<String>
                         chain.push(next.clone());
                         return Err(Diagnostic::error(
                             loc,
-                            format!(
-                                "Рекурсия функций запрещена: цепочка вызовов {}",
-                                chain.join(" → ")
-                            ),
+                            msg!(keys::SE_053_RECURSION_FORBIDDEN, chain = chain.join(" → ")),
                         )
                         .with_code("SE-053"));
                     }

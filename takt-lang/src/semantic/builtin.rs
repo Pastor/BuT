@@ -15,9 +15,9 @@
 //! | `abs` | `x: BuiltinNumeric` | `BuiltinNumeric` | Абсолютное значение числа |
 //! | `clamp` | `x, lo, hi: BuiltinNumeric` | `BuiltinNumeric` | Ограничение значения в диапазон |
 
+use crate::diagnostics::Diagnostic;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use crate::diagnostics::Diagnostic;
 use crate::semantic::FunctionDefinitionNode;
 use crate::semantic::type_node::TypeNode;
 use phf::phf_map;

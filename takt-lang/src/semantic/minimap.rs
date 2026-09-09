@@ -1,4 +1,6 @@
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::semantic::extend::{Extend, ParameterArgument};
 use crate::semantic::naming::{normalize_camelcase_name, normalize_lowercase_snakecase};
 use crate::semantic::{ModelNode, StateNode};
@@ -218,7 +220,7 @@ impl Map {
         let Some(start) = model.borrow().get_start_state() else {
             return Err(Diagnostic::error(
                 model.borrow().loc,
-                "Модель должна содержать начальное состояние".to_string(),
+                msg!(keys::MINIMAP_MODEL_NEEDS_START),
             )
             .with_code("SE-011"));
         };

@@ -53,16 +53,18 @@ fn check_attribute(def: &ast::FunctionDefine) -> Result<(), Diagnostic> {
     if !matches!(attribute.name.as_str(), "inline" | "noinline") {
         return Err(Diagnostic::error(
             attribute.loc,
-            msg!(keys::SE_126_UNKNOWN_FUNCTION_ATTRIBUTE, name = attribute.name),
+            msg!(
+                keys::SE_126_UNKNOWN_FUNCTION_ATTRIBUTE,
+                name = attribute.name
+            ),
         )
         .with_code("SE-126"));
     }
     if def.external && attribute.name == "inline" {
-        return Err(Diagnostic::error(
-            attribute.loc,
-            msg!(keys::SE_127_INLINE_ON_EXTERN),
-        )
-        .with_code("SE-127"));
+        return Err(
+            Diagnostic::error(attribute.loc, msg!(keys::SE_127_INLINE_ON_EXTERN))
+                .with_code("SE-127"),
+        );
     }
     Ok(())
 }
@@ -90,11 +92,8 @@ pub fn construct_function(
             .clone()
             .name
             .ok_or_else(|| {
-                Diagnostic::error(
-                    def.loc,
-                    msg!(keys::SE_022_FUNCTION_NEEDS_NAME_LOWER),
-                )
-                .with_code("SE-022")
+                Diagnostic::error(def.loc, msg!(keys::SE_022_FUNCTION_NEEDS_NAME_LOWER))
+                    .with_code("SE-022")
             })?
             .name
             .clone();
@@ -142,7 +141,11 @@ pub fn construct_function(
                         // Внутренний инвариант: форму параметра проверяет `SE-034`
                         // раньше, сюда приходит только то, что она
                         // пропустила.
-                        _ => return Err(internal("параметр функции без типа")),
+                        _ => {
+                            return Err(internal(&msg!(
+                                keys::SE_119_FUNCTION_PARAMETER_WITHOUT_TYPE
+                            )));
+                        }
                     };
                     let param_name = param
                         .clone()
@@ -214,7 +217,7 @@ pub fn construct_function(
     } else if let FunctionDefinitionNode::None = func {
         // Внутренний инвариант: неизвестное имя отсекает `SE-004` раньше (проба
         // 2026-08-19).
-        Err(internal("узел функции не определён"))
+        Err(internal(&msg!(keys::SE_119_FUNCTION_NODE_UNDEFINED)))
     } else {
         Ok(func)
     }

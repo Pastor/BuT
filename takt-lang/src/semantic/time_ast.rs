@@ -14,9 +14,9 @@
 //! 2. Следит, что `after` стоит **только** в условии перехода `ref` (`SE-068`);
 //!    `every 100ms { ... }` - разворачивается семантикой в блок.
 
+use crate::diagnostics::Diagnostic;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use crate::diagnostics::Diagnostic;
 use crate::parser::ast::{Condition, InlineFormulaDefine, Model, ModelElement, StateElement};
 use crate::semantic::ModelNode;
 use std::cell::RefCell;
@@ -114,11 +114,10 @@ fn cond_uses_after(cond: &crate::semantic::ConditionNode) -> bool {
 /// Отвергает `after` в условии, стоящем не на ребре перехода (`SE-068`).
 fn reject_after(cond: &Condition, place: &str) -> Result<(), Diagnostic> {
     if let Some(loc) = find_after(cond) {
-        return Err(Diagnostic::error(
-            loc,
-            msg!(keys::SE_068_AFTER_OUTSIDE_REF, place = place),
-        )
-        .with_code("SE-068"));
+        return Err(
+            Diagnostic::error(loc, msg!(keys::SE_068_AFTER_OUTSIDE_REF, place = place))
+                .with_code("SE-068"),
+        );
     }
     Ok(())
 }
@@ -132,7 +131,7 @@ fn reject_after_in_formula(def: &InlineFormulaDefine) -> Result<(), Diagnostic> 
     match def {
         InlineFormulaDefine::Guard { conditions, .. } => {
             for cond in conditions {
-                reject_after(cond, "Guard-формуле")?;
+                reject_after(cond, &msg!(keys::AFTER_PLACE_GUARD_FORMULA))?;
             }
             Ok(())
         }
@@ -307,8 +306,12 @@ fn walk(ast: &Model, found: &mut Option<u64>) -> Result<(), Diagnostic> {
                 _ => *found = Some(def.hertz),
             },
             // `after` вне ребра - ошибка (см. шапку модуля).
-            ModelElement::Condition(def) => reject_after(&def.value, "именованном условии")?,
-            ModelElement::Invariant(def) => reject_after(&def.value, "инварианте")?,
+            ModelElement::Condition(def) => {
+                reject_after(&def.value, &msg!(keys::AFTER_PLACE_NAMED_CONDITION))?
+            }
+            ModelElement::Invariant(def) => {
+                reject_after(&def.value, &msg!(keys::AFTER_PLACE_INVARIANT))?
+            }
             ModelElement::InlineFormula(def) => reject_after_in_formula(def)?,
             ModelElement::Model(nested) => walk(nested, found)?,
             ModelElement::State(state) => {
@@ -321,7 +324,7 @@ fn walk(ast: &Model, found: &mut Option<u64>) -> Result<(), Diagnostic> {
                         // Условие ребра - **единственное** законное место `after`.
                         StateElement::Reference(_, _, _) => {}
                         StateElement::Invariant(def) => {
-                            reject_after(&def.value, "инварианте состояния")?;
+                            reject_after(&def.value, &msg!(keys::AFTER_PLACE_STATE_INVARIANT))?;
                         }
                         StateElement::InlineFormula(def) => reject_after_in_formula(def)?,
                         // Вставка уровня состояния - тело, а не условие: `after` в нём

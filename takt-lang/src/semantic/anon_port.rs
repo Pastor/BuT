@@ -17,8 +17,8 @@
 //! недопустимы.
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::parser::ast;
 use crate::semantic::type_inference::ast_type_to_node;
 use crate::semantic::type_node::TypeNode;
@@ -196,11 +196,7 @@ fn build(
     ty: TypeNode,
 ) -> Result<AnonPortAccess, Diagnostic> {
     let addr = i64::try_from(addr).map_err(|_| {
-        Diagnostic::error(
-            loc,
-            msg!(keys::SE_098_ADDRESS_TOO_WIDE, addr = addr),
-        )
-        .with_code("SE-098")
+        Diagnostic::error(loc, msg!(keys::SE_098_ADDRESS_TOO_WIDE, addr = addr)).with_code("SE-098")
     })?;
 
     let bit = match (literal_bit, member) {
@@ -228,11 +224,7 @@ fn build(
 
     let bit = i64::try_from(bit).unwrap_or(i64::MAX);
     let width = width_of(&ty).ok_or_else(|| {
-        Diagnostic::error(
-            loc,
-            msg!(keys::SE_098_TYPE_WITHOUT_WIDTH, ty = ty),
-        )
-        .with_code("SE-098")
+        Diagnostic::error(loc, msg!(keys::SE_098_TYPE_WITHOUT_WIDTH, ty = ty)).with_code("SE-098")
     })?;
 
     if !(0..=MAX_ANON_BIT).contains(&bit) {

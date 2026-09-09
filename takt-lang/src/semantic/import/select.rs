@@ -9,9 +9,9 @@
 //! размера, которому расти нельзя. Заодно приём стал видимым: перенос имён и их
 //! **привязка** к импортёру - одна операция, и жить ей вместе.
 
+use crate::diagnostics::Diagnostic;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use crate::diagnostics::Diagnostic;
 use crate::parser::ast::Identifier;
 use crate::semantic::import::adopt;
 use crate::semantic::{ConditionDefinitionNode, ModelNode, VariableNode};

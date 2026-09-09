@@ -2,9 +2,9 @@
 //!
 //! Часть модуля `validate`.
 
+use super::*;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use super::*;
 
 /// SE-047: предупреждения об очевидно константных условиях переходов.
 ///
@@ -56,20 +56,14 @@ fn eval_condition_const(cond: &ConditionNode, loc: Location, out: &mut Vec<Diagn
     match eval_const_value(cond) {
         Some(true) => {
             out.push(
-                Diagnostic::warning(
-                    loc,
-                    msg!(keys::SE_047_CONDITION_ALWAYS_TRUE),
-                )
-                .with_code("SE-047"),
+                Diagnostic::warning(loc, msg!(keys::SE_047_CONDITION_ALWAYS_TRUE))
+                    .with_code("SE-047"),
             );
         }
         Some(false) => {
             out.push(
-                Diagnostic::warning(
-                    loc,
-                    msg!(keys::SE_047_CONDITION_ALWAYS_FALSE),
-                )
-                .with_code("SE-047"),
+                Diagnostic::warning(loc, msg!(keys::SE_047_CONDITION_ALWAYS_FALSE))
+                    .with_code("SE-047"),
             );
         }
         None => {}

@@ -7,9 +7,9 @@
 //! Функция [`compute_usage`] вычисляет множество используемых имён по всем категориям
 //! элементов модели.
 
+use crate::diagnostics::Diagnostic;
 use crate::diagnostics::lang::keys;
 use crate::msg;
-use crate::diagnostics::Diagnostic;
 use crate::semantic::{
     ConditionDefinitionNode, ConditionNode, ExpressionNode, Formula, FunctionDefinitionNode,
     ModelNode, NamedCodeBlockDefinitionNode, StatementNode, VariableNode,
@@ -562,11 +562,8 @@ fn check_model_unused(model: Rc<RefCell<ModelNode>>, warnings: &mut Vec<Diagnost
         }
         if !used.contains(name.as_str()) {
             warnings.push(
-                Diagnostic::warning(
-                    var.loc(),
-                    msg!(keys::SE_036_VARIABLE_UNUSED, name = name),
-                )
-                .with_code("SE-036"),
+                Diagnostic::warning(var.loc(), msg!(keys::SE_036_VARIABLE_UNUSED, name = name))
+                    .with_code("SE-036"),
             );
         }
     }
@@ -620,11 +617,8 @@ fn check_unused_locals(stmt: &StatementNode, warnings: &mut Vec<Diagnostic>) {
     if let StatementNode::Block(items) = stmt {
         for (name, loc) in unused_locals_of_block(items) {
             warnings.push(
-                Diagnostic::warning(
-                    loc,
-                    msg!(keys::SE_036_VARIABLE_UNUSED, name = name),
-                )
-                .with_code("SE-036"),
+                Diagnostic::warning(loc, msg!(keys::SE_036_VARIABLE_UNUSED, name = name))
+                    .with_code("SE-036"),
             );
         }
     }
