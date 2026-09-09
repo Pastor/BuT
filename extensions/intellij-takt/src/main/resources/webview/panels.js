@@ -43,6 +43,10 @@ export const PANELS = [
   { id: "view", home: "bl", when: "always", label: "scheme.panel.view" },
   { id: "sheet", home: "br", when: "wide", label: "scheme.panel.sheet" },
   { id: "legend", home: null, when: "always", label: "scheme.panel.legend" },
+  // Миникарта углов не занимает и панелью кнопок не является, но вопрос к ней
+  // тот же: показывать или нет. Умолчание "широкий экран" - прежнее поведение:
+  // на узком окно в лист размером с ладонь показывает ладонь.
+  { id: "map", home: null, when: "wide", label: "scheme.panel.minimap" },
 ];
 
 /** Места на холсте в порядке обхода. */
@@ -192,6 +196,11 @@ export class Panels {
     // осталась на экране, тянулась бы в пустоту.
     const legendHidden = !visible(this.whenOf("legend"), this.narrow);
     for (const split of this.dom.legendSplits ?? []) split.hidden = legendHidden;
+    // Признак видимости миникарты - на холсте: от неё отступает место панели
+    // нижнего правого угла, а показана она бывает при любой ширине окна.
+    if (this.dom.scheme) {
+      this.dom.scheme.dataset.map = visible(this.whenOf("map"), this.narrow) ? "on" : "off";
+    }
   }
 
   /** Подключает перемещение и слежение за шириной. */

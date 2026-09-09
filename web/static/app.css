@@ -1685,7 +1685,11 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 .tool-dock-tl { left: var(--gap); top: var(--gap); }
 .tool-dock-tr { right: calc(var(--h-control) + var(--gap) * 2); top: var(--gap); justify-content: flex-end; }
 .tool-dock-bl { left: var(--gap); bottom: var(--gap); }
-.tool-dock-br { right: var(--gap); bottom: calc(var(--map-h) + var(--gap) * 2); justify-content: flex-end; }
+/* Нижний правый угол отступает от миникарты ровно тогда, когда она видна: её
+ * показ - выбор читателя, и отступ, привязанный к ширине окна, оставлял бы
+ * панель под ней. */
+.tool-dock-br { right: var(--gap); bottom: var(--gap); justify-content: flex-end; }
+.scheme[data-map="on"] .tool-dock-br { bottom: calc(var(--map-h) + var(--gap) * 2); }
 .scheme.docking .tool-dock:empty {
   display: block;
   min-width: 6rem;
@@ -2363,6 +2367,7 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  * Правый нижний угол: узлы прямоугольниками, видимая область - рамка
  * акцента. Утопленная поверхность: миникарта не карточка на листе, а окно в
  * него. */
+.minimap[hidden] { display: none; }
 .minimap {
   position: absolute;
   right: var(--gap);
@@ -2480,12 +2485,12 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  * рядом с путём входа и уводили бы строку в третий ряд. Миникарты нет: окно в
  * лист размером с ладонь показывает ладонь. */
 @media (max-width: 900px) {
-  .minimap { display: none; }
-  /* Кнопки панелей здесь не исчезают: что показывать на узком экране, решает
-   * читатель во вкладке настроек, а не правило вёрстки. Пропадавшую кнопку
-   * нельзя было ни найти, ни вернуть - о ней попросту не знали.
-   * Миникарты нет, и место панели, отступавшее от неё, отступать перестаёт. */
-  .tool-dock-br { bottom: var(--gap); }
+  /* Миникарта здесь не исчезает: что показывать на узком экране, решает
+   * читатель во вкладке настроек, а не правило вёрстки. Пропадавшее окно в лист
+   * нельзя было ни найти, ни вернуть - о нём попросту не знали. Умолчание
+   * прежнее ("широкий экран"), но теперь оно названо словом и меняется.
+   * Место панели нижнего угла отступает от миникарты по признаку холста, а не
+   * по ширине окна. */
   .scheme-nav { max-width: 100%; }
   /* Холст на узком экране обязан занимать экран, а не остаток от прочего:
    * легенда и служебные строки иначе съедают холст до узкой полосы.

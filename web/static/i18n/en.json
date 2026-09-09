@@ -290,5 +290,6 @@
   "account.fromSample": "From the sample",
   "account.needSignIn": "sign in first",
   "tree.actions": "Project actions",
-  "tree.noFiles": "No files yet"
+  "tree.noFiles": "No files yet",
+  "scheme.panel.minimap": "Sheet minimap"
 }

@@ -186,7 +186,11 @@ export async function main() {
         // Легенда углов холста не занимает, но вопрос к ней тот же - показывать
         // или нет, - и отвечать на него читатель ходит в то же окно.
         legend: dom.legend,
+        // Миникарта - не панель кнопок, но её видимость решается тем же
+        // вопросом и в том же окне.
+        map: dom.map,
       },
+      scheme: dom.scheme,
       docks: docks(),
       legendSplits: [dom.legendrows, dom.legendcols],
       settingsOpen: dom.settings,
