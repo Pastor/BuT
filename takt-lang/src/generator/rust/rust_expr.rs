@@ -408,10 +408,7 @@ fn binary(
     if crate::generator::rust::rust_bit::words_of(a).is_some()
         || crate::generator::rust::rust_bit::words_of(b).is_some()
     {
-        return Err(unsupported(&format!(
-            "{}",
-            msg!(keys::RS_WHAT_WIDE_BIT_VECTOR, op = op)
-        )));
+        return Err(unsupported(&msg!(keys::RS_WHAT_WIDE_BIT_VECTOR, op = op)));
     }
     Ok(format!(
         "({} {} {})",

@@ -3,6 +3,7 @@
 //! Часть модуля `c_expr`.
 
 use super::*;
+use crate::diagnostics::lang::keys;
 use crate::generator::c::c_unsupported::{self, UnsupportedNode};
 use crate::generator::shift_width::{self, Direction};
 
@@ -494,16 +495,17 @@ pub(in crate::generator::c) fn generate_expr(
                     ..
                 } = &*var
                 {
-                    let model_name = if let Some(model_rc) =
-                        upper.as_ref().and_then(|w| w.upgrade())
-                    {
-                        Name::from(model_rc)
-                    } else {
-                        return Err(crate::generator::c::c_unresolved::refuse(
-                            expr.loc(),
-                            crate::generator::c::c_unresolved::UnresolvedNode::PortOwner("запись"),
-                        ));
-                    };
+                    let model_name =
+                        if let Some(model_rc) = upper.as_ref().and_then(|w| w.upgrade()) {
+                            Name::from(model_rc)
+                        } else {
+                            return Err(crate::generator::c::c_unresolved::refuse(
+                                expr.loc(),
+                                crate::generator::c::c_unresolved::UnresolvedNode::PortOwner(
+                                    keys::CC_WHAT_WRITE,
+                                ),
+                            ));
+                        };
                     let cls = PortClass::from_type(ty);
                     let variant = crate::generator::c::c_names::port_enum_variant(
                         &model_name,
@@ -776,7 +778,7 @@ pub(in crate::generator::c) fn generate_expr(
                                     return Err(crate::generator::c::c_unresolved::refuse(
                                     expr.loc(),
                                     crate::generator::c::c_unresolved::UnresolvedNode::PortOwner(
-                                        "чтение бита",
+                                        keys::CC_WHAT_BIT_READ,
                                     ),
                                 ));
                                 };

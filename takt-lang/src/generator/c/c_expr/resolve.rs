@@ -3,6 +3,7 @@
 //! Часть модуля `c_expr`.
 
 use super::*;
+use crate::diagnostics::lang::keys;
 
 /// Возвращает имя поля в родительской C-структуре для вложенной модели.
 ///
@@ -220,7 +221,9 @@ pub(in crate::generator::c) fn resolve_variable_c_expr(
             } else {
                 return Err(crate::generator::c::c_unresolved::refuse(
                     var.loc(),
-                    crate::generator::c::c_unresolved::UnresolvedNode::PortOwner("чтение"),
+                    crate::generator::c::c_unresolved::UnresolvedNode::PortOwner(
+                        keys::CC_WHAT_READ,
+                    ),
                 ));
             };
             let cls = PortClass::from_type(ty);

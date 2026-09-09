@@ -1,6 +1,7 @@
 //! Обращение к элементу порта у цели `c`.
 
 use super::*;
+use crate::diagnostics::lang::keys;
 
 /// Печатает запись в элемент порта; `false` - приёмник не элемент порта.
 ///
@@ -37,7 +38,9 @@ pub(in crate::generator::c) fn emit_write(
     let Some(model_rc) = upper.as_ref().and_then(|w| w.upgrade()) else {
         return Err(crate::generator::c::c_unresolved::refuse(
             expr.loc(),
-            crate::generator::c::c_unresolved::UnresolvedNode::PortOwner("запись элемента"),
+            crate::generator::c::c_unresolved::UnresolvedNode::PortOwner(
+                keys::CC_WHAT_ELEMENT_WRITE,
+            ),
         ));
     };
     let variant = crate::generator::c::c_names::port_enum_variant(
@@ -108,7 +111,7 @@ pub(in crate::generator::c) fn emit_bit_write(
     let Some(model_rc) = upper.as_ref().and_then(|w| w.upgrade()) else {
         return Err(crate::generator::c::c_unresolved::refuse(
             expr.loc(),
-            crate::generator::c::c_unresolved::UnresolvedNode::PortOwner("запись бита"),
+            crate::generator::c::c_unresolved::UnresolvedNode::PortOwner(keys::CC_WHAT_BIT_WRITE),
         ));
     };
     let cls = PortClass::from_type(ty);
@@ -192,7 +195,9 @@ pub(in crate::generator::c) fn read(
     let Some(model_rc) = upper.as_ref().and_then(|w| w.upgrade()) else {
         return Err(crate::generator::c::c_unresolved::refuse(
             crate::diagnostics::Location::Codegen,
-            crate::generator::c::c_unresolved::UnresolvedNode::PortOwner("чтение элемента"),
+            crate::generator::c::c_unresolved::UnresolvedNode::PortOwner(
+                keys::CC_WHAT_ELEMENT_READ,
+            ),
         ));
     };
     let variant = crate::generator::c::c_names::port_enum_variant(

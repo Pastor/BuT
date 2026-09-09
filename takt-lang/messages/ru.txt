@@ -566,3 +566,38 @@ st.what-bit-of-bool = бит {bit} у однобитного значения: �
 st.what-bit-access-type = битовый доступ к типу '{ty}': маска строится только для целых типов IEC (8/16/32/64 бита)
 st.what-bit-out-of-width = бит {bit} вне разрядности типа '{ty}' ({bits} бит)
 st.what-cast-unknown-type = приведение операнда, чей тип не определяется статически: имя функции преобразования IEC строится из ОБОИХ типов (<ИЗ>_TO_<В>)
+
+# ─── Цель sv: операторы (`generator/sv/sv_stmt.rs`) ──────────────────────────
+sv.what-return-outside-function = возврат значения вне тела функции
+sv.what-loop = цикл (loop/while): в синтезируемом RTL цикл обязан разворачиваться в схему, то есть иметь границы, известные на этапе синтеза
+sv.what-for = цикл for: в синтезируемом RTL цикл обязан разворачиваться в схему, то есть иметь границы, известные на этапе синтеза. Развернуть удаётся объявление с литеральным началом, сравнение переменной цикла с литералом и шаг '+='/'-=' на литерал, не более {limit} итераций
+sv.what-continue = оператор continue (циклов нет)
+sv.what-break = оператор break (циклов нет)
+sv.what-match-arm-without-patterns = ветка match без образцов
+sv.what-unresolved-statement = неразрешённый оператор
+sv.what-variable = переменная '{name}'
+sv.what-expression-statement = выражение '{kind}' в позиции оператора
+sv.kind-empty = пустое
+sv.kind-no-effect = без побочного эффекта
+sv.what-unresolved-assign-target = неразрешённая переменная в левой части присваивания
+sv.what-complex-assign-target = сложная левая часть присваивания
+
+# ─── Цель c: условия (`generator/c/c_expr/condition.rs`) ─────────────────────
+cc.state-of-argument = аргумент 'S(Модель)' не разрешён в модель: ожидалось имя модели
+cc.model-not-found = Модель {name} не найдена
+cc.not-a-model = Элемент {name} не является моделью
+cc.state-not-in-model = Состояние {state} не найдено в модели {model}
+cc-019.state-unreachable = состояние модели '{name}' недостижимо из '{owner}': модель не встроена ни в одно состояние родителя
+cc.what-duration-in-condition = литерал длительности в условии
+cc.what-element-read-in-condition = чтение элемента в условии
+cc.what-bit-access-in-condition = доступ к биту в условии
+cc-001.bit-access-on-float-port = BitAccess на float-порт не поддерживается в условии
+cc.unresolved-function-in-condition = Неразрешённая функция в условии перехода
+cc.model-or-state-in-condition = Ссылки на модели и состояния не поддерживаются в условиях переходов
+cc.what-after = выдержка 'after'
+cc.what-read = чтение
+cc.what-write = запись
+cc.what-element-write = запись элемента
+cc.what-bit-write = запись бита
+cc.what-element-read = чтение элемента
+cc.what-bit-read = чтение бита

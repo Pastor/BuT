@@ -19,6 +19,8 @@
 //! `always_ff` защёлкнет по фронту. Отображение имени делает
 //! [`Scope`](super::sv_expr::Scope) - здесь только выбор стороны.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::diagnostics::Diagnostic;
@@ -95,7 +97,7 @@ pub(crate) fn print_statement(
         StatementNode::Return(Some(expr), _) => {
             let name = scope
                 .function
-                .ok_or_else(|| sv002("возврат значения вне тела функции"))?;
+                .ok_or_else(|| sv002(&msg!(keys::SV_WHAT_RETURN_OUTSIDE_FUNCTION)))?;
             let value = match scope.function_ret {
                 Some(ty) => scope.coerce(ty, expr)?,
                 None => print_expression(expr, scope)?,
@@ -155,10 +157,7 @@ pub(crate) fn print_statement(
         // Условие Takt их не гарантирует, а неразворачиваемый цикл синтезатор
         // отвергает. Транслировать его молча значило бы обещать схему, которой не
         // существует. В корпусе циклов нет (проверено).
-        StatementNode::Loop { .. } => Err(sv002(
-            "цикл (loop/while): в синтезируемом RTL цикл обязан разворачиваться \
-             в схему, то есть иметь границы, известные на этапе синтеза",
-        )),
+        StatementNode::Loop { .. } => Err(sv002(&msg!(keys::SV_WHAT_LOOP))),
         // Цикл `for` разворачивается, если его границы известны при компиляции: в RTL
         // цикла нет, есть схема.
         StatementNode::For {
@@ -177,12 +176,9 @@ pub(crate) fn print_statement(
                 cond.as_deref(),
                 step.as_deref(),
             ) else {
-                return Err(sv002(&format!(
-                    "цикл for: в синтезируемом RTL цикл обязан разворачиваться в схему, \
-                     то есть иметь границы, известные на этапе синтеза. Развернуть \
-                     удаётся объявление с литеральным началом, сравнение переменной цикла \
-                     с литералом и шаг '+='/'-=' на литерал, не более {} итераций",
-                    crate::generator::sv::sv_unroll::MAX_ITERATIONS
+                return Err(sv002(&msg!(
+                    keys::SV_WHAT_FOR,
+                    limit = crate::generator::sv::sv_unroll::MAX_ITERATIONS
                 )));
             };
             // Имя печатается как есть - так же, как его печатает объявление локальной
@@ -197,8 +193,8 @@ pub(crate) fn print_statement(
             }
             Ok(())
         }
-        StatementNode::Continue(_) => Err(sv002("оператор continue (циклов нет)")),
-        StatementNode::Break(_) => Err(sv002("оператор break (циклов нет)")),
+        StatementNode::Continue(_) => Err(sv002(&msg!(keys::SV_WHAT_CONTINUE))),
+        StatementNode::Break(_) => Err(sv002(&msg!(keys::SV_WHAT_BREAK))),
         // `match` переводится в `case`: в SystemVerilog это прямой аналог.
         //
         // Ветвь `default` печатается всегда: `case` без неё в `always_comb` оставляет
@@ -232,7 +228,7 @@ pub(crate) fn print_statement(
                         labels.push(print_expression(value, scope)?);
                     }
                     if labels.is_empty() {
-                        return Err(sv002("ветка match без образцов"));
+                        return Err(sv002(&msg!(keys::SV_WHAT_MATCH_ARM_WITHOUT_PATTERNS)));
                     }
                     p.ident(&format!("{}: begin", labels.join(", "))).nl();
                 }
@@ -266,7 +262,7 @@ pub(crate) fn print_statement(
             }
             Ok(())
         }
-        StatementNode::Unresolved(_) => Err(sv002("неразрешённый оператор")),
+        StatementNode::Unresolved(_) => Err(sv002(&msg!(keys::SV_WHAT_UNRESOLVED_STATEMENT))),
     }
 }
 
@@ -362,7 +358,7 @@ pub(crate) fn emit_hoisted_locals(
     unread: &[String],
 ) -> Result<(), Diagnostic> {
     for (name, ty) in locals {
-        let decl = super::sv_type::sv_type(ty, &format!("переменная '{}'", name))?;
+        let decl = super::sv_type::sv_type(ty, &msg!(keys::SV_WHAT_VARIABLE, name = name))?;
         p.ident(&format!("{};", decl.declare(name))).nl();
         emit_sink_declaration(p, name, unread);
     }
@@ -526,7 +522,7 @@ pub(crate) fn emit_hoisted_locals_auto(
     unread: &[String],
 ) -> Result<(), Diagnostic> {
     for (name, ty) in locals {
-        let decl = super::sv_type::sv_type(ty, &format!("переменная '{}'", name))?;
+        let decl = super::sv_type::sv_type(ty, &msg!(keys::SV_WHAT_VARIABLE, name = name))?;
         p.ident(&format!("automatic {};", decl.declare(name))).nl();
         emit_sink_declaration(p, name, unread);
     }
@@ -639,13 +635,16 @@ fn print_expression_statement(
                 .nl();
             Ok(())
         }
-        other => Err(sv002(&format!(
-            "выражение '{}' в позиции оператора",
-            match other {
-                ExpressionNode::None => "пустое",
-                _ => "без побочного эффекта",
-            }
-        ))),
+        other => {
+            let kind = match other {
+                ExpressionNode::None => msg!(keys::SV_KIND_EMPTY),
+                _ => msg!(keys::SV_KIND_NO_EFFECT),
+            };
+            Err(sv002(&msg!(
+                keys::SV_WHAT_EXPRESSION_STATEMENT,
+                kind = kind
+            )))
+        }
     }
 }
 
@@ -734,7 +733,7 @@ fn print_assign_target(target: &ExpressionNode, scope: &Scope) -> Result<String,
     match target {
         ExpressionNode::Variable(var) => signal_of_in(var, scope)
             .map(|name| scope.write(&name))
-            .ok_or_else(|| sv002("неразрешённая переменная в левой части присваивания")),
+            .ok_or_else(|| sv002(&msg!(keys::SV_WHAT_UNRESOLVED_ASSIGN_TARGET))),
         // База - выражение: она сама печатается как цель записи, поэтому `b.data[1] :=
         // ...` даёт `b_next.data[1] = ...`.
         //
@@ -763,7 +762,7 @@ fn print_assign_target(target: &ExpressionNode, scope: &Scope) -> Result<String,
         // Запись в ячейку: та же комбинационная пара `_next`, что у переменной модели, -
         // защёлкивание делает `always_ff`.
         ExpressionNode::AnonPort(access) => Ok(scope.write(&access.synthetic_name())),
-        _ => Err(sv002("сложная левая часть присваивания")),
+        _ => Err(sv002(&msg!(keys::SV_WHAT_COMPLEX_ASSIGN_TARGET))),
     }
 }
 

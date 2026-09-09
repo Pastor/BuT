@@ -3,6 +3,8 @@
 //! Часть модуля `c_expr`.
 
 use super::*;
+use crate::diagnostics::lang::keys;
+use crate::msg;
 
 // Модель, о **текущем состоянии** которой идёт речь в левой части сравнения:
 // `S(Модель)` либо краткая форма `Модель`. Обе записи означают одно и то же и дают один
@@ -32,7 +34,7 @@ fn generate_state_comparison(
     let Some(eq_name) = compared_state_name(right) else {
         return Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            "аргумент 'S(Модель)' не разрешён в модель: ожидалось имя модели".to_string(),
+            msg!(keys::CC_STATE_OF_ARGUMENT),
         )
         .with_code("CC-013"));
     };
@@ -45,7 +47,7 @@ fn generate_state_comparison(
         .ok_or_else(|| {
             Diagnostic::error(
                 crate::generator::site::at(Location::Codegen),
-                format!("Модель {} не найдена", model_name),
+                msg!(keys::CC_MODEL_NOT_FOUND, name = model_name),
             )
             .with_code("CC-012")
         })?;
@@ -53,7 +55,7 @@ fn generate_state_comparison(
     let Element::Model { states, .. } = element else {
         return Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            format!("Элемент {} не является моделью", model_name),
+            msg!(keys::CC_NOT_A_MODEL, name = model_name),
         )
         .with_code("CC-006"));
     };
@@ -64,7 +66,11 @@ fn generate_state_comparison(
         .ok_or_else(|| {
             Diagnostic::error(
                 crate::generator::site::at(Location::Codegen),
-                format!("Состояние {} не найдено в модели {}", eq_name, model_name),
+                msg!(
+                    keys::CC_STATE_NOT_IN_MODEL,
+                    state = eq_name,
+                    model = model_name
+                ),
             )
             .with_code("CC-011")
         })?;
@@ -102,11 +108,10 @@ fn generate_state_comparison(
         let chain = path_from_root(model).ok_or_else(|| {
             Diagnostic::error(
                 crate::generator::site::at(Location::Codegen),
-                format!(
-                    "состояние модели '{}' недостижимо из '{}': модель не \
-                     встроена ни в одно состояние родителя",
-                    model_name,
-                    owner.name()
+                msg!(
+                    keys::CC_019_STATE_UNREACHABLE,
+                    name = model_name,
+                    owner = owner.name()
                 ),
             )
             .with_code("CC-019")
@@ -192,7 +197,7 @@ pub(in crate::generator::c) fn generate_condition_expr(
         ConditionNode::Duration(nanos) => Ok(crate::semantic::duration::value_millis(
             *nanos,
             Location::Codegen,
-            "литерал длительности в условии",
+            &msg!(keys::CC_WHAT_DURATION_IN_CONDITION),
         )?
         .to_string()),
         ConditionNode::Number(n) => Ok(crate::generator::c::c_literal::c_int_literal(*n)),
@@ -283,7 +288,7 @@ pub(in crate::generator::c) fn generate_condition_expr(
                     return Err(crate::generator::c::c_unresolved::refuse(
                         crate::generator::site::at(Location::Codegen),
                         crate::generator::c::c_unresolved::UnresolvedNode::PortOwner(
-                            "чтение элемента в условии",
+                            keys::CC_WHAT_ELEMENT_READ_IN_CONDITION,
                         ),
                     ));
                 };
@@ -334,7 +339,7 @@ pub(in crate::generator::c) fn generate_condition_expr(
                                     return Err(crate::generator::c::c_unresolved::refuse(
                                     crate::diagnostics::Location::Codegen,
                                     crate::generator::c::c_unresolved::UnresolvedNode::PortOwner(
-                                        "доступ к биту в условии",
+                                        keys::CC_WHAT_BIT_ACCESS_IN_CONDITION,
                                     ),
                                 ));
                                 };
@@ -368,8 +373,7 @@ pub(in crate::generator::c) fn generate_condition_expr(
                                 }
                                 PortClass::Rational => Err(Diagnostic::error(
                                     crate::generator::site::at(Location::Codegen),
-                                    "BitAccess на float-порт не поддерживается в условии"
-                                        .to_string(),
+                                    msg!(keys::CC_001_BIT_ACCESS_ON_FLOAT_PORT),
                                 )
                                 .with_code("CC-001")),
                             };
@@ -393,7 +397,7 @@ pub(in crate::generator::c) fn generate_condition_expr(
             ) {
                 return Err(Diagnostic::error(
                     crate::generator::site::at(Location::Codegen),
-                    "Неразрешённая функция в условии перехода".to_string(),
+                    msg!(keys::CC_UNRESOLVED_FUNCTION_IN_CONDITION),
                 )
                 .with_code("CC-002"));
             }
@@ -435,7 +439,7 @@ pub(in crate::generator::c) fn generate_condition_expr(
         }
         ConditionNode::Model(_, _) | ConditionNode::State(_, _) => Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            "Ссылки на модели и состояния не поддерживаются в условиях переходов".to_string(),
+            msg!(keys::CC_MODEL_OR_STATE_IN_CONDITION),
         )
         .with_code("CC-003")),
     }
@@ -472,7 +476,7 @@ fn after_condition(nanos: i64, map: &CMap, owner: &Element) -> Result<String, Di
         nanos,
         profile,
         Location::Codegen,
-        "выдержка 'after'",
+        &msg!(keys::CC_WHAT_AFTER),
     )?;
     match profile {
         crate::semantic::duration::TimeProfile::Ticks { .. } => {

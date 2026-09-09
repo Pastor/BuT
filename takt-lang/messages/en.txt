@@ -559,3 +559,38 @@ st.what-bit-of-bool = bit {bit} of a single-bit value: in IEC 61131-3 a BOOL has
 st.what-bit-access-type = a bit access on type '{ty}': the mask is built only for IEC integer types (8/16/32/64 bits)
 st.what-bit-out-of-width = bit {bit} is outside the width of type '{ty}' ({bits} bits)
 st.what-cast-unknown-type = a cast of an operand whose type is not determined statically: the name of the IEC conversion function is built from BOTH types (<FROM>_TO_<TO>)
+
+# ─── Target sv: statements (`generator/sv/sv_stmt.rs`) ───────────────────────
+sv.what-return-outside-function = a value return outside a function body
+sv.what-loop = a loop (loop/while): in synthesisable RTL a loop must unroll into a circuit, that is, have bounds known at synthesis time
+sv.what-for = a for loop: in synthesisable RTL a loop must unroll into a circuit, that is, have bounds known at synthesis time. Unrolling works for a declaration with a literal start, a comparison of the loop variable with a literal and a '+='/'-=' step by a literal, at most {limit} iterations
+sv.what-continue = a continue statement (there are no loops)
+sv.what-break = a break statement (there are no loops)
+sv.what-match-arm-without-patterns = a match arm without patterns
+sv.what-unresolved-statement = an unresolved statement
+sv.what-variable = variable '{name}'
+sv.what-expression-statement = an expression '{kind}' in statement position
+sv.kind-empty = empty
+sv.kind-no-effect = without a side effect
+sv.what-unresolved-assign-target = an unresolved variable on the left-hand side of an assignment
+sv.what-complex-assign-target = a complex left-hand side of an assignment
+
+# ─── Target c: conditions (`generator/c/c_expr/condition.rs`) ────────────────
+cc.state-of-argument = the argument of 'S(Model)' is not resolved to a model: a model name was expected
+cc.model-not-found = model {name} not found
+cc.not-a-model = the element {name} is not a model
+cc.state-not-in-model = state {state} not found in model {model}
+cc-019.state-unreachable = the state of model '{name}' is unreachable from '{owner}': the model is not built into any state of the parent
+cc.what-duration-in-condition = a duration literal in a condition
+cc.what-element-read-in-condition = an element read in a condition
+cc.what-bit-access-in-condition = a bit access in a condition
+cc-001.bit-access-on-float-port = BitAccess on a float port is not supported in a condition
+cc.unresolved-function-in-condition = an unresolved function in a transition condition
+cc.model-or-state-in-condition = references to models and states are not supported in transition conditions
+cc.what-after = the 'after' delay
+cc.what-read = a read
+cc.what-write = a write
+cc.what-element-write = an element write
+cc.what-bit-write = a bit write
+cc.what-element-read = an element read
+cc.what-bit-read = a bit read

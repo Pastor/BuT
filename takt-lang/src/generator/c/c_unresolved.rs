@@ -13,7 +13,7 @@
 //! печатника, и до этой воронки она не доходит. Заводя новую форму, проверь порядок:
 //! сначала разбор законной формы, потом отказ.
 
-use crate::diagnostics::lang::keys;
+use crate::diagnostics::lang::{Key, keys, render};
 use crate::diagnostics::{Diagnostic, Location};
 use crate::msg;
 
@@ -39,7 +39,7 @@ pub(in crate::generator::c) enum UnresolvedNode {
     /// Второе поле - место, где это обнаружено (чтение, запись, доступ к биту): у
     /// самого узла позиции нет, и без уточнения три разных дефекта дали бы одно
     /// неразличимое сообщение.
-    PortOwner(&'static str),
+    PortOwner(Key),
     /// Определение функции не разрешено (`FunctionDefinitionNode::Unresolved`).
     ///
     /// Второе поле - имя функции, если оно известно.
@@ -60,7 +60,7 @@ impl UnresolvedNode {
             UnresolvedNode::EmptyExpression => msg!(keys::CC_023_NODE_EMPTY_EXPRESSION),
             UnresolvedNode::Variable => msg!(keys::CC_023_NODE_VARIABLE),
             UnresolvedNode::PortOwner(where_) => {
-                msg!(keys::CC_023_NODE_PORT_OWNER, r#where = where_)
+                msg!(keys::CC_023_NODE_PORT_OWNER, r#where = render(*where_, &[]))
             }
             UnresolvedNode::Function(Some(name)) => {
                 msg!(keys::CC_023_NODE_FUNCTION_NAMED, name = name)
@@ -81,7 +81,7 @@ impl UnresolvedNode {
             UnresolvedNode::Statement,
             UnresolvedNode::EmptyExpression,
             UnresolvedNode::Variable,
-            UnresolvedNode::PortOwner("чтение"),
+            UnresolvedNode::PortOwner(keys::CC_WHAT_ELEMENT_READ_IN_CONDITION),
             UnresolvedNode::Function(Some("pid_step".to_string())),
             UnresolvedNode::ConstantValue("LIMIT".to_string()),
         ]
