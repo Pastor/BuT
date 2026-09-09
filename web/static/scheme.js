@@ -124,6 +124,10 @@ export class Scheme {
     // Кто правит - спрашивается у страницы на каждую правку, а не запоминается:
     // вход и выход случаются посреди работы над схемой.
     this.who = options.who ?? (() => "");
+    // Настройки страницы окно показывает, но не держит: язык и перенос строк -
+    // дело страницы, и второй их носитель разошёлся бы с первым молча.
+    this.pageValues = options.pageValues ?? (() => ({}));
+    this.onPage = options.onPage ?? (() => {});
     this.graph = null;
     this.layout = layoutFile.empty();
     this.undo = [];
@@ -478,6 +482,7 @@ export class Scheme {
     this.settingsBefore = this.text();
     this.panelsBefore = this.panels?.snapshot() ?? null;
     this.settings.open();
+    if (this.dom.settingsBody) this.dom.settingsBody.scrollTop = 0;
   }
 
   /** Ступени вида, показанные окну: настройки и то, что живёт рядом с ними. */
@@ -490,11 +495,16 @@ export class Scheme {
     // Видимость панелей стоит в том же окне, но живёт не в раскладке: она
     // принадлежит читателю. Ключ помечен, чтобы выбор ушёл своему хозяину.
     for (const panel of PANELS) values[`panel:${panel.id}`] = this.panels?.whenOf(panel.id);
+    for (const [key, value] of Object.entries(this.pageValues())) values[`page:${key}`] = value;
     return values;
   }
 
   /** Выбор ступени в окне: раскладка правится сразу, лист перерисовывается. */
   pickSetting(key, value) {
+    if (key.startsWith("page:")) {
+      this.onPage(key.slice(5), value);
+      return;
+    }
     if (key.startsWith("panel:")) {
       this.panels?.setWhen(key.slice(6), value);
       return;

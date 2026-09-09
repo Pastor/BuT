@@ -64,6 +64,9 @@
   <button id="account" class="icon-btn" type="button"
           data-i18n-attr="data-tip:account.projects;aria-label:account.projects"
           data-tip="Мои проекты" aria-label="Мои проекты"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="9.5" r="2.5"/><path d="M6.5 19c1-2.5 3-3.8 5.5-3.8s4.5 1.3 5.5 3.8"/></svg></button>
+  <button id="settings" class="icon-btn" type="button"
+          data-i18n-attr="data-tip:settings.title;aria-label:settings.title"
+          data-tip="Настройки" aria-label="Настройки"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="7"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12h2.5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8"/></svg></button>
   <button id="showcase" class="icon-btn" type="button"
           data-i18n-attr="data-tip:showcase.title;aria-label:showcase.title"
           data-tip="Открытые проекты" aria-label="Открытые проекты"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 5.5h7v7h-7zM13.5 5.5h7v7h-7zM3.5 15.5h7v5h-7zM13.5 15.5h7v5h-7z"/></svg></button>
@@ -322,7 +325,6 @@
             <button class="icon-btn" type="button" data-act="legend-right" aria-pressed="false" data-i18n-attr="aria-label:scheme.legend.right;data-tip:scheme.legend.right" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 3.5h11v17h-11z"/><path d="M17 3.5h3.5v17H17z"/></svg></button>
             <button class="icon-btn" type="button" data-act="legend-float" aria-pressed="false" data-i18n-attr="aria-label:scheme.legend.float;data-tip:scheme.legend.float" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 3.5h17v17h-17z"/><path d="M8.5 8.5h9v6h-9z"/></svg></button>
             <button class="icon-btn" type="button" data-act="pin-add" data-i18n-attr="aria-label:scheme.pinAdd;data-tip:scheme.pinAdd" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20v-8h8"/><circle cx="12" cy="12" r="2.5"/><path d="M16.5 6.5h5M19 4v5"/></svg></button>
-            <button class="icon-btn" type="button" data-act="settings" data-i18n-attr="aria-label:scheme.settings;data-tip:scheme.settings" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3M6 6l2.1 2.1M15.9 15.9L18 18M18 6l-2.1 2.1M8.1 15.9L6 18"/></svg></button>
             <button class="icon-btn" type="button" data-act="nav" aria-pressed="false" data-i18n-attr="aria-label:scheme.navigator;data-tip:scheme.navigatorHint" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 4.5h17v15h-17z"/><path d="M9 4.5v15"/><path d="M12 9h6M12 12h6M12 15h4"/></svg></button>
           </div>
           </div>
@@ -396,8 +398,8 @@
      схеме сразу; "Отменить" возвращает раскладку к снимку при открытии. -->
 <div id="scheme-modal" class="modal" hidden>
   <div class="modal-box" role="dialog" aria-modal="true"
-       data-i18n-attr="aria-label:scheme.settings" aria-label="Настройки схемы">
-    <div class="modal-head" data-i18n="scheme.settings">Настройки схемы</div>
+       data-i18n-attr="aria-label:settings.title" aria-label="Настройки">
+    <div class="modal-head" data-i18n="settings.title">Настройки</div>
     <div id="scheme-tabs" class="tabs" role="tablist"></div>
     <div id="scheme-settings" class="modal-body settings-body"></div>
     <div class="modal-foot">

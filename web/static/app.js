@@ -175,6 +175,7 @@ export async function main() {
       },
       docks: docks(),
       legendSplits: [dom.legendrows, dom.legendcols],
+      settingsOpen: dom.settings,
       empty: dom["scheme-empty"],
       notice: dom["scheme-notice"],
       noticeText: dom["scheme-notice-text"],
@@ -193,6 +194,14 @@ export async function main() {
       who: () => api.who()?.login ?? "",
       // Щелчок по узлу ставит курсор на имя состояния: выбор синхронен с текстом.
       onSelect: (node) => jump(node.nameRange.start_line, node.nameRange.start_character),
+      // Настройки страницы окно показывает, но держит их страница: язык живёт в
+      // памяти читателя, перенос строк - в своей кнопке. Спрашиваются они у тех
+      // же носителей, что и правит читатель руками.
+      pageValues: () => ({
+        lang: i18n.language(),
+        wrap: dom.wrap.getAttribute("aria-pressed") === "true",
+      }),
+      onPage: (key, value) => setPageSetting(key, value),
       // Правка раскладки - такая же работа, как правка текста: черновик пишется по тем
       // же правилам и с тем же вопросом при уходе.
       onChange: () => {
@@ -334,6 +343,9 @@ function redraw() {
   if (!state.bridge) return;
   showVersion();
   if (state.editor) refresh();
+  // Открытое окно настроек построено кодом: смена языка из него самого оставила
+  // бы его подписи на прежнем языке, и читатель увидел бы два языка разом.
+  if (state.scheme?.settings?.isOpen) state.scheme.settings.paint();
 }
 
 /**
@@ -428,6 +440,22 @@ function fade(node) {
 }
 
 /** Находит узлы страницы один раз: поиск в обработчике - лишняя работа. */
+/**
+ * Правка настройки страницы из окна настроек.
+ *
+ * Своих носителей окно не заводит: язык переключается тем же путём, что и
+ * список в шапке, перенос строк - нажатием своей кнопки. Иначе у настройки
+ * оказалось бы два хозяина, и они разошлись бы молча.
+ */
+function setPageSetting(key, value) {
+  if (key === "lang") {
+    setPick("lang", value);
+    dom.lang.dispatchEvent(new Event("change"));
+  } else if (key === "wrap") {
+    if ((dom.wrap.getAttribute("aria-pressed") === "true") !== value) dom.wrap.click();
+  }
+}
+
 /** Места панелей холста по имени: признак стоит в разметке. */
 function docks() {
   const out = {};
@@ -450,7 +478,7 @@ function cache() {
     "found", "more", "doc", "sourcetitle", "openfilename", "scenariopick",
     "scenariofile", "showscheme", "scheme-notice", "scheme-notice-text", "scheme-drop",
     "crumbs", "scheme-up", "stage", "scheme", "sheet", "nav", "map",
-    "panel-run", "panel-view", "panel-sheet",
+    "panel-run", "panel-view", "panel-sheet", "settings",
     "scheme-empty", "legend", "zoom", "alerts",
     "scheme-modal", "scheme-tabs", "scheme-settings", "scheme-save", "scheme-cancel",
     "showlog", "logsplit", "legendrows", "legendcols",
@@ -503,6 +531,7 @@ function wire() {
     compile();
     saveDraft();
   });
+  dom.settings.addEventListener("click", () => state.scheme.openSettings());
   dom.lang.addEventListener("change", async () => {
     // Язык - свойство читателя, а не документа: в ссылку-снимок и в черновик он не
     // входит, иначе переданная ссылка меняла бы язык у получателя.

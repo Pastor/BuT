@@ -173,7 +173,6 @@
   "scheme.cornersRound": "Углы скруглённые",
   "scheme.pinAdd": "Добавить излом",
   "scheme.navigator": "Навигатор",
-  "scheme.settings": "Настройки схемы",
   "scheme.settingsSave": "Сохранить",
   "scheme.settingsCancel": "Отменить",
   "scheme.settings.lines": "Линии",
@@ -269,5 +268,13 @@
   "scheme.settings.panels": "Панели",
   "scheme.when.always": "всегда",
   "scheme.when.wide": "широкий экран",
-  "scheme.when.hidden": "скрыть"
+  "scheme.when.hidden": "скрыть",
+  "settings.title": "Настройки",
+  "settings.page": "Страница",
+  "settings.lang": "Язык оболочки",
+  "settings.lang.ru": "русский",
+  "settings.lang.en": "английский",
+  "settings.wrap": "Перенос длинных строк",
+  "settings.wrap.on": "переносить",
+  "settings.wrap.off": "не переносить"
 }

@@ -39,6 +39,30 @@ function mk(tag, attrs = {}) {
  */
 const TABS = [
   {
+    // Настройки страницы: они не про лист, и хозяин у них не схема. Значения
+    // приходят и уходят с приставкой `page:` - её видит тот, кто их держит.
+    id: "page",
+    label: "settings.page",
+    fields: [
+      {
+        id: "page:lang",
+        label: "settings.lang",
+        steps: [
+          { value: "ru", label: "settings.lang.ru" },
+          { value: "en", label: "settings.lang.en" },
+        ],
+      },
+      {
+        id: "page:wrap",
+        label: "settings.wrap",
+        steps: [
+          { value: false, label: "settings.wrap.off" },
+          { value: true, label: "settings.wrap.on" },
+        ],
+      },
+    ],
+  },
+  {
     id: "lines",
     label: "scheme.settings.lines",
     fields: [

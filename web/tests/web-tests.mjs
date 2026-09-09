@@ -1165,6 +1165,18 @@ test("страница проекта: закрытый отвечает наз�
   );
 });
 
+test("настройки: кнопка стоит в шапке, а не на скрываемой панели", async () => {
+  // Кнопка, живущая на панели, которую читатель вправе снять, снимается вместе
+  // с ней - и вернуть настройки становится нечем.
+  const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
+  const bar = html.slice(html.indexOf('<div class="bar bar-tools">'), html.indexOf("</div>", html.indexOf('<div class="bar bar-tools">')));
+  assert.ok(bar.includes('id="settings"'), "кнопки настроек нет в полосе инструментов");
+  const panels = html.matchAll(/<div id="panel-\w+" class="tool-panel[\s\S]*?\n          <\/div>/g);
+  for (const [panel] of panels) {
+    assert.ok(!panel.includes('id="settings"'), "кнопка настроек вернулась на панель");
+  }
+});
+
 test("панели: чужое имя и ступень вне набора не переживают чтения", () => {
   // Хранилище переживает выкладки, а состав панелей меняется: запись о панели,
   // которой больше нет, не должна ни падать, ни оживать при возврате имени.

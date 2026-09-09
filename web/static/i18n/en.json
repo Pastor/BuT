@@ -173,7 +173,6 @@
   "scheme.cornersRound": "Rounded corners",
   "scheme.pinAdd": "Add bend",
   "scheme.navigator": "Navigator",
-  "scheme.settings": "Scheme settings",
   "scheme.settingsSave": "Save",
   "scheme.settingsCancel": "Cancel",
   "scheme.settings.lines": "Lines",
@@ -269,5 +268,13 @@
   "scheme.settings.panels": "Panels",
   "scheme.when.always": "always",
   "scheme.when.wide": "wide screen",
-  "scheme.when.hidden": "hide"
+  "scheme.when.hidden": "hide",
+  "settings.title": "Settings",
+  "settings.page": "Page",
+  "settings.lang": "Interface language",
+  "settings.lang.ru": "Russian",
+  "settings.lang.en": "English",
+  "settings.wrap": "Wrap long lines",
+  "settings.wrap.on": "wrap",
+  "settings.wrap.off": "do not wrap"
 }
