@@ -29,10 +29,16 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     // протокол и отвечает `ProtocolError("disconnected channel")`. Версия нужна, чтобы
     // отличить устаревший установленный сервер от дефекта языка: редактор держит свой
     // сервер и обновляется независимо от дерева.
-    if let Some(code) =
-        takt_lang::version::handle_server_args(&std::env::args().skip(1).collect::<Vec<_>>())
-    {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if let Some(code) = takt_lang::version::handle_server_args(&args) {
         process::exit(code);
+    }
+
+    // Граф модели одним вызовом: клиенту, которому запрос протокола недоступен,
+    // остаётся тот же сервер и тот же носитель формы. Второй логики здесь нет -
+    // ветвь зовёт то же, что и запрос `takt/graph`.
+    if args.first().map(String::as_str) == Some("--graph") {
+        process::exit(print_graph(args.get(1).map(String::as_str)));
     }
 
     // Инициализируем соединение через stdin/stdout
@@ -192,6 +198,43 @@ fn main_loop(
         }
     }
     Ok(())
+}
+
+/// Печатает граф модели файла; возвращает код возврата процесса.
+///
+/// Отказ разбора уходит в поток ошибок и даёт ненулевой код: молчаливый пустой
+/// граф читался бы как модель без состояний.
+fn print_graph(path: Option<&str>) -> i32 {
+    let Some(path) = path else {
+        eprintln!("takt-lsp --graph: не указан файл модели");
+        return 2;
+    };
+    let source = match std::fs::read_to_string(path) {
+        Ok(source) => source,
+        Err(error) => {
+            eprintln!("takt-lsp --graph: {path}: {error}");
+            return 2;
+        }
+    };
+    match takt_lang::layout::graph_of(&source) {
+        Ok(graph) => {
+            let json = takt_lang::layout::json::graph_json(graph, &source);
+            match serde_json::to_string(&json) {
+                Ok(text) => {
+                    println!("{text}");
+                    0
+                }
+                Err(error) => {
+                    eprintln!("takt-lsp --graph: {error}");
+                    2
+                }
+            }
+        }
+        Err(diagnostic) => {
+            eprintln!("takt-lsp --graph: {}", diagnostic.message);
+            1
+        }
+    }
 }
 
 /// Параметры запроса графа: документ, как у прочих операций редактора.

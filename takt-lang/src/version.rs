@@ -104,6 +104,7 @@ pub fn server_help_text() -> String {
          \x20 takt-lsp                 запуск сервера (stdio)\n\
          \x20 takt-lsp --version | -V  версии инструмента и языка\n\
          \x20 takt-lsp --help    | -h  эта справка\n\
+         \x20 takt-lsp --graph ФАЙЛ    граф модели для схемы, JSON в поток вывода\n\
          \n\
          Пути поиска импортов задаются клиентом —\n\
          initializationOptions.searchPaths.\n\

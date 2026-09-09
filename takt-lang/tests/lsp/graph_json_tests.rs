@@ -116,3 +116,51 @@ fn graph_form_has_a_single_carrier() {
         "форма графа объявлена мимо общего носителя: {found:?}"
     );
 }
+
+#[test]
+fn server_prints_graph_by_one_call() {
+    // Клиенту, которому запрос протокола недоступен, остаётся тот же сервер и
+    // тот же носитель формы: ветвь `--graph` обязана давать то же, что запрос.
+    let source = MODEL;
+    let dir = tempfile::tempdir().expect("временный каталог");
+    let path = dir.path().join("model.takt");
+    std::fs::write(&path, source).expect("файл модели");
+
+    let exe = std::path::Path::new(env!("CARGO_BIN_EXE_takt-lsp"));
+    let out = std::process::Command::new(exe)
+        .arg("--graph")
+        .arg(&path)
+        .output()
+        .expect("сервер запускается");
+    assert!(
+        out.status.success(),
+        "код возврата: {:?}",
+        out.status.code()
+    );
+
+    let printed: serde_json::Value = serde_json::from_slice(&out.stdout).expect("вывод - JSON");
+    assert_eq!(
+        printed,
+        graph_value(source),
+        "печать разошлась с формой запроса"
+    );
+}
+
+#[test]
+fn server_refuses_unreadable_model_by_words() {
+    // Молчаливый пустой граф читался бы как модель без состояний: отказ уходит
+    // в поток ошибок и даёт ненулевой код.
+    let dir = tempfile::tempdir().expect("временный каталог");
+    let path = dir.path().join("broken.takt");
+    std::fs::write(&path, "start Heating {").expect("файл модели");
+
+    let exe = std::path::Path::new(env!("CARGO_BIN_EXE_takt-lsp"));
+    let out = std::process::Command::new(exe)
+        .arg("--graph")
+        .arg(&path)
+        .output()
+        .expect("сервер запускается");
+    assert!(!out.status.success(), "неразбираемая модель принята");
+    assert!(out.stdout.is_empty(), "в поток вывода ушёл граф");
+    assert!(!out.stderr.is_empty(), "причина не названа");
+}
