@@ -1,6 +1,6 @@
 [package]
 name = "takt-lang"
-version = "0.60.0"
+version = "0.61.0"
 authors = ["Pastor <viruszold@gmail.com>"]
 description = "Takt — учебный DSL конечных автоматов: компилятор и LSP-сервер. Язык сделан в учебных целях и показывает принципы автоматного подхода к разработке"
 homepage = "https://but.ru"

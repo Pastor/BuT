@@ -13,6 +13,12 @@
 //!
 //! Это **не** версия крейта `takt-lang` (`CARGO_PKG_VERSION`): крейт версионируется по
 //! SemVer на каждую фичу, версия языка - накапливается. Они намеренно разные.
+//!
+//! **Наружу модуль отдаёт только то, что зовут за его пределами**: константу версии
+//! и два входа инструментов - `run_version_subcommand` для компилятора и
+//! `handle_server_args` для сервера. Прочие функции модульные, и это граница, а не
+//! случайность: `pub` поверх недостижимого кода глушит `dead_code`, и мёртвая
+//! функция живёт в дереве незамеченной. Модульная - валит сборку под `-D warnings`.
 
 /// Текущая версия языка Takt (SemVer, `x.y.z`). Единственный источник истины;
 /// `README.md` обязан ей соответствовать (проверка `check-language-version.sh`).
@@ -30,7 +36,7 @@ pub const LANGUAGE_VERSION: &str = "0.18.0";
 /// Ни одно число здесь не написано литералом: обе величины читаются из кода, иначе
 /// появился бы второй источник истины - ровно тот, против которого эта константа и
 /// заведена.
-pub fn version_text() -> String {
+fn version_text() -> String {
     version_text_for("taktc")
 }
 
@@ -43,7 +49,7 @@ pub fn version_text() -> String {
 /// компилятор принимает.
 ///
 /// Своей печати у сервера заводить нельзя: форма вывода - одно знание на проект.
-pub fn version_text_for(tool: &str) -> String {
+fn version_text_for(tool: &str) -> String {
     format!(
         "{} {}\nязык Takt {}",
         tool,
@@ -59,7 +65,7 @@ pub fn run_version_subcommand() -> i32 {
 }
 
 /// То же для инструмента с другим именем.
-pub fn run_version_subcommand_for(tool: &str) -> i32 {
+fn run_version_subcommand_for(tool: &str) -> i32 {
     println!("{}", version_text_for(tool));
     0
 }
@@ -93,7 +99,7 @@ pub fn handle_server_args(args: &[String]) -> Option<i32> {
 /// Первой строкой названо главное недоразумение: запущенный вручную сервер
 /// **завершится ошибкой протокола** - именно так выглядела попытка спросить у
 /// него версию до этого исправления.
-pub fn server_help_text() -> String {
+fn server_help_text() -> String {
     format!(
         "takt-lsp — языковой сервер Takt (LSP поверх stdio).\n\
          \n\
@@ -105,27 +111,6 @@ pub fn server_help_text() -> String {
          \x20 takt-lsp --version | -V  версии инструмента и языка\n\
          \x20 takt-lsp --help    | -h  эта справка\n\
          \x20 takt-lsp --graph ФАЙЛ    граф модели для схемы, JSON в поток вывода\n\
-         \n\
-         Пути поиска импортов задаются клиентом —\n\
-         initializationOptions.searchPaths.\n\
-         \n\
-         {}",
-        version_text_for("takt-lsp")
-    )
-}
-
-/// Справка сервера: он не запускается пользователем вручную.
-pub fn server_server_help_text() -> String {
-    format!(
-        "takt-lsp — языковой сервер Takt (LSP поверх stdio).\n\
-         \n\
-         Запускается РЕДАКТОРОМ, не вручную: без клиента процесс завершится\n\
-         ошибкой протокола.\n\
-         \n\
-         Формы:\n\
-         \x20 takt-lsp                 запуск сервера (stdio)\n\
-         \x20 takt-lsp --version | -V  версии инструмента и языка\n\
-         \x20 takt-lsp --help    | -h  эта справка\n\
          \n\
          Пути поиска импортов задаются клиентом —\n\
          initializationOptions.searchPaths.\n\
