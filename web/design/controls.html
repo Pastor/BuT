@@ -219,6 +219,18 @@
     </div>
   </section>
 
+  <!-- Список записей: одна форма на журнал прогона и на диагностики. Тон несёт
+       колонка рода, а не заливка записи. Вторая запись помечена как прочитанная. -->
+  <section class="case" data-control=".log">
+    <div class="pane-head"><span>Список записей — журнал прогона и диагностики</span></div>
+    <div class="list log">
+      <div class="row row-error"><span class="row-kind">отказ</span><span class="row-text">3:5: [SE-004] имя 'temperatur' не объявлено</span></div>
+      <div class="row row-warning" aria-selected="true"><span class="row-kind">пред</span><span class="row-text">[SE-036] переменная 'idle' объявлена и не используется</span></div>
+      <div class="row row-trace"><span class="row-text">Шаг   1 (     0ms):  [Heating]  out:heater=1</span></div>
+      <div class="row row-output"><span class="row-kind">вывод</span><span class="row-text">нагрев включён</span></div>
+    </div>
+  </section>
+
   <section class="case" data-control=".grip">
     <div class="pane-head"><span>Ручка ширины оболочки</span></div>
     <!-- `.grip` объявлена `position: fixed` и на странице стоит у края окна.

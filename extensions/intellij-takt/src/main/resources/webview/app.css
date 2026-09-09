@@ -1353,36 +1353,37 @@ body[data-panel="none"][data-tree="off"] .work {
 }
 
 .row { padding: var(--gap-quarter) var(--gap); white-space: pre-wrap; }
-/* Ошибка - пара, а не одни чернила: строка диагностики читается как полоса,
- * и по ней же кликают. Состояние передаётся не только цветом - рядом код и
- * текст сообщения. */
-.row-error {
-  background: var(--surface-alarm);
-  color: var(--on-surface-alarm);
-  cursor: pointer;
-}
+/* Ошибка кликается: щелчок ведёт к месту в тексте. Тон её несёт колонка рода, а
+ * не заливка всей записи: список читается спокойно, а род виден сразу - и он же
+ * назван словом. */
+.row-error { cursor: pointer; }
 .row-warning { color: var(--on-surface-warn); }
 .row-ok { color: var(--on-surface-soft); }
 .row-trace { color: var(--on-surface); }
 /* Вывод модели: не замечание инструмента, но и не строка трассы. */
 .row-output { color: var(--on-surface-soft); font-style: italic; }
 
-/* ── Запись журнала прогона ──────────────────────────────────────────────
- * Каждая строка - отдельное поле: своя подложка, свой отступ, её выделяют
- * щелчком. Чередование фона ведёт глаз по длинной трассе - соседние такты
+/* ── Запись журнала (`.log`) ─────────────────────────────────────────────
+ * Форма одна на журнал прогона и на список диагностик: оба отвечают на вопрос
+ * "что случилось", и разная форма у одного ответа заставляла бы читать их
+ * по-разному. Форма принадлежит контролу, а не месту: правило, привязанное к
+ * области, пришлось бы повторять на каждой новой.
+ *
+ * Каждая запись - отдельное поле: своя подложка, свой отступ, её выделяют
+ * щелчком. Чередование фона ведёт глаз по длинному списку - соседние записи
  * различаются полосой, а не только числом.
  * Колонка рода стоит слева и написана словом: цветом одним состояние не
- * передаётся, а у шага она пуста - строка сама называет себя тактом. */
-.panel-scheme > .trace {
+ * передаётся, а у шага трассы она пуста - строка сама называет себя тактом. */
+.log {
   display: flex;
   flex-direction: column;
   gap: var(--gap-quarter);
   padding: var(--gap-quarter) var(--gap-half);
 }
-/* Запись - карточка: своя рамка и своё скругление. Рамка отделяет такт от такта
- * там, где одна подложка не справляется, - строки трассы похожи одна на другую,
+/* Запись - карточка: своя рамка и своё скругление. Рамка отделяет запись от
+ * записи там, где одна подложка не справляется, - строки похожи одна на другую,
  * и глазу нужна граница, а не только оттенок. */
-.panel-scheme > .trace .row {
+.log .row {
   display: flex;
   gap: var(--gap-half);
   align-items: baseline;
@@ -1391,20 +1392,40 @@ body[data-panel="none"][data-tree="off"] .work {
   border-radius: var(--radius-sm);
   cursor: default;
 }
-.panel-scheme > .trace .row:nth-child(even) {
+.log .row:nth-child(even) {
   background: color-mix(in srgb, var(--on-surface) 6%, transparent);
 }
 .row-kind {
   flex: none;
-  width: 4ch;
+  /* Пять знаков - по самому длинному слову рода ("отказ"). Четырёх не хватало,
+   * и слово слипалось с началом текста; ширина здесь фиксированная затем, чтобы
+   * тексты записей стояли одной колонкой. */
+  width: 5ch;
   font-size: var(--text-xs);
   color: var(--on-surface-off);
   text-align: right;
 }
 .row-text { min-width: 0; white-space: pre-wrap; }
+/* Тон рода - на самом слове: отказ и предупреждение видны с одного взгляда, а
+ * текст записи остаётся читаемым обычными чернилами. Пара берётся из реестра
+ * целиком: чернила у своей заливки свои. */
+.log .row-error { color: var(--on-surface); }
+.log .row-error .row-kind {
+  background: var(--surface-alarm);
+  color: var(--on-surface-alarm);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--gap-quarter);
+}
+.log .row-warning { color: var(--on-surface); }
+.log .row-warning .row-kind {
+  background: var(--surface-warn);
+  color: var(--on-surface-warn);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--gap-quarter);
+}
 /* Выделение - светлая подложка акцента, а не сплошная заливка: отметка чтения
  * не должна кричать громче самой строки, которую отметили. */
-.panel-scheme > .trace .row[aria-selected="true"] {
+.log .row[aria-selected="true"] {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
   border-color: var(--accent);
 }

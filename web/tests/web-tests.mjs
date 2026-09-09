@@ -965,6 +965,34 @@ test("структура проекта: область справа, файлы
   }
 });
 
+test("списки: форма записи одна на журнал прогона и диагностики", async () => {
+  // Оба отвечают на вопрос "что случилось", и разная форма у одного ответа
+  // заставляла бы читать их по-разному. Правила формы принадлежат контролу, а
+  // не месту: пока они были записаны на область схемы, список диагностик не
+  // получал их вовсе.
+  const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
+  const css = await readFile(new URL("../static/app.css", import.meta.url), "utf8");
+  const app = await readFile(new URL("../static/app.js", import.meta.url), "utf8");
+
+  for (const id of ["trace", "diagnostics"]) {
+    assert.match(html, new RegExp(`id="${id}"[^>]*class="[^"]*\\blog\\b`), `у '${id}' нет формы записи`);
+  }
+  assert.ok(!css.includes(".panel-scheme > .trace .row"), "форма записи осталась привязана к месту");
+  assert.match(css, /\.log \.row \{[\s\S]{0,200}?border: 1px solid var\(--border\)/, "запись не карточка");
+  assert.match(css, /\.log \.row:nth-child\(even\)/, "чередования подложки нет");
+  assert.match(css, /\.log \.row\[aria-selected="true"\]/, "пометки выбранной записи нет");
+
+  // Тон несёт колонка рода, а не заливка записи.
+  assert.match(css, /\.log \.row-error \.row-kind \{[\s\S]{0,160}?background: var\(--surface-alarm\)/,
+    "род отказа не окрашен");
+  assert.match(css, /\.log \.row-error \{ color: var\(--on-surface\); \}/,
+    "запись отказа красится целиком");
+
+  // Выделение щелчком - одно правило на оба списка.
+  assert.match(app, /for \(const list of \[dom\.trace, dom\.diagnostics\]\)/,
+    "выделение записи заведено не на оба списка");
+});
+
 test("структура проекта: прячется своей кнопкой и вместе с ручкой ширины", async () => {
   const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
   const app = await readFile(new URL("../static/app.js", import.meta.url), "utf8");

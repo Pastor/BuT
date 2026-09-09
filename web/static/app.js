@@ -574,17 +574,15 @@ function wire() {
   dom.showgen.addEventListener("click", () => selectPanel(state.panel === "output" ? null : "output"));
   dom.showdiag.addEventListener("click", () => showDiagnosticsPane(dom.diagnostics.hidden));
   dom.showtree.addEventListener("click", () => showTree(document.body.dataset.tree === "off"));
-  // Запись журнала выделяется щелчком: в длинной трассе так не теряют место, к
-  // которому вернулись. Выделена всегда одна - это отметка чтения, а не отбор.
-  dom.trace.addEventListener("click", (event) => {
-    const line = event.target.closest(".row");
-    if (!line || !dom.trace.contains(line)) return;
-    const was = line.getAttribute("aria-selected") === "true";
-    for (const other of dom.trace.querySelectorAll('[aria-selected="true"]')) {
-      other.removeAttribute("aria-selected");
-    }
-    if (!was) line.setAttribute("aria-selected", "true");
-  });
+  // Запись выделяется щелчком: в длинном списке так не теряют место, к которому
+  // вернулись. Выделена всегда одна - это отметка чтения, а не отбор. Правило
+  // одно на журнал прогона и на список диагностик: у них одна форма записи.
+  for (const list of [dom.trace, dom.diagnostics]) {
+    list.addEventListener("click", (event) => {
+      const line = event.target.closest(".row");
+      if (line && list.contains(line)) markRow(list, line);
+    });
+  }
   // Журнал прогона убирается со схемы кнопкой: лист и журнал читают вместе, но
   // когда рисунок велик, полоса строк отнимает у него половину области.
   showLog(shell.setting(localStorage, shell.UI_KEYS.log, "1") !== "0");
@@ -1438,6 +1436,19 @@ function row(text, kind) {
   body.textContent = text;
   node.appendChild(body);
   return node;
+}
+
+/**
+ * Помечает запись списка как прочитанную; повторный щелчок отметку снимает.
+ *
+ * Отметка всегда одна: это место, к которому вернулись, а не отбор строк.
+ */
+function markRow(list, line) {
+  const was = line.getAttribute("aria-selected") === "true";
+  for (const other of list.querySelectorAll('[aria-selected="true"]')) {
+    other.removeAttribute("aria-selected");
+  }
+  if (!was) line.setAttribute("aria-selected", "true");
 }
 
 /** Слово рода записи; рода без слова колонки не получают. */
