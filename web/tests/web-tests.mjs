@@ -1033,6 +1033,10 @@ test("списки: форма записи одна на журнал прог�
   assert.match(css, /\.log \.row:nth-child\(even\)/, "чередования подложки нет");
   assert.match(css, /\.log \.row\[aria-selected="true"\]/, "пометки выбранной записи нет");
 
+  // Скрытая панель обязана исчезать: раскладка сильнее атрибута `hidden`, и
+  // список, получивший её, кнопкой не прячется.
+  assert.match(css, /\.log\[hidden\] \{ display: none; \}/, "скрытый список остаётся на экране");
+
   // Тон несёт колонка рода, а не заливка записи.
   assert.match(css, /\.log \.row-error \.row-kind \{[\s\S]{0,160}?background: var\(--surface-alarm\)/,
     "род отказа не окрашен");
@@ -1042,6 +1046,42 @@ test("списки: форма записи одна на журнал прог�
   // Выделение щелчком - одно правило на оба списка.
   assert.match(app, /for \(const list of \[dom\.trace, dom\.diagnostics\]\)/,
     "выделение записи заведено не на оба списка");
+});
+
+test("файлы проекта: полоса отвечает на один вопрос за раз", async () => {
+  // Пока проекта нет - как его завести или открыть; когда открыт - что делать с
+  // ним и его файлами. Обе группы разом заставляли бы искать нужную среди
+  // ненужных.
+  const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
+  const account = await readFile(new URL("../static/account.js", import.meta.url), "utf8");
+  const api = await readFile(new URL("../static/api.js", import.meta.url), "utf8");
+
+  assert.match(account, /dom\.newproject\.hidden = opened;/, "заведение проекта видно при открытом");
+  assert.match(account, /dom\.openproject\.hidden = opened;/, "выбор проекта виден при открытом");
+  assert.match(account, /dom\.closeproject\.hidden = !opened;/, "закрытие видно без проекта");
+  // Заводить и удалять файлы вправе тот, кто вправе писать.
+  assert.match(account, /dom\.newfile\.hidden = !writes;/, "заведение файла не по праву записи");
+  assert.match(account, /dom\.dropfile\.hidden = !writes;/, "удаление файла не по праву записи");
+
+  // Расширение ставит род файла, а не автор: правило проекта не перекладывается
+  // на того, кто заводит файл.
+  assert.match(account, /const FILE_KINDS = \[[\s\S]{0,300}?extension: "\.takt"/, "родов файла нет");
+  assert.ok(account.includes('extension: ".json"') && account.includes('extension: ".md"'),
+    "род сценария или пояснения не заведён");
+  assert.match(account, /name = raw \+ chosenFileKind\(\)\.extension/, "расширение берётся не у рода");
+
+  // Удаление файла спрашивает и уносит парную раскладку: осиротевшая, она
+  // показывала бы схему того, чего нет.
+  assert.ok(account.includes('t("file.dropAsk"'), "удаление файла не спрашивает");
+  assert.match(account, /layoutName\(doomed\)/, "раскладка остаётся после удаления модели");
+  assert.match(api, /export async function removeFile\(id, name\)[\s\S]{0,200}?method: "DELETE"/,
+    "у страницы нет удаления файла");
+
+  // Окна заведения и удаления файла закрываются щелчком по затемнению и Escape.
+  for (const id of ["file-modal", "dropfile-modal"]) {
+    assert.ok(html.includes(`id="${id}"`), `окна '${id}' нет`);
+  }
+  assert.match(account, /MODALS = \[[^\]]*"file-modal"[^\]]*"dropfile-modal"/, "окна файлов не закрываются");
 });
 
 test("структура проекта: прячется своей кнопкой и вместе с ручкой ширины", async () => {
@@ -1073,9 +1113,12 @@ test("проект: действия стоят над его составом, 
   // тем, что показано ниже.
   const tree = html.slice(html.indexOf('class="pane pane-tree"'), html.indexOf("</main>"));
   assert.ok(tree.includes('class="tree-tools"'), "полосы действий над структурой нет");
-  for (const id of ["newproject", "openproject", "download", "dropproject"]) {
+  for (const id of ["newproject", "openproject", "download", "closeproject", "newfile", "dropfile"]) {
     assert.ok(tree.includes(`id="${id}"`), `в полосе действий нет '${id}'`);
   }
+  // Удаление проекта ушло из полосы в строку списка: полоса отвечает за
+  // открытый проект, а удаляют выбранный - там его видно по имени.
+  assert.ok(!tree.includes('id="dropproject"'), "удаление проекта осталось в полосе");
   const order = ['class="tree-tools"', 'id="tree"'].map((mark) => tree.indexOf(mark));
   assert.deepEqual(order.slice().sort((a, b) => a - b), order, "действия стоят под составом");
 
@@ -1100,10 +1143,9 @@ test("проект: действия стоят над его составом, 
   assert.ok(account.includes('t("account.dropAsk"'), "удаление не спрашивает");
   assert.match(api, /export async function remove\(id\)[\s\S]{0,160}?method: "DELETE"/,
     "у страницы нет удаления проекта");
-  // Кнопка удаления - только владельцу: отказ сервера на действие, которое
-  // страница предложила сама, читается как поломка.
-  assert.match(account, /dom\.dropproject\.hidden = state\.project === null \|\| state\.level !== "owner"/,
-    "удаление предлагается не владельцу");
+  // Мусорка в строке списка стоит только у своего проекта: отказ сервера на
+  // действие, которое страница предложила сама, читается как поломка.
+  assert.match(account, /if \(row\.level === "owner"\)/, "удаление предлагается не владельцу");
 });
 
 test("шапка: две полосы, и каждая отвечает на свой вопрос", async () => {

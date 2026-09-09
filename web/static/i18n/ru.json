@@ -291,5 +291,21 @@
   "account.needSignIn": "нужно войти",
   "tree.actions": "Действия над проектом",
   "tree.noFiles": "Файлов пока нет",
-  "scheme.panel.minimap": "Миникарта листа"
+  "scheme.panel.minimap": "Миникарта листа",
+  "account.closeProject": "Закрыть проект",
+  "account.closed": "проект закрыт",
+  "file.add": "Добавить файл",
+  "file.drop": "Удалить файл",
+  "file.kind": "Род файла",
+  "file.namePlaceholder": "Имя без расширения",
+  "file.kind.takt": "Модель",
+  "file.kind.scenario": "Сценарий",
+  "file.kind.markdown": "Пояснение",
+  "file.needName": "у файла должно быть имя",
+  "file.badName": "имя: латиница, цифры, _ и -",
+  "file.exists": "файл «{name}» в проекте уже есть",
+  "file.created": "создан файл «{name}»",
+  "file.dropAsk": "Удалить файл «{name}» из проекта?",
+  "file.dropped": "файл «{name}» удалён",
+  "file.nothingOpen": "файл не открыт — удалять нечего"
 }

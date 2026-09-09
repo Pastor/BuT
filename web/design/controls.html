@@ -222,6 +222,19 @@
 
   <!-- Список записей: одна форма на журнал прогона и на диагностики. Тон несёт
        колонка рода, а не заливка записи. Вторая запись помечена как прочитанная. -->
+  <!-- Строка выбора со своим действием: имя занимает ширину, кнопка прижата
+       вправо. Действие показано лишь тому, кто вправе его сделать. -->
+  <section class="case" data-control=".row-pick">
+    <div class="pane-head"><span>Строка списка с действием</span></div>
+    <div class="list">
+      <div class="row row-pick">
+        <span class="row-text">Термореле — мой</span>
+        <button class="icon-btn row-drop" type="button" title="Удалить проект" aria-label="Удалить проект"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l1 12.5h9l1-12.5"/></svg></button>
+      </div>
+      <div class="row row-pick"><span class="row-text">Лифт — чтение</span></div>
+    </div>
+  </section>
+
   <section class="case" data-control=".log">
     <div class="pane-head"><span>Список записей — журнал прогона и диагностики</span></div>
     <div class="list log">

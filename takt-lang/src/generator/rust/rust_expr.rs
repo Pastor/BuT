@@ -17,13 +17,13 @@ pub(crate) use crate::generator::rust::rust_coerce::{coerce_to, enum_variant_lit
 pub(crate) use crate::generator::rust::rust_text::unwrap_outer;
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::rust::rust_fixed::{self, FixedOp};
 use crate::generator::rust::rust_name::{rust_type_name, rust_value_name};
 use crate::generator::rust::rust_needs::function_needs;
 use crate::generator::rust::rust_port::port_class;
 use crate::generator::rust::rust_shift::Direction;
+use crate::msg;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{
     ExpressionNode, FunctionDefinitionNode, ModelNode, PortDirection, VariableNode,
@@ -204,11 +204,10 @@ fn read_port(
     loc: Location,
 ) -> Result<String, Diagnostic> {
     if direction == PortDirection::Out {
-        return Err(Diagnostic::error(
-            loc,
-            msg!(keys::RS_018_OUTPUT_PORT_READ, name = name),
-        )
-        .with_code("RS-018"));
+        return Err(
+            Diagnostic::error(loc, msg!(keys::RS_018_OUTPUT_PORT_READ, name = name))
+                .with_code("RS-018"),
+        );
     }
     let class = port_class(ty, name, loc, scope.model)?;
     let read = format!(
@@ -241,11 +240,10 @@ pub(crate) fn write_port(
     loc: Location,
 ) -> Result<String, Diagnostic> {
     if direction == PortDirection::In {
-        return Err(Diagnostic::error(
-            loc,
-            msg!(keys::RS_018_INPUT_PORT_WRITE, name = name),
-        )
-        .with_code("RS-018"));
+        return Err(
+            Diagnostic::error(loc, msg!(keys::RS_018_INPUT_PORT_WRITE, name = name))
+                .with_code("RS-018"),
+        );
     }
     let class = port_class(ty, name, loc, scope.model)?;
     // Значение перечислимого типа уходит в HAL целым: в структуре модели оно хранится
@@ -411,7 +409,8 @@ fn binary(
         || crate::generator::rust::rust_bit::words_of(b).is_some()
     {
         return Err(unsupported(&format!(
-            "{}", msg!(keys::RS_WHAT_WIDE_BIT_VECTOR, op = op)
+            "{}",
+            msg!(keys::RS_WHAT_WIDE_BIT_VECTOR, op = op)
         )));
     }
     Ok(format!(
@@ -606,7 +605,8 @@ pub(crate) fn print_expression(expr: &ExpressionNode, scope: &Scope) -> Result<S
                 // валидной.
                 print_expression(inner, scope)
             } else {
-                let target = crate::generator::rust::rust_type::rust_type(ty, &msg!(keys::RS_WHAT_CAST))?;
+                let target =
+                    crate::generator::rust::rust_type::rust_type(ty, &msg!(keys::RS_WHAT_CAST))?;
                 Ok(format!(
                     "({} as {})",
                     print_expression(inner, scope)?,
@@ -626,14 +626,12 @@ pub(crate) fn print_expression(expr: &ExpressionNode, scope: &Scope) -> Result<S
         // Ниже - непереводимое. Ветки `_` нет намеренно: добавление
         // варианта в `ExpressionNode` обязано валить сборку.
         ExpressionNode::None => Err(unsupported(&msg!(keys::RS_WHAT_EMPTY_EXPRESSION))),
-        ExpressionNode::Unresolved(_) => Err(unsupported(&msg!(keys::RS_WHAT_UNRESOLVED_EXPRESSION))),
-        ExpressionNode::ArraySlice(_, _, _) => Err(unsupported(
-            &msg!(keys::RS_WHAT_ARRAY_SLICE),
-        )),
-        ExpressionNode::CodeBlock(_, _) => Err(unsupported(&msg!(keys::RS_WHAT_CODE_BLOCK))),
-        ExpressionNode::NamedFunctionBox(_, _) => {
-            Err(unsupported(&msg!(keys::RS_WHAT_NAMED_CALL)))
+        ExpressionNode::Unresolved(_) => {
+            Err(unsupported(&msg!(keys::RS_WHAT_UNRESOLVED_EXPRESSION)))
         }
+        ExpressionNode::ArraySlice(_, _, _) => Err(unsupported(&msg!(keys::RS_WHAT_ARRAY_SLICE))),
+        ExpressionNode::CodeBlock(_, _) => Err(unsupported(&msg!(keys::RS_WHAT_CODE_BLOCK))),
+        ExpressionNode::NamedFunctionBox(_, _) => Err(unsupported(&msg!(keys::RS_WHAT_NAMED_CALL))),
         // Целая степень - `wrapping_pow`; довод - в заголовке
         // `rust_shift`.
         ExpressionNode::Power(base, exp) => {
@@ -641,18 +639,12 @@ pub(crate) fn print_expression(expr: &ExpressionNode, scope: &Scope) -> Result<S
             // `rust_coerce`, и оттуда идёт вызов с `Some(ty)`.
             crate::generator::rust::rust_shift::power(base, exp, scope, scope.power_target.as_ref())
         }
-        ExpressionNode::String(_) => Err(unsupported(
-            &msg!(keys::RS_WHAT_STRING),
-        )),
+        ExpressionNode::String(_) => Err(unsupported(&msg!(keys::RS_WHAT_STRING))),
         ExpressionNode::Type(_) => Err(unsupported(&msg!(keys::RS_WHAT_TYPE))),
-        ExpressionNode::Address(_, _) => Err(unsupported(
-            &msg!(keys::RS_WHAT_ADDRESS),
-        )),
+        ExpressionNode::Address(_, _) => Err(unsupported(&msg!(keys::RS_WHAT_ADDRESS))),
         // Анонимное обращение: у цели `rust` порт - метод
         // HAL-трейта, адреса она не знает.
-        ExpressionNode::AnonPort(_) => Err(unsupported(
-            &msg!(keys::RS_WHAT_ANON_PORT),
-        )),
+        ExpressionNode::AnonPort(_) => Err(unsupported(&msg!(keys::RS_WHAT_ANON_PORT))),
         ExpressionNode::Model(_) => Err(unsupported(&msg!(keys::RS_WHAT_MODEL))),
         // Именованное условие печатается печатником условий;
         // `condition_as_bool` тут не годится - довод в.
@@ -810,7 +802,9 @@ fn call(
             printed.join(", ")
         )),
         FunctionDefinitionNode::None => Err(unsupported(&msg!(keys::RS_WHAT_EMPTY_FUNCTION))),
-        FunctionDefinitionNode::Unresolved(_) => Err(unsupported(&msg!(keys::RS_WHAT_UNRESOLVED_FUNCTION))),
+        FunctionDefinitionNode::Unresolved(_) => {
+            Err(unsupported(&msg!(keys::RS_WHAT_UNRESOLVED_FUNCTION)))
+        }
     }
 }
 
@@ -886,9 +880,7 @@ fn builtin(
         // отбросить нельзя: конструкция автора не вправе исчезать из вывода молча.
         ("debug", 1) => {
             let ExpressionNode::String(parts) = &args[0] else {
-                return Err(unsupported(
-                    &msg!(keys::RS_WHAT_DEBUG_NON_STRING),
-                ));
+                return Err(unsupported(&msg!(keys::RS_WHAT_DEBUG_NON_STRING)));
             };
             Ok(format!(
                 "{}.debug(\"{}\")",
@@ -896,9 +888,7 @@ fn builtin(
                 escape(&parts.join(""))
             ))
         }
-        ("S", 1) => Err(unsupported(
-            &msg!(keys::RS_WHAT_BUILTIN_S_OUTSIDE),
-        )),
+        ("S", 1) => Err(unsupported(&msg!(keys::RS_WHAT_BUILTIN_S_OUTSIDE))),
         (other, n) => Err(unsupported(&msg!(
             keys::RS_WHAT_BUILTIN_ARITY,
             name = other,

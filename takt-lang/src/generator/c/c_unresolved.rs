@@ -14,8 +14,8 @@
 //! сначала разбор законной формы, потом отказ.
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 
 /// Вид узла, дошедшего до печатника цели `c` неразрешённым.
 ///
@@ -100,11 +100,7 @@ impl UnresolvedNode {
 /// языка способна открыть путь снова. Молчание в этом месте уже стоило проекту
 /// дефекта.
 pub(in crate::generator::c) fn refuse(loc: Location, node: UnresolvedNode) -> Diagnostic {
-    Diagnostic::error(
-        loc,
-        msg!(keys::CC_023_REFUSAL, what = node.phrase()),
-    )
-    .with_code("CC-023")
+    Diagnostic::error(loc, msg!(keys::CC_023_REFUSAL, what = node.phrase())).with_code("CC-023")
 }
 
 #[cfg(test)]

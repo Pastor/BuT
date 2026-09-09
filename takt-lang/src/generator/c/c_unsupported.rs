@@ -17,8 +17,8 @@
 //! и `format::unsupported`.
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 
 /// Конструкция языка, которую цель `c` не переводит.
 ///
@@ -112,7 +112,11 @@ pub(in crate::generator::c) fn refuse(node: UnsupportedNode, loc: Location) -> D
     let message = if reason.is_empty() {
         msg!(keys::CC_022_REFUSAL, what = node.phrase())
     } else {
-        msg!(keys::CC_022_REFUSAL_WITH_REASON, what = node.phrase(), reason = reason)
+        msg!(
+            keys::CC_022_REFUSAL_WITH_REASON,
+            what = node.phrase(),
+            reason = reason
+        )
     };
     Diagnostic::error(loc, message).with_code("CC-022")
 }

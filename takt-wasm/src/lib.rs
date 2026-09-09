@@ -102,13 +102,24 @@ struct CompileRequest {
     args: String,
     /// Исходный текст модели.
     source: String,
+    /// Имя файла, под которым компилируется исходник; пусто - умолчание моста.
+    ///
+    /// Имя корневой модели берётся из имени файла, поэтому оно есть **часть
+    /// вывода**: у открытого проекта это имя его файла, а не имя буфера.
+    #[serde(default)]
+    filename: String,
 }
 
 /// Компилирует модель: запрос [`CompileRequest`] в буфере.
 #[unsafe(no_mangle)]
 pub extern "C" fn takt_compile(len: u32) -> u32 {
     call(len, |request: CompileRequest| {
-        compile::compile(&request.target, &request.args, &request.source)
+        compile::compile(
+            &request.target,
+            &request.args,
+            &request.source,
+            &request.filename,
+        )
     })
 }
 

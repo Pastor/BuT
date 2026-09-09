@@ -353,9 +353,20 @@
       <button id="download" class="icon-btn" type="button" hidden
               data-i18n-attr="data-tip:archive.download;aria-label:archive.download"
               data-tip="Скачать архивом" aria-label="Скачать архивом"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 4.5h17v4h-17z"/><path d="M5 8.5v11h14v-11"/><path d="M10 12h4"/></svg></button>
-      <button id="dropproject" class="icon-btn" type="button" hidden
-              data-i18n-attr="data-tip:account.dropProject;aria-label:account.dropProject"
-              data-tip="Удалить проект" aria-label="Удалить проект"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l1 12.5h9l1-12.5"/></svg></button>
+      <!-- Закрыть проект: страница возвращается к безымянному буферу, а полоса -
+           к действиям над проектами. Без этой кнопки выйти из проекта можно было
+           только выходом из учётной записи. -->
+      <button id="closeproject" class="icon-btn" type="button" hidden
+              data-i18n-attr="data-tip:account.closeProject;aria-label:account.closeProject"
+              data-tip="Закрыть проект" aria-label="Закрыть проект"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 7l10 10"/><path d="M17 7L7 17"/></svg></button>
+      <!-- Действия над файлами открытого проекта: завести и удалить. Показаны
+           ровно тогда, когда проект открыт: без него файлу негде лежать. -->
+      <button id="newfile" class="icon-btn" type="button" hidden
+              data-i18n-attr="data-tip:file.add;aria-label:file.add"
+              data-tip="Добавить файл" aria-label="Добавить файл"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 3.5h7l5 5v12h-12z"/><path d="M13 3.5v5.5h5.5"/><path d="M12 12v5M9.5 14.5h5"/></svg></button>
+      <button id="dropfile" class="icon-btn" type="button" hidden
+              data-i18n-attr="data-tip:file.drop;aria-label:file.drop"
+              data-tip="Удалить файл" aria-label="Удалить файл"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l1 12.5h9l1-12.5"/></svg></button>
     </div>
     <div id="tree" class="tree" data-i18n-attr="aria-label:tree.title"
          aria-label="Структура проекта"></div>
@@ -440,6 +451,42 @@
            aria-label="Мои проекты"></div>
       <div class="modal-actions">
         <button id="opencancel" type="button" data-i18n="account.cancel">Отмена</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Заведение файла: род и имя без расширения. Расширение ставит род - оно
+     не свойство имени, а свойство рода, и спрашивать его у автора значило бы
+     перекладывать на него правило проекта. -->
+<div id="file-modal" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true"
+       data-i18n-attr="aria-label:file.add" aria-label="Добавить файл">
+    <div class="modal-head" data-i18n="file.add">Добавить файл</div>
+    <div class="modal-body">
+      <div id="filekinds" class="seg" role="radiogroup"
+           data-i18n-attr="aria-label:file.kind" aria-label="Род файла"></div>
+      <input id="filename" type="text" spellcheck="false"
+             data-i18n-attr="placeholder:file.namePlaceholder" placeholder="Имя без расширения">
+      <span id="filepreview" class="muted"></span>
+      <div class="modal-actions">
+        <button id="filecancel" type="button" data-i18n="account.cancel">Отмена</button>
+        <button id="fileok" class="primary" type="button" data-i18n="account.create">Создать</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Удаление файла: спрашивается всегда и называет файл по имени. -->
+<div id="dropfile-modal" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true"
+       data-i18n-attr="aria-label:file.drop" aria-label="Удалить файл">
+    <div class="modal-head" data-i18n="file.drop">Удалить файл</div>
+    <div class="modal-body">
+      <span id="dropfiletext"></span>
+      <div class="modal-actions">
+        <button id="dropfilecancel" type="button" data-i18n="account.cancel">Отмена</button>
+        <button id="dropfileok" class="primary" type="button" data-i18n="account.dropOk">Удалить</button>
       </div>
     </div>
   </div>

@@ -251,6 +251,12 @@ export async function main() {
     // Черновик пишется немедленно перед уходом на площадку: отложенная запись до
     // перехода не доживёт.
     keep: () => saveDraft.now(),
+    // Проект закрыт: имя файла уходит из шапки - она называла бы файл, которого
+    // на странице больше нет. Текст остаётся: закрытие проекта не потеря работы.
+    closed: () => {
+      state.file = "";
+      dom.openfilename.textContent = "";
+    },
     // Раскладка схемы: текст файла `.takt-ui` для записи в проект и в черновик.
     layout: () => state.scheme.text(),
     // Цель выгрузки - та, что открыта во вкладке вывода: архив "с генерацией" берёт
@@ -497,9 +503,11 @@ function cache() {
     "found", "more", "doc", "sourcetitle", "openfilename",
     "scheme-notice", "scheme-notice-text", "scheme-drop",
     "tree", "treesplit", "diagnostics-head", "showtree",
-    "openproject", "dropproject", "createproject", "createcancel", "opencancel",
-    "dropok", "dropcancel", "droptext", "fromsample",
-    "project-modal", "open-modal", "drop-modal",
+    "openproject", "createproject", "createcancel", "opencancel",
+    "dropok", "dropcancel", "droptext", "fromsample", "closeproject",
+    "newfile", "dropfile", "filekinds", "filename", "filepreview",
+    "fileok", "filecancel", "dropfileok", "dropfilecancel", "dropfiletext",
+    "project-modal", "open-modal", "drop-modal", "file-modal", "dropfile-modal",
     "crumbs", "scheme-up", "stage", "scheme", "sheet", "nav", "map",
     "panel-run", "panel-view", "panel-sheet", "settings",
     "scheme-empty", "legend", "zoom", "alerts",
@@ -1018,7 +1026,12 @@ function compile() {
     showTargetDiagnostics([]);
     return;
   }
-  const reply = state.bridge.compile(state.target, state.args, state.editor.value());
+  const reply = state.bridge.compile(
+    state.target,
+    state.args,
+    state.editor.value(),
+    state.file
+  );
   dom.output.replaceChildren();
   if (!reply.ok) {
     // Отказ цели - замечание к модели, и место у него то же, что у прочих:

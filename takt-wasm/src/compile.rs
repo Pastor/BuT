@@ -52,7 +52,7 @@ struct CompiledJson {
 /// # Ошибки
 /// Незакрытая кавычка, неизвестная цель, неразбираемый ключ либо ключ,
 /// неприменимый к цели (таблица `target_flags`).
-fn prepare(target: &str, args: &str) -> Result<(Target, CompileOptions), String> {
+fn prepare(target: &str, args: &str, filename: &str) -> Result<(Target, CompileOptions), String> {
     let Some(parsed) = Target::parse(target) else {
         return Err(format!(
             "неизвестная цель '{target}'. Поддерживается: {}",
@@ -69,7 +69,13 @@ fn prepare(target: &str, args: &str) -> Result<(Target, CompileOptions), String>
     // командная строка. Своего значения по умолчанию у разбора нет, и это верно: у CLI
     // файл обязателен.
     if !argv.iter().any(|a| !a.starts_with('-')) {
-        argv.push(DEFAULT_FILENAME.to_string());
+        // Имя, названное вызывающим, сильнее умолчания: у открытого файла проекта
+        // оно своё, и вывод обязан нести его, а не имя безымянного буфера.
+        argv.push(if filename.is_empty() {
+            DEFAULT_FILENAME.to_string()
+        } else {
+            filename.to_string()
+        });
     }
     argv.push("--target".to_string());
     argv.push(parsed.name().to_string());
@@ -97,7 +103,7 @@ fn prepare(target: &str, args: &str) -> Result<(Target, CompileOptions), String>
 /// таблица применимости живут в `compile_cli`, и вторая копия разошлась бы с ней молча.
 /// Отсюда круговой рейс через модуль - тот же приём, что у сборки архива.
 pub fn check(target: &str, args: &str) -> String {
-    match prepare(target, args) {
+    match prepare(target, args, "") {
         Ok(_) => reply::ok(serde_json::json!({})),
         Err(message) => reply::refused(message),
     }
@@ -107,8 +113,8 @@ pub fn check(target: &str, args: &str) -> String {
 ///
 /// `args` - строка ключей `taktc compile` (`--fsm=table -I lib`, имя файла позиционным
 /// аргументом). Ключ `-o` разбирается, но не действует: писать некуда.
-pub fn compile(target: &str, args: &str, source: &str) -> String {
-    let (target, options) = match prepare(target, args) {
+pub fn compile(target: &str, args: &str, source: &str, filename: &str) -> String {
+    let (target, options) = match prepare(target, args, filename) {
         Ok(prepared) => prepared,
         Err(message) => return reply::refused(message),
     };
@@ -190,7 +196,7 @@ mod tests {
     /// Цель `c` отдаёт два файла, названных по имени входа.
     #[test]
     fn compiles_c_into_two_files() {
-        let reply = json(&compile("c", "stacker.takt", MODEL));
+        let reply = json(&compile("c", "stacker.takt", MODEL, ""));
         assert_eq!(reply["ok"], Value::Bool(true), "{reply}");
         let names: Vec<&str> = reply["files"]
             .as_array()
@@ -205,7 +211,7 @@ mod tests {
     /// Без имени входа берётся [`DEFAULT_FILENAME`].
     #[test]
     fn nameless_source_gets_default_filename() {
-        let reply = json(&compile("rust", "", MODEL));
+        let reply = json(&compile("rust", "", MODEL, ""));
         assert_eq!(reply["ok"], Value::Bool(true), "{reply}");
         assert_eq!(
             reply["files"][0]["name"],
@@ -216,7 +222,7 @@ mod tests {
     /// Неизвестная цель - отказ вызова со списком поддерживаемых.
     #[test]
     fn unknown_target_is_refused_with_list() {
-        let reply = json(&compile("verilog", "", MODEL));
+        let reply = json(&compile("verilog", "", MODEL, ""));
         assert_eq!(reply["ok"], Value::Bool(false));
         let message = reply["error"]["message"].as_str().unwrap();
         assert!(message.contains("sv-mmio"), "нет списка целей: {message}");
@@ -226,7 +232,12 @@ mod tests {
     /// Ошибка модели - диагностика цели: код и позиция, а не строка без роду.
     #[test]
     fn model_error_carries_code_and_position() {
-        let reply = json(&compile("c", "", "start S {\n    ref Missing: 1 = 1;\n}\n"));
+        let reply = json(&compile(
+            "c",
+            "",
+            "start S {\n    ref Missing: 1 = 1;\n}\n",
+            "",
+        ));
         assert_eq!(reply["ok"], Value::Bool(false), "{reply}");
         assert!(
             reply["error"]["code"].as_str().is_some(),
@@ -242,7 +253,7 @@ mod tests {
     /// Ключ, неприменимый к цели, отвергается - той же таблицей, что у CLI.
     #[test]
     fn flag_not_applicable_to_target_is_refused() {
-        let reply = json(&compile("rust", "--bus=apb", MODEL));
+        let reply = json(&compile("rust", "--bus=apb", MODEL, ""));
         assert_eq!(reply["ok"], Value::Bool(false), "{reply}");
         let message = reply["error"]["message"].as_str().unwrap();
         assert!(
@@ -254,7 +265,7 @@ mod tests {
     /// Импорт - названная граница: файловой системы нет.
     #[test]
     fn import_is_refused_with_diagnostic() {
-        let reply = json(&compile("c", "", "import \"lib.takt\";\nstart S;\n"));
+        let reply = json(&compile("c", "", "import \"lib.takt\";\nstart S;\n", ""));
         assert_eq!(reply["ok"], Value::Bool(false), "{reply}");
         assert!(
             !reply["error"]["message"].as_str().unwrap().is_empty(),

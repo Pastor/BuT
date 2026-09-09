@@ -41,9 +41,9 @@
 // Тип операнда живёт своим модулем; имена доступны отсюда - их зовут печатники
 // выражений, операторов и фиксированной точки.
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::generator::st::st_operand_type::variable_type;
 pub(crate) use crate::generator::st::st_operand_type::{inner_expr_type, inner_expr_type_in};
+use crate::msg;
 
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::st::st_fixed;
@@ -177,32 +177,22 @@ pub(crate) fn print_expression(
         // `ExpressionNode` не помечен `#[non_exhaustive]`, поэтому новый вариант
         // Завалит сборку (гарантия ), а не проскочит молча.
         ExpressionNode::None => Err(unsupported(&msg!(keys::ST_WHAT_EMPTY_EXPRESSION))),
-        ExpressionNode::Unresolved(_) => Err(unsupported(
-            &msg!(keys::ST_WHAT_UNRESOLVED_EXPRESSION),
-        )),
-        ExpressionNode::ArraySlice(_, _, _) => Err(unsupported(
-            &msg!(keys::ST_WHAT_ARRAY_SLICE),
-        )),
+        ExpressionNode::Unresolved(_) => {
+            Err(unsupported(&msg!(keys::ST_WHAT_UNRESOLVED_EXPRESSION)))
+        }
+        ExpressionNode::ArraySlice(_, _, _) => Err(unsupported(&msg!(keys::ST_WHAT_ARRAY_SLICE))),
         // Вызов функции печатает `st_func`: у беспараметрических функций есть
         // синтетический параметр, и аргумент к нему добавляется там.
         ExpressionNode::Function(def, args) => super::st_func::print_call(def, args, model),
-        ExpressionNode::CodeBlock(_, _) => {
-            Err(unsupported(&msg!(keys::ST_WHAT_CODE_BLOCK)))
-        }
-        ExpressionNode::NamedFunctionBox(_, _) => Err(unsupported(
-            &msg!(keys::ST_WHAT_NAMED_CALL),
-        )),
-        ExpressionNode::String(_) => Err(unsupported(
-            &msg!(keys::ST_WHAT_STRING),
-        )),
+        ExpressionNode::CodeBlock(_, _) => Err(unsupported(&msg!(keys::ST_WHAT_CODE_BLOCK))),
+        ExpressionNode::NamedFunctionBox(_, _) => Err(unsupported(&msg!(keys::ST_WHAT_NAMED_CALL))),
+        ExpressionNode::String(_) => Err(unsupported(&msg!(keys::ST_WHAT_STRING))),
         ExpressionNode::Type(_) => Err(unsupported(&msg!(keys::ST_WHAT_TYPE))),
         // Ветвь **недостижима** из корректной программы: голый адресный литерал в
         // позиции значения отвергает семантика (`SY-008`) - адрес есть свойство
         // размещения, а не число. Отказ оставлен страховкой; прежний текст обещал "",
         // то есть работу, которой не будет.
-        ExpressionNode::Address(_, _) => Err(unsupported(
-            &msg!(keys::ST_WHAT_ADDRESS),
-        )),
+        ExpressionNode::Address(_, _) => Err(unsupported(&msg!(keys::ST_WHAT_ADDRESS))),
         // Анонимное обращение: ячейка - размещённая глобальная переменная (`VAR_GLOBAL
         // ... AT %M...`), блок видит её через `VAR_EXTERNAL`, поэтому здесь печатается
         // **имя**.
@@ -223,9 +213,9 @@ pub(crate) fn print_expression(
         // печатником операторов, а сюда доходит то, что значением быть не может:
         // возврат массива из функции (`return {1, 2};`). В IEC 61131-3 функция массива
         // не возвращает - причина в целевом языке, а не в недоделке.
-        ExpressionNode::Array(_) | ExpressionNode::Initializer(_) => Err(unsupported(
-            &msg!(keys::ST_WHAT_AGGREGATE),
-        )),
+        ExpressionNode::Array(_) | ExpressionNode::Initializer(_) => {
+            Err(unsupported(&msg!(keys::ST_WHAT_AGGREGATE)))
+        }
     }
 }
 
@@ -537,11 +527,7 @@ pub(super) fn bit_string_of_expr(
     inner_expr_type(expr)
         .as_ref()
         .and_then(bit_string_of_type)
-        .ok_or_else(|| {
-            unsupported(
-                &msg!(keys::ST_WHAT_BITWISE_UNKNOWN_TYPE),
-            )
-        })
+        .ok_or_else(|| unsupported(&msg!(keys::ST_WHAT_BITWISE_UNKNOWN_TYPE)))
 }
 
 /// Печатает побитовую операцию через преобразование в битовую строку.
@@ -620,11 +606,8 @@ pub(super) fn bit_access(
         Member::Identifier(id) => Ok(format!("{}.{}", print_inner()?, id.name)),
         Member::Number(n) => {
             let inner = print_inner()?;
-            let ty = inner_ty.ok_or_else(|| {
-                unsupported(
-                    &msg!(keys::ST_WHAT_BIT_ACCESS_UNKNOWN_TYPE),
-                )
-            })?;
+            let ty = inner_ty
+                .ok_or_else(|| unsupported(&msg!(keys::ST_WHAT_BIT_ACCESS_UNKNOWN_TYPE)))?;
             // Бит 0 булева значения - оно само; иных битов у BOOL нет.
             if matches!(ty, TypeNode::Bit | TypeNode::Bool) {
                 return if *n == 0 {
@@ -633,9 +616,8 @@ pub(super) fn bit_access(
                     Err(unsupported(&msg!(keys::ST_WHAT_BIT_OF_BOOL, bit = n)))
                 };
             }
-            let bs = bit_string_of_type(&ty).ok_or_else(|| {
-                unsupported(&msg!(keys::ST_WHAT_BIT_ACCESS_TYPE, ty = ty))
-            })?;
+            let bs = bit_string_of_type(&ty)
+                .ok_or_else(|| unsupported(&msg!(keys::ST_WHAT_BIT_ACCESS_TYPE, ty = ty)))?;
             if *n < 0 || *n >= i128::from(bs.bits) {
                 return Err(unsupported(&msg!(
                     keys::ST_WHAT_BIT_OUT_OF_WIDTH,
@@ -660,11 +642,8 @@ pub(super) fn bit_access(
 /// Печатает приведение типа через функцию преобразования IEC (`<ИЗ>_TO_<В>`).
 fn cast(inner: &ExpressionNode, ty: &TypeNode, model: &ModelNode) -> Result<String, Diagnostic> {
     let to = super::st_type::get_st_type(ty, model)?;
-    let from_ty = inner_expr_type_in(inner, model).ok_or_else(|| {
-        unsupported(
-            &msg!(keys::ST_WHAT_CAST_UNKNOWN_TYPE),
-        )
-    })?;
+    let from_ty = inner_expr_type_in(inner, model)
+        .ok_or_else(|| unsupported(&msg!(keys::ST_WHAT_CAST_UNKNOWN_TYPE)))?;
     let from = super::st_type::get_st_type(&from_ty, model)?;
     if from == to {
         return print_expression(inner, model);

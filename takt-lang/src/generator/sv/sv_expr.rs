@@ -45,10 +45,10 @@
 pub(crate) use crate::generator::sv::sv_scope::Scope;
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::sv::sv_names::{print_member, signal_of_in, sv_enum_variant_name};
 use crate::generator::sv::sv_state_of;
+use crate::msg;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ConditionNode, ExpressionNode};
 
@@ -59,19 +59,12 @@ pub(crate) fn sv002(what: &str) -> Diagnostic {
         msg!(keys::SV_002_REFUSAL, what = what),
     )
     .with_code("SV-002")
-    .with_note(
-        Location::Codegen,
-        msg!(keys::SV_002_NOTE),
-    )
+    .with_note(Location::Codegen, msg!(keys::SV_002_NOTE))
 }
 
 /// Строит диагностику `SV-005` - `extern fn` в синтезируемом RTL невыразима.
 pub(in crate::generator::sv) fn sv005(name: &str, loc: Location) -> Diagnostic {
-    Diagnostic::error(
-        loc,
-        msg!(keys::SV_005_EXTERN_FUNCTION, name = name),
-    )
-    .with_code("SV-005")
+    Diagnostic::error(loc, msg!(keys::SV_005_EXTERN_FUNCTION, name = name)).with_code("SV-005")
 }
 
 /// Строит предупреждение `SV-009` - переменный делитель.
@@ -234,9 +227,7 @@ pub(crate) fn print_condition(node: &ConditionNode, scope: &Scope) -> Result<Str
         // исчерпывающий разбор возможен - и обязан валить сборку при добавлении
         // варианта, а не проглатывать его молча.
         ConditionNode::Unresolved(_) => Err(sv002(&msg!(keys::SV_WHAT_UNRESOLVED_CONDITION))),
-        ConditionNode::Rational(_, _) => Err(sv002(
-            &msg!(keys::SV_WHAT_RATIONAL),
-        )),
+        ConditionNode::Rational(_, _) => Err(sv002(&msg!(keys::SV_WHAT_RATIONAL))),
         ConditionNode::String(_) => Err(sv002(&msg!(keys::SV_WHAT_STRING))),
         ConditionNode::Model(_, _) => Err(sv002(&msg!(keys::SV_WHAT_MODEL_IN_CONDITION))),
         ConditionNode::State(..) => Err(sv002(&msg!(keys::SV_WHAT_STATE_IN_CONDITION))),
@@ -406,15 +397,11 @@ pub(crate) fn print_expression(node: &ExpressionNode, scope: &Scope) -> Result<S
         }
         // Присваивание - оператор, а не выражение: печатается в `sv_stmt`. Здесь оно
         // означало бы `x = (y = 1)`, чего Takt не строит.
-        ExpressionNode::Assign(_, _) => Err(sv002(
-            &msg!(keys::SV_WHAT_ASSIGN_IN_EXPRESSION),
-        )),
+        ExpressionNode::Assign(_, _) => Err(sv002(&msg!(keys::SV_WHAT_ASSIGN_IN_EXPRESSION))),
         // Степень с литеральным показателем разворачивается в умножения - синтезатору
         // нужна константа, и она здесь есть.
         ExpressionNode::Power(base, exp) => super::sv_cast::power(base, exp, scope),
-        ExpressionNode::Rational(_, _) => Err(sv002(
-            &msg!(keys::SV_WHAT_RATIONAL),
-        )),
+        ExpressionNode::Rational(_, _) => Err(sv002(&msg!(keys::SV_WHAT_RATIONAL))),
         ExpressionNode::None => Err(sv002(&msg!(keys::SV_WHAT_EMPTY_EXPRESSION))),
         ExpressionNode::Unresolved(_) => Err(sv002(&msg!(keys::SV_WHAT_UNRESOLVED_EXPRESSION))),
         ExpressionNode::ArraySlice(_, _, _) => Err(sv002(&msg!(keys::SV_WHAT_ARRAY_SLICE))),
@@ -422,9 +409,7 @@ pub(crate) fn print_expression(node: &ExpressionNode, scope: &Scope) -> Result<S
         ExpressionNode::NamedFunctionBox(_, _) => Err(sv002(&msg!(keys::SV_WHAT_NAMED_CALL))),
         ExpressionNode::String(_) => Err(sv002(&msg!(keys::SV_WHAT_STRING))),
         ExpressionNode::Type(_) => Err(sv002(&msg!(keys::SV_WHAT_TYPE))),
-        ExpressionNode::Address(_, _) => Err(sv002(
-            &msg!(keys::SV_WHAT_ADDRESS),
-        )),
+        ExpressionNode::Address(_, _) => Err(sv002(&msg!(keys::SV_WHAT_ADDRESS))),
         // Ячейка по адресу - сигнал регистрового файла; `read` даёт `_next` (капкан ).
         // Сюда доходит только `sv-mmio`: цель `sv` отвергает такую модель в точке входа
         // (`SV-017`).

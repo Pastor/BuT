@@ -291,5 +291,21 @@
   "account.needSignIn": "sign in first",
   "tree.actions": "Project actions",
   "tree.noFiles": "No files yet",
-  "scheme.panel.minimap": "Sheet minimap"
+  "scheme.panel.minimap": "Sheet minimap",
+  "account.closeProject": "Close the project",
+  "account.closed": "the project is closed",
+  "file.add": "Add a file",
+  "file.drop": "Delete the file",
+  "file.kind": "File kind",
+  "file.namePlaceholder": "Name without extension",
+  "file.kind.takt": "Model",
+  "file.kind.scenario": "Scenario",
+  "file.kind.markdown": "Note",
+  "file.needName": "the file needs a name",
+  "file.badName": "name: latin letters, digits, _ and -",
+  "file.exists": "“{name}” is already in the project",
+  "file.created": "the file “{name}” is created",
+  "file.dropAsk": "Delete the file “{name}” from the project?",
+  "file.dropped": "the file “{name}” is deleted",
+  "file.nothingOpen": "no file is open — nothing to delete"
 }

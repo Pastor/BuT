@@ -20,8 +20,8 @@
 //! [`analyze/0041-02`]: ../../../../../../../../docs/features/0041-st-backend.md#анализ
 
 use crate::diagnostics::lang::keys;
-use crate::msg;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::ModelNode;
 use crate::semantic::enum_facts;
 use crate::semantic::naming::normalize_camelcase_name;
@@ -101,12 +101,15 @@ pub(crate) fn get_st_type(typ: &TypeNode, model: &ModelNode) -> Result<String, D
             &format!("0x{:X}", addr),
             &msg!(keys::ST_002_WHY_ADDRESS),
         )),
-        TypeNode::BuiltinString => Err(unmapped(
-            "string",
-            &msg!(keys::ST_002_WHY_STRING),
+        TypeNode::BuiltinString => Err(unmapped("string", &msg!(keys::ST_002_WHY_STRING))),
+        TypeNode::BuiltinModel => Err(unmapped(
+            &msg!(keys::ST_002_SHOWN_MODEL),
+            &msg!(keys::ST_002_WHY_BUILTIN),
         )),
-        TypeNode::BuiltinModel => Err(unmapped(&msg!(keys::ST_002_SHOWN_MODEL), &msg!(keys::ST_002_WHY_BUILTIN))),
-        TypeNode::BuiltinState => Err(unmapped(&msg!(keys::ST_002_SHOWN_STATE), &msg!(keys::ST_002_WHY_BUILTIN))),
+        TypeNode::BuiltinState => Err(unmapped(
+            &msg!(keys::ST_002_SHOWN_STATE),
+            &msg!(keys::ST_002_WHY_BUILTIN),
+        )),
         TypeNode::BuiltinNumeric => Err(unmapped(
             &msg!(keys::ST_002_SHOWN_NUMERIC),
             &msg!(keys::ST_002_WHY_BUILTIN_NUMERIC),
@@ -272,7 +275,11 @@ fn struct_type(name: &str, model: &ModelNode) -> Result<String, Diagnostic> {
 fn unresolved(kind: &str, name: &str) -> Diagnostic {
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
-        msg!(keys::ST_008_UNRESOLVED_DECLARATION, kind = kind, name = name),
+        msg!(
+            keys::ST_008_UNRESOLVED_DECLARATION,
+            kind = kind,
+            name = name
+        ),
     )
     .with_code("ST-008")
 }

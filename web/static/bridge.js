@@ -56,8 +56,16 @@ export class Bridge {
     return JSON.parse(text);
   }
 
-  compile(target, args, source) {
-    return this.call("takt_compile", { target, args, source });
+  /**
+   * Компилирует исходник целью `target`.
+   *
+   * Имя файла едет вместе с текстом: имя корневой модели берётся из него, и
+   * вывод открытого проекта обязан нести имя его файла, а не имя буфера.
+   *
+   * @param {string} filename имя файла; пусто - умолчание моста
+   */
+  compile(target, args, source, filename = "") {
+    return this.call("takt_compile", { target, args, source, filename });
   }
 
   diagnostics(source) {

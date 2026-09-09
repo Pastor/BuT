@@ -34,6 +34,8 @@ const state = {
   project: null,
   /** Имя открытого файла. */
   file: null,
+  /** Проект, назначенный к удалению: строка списка, а не открытый проект. */
+  doomed: null,
   /** Ревизия проекта на момент чтения файла. */
   revision: null,
   /** Мой уровень доступа к открытому проекту. */
@@ -95,19 +97,30 @@ export function attach(nodes, callbacks) {
   // Выбор проекта - отдельный разговор: список читают, а не держат на экране.
   dom.openproject.addEventListener("click", () => openChooser());
   dom.opencancel.addEventListener("click", () => closeModal(dom["open-modal"]));
-  dom.dropproject.addEventListener("click", () => openDrop());
   dom.dropok.addEventListener("click", () => drop());
   dom.dropcancel.addEventListener("click", () => closeModal(dom["drop-modal"]));
+  dom.closeproject.addEventListener("click", () => closeProject());
+  dom.newfile.addEventListener("click", () => openNewFile());
+  dom.fileok.addEventListener("click", () => makeFile());
+  dom.filecancel.addEventListener("click", () => closeModal(dom["file-modal"]));
+  dom.filename.addEventListener("input", () => showFilePreview());
+  dom.filename.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") makeFile();
+  });
+  dom.dropfile.addEventListener("click", () => openDropFile());
+  dom.dropfileok.addEventListener("click", () => dropFile());
+  dom.dropfilecancel.addEventListener("click", () => closeModal(dom["dropfile-modal"]));
   // Выход из разговора не должен требовать попадания в кнопку: щелчок по
   // затемнению и Escape закрывают любое из трёх окон.
-  for (const id of ["project-modal", "open-modal", "drop-modal"]) {
+  const MODALS = ["project-modal", "open-modal", "drop-modal", "file-modal", "dropfile-modal"];
+  for (const id of MODALS) {
     dom[id].addEventListener("click", (event) => {
       if (event.target === dom[id]) closeModal(dom[id]);
     });
   }
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
-    for (const id of ["project-modal", "open-modal", "drop-modal"]) {
+    for (const id of MODALS) {
       if (!dom[id].hidden) closeModal(dom[id]);
     }
   });
@@ -143,6 +156,13 @@ export function attach(nodes, callbacks) {
     exchange(state.ticket, login);
   });
   dom.projects.addEventListener("click", (event) => {
+    // Кнопка удаления живёт внутри строки: сперва спрашиваем её, иначе щелчок по
+    // мусорке открывал бы проект, который автор собрался удалить.
+    const drop = event.target.closest("[data-drop]");
+    if (drop) {
+      openDrop(drop.dataset.drop, drop.dataset.name);
+      return;
+    }
     const row = event.target.closest("[data-project]");
     if (!row) return;
     closeModal(dom["open-modal"]);
@@ -590,11 +610,32 @@ async function openChooser() {
   await list();
 }
 
-/** Открывает окно удаления: проект назван по имени. */
-function openDrop() {
-  if (!state.project) return;
-  dom.droptext.textContent = t("account.dropAsk", { name: state.project.name });
+/** Открывает окно удаления проекта: он назван по имени. */
+function openDrop(id, name) {
+  state.doomed = { id, name };
+  dom.droptext.textContent = t("account.dropAsk", { name });
   dom["drop-modal"].hidden = false;
+}
+
+/** Открывает окно заведения файла: род и имя без расширения. */
+function openNewFile() {
+  if (!state.project) return;
+  paintFileKinds();
+  dom.filename.value = "";
+  showFilePreview();
+  dom["file-modal"].hidden = false;
+  dom.filename.focus();
+}
+
+/** Открывает окно удаления открытого файла. */
+function openDropFile() {
+  if (!state.project) return;
+  if (!state.file) {
+    host.say(t("file.nothingOpen"), "warning");
+    return;
+  }
+  dom.dropfiletext.textContent = t("file.dropAsk", { name: state.file });
+  dom["dropfile-modal"].hidden = false;
 }
 
 /** Вошли ли; не вошли - сказано словами, а окно не открывается. */
@@ -638,19 +679,152 @@ async function make() {
  * автору всё ещё виден.
  */
 async function drop() {
-  const doomed = state.project;
+  const doomed = state.doomed;
   if (!doomed) return;
   try {
     await api.remove(doomed.id);
     closeModal(dom["drop-modal"]);
-    state.project = null;
-    state.file = null;
-    state.revision = null;
-    state.level = "none";
-    paintTree([]);
+    state.doomed = null;
+    // Удалённый проект мог быть открытым: страница возвращается к безымянному
+    // буферу, иначе она показывала бы состав того, чего нет.
+    if (state.project?.id === doomed.id) closeProject(false);
     host.say(t("account.dropped", { name: doomed.name }), "ok");
     refresh();
     await list();
+  } catch (error) {
+    fail(error);
+  }
+}
+
+/**
+ * Закрывает открытый проект: страница возвращается к безымянному буферу.
+ *
+ * Текст не трогается: закрытие проекта - не потеря работы, и то, что автор
+ * набрал, остаётся у него на экране и в черновике.
+ */
+function closeProject(say = true) {
+  state.project = null;
+  state.file = null;
+  state.revision = null;
+  state.level = "none";
+  state.scenarioFile = null;
+  state.doomed = null;
+  paintTree([]);
+  hideConflict();
+  host.closed();
+  if (say) host.say(t("account.closed"), "ok");
+  refresh();
+}
+
+/** Роды файлов, которые автор вправе завести, и расширение каждого. */
+const FILE_KINDS = [
+  { kind: "takt", label: "file.kind.takt", extension: ".takt" },
+  { kind: "scenario", label: "file.kind.scenario", extension: ".json" },
+  { kind: "markdown", label: "file.kind.markdown", extension: ".md" },
+];
+
+/**
+ * Рисует ряд родов файла.
+ *
+ * Раскладка файла раскладкой не заводится: она парная модели и появляется сама
+ * при первом сохранении схемы - заводить её отдельно значило бы предлагать файл,
+ * которому нечего описывать.
+ */
+function paintFileKinds() {
+  dom.filekinds.replaceChildren();
+  for (const [index, item] of FILE_KINDS.entries()) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.kind = item.kind;
+    button.textContent = t(item.label);
+    button.setAttribute("role", "radio");
+    button.setAttribute("aria-checked", String(index === 0));
+    button.addEventListener("click", () => {
+      for (const other of dom.filekinds.children) other.setAttribute("aria-checked", "false");
+      button.setAttribute("aria-checked", "true");
+      showFilePreview();
+    });
+    dom.filekinds.appendChild(button);
+  }
+}
+
+/** Выбранный род файла. */
+function chosenFileKind() {
+  const picked = [...dom.filekinds.children].find(
+    (node) => node.getAttribute("aria-checked") === "true"
+  );
+  return FILE_KINDS.find((item) => item.kind === picked?.dataset.kind) ?? FILE_KINDS[0];
+}
+
+/** Показывает имя, которое получится: расширение ставит род, а не автор. */
+function showFilePreview() {
+  const name = dom.filename.value.trim();
+  dom.filepreview.textContent = name ? name + chosenFileKind().extension : "";
+}
+
+/**
+ * Заводит файл в открытом проекте и открывает его.
+ *
+ * Имя судит сервер (латиница, цифры, `_`, `-`), но пустое имя и занятое имя
+ * страница ловит сама: отказ, который она может назвать заранее, не стоит
+ * рейса.
+ */
+async function makeFile() {
+  if (!state.project) return;
+  const raw = dom.filename.value.trim();
+  if (!raw) {
+    host.say(t("file.needName"), "warning");
+    return;
+  }
+  if (!/^[A-Za-z0-9_-]+$/.test(raw)) {
+    host.say(t("file.badName"), "warning");
+    return;
+  }
+  const name = raw + chosenFileKind().extension;
+  if (state.project.files?.some((file) => file.name === name)) {
+    host.say(t("file.exists", { name }), "warning");
+    return;
+  }
+  try {
+    await api.write(state.project.id, name, "", null);
+    closeModal(dom["file-modal"]);
+    await openProjectFiles(state.project.id);
+    await openFile(state.project.id, name);
+    host.say(t("file.created", { name }), "ok");
+  } catch (error) {
+    fail(error);
+  }
+}
+
+/**
+ * Удаляет открытый файл проекта.
+ *
+ * Вместе с моделью уходит её раскладка: файл `.takt-ui` описывает именно эту
+ * модель, и осиротевший он показывал бы схему того, чего нет.
+ */
+async function dropFile() {
+  if (!state.project || !state.file) return;
+  const doomed = state.file;
+  try {
+    await api.removeFile(state.project.id, doomed);
+    if (doomed.endsWith(".takt")) {
+      const layout = layoutName(doomed);
+      if (state.project.files?.some((file) => file.name === layout)) {
+        await api.removeFile(state.project.id, layout);
+      }
+    }
+    closeModal(dom["dropfile-modal"]);
+    host.say(t("file.dropped", { name: doomed }), "ok");
+    await openProjectFiles(state.project.id);
+    const next = state.project.files?.[0]?.name ?? null;
+    if (next) {
+      await openFile(state.project.id, next);
+    } else {
+      state.file = DEFAULT_FILE;
+      state.revision = null;
+      host.open({ source: "", scenario: "", layout: "" });
+      refresh();
+    }
   } catch (error) {
     fail(error);
   }
@@ -663,12 +837,39 @@ async function list() {
     dom.projects.replaceChildren();
     for (const row of rows) {
       const node = document.createElement("div");
-      node.className = "row";
+      node.className = "row row-pick";
       node.dataset.project = row.id;
-      node.textContent = t("account.projectRow", {
+      const label = document.createElement("span");
+      label.className = "row-text";
+      label.dataset.project = row.id;
+      label.textContent = t("account.projectRow", {
         name: row.name,
         level: levelName(row.level),
       });
+      node.appendChild(label);
+      // Удаляет владелец, и только он: чужой проект в списке виден, но кнопки
+      // у него нет - предлагать действие, которое сервер отвергнет, нельзя.
+      if (row.level === "owner") {
+        const drop = document.createElement("button");
+        drop.type = "button";
+        drop.className = "icon-btn row-drop";
+        drop.dataset.drop = row.id;
+        drop.dataset.name = row.name;
+        drop.dataset.tip = t("account.dropProject");
+        drop.setAttribute("aria-label", t("account.dropProject"));
+        drop.innerHTML = "";
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("class", "icon");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("aria-hidden", "true");
+        for (const d of ["M4.5 7h15", "M9.5 7V4.5h5V7", "M6.5 7l1 12.5h9l1-12.5"]) {
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          path.setAttribute("d", d);
+          svg.appendChild(path);
+        }
+        drop.appendChild(svg);
+        node.appendChild(drop);
+      }
       dom.projects.appendChild(node);
     }
     if (rows.length === 0) {
@@ -1089,11 +1290,19 @@ function refresh() {
   dom["icon-leave"].hidden = me === null;
   dom["whoami-bar"].textContent = me ? me.login : "";
   dom["whoami-bar"].hidden = me === null;
-  dom.download.hidden = state.project === null;
-  // Удалить может только владелец: читателю и соавтору кнопка не показывается -
-  // отказ сервера на действие, которое страница предложила сама, читается как
-  // поломка.
-  dom.dropproject.hidden = state.project === null || state.level !== "owner";
+  // Полоса структуры отвечает на один вопрос за раз: пока проекта нет - как его
+  // завести или открыть; когда открыт - что делать с ним и его файлами. Обе
+  // группы разом заставляли бы искать нужную среди ненужных.
+  const opened = state.project !== null;
+  const writes = opened && (state.level === "edit" || state.level === "owner");
+  dom.newproject.hidden = opened;
+  dom.openproject.hidden = opened;
+  dom.download.hidden = !opened;
+  dom.closeproject.hidden = !opened;
+  // Заводить и удалять файлы вправе тот, кто вправе писать: чужой проект
+  // открывается на чтение, и предлагать ему правку значит обещать отказ сервера.
+  dom.newfile.hidden = !writes;
+  dom.dropfile.hidden = !writes;
   const writable = editing() && (state.level === "edit" || state.level === "owner");
   dom.save.hidden = !writable;
   dom.openfile.hidden = !editing();

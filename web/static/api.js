@@ -247,6 +247,14 @@ export async function file(id, name) {
   return await call(`projects/${encodeURIComponent(id)}/files/${encodeURIComponent(name)}`);
 }
 
+/** Удаляет файл проекта. */
+export async function removeFile(id, name) {
+  return await call(
+    `projects/${encodeURIComponent(id)}/files/${encodeURIComponent(name)}`,
+    { method: "DELETE" }
+  );
+}
+
 /**
  * Пишет файл.
  *
