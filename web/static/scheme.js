@@ -21,6 +21,7 @@ import * as geo from "./scheme-geometry.js";
 import * as layoutFile from "./layout.js";
 import { paintLegend, paintNav, tipOf } from "./legend.js";
 import { Settings } from "./scheme-settings.js";
+import { Panels, PANELS } from "./panels.js";
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -137,6 +138,14 @@ export class Scheme {
     // Счётчик масок щели под знаком: имя маски обязано быть своим у каждого ребра,
     // а ключ ребра содержит знаки, которых в имени быть не может.
     this.gapSeq = 0;
+    // Панели холста: где стоят и показывать ли их. Хозяин у них здесь - холст
+    // им место, а окно настроек спрашивает у той же стороны, что и вид листа.
+    this.panels = dom.panels
+      ? new Panels(
+          { scheme: dom.scheme, panels: dom.panels, docks: dom.docks, legendSplits: dom.legendSplits },
+          { store: options.store },
+        )
+      : null;
     this.kinds = {
       start: this.t("scheme.kind.start"),
       state: this.t("scheme.kind.state"),
@@ -467,20 +476,29 @@ export class Scheme {
   openSettings() {
     if (!this.settings) return;
     this.settingsBefore = this.text();
+    this.panelsBefore = this.panels?.snapshot() ?? null;
     this.settings.open();
   }
 
   /** Ступени вида, показанные окну: настройки и то, что живёт рядом с ними. */
   settingValues() {
-    return {
+    const values = {
       ...layoutFile.viewOf(this.layout),
       corners: this.layout.corners ?? "square",
       labelPlace: this.labelPlace(),
     };
+    // Видимость панелей стоит в том же окне, но живёт не в раскладке: она
+    // принадлежит читателю. Ключ помечен, чтобы выбор ушёл своему хозяину.
+    for (const panel of PANELS) values[`panel:${panel.id}`] = this.panels?.whenOf(panel.id);
+    return values;
   }
 
   /** Выбор ступени в окне: раскладка правится сразу, лист перерисовывается. */
   pickSetting(key, value) {
+    if (key.startsWith("panel:")) {
+      this.panels?.setWhen(key.slice(6), value);
+      return;
+    }
     if (key === "corners") this.layout.corners = value;
     else if (key === "labelPlace") layoutFile.labelPlaceAt(this.layout, value);
     else layoutFile.setView(this.layout, key, value);
@@ -491,10 +509,15 @@ export class Scheme {
   saveSettings() {
     this.commit(this.settingsBefore ?? this.text());
     this.settingsBefore = null;
+    this.panelsBefore = null;
   }
 
   /** Отказ: раскладка возвращается к снимку, снятому при открытии окна. */
   cancelSettings() {
+    if (this.panelsBefore) {
+      this.panels?.restore(this.panelsBefore);
+      this.panelsBefore = null;
+    }
     if (this.settingsBefore === null || this.settingsBefore === undefined) return;
     this.layout = layoutFile.parse(this.settingsBefore).layout;
     this.settingsBefore = null;

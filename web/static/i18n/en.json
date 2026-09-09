@@ -261,5 +261,13 @@
   "scheme.legend.aliasEmpty": "name from model",
   "scheme.stale": "The layout knows records the model does not have: {names}",
   "scheme.staleDrop": "remove",
-  "scheme.layoutNotSaved": "layout not written: {error}"
+  "scheme.layoutNotSaved": "layout not written: {error}",
+  "scheme.panel.run": "Run",
+  "scheme.panel.view": "View",
+  "scheme.panel.sheet": "Sheet",
+  "scheme.panel.legend": "Legend",
+  "scheme.settings.panels": "Panels",
+  "scheme.when.always": "always",
+  "scheme.when.wide": "wide screen",
+  "scheme.when.hidden": "hide"
 }

@@ -261,5 +261,13 @@
   "scheme.legend.aliasEmpty": "имя из модели",
   "scheme.stale": "Раскладка знает записи, которых в модели нет: {names}",
   "scheme.staleDrop": "убрать",
-  "scheme.layoutNotSaved": "раскладка не записана: {error}"
+  "scheme.layoutNotSaved": "раскладка не записана: {error}",
+  "scheme.panel.run": "Прогон",
+  "scheme.panel.view": "Вид",
+  "scheme.panel.sheet": "Лист",
+  "scheme.panel.legend": "Легенда",
+  "scheme.settings.panels": "Панели",
+  "scheme.when.always": "всегда",
+  "scheme.when.wide": "широкий экран",
+  "scheme.when.hidden": "скрыть"
 }

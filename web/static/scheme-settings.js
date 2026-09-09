@@ -19,6 +19,8 @@
 // хозяин пишет её в раскладку и перерисовывает лист. "Отменить" возвращает
 // раскладку к снимку, снятому при открытии, - откат целиком, а не по шагам.
 
+import { PANELS } from "./panels.js";
+
 const NS = "http://www.w3.org/2000/svg";
 
 /** Узел SVG с атрибутами. */
@@ -186,6 +188,22 @@ const TABS = [
       },
     ],
   },
+  {
+    // Панели холста: показывать ли каждую. Образцов здесь нет - выбор словесный,
+    // и рисовать "всегда" нечем. Состав вкладки строится по списку панелей:
+    // второй список разошёлся бы с ним молча.
+    id: "panels",
+    label: "scheme.settings.panels",
+    fields: PANELS.map((panel) => ({
+      id: `panel:${panel.id}`,
+      label: panel.label,
+      steps: [
+        { value: "always", label: "scheme.when.always" },
+        { value: "wide", label: "scheme.when.wide" },
+        { value: "hidden", label: "scheme.when.hidden" },
+      ],
+    })),
+  },
 ];
 
 /** Толщина линии ступенью: те же числа, что у листа (`app.css`). */
@@ -300,7 +318,10 @@ export class Settings {
       button.setAttribute("aria-checked", String(values[field.id] === step.value));
       button.setAttribute("aria-label", label);
       button.dataset.tip = label;
-      button.appendChild(field.sample(step.value));
+      // Поле без образца - словесный выбор: рисовать нечего, и кнопка остаётся
+      // подписью. Пустой образец на его месте занимал бы место обещанием.
+      if (field.sample) button.appendChild(field.sample(step.value));
+      else button.classList.add("set-step-plain");
       const caption = document.createElement("span");
       caption.className = "set-step-name";
       caption.textContent = label;

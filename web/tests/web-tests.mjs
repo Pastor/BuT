@@ -37,6 +37,7 @@ import * as editor from "../static/editor.js";
 import * as json from "../static/json.js";
 import * as flags from "../static/flags.js";
 import * as md from "../static/md.js";
+import * as panels from "../static/panels.js";
 import * as build from "../static/build.js";
 import * as project from "../static/project.js";
 import * as api from "../static/api.js";
@@ -459,7 +460,8 @@ test("язык: порядок выбора — сохранённый, брау
 const PAGE_SCRIPTS = [
   "account.js", "alerts.js", "api.js", "app.js", "boot.js", "bridge.js", "build.js",
   "draft.js", "editor.js", "i18n.js", "layout.js", "legend.js", "pick.js",
-  "project.js", "sample.js", "scheme.js", "scheme-geometry.js", "scheme-settings.js",
+  "panels.js", "project.js", "sample.js", "scheme.js", "scheme-geometry.js",
+  "scheme-settings.js",
   "flags.js", "json.js",
   "md.js", "share.js", "shell.js", "showcase.js", "tip.js", "worker.js",
 ];
@@ -1161,6 +1163,47 @@ test("страница проекта: закрытый отвечает наз�
     () => project.read("AbCd", "/", broken),
     (error) => error.key === "project.failed",
   );
+});
+
+test("панели: чужое имя и ступень вне набора не переживают чтения", () => {
+  // Хранилище переживает выкладки, а состав панелей меняется: запись о панели,
+  // которой больше нет, не должна ни падать, ни оживать при возврате имени.
+  const clean = panels.cleanState({
+    run: { dock: "tr", when: "hidden" },
+    view: { dock: "нигде", when: "иногда" },
+    ghost: { dock: "tl", when: "always" },
+    legend: { dock: "tl", when: "wide" },
+  });
+  assert.deepEqual(clean.run, { dock: "tr", when: "hidden" });
+  assert.deepEqual(clean.view, undefined, "ступень и место вне набора отброшены");
+  assert.equal(clean.ghost, undefined, "чужое имя не читается");
+  // У легенды углов холста нет, и место ей не пишется даже из хранилища.
+  assert.deepEqual(clean.legend, { when: "wide" });
+});
+
+test("панели: видимость решает ступень, а не одна лишь ширина", () => {
+  assert.equal(panels.visible("always", true), true, "всегда - значит и на узком");
+  assert.equal(panels.visible("hidden", false), false);
+  assert.equal(panels.visible("wide", false), true);
+  assert.equal(panels.visible("wide", true), false, "широкий экран - не узкий");
+});
+
+test("панели: дома разведены по углам, и ни одна пара не делит угол", () => {
+  // Холст рядом с легендой узок: две панели, поселённые в один угол, накрывают
+  // друг друга, и переставить их читатель уже не может.
+  const homes = panels.PANELS.map((panel) => panel.home).filter(Boolean);
+  assert.deepEqual([...new Set(homes)], homes, "два дома совпали");
+  for (const home of homes) assert.ok(panels.DOCKS.includes(home), `место '${home}' не объявлено`);
+});
+
+test("панели: умолчания доезжают до состояния, а сохранённое их перекрывает", () => {
+  const fresh = panels.stateOf({});
+  assert.equal(fresh.run.dock, panels.panelOf("run").home);
+  assert.equal(fresh.sheet.when, "wide", "лист на узком экране уступает место холсту");
+  const saved = panels.stateOf({ run: { dock: "br" }, sheet: { when: "hidden" } });
+  assert.equal(saved.run.dock, "br");
+  assert.equal(saved.run.when, "always", "неназванная половина берётся у умолчания");
+  assert.equal(saved.sheet.when, "hidden");
 });
 
 test("язык: список модулей страницы полон", async () => {

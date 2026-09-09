@@ -162,7 +162,19 @@ export async function main() {
       crumbs: dom.crumbs,
       crumbsUp: dom["scheme-up"],
       nav: dom.nav,
-      tools: dom["scheme-tools"],
+      // Кнопки холста разошлись по панелям, и слушает их сам холст: список
+      // панелей иначе пришлось бы вести дважды - в разметке и в подписке.
+      tools: dom.scheme,
+      panels: {
+        run: dom["panel-run"],
+        view: dom["panel-view"],
+        sheet: dom["panel-sheet"],
+        // Легенда углов холста не занимает, но вопрос к ней тот же - показывать
+        // или нет, - и отвечать на него читатель ходит в то же окно.
+        legend: dom.legend,
+      },
+      docks: docks(),
+      legendSplits: [dom.legendrows, dom.legendcols],
       empty: dom["scheme-empty"],
       notice: dom["scheme-notice"],
       noticeText: dom["scheme-notice-text"],
@@ -416,6 +428,13 @@ function fade(node) {
 }
 
 /** Находит узлы страницы один раз: поиск в обработчике - лишняя работа. */
+/** Места панелей холста по имени: признак стоит в разметке. */
+function docks() {
+  const out = {};
+  for (const node of document.querySelectorAll("[data-dock]")) out[node.dataset.dock] = node;
+  return out;
+}
+
 function cache() {
   for (const id of [
     "editor", "diagnostics", "output", "trace", "version", "target", "args",
@@ -430,7 +449,8 @@ function cache() {
     "setpass", "download", "upload", "showcase", "finder", "query", "findbtn",
     "found", "more", "doc", "sourcetitle", "openfilename", "scenariopick",
     "scenariofile", "showscheme", "scheme-notice", "scheme-notice-text", "scheme-drop",
-    "crumbs", "scheme-up", "stage", "scheme", "sheet", "nav", "scheme-tools", "map",
+    "crumbs", "scheme-up", "stage", "scheme", "sheet", "nav", "map",
+    "panel-run", "panel-view", "panel-sheet",
     "scheme-empty", "legend", "zoom", "alerts",
     "scheme-modal", "scheme-tabs", "scheme-settings", "scheme-save", "scheme-cancel",
     "showlog", "logsplit", "legendrows", "legendcols",
