@@ -194,6 +194,13 @@ fn main_loop(
     Ok(())
 }
 
+/// Параметры запроса графа: документ, как у прочих операций редактора.
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GraphParams {
+    text_document: TextDocumentIdentifier,
+}
+
 /// Обрабатывает входящий запрос от клиента.
 fn handle_request(
     connection: &Connection,
@@ -383,6 +390,28 @@ fn handle_request(
                 req.id,
                 serde_json::to_value(symbols)?,
             )))?;
+        }
+        // Граф модели для схемы. Запрос не из протокола: своего понятия "схема
+        // состояний" у LSP нет, а панель редактора без графа нарисовать нечего.
+        // Форму ответа строит тот же носитель, что у страницы, - иначе панель
+        // рисовала бы не тот автомат.
+        "takt/graph" => {
+            let params: GraphParams = serde_json::from_value(req.params)?;
+            let text = state.get_text(&params.text_document.uri).unwrap_or("");
+            let response = match takt_lang::layout::graph_of(text) {
+                Ok(graph) => Response::new_ok(
+                    req.id,
+                    serde_json::to_value(takt_lang::layout::json::graph_json(graph, text))?,
+                ),
+                // Неразбираемый текст - отказ с диагностикой разбора: панель
+                // показывает причину, а не пустой лист без объяснения.
+                Err(diagnostic) => Response::new_err(
+                    req.id,
+                    lsp_server::ErrorCode::InvalidRequest as i32,
+                    diagnostic.message.clone(),
+                ),
+            };
+            connection.sender.send(Message::Response(response))?;
         }
         "textDocument/semanticTokens/full" => {
             let params: SemanticTokensParams = serde_json::from_value(req.params)?;

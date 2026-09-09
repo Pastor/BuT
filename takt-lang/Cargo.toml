@@ -65,5 +65,5 @@ harness = false
 
 [features]
 default = []
-ast-serde = ["serde"]
-lsp = ["dep:serde_json", "dep:lsp-server", "dep:lsp-types"]
+ast-serde = ["dep:serde"]
+lsp = ["dep:serde", "dep:serde_json", "dep:lsp-server", "dep:lsp-types"]

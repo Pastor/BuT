@@ -1,5 +1,6 @@
 //! Языковой сервер и редакторский слой - Одна тестовая цель на все наборы темы.
 
+mod graph_json_tests;
 mod import_binding_kind_tests;
 mod imported_symbol_kind_tests;
 mod lsp_definition_tests;

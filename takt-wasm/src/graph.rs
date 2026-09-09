@@ -1,167 +1,21 @@
 //! Граф модели для схемы: ответ `takt_lang::layout` в форме страницы.
 //!
-//! Позиции переводятся в строки и колонки протокола LSP, как у прочих операций
-//! редактора: страница ставит курсор и подсвечивает диапазоны одним и тем же способом.
-//! Ничего своего здесь нет - ни ярусов, ни разбора: считает библиотека.
+//! Формы здесь нет: её строит `takt_lang::layout::json`, и ту же форму берёт
+//! сервер. Заведи модуль свою - панель плагина рисовала бы не тот автомат, что
+//! страница, и расхождение пришло бы молча.
 
-use serde::Serialize;
-use takt_lang::diagnostics::Location;
-use takt_lang::layout::{self, Edge, Implement, Node, Sheet};
-use takt_lang::lsp::offset_to_range;
+use takt_lang::layout::{self, json};
 
-use crate::editor::RangeJson;
 use crate::reply;
-
-/// Лист графа.
-#[derive(Debug, Serialize)]
-struct SheetJson {
-    path: String,
-    name: String,
-    range: Option<RangeJson>,
-    name_range: Option<RangeJson>,
-    start: Option<String>,
-    implements: Option<ImplementJson>,
-    nodes: Vec<NodeJson>,
-    edges: Vec<EdgeJson>,
-}
-
-/// Узел листа.
-#[derive(Debug, Serialize)]
-struct NodeJson {
-    name: String,
-    kind: &'static str,
-    start: bool,
-    range: Option<RangeJson>,
-    name_range: Option<RangeJson>,
-    implements: Option<ImplementJson>,
-    rank: u32,
-    order: u32,
-}
-
-/// Ребро листа.
-#[derive(Debug, Serialize)]
-struct EdgeJson {
-    from: String,
-    to: String,
-    ordinal: u32,
-    kind: &'static str,
-    condition: Option<String>,
-    range: Option<RangeJson>,
-}
-
-/// Дерево реализации: `{"model": {...}}`, `{"chain": [...]}`, `{"parallel": [...]}`,
-/// `{"group": {...}}`.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "lowercase")]
-enum ImplementJson {
-    Model {
-        name: String,
-        path: Option<String>,
-        range: Option<RangeJson>,
-    },
-    Chain(Vec<ImplementJson>),
-    Parallel(Vec<ImplementJson>),
-    Group(Box<ImplementJson>),
-}
 
 /// Граф модели по тексту.
 ///
 /// Неразбираемый текст - отказ с диагностикой разбора, как у компиляции: страница
 /// показывает пустой лист и диагностику, а не падает.
 pub fn graph(source: &str) -> String {
-    #[derive(Serialize)]
-    struct Reply {
-        sheets: Vec<SheetJson>,
-    }
     match layout::graph_of(source) {
-        Ok(graph) => reply::ok(Reply {
-            sheets: graph
-                .sheets
-                .into_iter()
-                .map(|sheet| sheet_json(sheet, source))
-                .collect(),
-        }),
+        Ok(graph) => reply::ok(json::graph_json(graph, source)),
         Err(diagnostic) => reply::failed(&diagnostic, source),
-    }
-}
-
-fn sheet_json(sheet: Sheet, source: &str) -> SheetJson {
-    SheetJson {
-        path: sheet.path,
-        name: sheet.name,
-        range: range_of(sheet.loc, source),
-        name_range: sheet.name_loc.and_then(|loc| range_of(loc, source)),
-        start: sheet.start,
-        implements: sheet.implements.map(|i| implement_json(i, source)),
-        nodes: sheet
-            .nodes
-            .into_iter()
-            .map(|node| node_json(node, source))
-            .collect(),
-        edges: sheet
-            .edges
-            .into_iter()
-            .map(|edge| edge_json(edge, source))
-            .collect(),
-    }
-}
-
-fn node_json(node: Node, source: &str) -> NodeJson {
-    NodeJson {
-        name: node.name,
-        kind: node.kind.as_str(),
-        start: node.start,
-        range: range_of(node.loc, source),
-        name_range: range_of(node.name_loc, source),
-        implements: node.implements.map(|i| implement_json(i, source)),
-        rank: node.rank,
-        order: node.order,
-    }
-}
-
-fn edge_json(edge: Edge, source: &str) -> EdgeJson {
-    EdgeJson {
-        from: edge.from,
-        to: edge.to,
-        ordinal: edge.ordinal,
-        kind: edge.kind.as_str(),
-        condition: edge.condition,
-        range: range_of(edge.loc, source),
-    }
-}
-
-fn implement_json(implement: Implement, source: &str) -> ImplementJson {
-    match implement {
-        Implement::Model { name, path, loc } => ImplementJson::Model {
-            name,
-            path,
-            range: range_of(loc, source),
-        },
-        Implement::Chain(items) => ImplementJson::Chain(
-            items
-                .into_iter()
-                .map(|i| implement_json(i, source))
-                .collect(),
-        ),
-        Implement::Parallel(items) => ImplementJson::Parallel(
-            items
-                .into_iter()
-                .map(|i| implement_json(i, source))
-                .collect(),
-        ),
-        Implement::Group(inner) => ImplementJson::Group(Box::new(implement_json(*inner, source))),
-    }
-}
-
-/// Диапазон позиции в исходнике; у позиции вне файла диапазона нет.
-fn range_of(loc: Location, source: &str) -> Option<RangeJson> {
-    match loc {
-        Location::Source(_, start, end) => Some(RangeJson::of(offset_to_range(
-            source,
-            start as usize,
-            end as usize,
-        ))),
-        _ => None,
     }
 }
 
