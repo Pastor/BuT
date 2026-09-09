@@ -98,20 +98,17 @@
             data-i18n="bar.fontMore" data-i18n-attr="data-tip:bar.fontHint" data-tip="Крупнее">+</button>
   </span>
   <span class="spacer"></span>
-  <!-- Панели правой области: генерация либо симуляция, либо ни одной. Кнопки
-       залипающие и взаимоисключающие — область одна, и держать в ней два
-       ответа сразу негде (решение заказчика 2026-09-05). -->
   <button id="showgen" class="icon-btn" type="button" aria-pressed="true"
           data-i18n-attr="data-tip:panel.generate;aria-label:panel.generate"
           data-tip="Генерация" aria-label="Генерация"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 8.5 4.5 12 9 15.5"/><path d="M15 8.5 19.5 12 15 15.5"/></svg></button>
-  <button id="showsim" class="icon-btn" type="button" aria-pressed="false"
-          data-i18n-attr="data-tip:panel.simulate;aria-label:panel.simulate"
-          data-tip="Симуляция" aria-label="Симуляция"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 16h3v-8h5v8h5v-8h4"/></svg></button>
+  <button id="showdiag" class="icon-btn" type="button" aria-pressed="true"
+          data-i18n-attr="aria-label:diagnostics.title;data-tip:diagnostics.title"
+          data-tip="Диагностики" aria-label="Диагностики"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4.5l8 14H4z"/><path d="M12 10v4"/><circle cx="12" cy="16.6" r="0.9" fill="currentColor" stroke="none"/></svg></button>
+  <!-- Панели правой области: генерация либо симуляция, либо ни одной. Кнопки
+       залипающие и взаимоисключающие — область одна, и держать в ней два
+       ответа сразу негде (решение заказчика 2026-09-05). -->
   <!-- Схема состояний: третья панель той же области. Что рисовать, говорит
        модуль (граф модели), где - файл раскладки автора рядом с моделью. -->
-  <button id="showscheme" class="icon-btn" type="button" aria-pressed="false"
-          data-i18n-attr="data-tip:panel.scheme;aria-label:panel.scheme"
-          data-tip="Схема" aria-label="Схема"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M12 9v3M12 12l-4.5 4M12 12l4.5 4"/></svg></button>
   <!-- Строка "доступна новая сборка": ненавязчиво, без окна и без повтора.
        Молча не перезагружаемся никогда — в редакторе несохранённая работа
        (задача 0531-07b). -->
@@ -156,8 +153,6 @@
            aria-label="Способы входа"></div>
       <div id="projects" class="list" data-i18n-attr="aria-label:account.projects"
            aria-label="Мои проекты"></div>
-      <div id="files" class="list" data-i18n-attr="aria-label:account.files"
-           aria-label="Файлы проекта"></div>
 
       <!-- Архив проекта: выгрузка запросом (у закрытого нужен токен, а ссылка
            заголовков не несёт) и загрузка обычным выбором файла. -->
@@ -197,64 +192,9 @@
       <button id="overwrite" type="button" data-i18n="account.overwrite">Перезаписать</button>
     </div>
     <div id="editor" class="editor" data-i18n-attr="aria-label:source.editor" aria-label="Исходный текст модели"></div>
-    <!-- Разделитель рядов: сколько отдано редактору, сколько диагностикам.
-         Правила те же, что у разделителя колонок, ось другая. -->
-    <div id="hsplit" class="split split-h" role="separator" aria-orientation="horizontal"
-         data-i18n-attr="aria-label:bar.rows" aria-label="Высота диагностик" tabindex="0"></div>
-    <div class="pane-head"><span data-i18n="diagnostics.title">Диагностики</span></div>
-    <!-- Строка-граница: до фичи сообщения инструментов существуют только
-           по-русски, и при другом языке оболочки смешение НАЗЫВАЕТСЯ, а не
-           прячется (задача 0531-10a). -->
-      <div id="tools-lang" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
-      <div id="diagnostics" class="list" aria-live="polite"></div>
-  </section>
-
-
-  <!-- Разделитель областей: доли задаёт читатель, как и ширину оболочки.
-       Клавиатура обязательна — разделитель без неё недоступен вовсе. -->
-  <div id="split" class="split" role="separator" aria-orientation="vertical"
-       data-i18n-attr="aria-label:bar.split" aria-label="Ширина областей" tabindex="0"></div>
-  <section class="pane pane-result">
-    <nav id="tabs" class="tabs" role="tablist">
-      <button class="tab active" data-tab="output" role="tab" aria-selected="true" type="button" data-i18n="tabs.output">Вывод цели</button>
-      <button class="tab" data-tab="flags" role="tab" aria-selected="false" type="button" data-i18n="tabs.flags">Ключи сборки</button>
-    </nav>
-
-    <div data-panel="output" class="panel">
-      <div class="controls">
-        <label for="target" data-i18n="output.target">Цель</label>
-        <select id="target"></select>
-        <!-- Поле ключей с экрана убрано: их
-             задаёт вкладка «Ключи сборки». Узел остаётся носителем СТРОКИ —
-             величина одна, и конструктор пишет именно в неё. -->
-        <input id="args" type="hidden" value="">
-      </div>
-      <div id="output" class="output"></div>
-    </div>
-
-    <div data-panel="trace" class="panel" hidden>
-      <!-- Подпись - одна строка словаря: разметка внутри переводимого текста
-           потребовала бы `innerHTML` из словаря, то есть лишнего пути в DOM.
-           Ключ `-s` остался в строке, элемент `code` снят. -->
-      <!-- Сценариев в проекте бывает несколько: который прогоняем,
-           выбирается здесь. Проект называет свой, выбор читателя живёт в
-           черновике — то же правило, что у цели сборки. -->
-      <div id="scenariopick" class="controls" hidden>
-        <label for="scenariofile" data-i18n="trace.scenarioFile">Сценарий</label>
-        <select id="scenariofile"></select>
-      </div>
-      <label for="scenario" data-i18n="trace.scenario">Сценарий входов (JSON, как файл -s у takt-sim)</label>
-      <!-- Сценарий - такая же область кода, как модель и вывод: те же номера
-           строк тем же счётчиком. У `textarea` строк-узлов нет вовсе, и номер
-           пришлось бы рисовать второй колонкой, синхронизируя прокрутку. -->
-      <div id="scenario" class="editor scenario" data-i18n-attr="aria-label:trace.scenario"
+    <div id="scenario" class="editor scenario" data-i18n-attr="aria-label:trace.scenario"
            aria-label="Сценарий входов"></div>
-    </div>
-
-    <!-- Схема состояний: уведомление о расхождении раскладки с моделью,
-         крошки уровня, полоса холста с легендой. Узлы холста строит `scheme.js`
-         построением, не разметкой из данных: имена состояний пишет автор. -->
-    <div data-panel="scheme" class="panel panel-scheme" hidden>
+<div data-panel="scheme" class="panel panel-scheme" hidden>
       <div id="scheme-notice" class="notice conflict" hidden>
         <span id="scheme-notice-text"></span>
         <button id="scheme-drop" type="button" data-i18n="scheme.staleDrop">убрать</button>
@@ -349,6 +289,47 @@
       <div id="tools-lang-trace" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
       <div id="trace" class="list trace" aria-live="polite"></div>
     </div>
+    <!-- Разделитель рядов: сколько отдано редактору, сколько диагностикам.
+         Правила те же, что у разделителя колонок, ось другая. -->
+    <div id="hsplit" class="split split-h" role="separator" aria-orientation="horizontal"
+         data-i18n-attr="aria-label:bar.rows" aria-label="Высота диагностик" tabindex="0"></div>
+    <div id="diagnostics-head" class="pane-head"><span data-i18n="diagnostics.title">Диагностики</span></div>
+    <!-- Строка-граница: до фичи сообщения инструментов существуют только
+           по-русски, и при другом языке оболочки смешение НАЗЫВАЕТСЯ, а не
+           прячется (задача 0531-10a). -->
+      <div id="tools-lang" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
+      <div id="diagnostics" class="list" aria-live="polite"></div>
+  </section>
+
+
+  <!-- Разделитель областей: доли задаёт читатель, как и ширину оболочки.
+       Клавиатура обязательна — разделитель без неё недоступен вовсе. -->
+  <div id="split" class="split" role="separator" aria-orientation="vertical"
+       data-i18n-attr="aria-label:bar.split" aria-label="Ширина областей" tabindex="0"></div>
+  <section class="pane pane-result">
+    <nav id="tabs" class="tabs" role="tablist">
+      <button class="tab active" data-tab="output" role="tab" aria-selected="true" type="button" data-i18n="tabs.output">Вывод цели</button>
+      <button class="tab" data-tab="flags" role="tab" aria-selected="false" type="button" data-i18n="tabs.flags">Ключи сборки</button>
+    </nav>
+
+    <div data-panel="output" class="panel">
+      <div class="controls">
+        <label for="target" data-i18n="output.target">Цель</label>
+        <select id="target"></select>
+        <!-- Поле ключей с экрана убрано: их
+             задаёт вкладка «Ключи сборки». Узел остаётся носителем СТРОКИ —
+             величина одна, и конструктор пишет именно в неё. -->
+        <input id="args" type="hidden" value="">
+      </div>
+      <div id="output" class="output"></div>
+    </div>
+
+    
+
+    <!-- Схема состояний: уведомление о расхождении раскладки с моделью,
+         крошки уровня, полоса холста с легендой. Узлы холста строит `scheme.js`
+         построением, не разметкой из данных: имена состояний пишет автор. -->
+    
     <!-- Ключи сборки выбором: та же строка, что в поле "Ключи сборки", только
          собранная контролами. Список ключей строит `flags.js` и сверяет с
          разбором аргументов сторож — свой список разошёлся бы молча. -->
@@ -368,15 +349,26 @@
       <div id="flags" class="flags"></div>
     </div>
   </section>
+  <!-- Разделитель перед структурой проекта: ширину дерева задаёт читатель, как
+       и доли прочих областей. -->
+  <div id="treesplit" class="split" role="separator" aria-orientation="vertical"
+       data-i18n-attr="aria-label:tree.width" aria-label="Ширина структуры" tabindex="0"></div>
+  <!-- Структура проекта: файлы дерева открываются в области кода - там же, где
+       правится модель. Отдельных областей у сценария и схемы нет: род файла
+       решает, чем его показать. -->
+  <section class="pane pane-tree">
+    <div class="pane-head"><span data-i18n="tree.title">Структура проекта</span></div>
+    <div id="tree" class="tree" data-i18n-attr="aria-label:tree.title"
+         aria-label="Структура проекта"></div>
+  </section>
 </main>
 
 <!-- Полка режимов: видна только на узком экране (см. app.css). Подпись у
      каждой цели остаётся словом — по одним значкам вкладку находят не все. -->
 <nav id="modes" class="modes" role="tablist" data-i18n-attr="aria-label:modes.label" aria-label="Область">
-  <button class="tab active" data-mode="source" role="tab" aria-selected="true" type="button" data-i18n="modes.source">Модель</button>
+  <button class="tab active" data-mode="source" role="tab" aria-selected="true" type="button" data-i18n="modes.source">Код</button>
   <button class="tab" data-mode="output" role="tab" aria-selected="false" type="button" data-i18n="modes.output">Вывод</button>
-  <button class="tab" data-mode="trace" role="tab" aria-selected="false" type="button" data-i18n="modes.trace">Прогон</button>
-  <button class="tab" data-mode="scheme" role="tab" aria-selected="false" type="button" data-i18n="modes.scheme">Схема</button>
+  <button class="tab" data-mode="tree" role="tab" aria-selected="false" type="button" data-i18n="modes.tree">Проект</button>
 </nav>
 
 <!-- Ручка ширины оболочки: на широком экране читатель задаёт, какой колонкой

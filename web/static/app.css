@@ -598,6 +598,51 @@ body {
   .split:not(.split-h) { display: none; }
 }
 
+/* ── Структура проекта (`.pane-tree`) ────────────────────────────────────
+ * Область справа: дерево файлов проекта. Отдельных областей у сценария и схемы
+ * нет - род файла решает, чем его показать, а место показа одно. Ширину задаёт
+ * читатель разделителем, как и прочие доли. */
+.pane-tree {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+.tree { flex: 1; overflow: auto; padding: var(--gap-half); display: flex; flex-direction: column; gap: var(--gap); }
+.tree-group { display: flex; flex-direction: column; gap: var(--gap-quarter); }
+/* Род - подпись группы, а не значок у строки: файлов в проекте немного, а
+ * слово читается без легенды. */
+.tree-kind {
+  font-size: var(--text-xs);
+  color: var(--on-surface-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0 var(--gap-half);
+}
+.tree-file {
+  height: var(--h-dense);
+  padding: 0 var(--gap-half);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--on-surface);
+  text-align: left;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tree-file:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface));
+}
+.tree-file[aria-pressed="true"] { background: var(--surface-yes); color: var(--on-surface-yes); }
+
+/* Область кода показывает один файл: скрытые узлы места не занимают, а
+ * показанный занимает всю её высоту - холсту схемы нужна вертикаль, и без
+ * этого правила он схлопывался под легенду. */
+#editor[hidden], #scenario[hidden], .panel-scheme[hidden] { display: none; }
+.pane-source > .panel-scheme { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
 /* ── Верхняя строка ─────────────────────────────────────────────────────── */
 .bar {
   display: flex;
@@ -689,7 +734,11 @@ button:disabled, select:disabled, input:disabled, textarea:disabled {
 .work {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, var(--panes-l, 1fr)) auto minmax(0, var(--panes-r, 1fr));
+  /* Пять дорожек: код, ручка, вывод, ручка, структура проекта. Ширина
+   * структуры - своя величина: она не делится с прочими долями, потому что
+   * дерево читают, а не растягивают под содержимое. */
+  grid-template-columns:
+    minmax(0, var(--panes-l, 1fr)) auto minmax(0, var(--panes-r, 1fr)) auto var(--tree-w, 15rem);
   gap: 1px;
   background: var(--border);
   min-height: 0;
@@ -2250,8 +2299,9 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
   .pane { display: none; }
   body[data-mode="source"] .pane-source,
   body[data-mode="output"] .pane-result,
-  body[data-mode="trace"] .pane-result,
-  body[data-mode="scheme"] .pane-result { display: flex; }
+  body[data-mode="tree"] .pane-tree { display: flex; }
+  /* Ручки долей на узком экране не нужны: область одна, делить нечего. */
+  .work > .split { display: none; }
   /* Внутренние вкладки дублируют полку - ими управляет она же. */
   .pane-result .tabs { display: none; }
   .modes {

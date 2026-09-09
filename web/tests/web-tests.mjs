@@ -791,22 +791,26 @@ test("редактор: перевод строки считается симв�
   assert.deepEqual(editor.lineOfOffset(lengths, 99), { index: 2, inLine: 5 });
 });
 
-test("панели: генерация и симуляция — одна область на двоих", async () => {
+test("области: генерация и диагностика открываются кнопками справа", async () => {
   const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
   const app = await readFile(new URL("../static/app.js", import.meta.url), "utf8");
   const css = await readFile(new URL("../static/app.css", import.meta.url), "utf8");
 
   // Кнопки залипающие и стоят в полосе управления справа.
   const tools = html.slice(html.indexOf('<div class="bar bar-tools">'), html.indexOf("<main"));
-  for (const id of ["showgen", "showsim"]) {
+  for (const id of ["showgen", "showdiag"]) {
     assert.match(tools, new RegExp(`id="${id}"[^>]*aria-pressed`), `${id} не залипающая`);
   }
   assert.ok(tools.indexOf('class="spacer"') < tools.indexOf('id="showgen"'),
-    "кнопки панелей не прижаты вправо");
+    "кнопки областей не прижаты вправо");
 
-  // Симуляция больше не вкладка: у неё своя панель. Вкладка, оставшаяся в
-  // ряду, показывала бы панель в обход кнопки - и обе оказались бы открыты.
+  // Своих областей у симуляции и схемы нет: файл открывается там же, где
+  // правится код, а вторая область заставляла бы помнить, где что живёт.
+  assert.ok(!html.includes('data-panel="trace"'), "область симуляции осталась");
   assert.ok(!html.includes('data-tab="trace"'), "симуляция осталась вкладкой");
+  const source = html.slice(html.indexOf('class="pane pane-source"'), html.indexOf('id="split"'));
+  assert.ok(source.includes('data-panel="scheme"'), "схема не в области кода");
+  assert.ok(source.includes('id="scenario"'), "сценарий не в области кода");
 
   // Скрытая генерация не выполняется: печатать в невидимую область - работа
   // впустую, и на большой модели она заметна.
@@ -820,6 +824,23 @@ test("панели: генерация и симуляция — одна обл
   // Обе отжаты - область уходит вместе со своим разделителем.
   assert.match(css, /body\[data-panel="none"\][\s\S]{0,200}?display: none/,
     "закрытая область остаётся на экране");
+});
+
+test("структура проекта: область справа, файлы по родам", async () => {
+  const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
+  const account = await readFile(new URL("../static/account.js", import.meta.url), "utf8");
+
+  // Дерево - последняя область рабочей строки: код, вывод, структура.
+  const work = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
+  const order = ["pane-source", "pane-result", "pane-tree"].map((cls) => work.indexOf(cls));
+  assert.deepEqual(order.slice().sort((a, b) => a - b), order, "порядок областей нарушен");
+  assert.ok(work.includes('id="treesplit"'), "у структуры нет своей ручки ширины");
+
+  // Роды перечислены ключами словаря: собранный ключ сверке невидим, и подпись
+  // рода пропала бы молча.
+  for (const key of ["tree.kind.takt", "tree.kind.layout", "tree.kind.scenario", "tree.kind.markdown"]) {
+    assert.ok(account.includes(`"${key}"`), `род '${key}' не назван ключом`);
+  }
 });
 
 test("шапка: две полосы, и каждая отвечает на свой вопрос", async () => {

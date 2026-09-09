@@ -300,6 +300,26 @@ export function attachLogRows(split, storage) {
 }
 
 /** Разделитель легенды-полки: её высота под холстом. */
+/**
+ * Ручка ширины структуры проекта.
+ *
+ * Доля своя, а не общая с областями кода и вывода: дерево читают, а не
+ * растягивают под содержимое, и делить его ширину с выводом значило бы менять
+ * два размера одной ручкой.
+ */
+export function attachTree(split, storage) {
+  attachDivider(split, {
+    storage,
+    key: TREE_KEY,
+    axis: "x",
+    fallback: TREE_DEFAULT,
+    box: () => split.parentElement.getBoundingClientRect(),
+    apply: (ratio, root) => {
+      root.style.setProperty("--tree-w", `${(1 - ratio) * 100}%`);
+    },
+  });
+}
+
 export function attachLegendRows(split, storage) {
   attachDivider(split, {
     storage,
@@ -326,6 +346,12 @@ export function attachLegendCols(split, storage) {
     },
   });
 }
+
+/** Ключ доли структуры проекта в памяти читателя. */
+const TREE_KEY = "takt.ui.tree";
+
+/** Умолчание доли: структура занимает шестую часть рабочей области. */
+const TREE_DEFAULT = 0.84;
 
 function attachDivider(split, plan) {
   const root = split.ownerDocument.documentElement;
@@ -554,10 +580,14 @@ export const UI_KEYS = {
   tab: "takt.ui.tab",
   /** Бюджет прогона, тактов. */
   budget: "takt.ui.budget",
-  /** Открытая панель правой области: `output`, `trace` либо пусто. */
+  /** Открытая панель правой области: `output` либо пусто. */
   panel: "takt.ui.panel",
   /** Виден ли журнал прогона под холстом схемы. */
   log: "takt.ui.log",
+  /** Видна ли область диагностик под кодом. */
+  diagnostics: "takt.ui.diagnostics",
+  /** Доля структуры проекта в рабочей области. */
+  tree: "takt.ui.tree",
 };
 
 /** Читает настройку; `fallback` - если её нет либо хранилище недоступно. */

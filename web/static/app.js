@@ -104,6 +104,8 @@ export async function main() {
   shell.attachLogRows(dom.logsplit, localStorage);
   shell.attachLegendRows(dom.legendrows, localStorage);
   shell.attachLegendCols(dom.legendcols, localStorage);
+  // Ширина структуры проекта: та же ручка правил, своя ось и своя память.
+  shell.attachTree(dom.treesplit, localStorage);
   // Перенос строк - Одна настройка на все области кода: так человек читает код вообще,
   // а не конкретную панель.
   shell.attachWrap(
@@ -117,7 +119,10 @@ export async function main() {
   // Прочие настройки интерфейса - оттуда же: вкладка и бюджет прогона.
   dom.budget.value = shell.setting(localStorage, shell.UI_KEYS.budget, dom.budget.value);
   selectTab(shell.setting(localStorage, shell.UI_KEYS.tab, "output"));
-  selectPanel(shell.setting(localStorage, shell.UI_KEYS.panel, "output"));
+  // Читается только известное значение: в памяти читателя мог остаться выбор
+  // области, которой больше нет, и страница открылась бы без вывода вовсе.
+  selectPanel(shell.setting(localStorage, shell.UI_KEYS.panel, "output") === "output" ? "output" : null);
+  showDiagnosticsPane(shell.setting(localStorage, shell.UI_KEYS.diagnostics, "1") === "1");
   // Подсказки - свои, а не нативные: `title` в разметке нет вовсе.
   tip.attach(document);
   await useLanguage(i18n.pick(i18n.stored(localStorage), navigator.languages ?? []));
@@ -139,7 +144,6 @@ export async function main() {
   showVersion();
   fillTargets(version.targets ?? []);
   picks.target = enhance(dom.target);
-  picks.scenariofile = enhance(dom.scenariofile);
   watchBuild();
   for (const node of [dom.editor, dom.output, dom.diagnostics, dom.trace]) fade(node);
 
@@ -242,20 +246,21 @@ export async function main() {
     args: () => state.args,
     // Сценариев в проекте бывает несколько (09n): список и выбранный приходят от того,
     // кто знает состав проекта, - страница их только показывает.
-    scenarios: (names, chosen) => fillScenarios(names, chosen),
-    // Имя приходит вместе с текстом: выбор сценария делают в двух местах - списком
-    // файлов и этим списком, - и величина у него одна. Обнови только текст, и подпись
-    // показывала бы один сценарий, а прогон шёл бы по другому.
-    openScenario: (text, name) => {
+    // Список сценариев показывает структура проекта: своего выбора у прогона
+    // нет, и второй список разошёлся бы с деревом.
+    scenarios: () => {},
+    openScenario: (text) => {
       state.scenario = text;
       state.scenarioEditor.setValue(text);
       paintScenario();
-      if (name) setPick("scenariofile", name);
     },
-    showTrace: () => selectPanel("trace"),
-    showScheme: () => selectPanel("scheme"),
+    showTrace: () => showSource("scenario"),
+    showScheme: () => showSource("scheme"),
     say,
   });
+  // Структура проекта рисуется сразу: без входа она говорит, что проекта нет, -
+  // пустая область читалась бы как поломка.
+  account.paintEmptyTree();
   // Возврат с площадки разбирается до восстановления состояния: во фрагменте там
   // ticket, а не ссылка-снимок, и принять одно за другое нельзя.
   const returned = await account.handleReturn();
@@ -467,16 +472,17 @@ function cache() {
   for (const id of [
     "editor", "diagnostics", "output", "trace", "version", "target", "args",
     "scenario", "budget", "share", "format", "status", "tabs", "modes",
-    "lang", "tools-lang", "tools-lang-trace", "update", "showgen", "showsim", "grip", "split", "hsplit", "wrap", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
+    "lang", "tools-lang", "tools-lang-trace", "update", "showgen", "showdiag", "grip", "split", "hsplit", "wrap", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
     "account", "session", "icon-enter", "icon-leave",
     "save", "openfile", "panel", "signedout", "signedin", "whoami",
     "whoami-bar",
     "signin-modal", "signin-cancel", "login", "password", "signin", "signup", "signout", "newname", "newproject",
-    "projects", "files", "conflict", "conflicttext", "reread", "overwrite",
+    "projects", "conflict", "conflicttext", "reread", "overwrite",
     "oauth", "pick", "picklogin", "pickok", "profile", "links", "newpass",
     "setpass", "download", "upload", "showcase", "finder", "query", "findbtn",
-    "found", "more", "doc", "sourcetitle", "openfilename", "scenariopick",
-    "scenariofile", "showscheme", "scheme-notice", "scheme-notice-text", "scheme-drop",
+    "found", "more", "doc", "sourcetitle", "openfilename",
+    "scheme-notice", "scheme-notice-text", "scheme-drop",
+    "tree", "treesplit", "diagnostics-head",
     "crumbs", "scheme-up", "stage", "scheme", "sheet", "nav", "map",
     "panel-run", "panel-view", "panel-sheet", "settings",
     "scheme-empty", "legend", "zoom", "alerts",
@@ -538,9 +544,6 @@ function wire() {
     i18n.remember(localStorage, dom.lang.value);
     await useLanguage(dom.lang.value);
   });
-  dom.scenariofile.addEventListener("change", () => {
-    account.chooseScenario(dom.scenariofile.value);
-  });
   dom.format.addEventListener("click", format);
   // Прогон, шаг и стоп живут в строке уровня схемы: прогон смотрят на схеме -
   // она показывает ход автомата подсветкой, а вкладка прогона несёт лог и
@@ -556,8 +559,7 @@ function wire() {
   // Панель включается своей кнопкой и выключается ею же: нажатая ещё раз кнопка
   // закрывает область - так автор освобождает экран под модель.
   dom.showgen.addEventListener("click", () => selectPanel(state.panel === "output" ? null : "output"));
-  dom.showsim.addEventListener("click", () => selectPanel(state.panel === "trace" ? null : "trace"));
-  dom.showscheme.addEventListener("click", () => selectPanel(state.panel === "scheme" ? null : "scheme"));
+  dom.showdiag.addEventListener("click", () => showDiagnosticsPane(dom.diagnostics.hidden));
   // Запись журнала выделяется щелчком: в длинной трассе так не теряют место, к
   // которому вернулись. Выделена всегда одна - это отметка чтения, а не отбор.
   dom.trace.addEventListener("click", (event) => {
@@ -679,6 +681,10 @@ function showKind() {
   dom.sourcetitle.dataset.i18n = key;
   dom.sourcetitle.textContent = t(key);
   dom.openfilename.textContent = state.file;
+  // Чем показать файл, решает его род: модель и пояснение правятся кодом,
+  // сценарий - своим полем, раскладка показывается схемой. Отдельных областей
+  // у сценария и схемы нет: они такие же файлы проекта, как модель.
+  showSource({ scenario: "scenario", layout: "scheme" }[state.kind] ?? "code");
   // Ключи сборки к пояснению отношения не имеют: вкладки уходят вместе с выводом цели,
   // а их место занимает показ.
   if (state.panel === "output") selectPanel("output");
@@ -797,26 +803,6 @@ function notice(text) {
   node.className = "flag-note";
   node.textContent = text;
   return node;
-}
-
-/**
- * Наполняет выбор сценария.
- *
- * Список пуст - выбора не показываем вовсе: одна строка "сценариев нет"
- * заняла бы место и ничего не сообщила, а вкладка прогона и без файла
- * работает - сценарий можно набрать прямо в ней.
- */
-function fillScenarios(names, chosen) {
-  dom.scenariofile.replaceChildren();
-  for (const name of names) {
-    const option = document.createElement("option");
-    option.value = name;
-    option.textContent = name;
-    dom.scenariofile.appendChild(option);
-  }
-  dom.scenariopick.hidden = names.length === 0;
-  if (chosen) setPick("scenariofile", chosen);
-  else picks.scenariofile?.refresh();
 }
 
 /** Красит сценарий как JSON: разбор свой, раскладчик строк общий. */
@@ -1095,14 +1081,13 @@ function stepOnce() {
 /**
  * Куда смотреть во время прогона.
  *
- * Открыта схема - она и показывает ход: узлы подсвечиваются, и уводить автора на
- * вкладку прогона значило бы отнять у него то, ради чего он схему открыл. В любой
- * другой области трасса нужна: иначе прогон идёт молча.
+ * Ход показывает схема: узлы подсвечиваются, а журнал идёт под холстом. Открыта
+ * она - трогать нечего; открыто другое - схема и открывается, иначе прогон идёт
+ * молча.
  */
 function showRun() {
-  if (state.panel === "scheme") return;
-  selectPanel("trace");
-  selectMode("trace");
+  if (!panel("scheme")?.hidden) return;
+  showSource("scheme");
 }
 
 function stop() {
@@ -1259,17 +1244,43 @@ function panels(...names) {
   return names.map(panel).filter(Boolean);
 }
 
+/**
+ * Показывает или прячет область диагностик.
+ *
+ * Список - часть области кода, а не самостоятельная область: он говорит о том,
+ * что открыто рядом. Прячется он вместе со своей шапкой и разделителем: ручка,
+ * которой нечего делить, тянулась бы в пустоту.
+ */
+function showDiagnosticsPane(show) {
+  dom.diagnostics.hidden = !show;
+  dom.hsplit.hidden = !show;
+  dom["diagnostics-head"].hidden = !show;
+  dom.showdiag.setAttribute("aria-pressed", String(show));
+  shell.remember(localStorage, shell.UI_KEYS.diagnostics, show ? "1" : "0");
+}
+
+/**
+ * Показывает в области кода то, чем открытый файл смотрят.
+ *
+ * Область одна на все роды файлов: читатель работает с тем, что выбрал в
+ * структуре проекта, и вторая область под сценарий или схему заставляла бы его
+ * помнить, где что живёт.
+ */
+function showSource(what) {
+  const scheme = panel("scheme");
+  dom.editor.hidden = what !== "code";
+  dom.scenario.hidden = what !== "scenario";
+  if (scheme) scheme.hidden = what !== "scheme";
+  if (what === "scheme") drawScheme(true);
+}
+
 function selectPanel(name) {
   state.panel = name;
   dom.showgen.setAttribute("aria-pressed", String(name === "output"));
-  dom.showsim.setAttribute("aria-pressed", String(name === "trace"));
-  dom.showscheme.setAttribute("aria-pressed", String(name === "scheme"));
-  panel("scheme").hidden = name !== "scheme";
   // У пояснения место вывода занимает показ (09n): компилировать его нечем, а вкладка
   // "Ключи сборки" говорила бы о сборке, которой не будет.
   const doc = state.kind === "markdown";
   dom.tabs.hidden = name !== "output" || doc;
-  panel("trace").hidden = name !== "trace";
   panel("doc").hidden = !(name === "output" && doc);
   if (name === "output" && doc) {
     for (const panel of panels("output", "flags")) {
@@ -1286,7 +1297,6 @@ function selectPanel(name) {
   // модели в него не печатались. Схема - по тому же правилу, и вдобавок вид листа
   // проверяется: закрыть панель могли с отведённым в сторону холстом.
   if (name === "output") compile();
-  if (name === "scheme") drawScheme(true);
 }
 
 /**
@@ -1304,7 +1314,9 @@ function selectMode(name) {
     mode.classList.toggle("active", active);
     mode.setAttribute("aria-selected", String(active));
   }
-  if (name !== "source") selectPanel(name);
+  // Область вывода на узком экране открывается вместе со своим режимом; код и
+  // структура своих панелей не имеют - их показывает раскладка.
+  if (name === "output") selectPanel("output");
 }
 
 /**

@@ -121,7 +121,7 @@ export function attach(nodes, callbacks) {
     const row = event.target.closest("[data-project]");
     if (row) openProject(row.dataset.project);
   });
-  dom.files.addEventListener("click", (event) => {
+  dom.tree.addEventListener("click", (event) => {
     const row = event.target.closest("[data-file]");
     if (row) openFile(state.project?.id, row.dataset.file);
   });
@@ -587,22 +587,66 @@ async function list() {
   }
 }
 
+/**
+ * Рисует структуру проекта: файлы по родам, в порядке рода и имени.
+ *
+ * Род - не украшение: файлы открываются по-разному (модель правится кодом,
+ * сценарий своим полем, раскладка показывается схемой), и читателю нужно видеть
+ * это до щелчка. Подпись рода - ключ словаря: текст здесь завёл бы второй
+ * словарь.
+ */
+function paintTree(files) {
+  // Роды перечислены ключами словаря, а не собраны строкой: собранный ключ
+  // сверке невидим, и подпись рода пропала бы молча.
+  const KINDS = [
+    { kind: "takt", label: "tree.kind.takt" },
+    { kind: "layout", label: "tree.kind.layout" },
+    { kind: "scenario", label: "tree.kind.scenario" },
+    { kind: "markdown", label: "tree.kind.markdown" },
+  ];
+  dom.tree.replaceChildren();
+  if (files.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "tree-kind";
+    empty.dataset.i18n = "tree.empty";
+    empty.textContent = t("tree.empty");
+    dom.tree.appendChild(empty);
+    return;
+  }
+  for (const { kind, label } of KINDS) {
+    const own = files.filter((file) => file.kind === kind).sort((a, b) => a.name.localeCompare(b.name));
+    if (own.length === 0) continue;
+    const group = document.createElement("div");
+    group.className = "tree-group";
+    const title = document.createElement("div");
+    title.className = "tree-kind";
+    title.dataset.i18n = label;
+    title.textContent = t(label);
+    group.appendChild(title);
+    for (const file of own) {
+      const node = document.createElement("button");
+      node.type = "button";
+      node.className = "tree-file";
+      node.dataset.file = file.name;
+      node.dataset.kind = file.kind;
+      node.textContent = file.name;
+      group.appendChild(node);
+    }
+    dom.tree.appendChild(group);
+  }
+}
+
+/** Рисует пустую структуру: страница открыта без проекта. */
+export function paintEmptyTree() {
+  if (!state.project) paintTree([]);
+}
+
 /** Перечитывает состав файлов открытого проекта. */
 async function openProjectFiles(id) {
   const opened = await api.project(id);
   state.project = opened;
   state.level = opened.level;
-  dom.files.replaceChildren();
-  for (const file of opened.files) {
-    const node = document.createElement("div");
-    node.className = "row";
-    node.dataset.file = file.name;
-    // Род виден в списке: файлы трёх родов различаются не только расширением, и по
-    // щелчку они открываются по-разному.
-    node.dataset.kind = file.kind;
-    node.textContent = file.name;
-    dom.files.appendChild(node);
-  }
+  paintTree(opened.files);
   // Сценариев бывает несколько: проект называет свой, и он же становится умолчанием. Не
   // назови - прогон шёл бы по первому по имени, то есть не по тому, на котором автор
   // показывает работу модели.
