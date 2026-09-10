@@ -129,15 +129,16 @@ function span(touches) {
 
 /**
  * Текст плашки композиции: активные внутренние состояния - подписью автора, если
- * она есть, иначе именем; у параллели их несколько, через запятую.
+ * она есть, иначе именем (у шага композиции - именем его модели); у параллели их
+ * несколько, через запятую.
  *
- * @param {{name: string, alias?: string}[]} nodes узлы внутреннего листа
+ * @param {{name: string, alias?: string, model?: string}[]} nodes узлы внутреннего листа
  * @param {Set<string>} running активные состояния такта (имена всех уровней)
  */
 export function innerLabel(nodes, running) {
   return nodes
     .filter((node) => running.has(node.name))
-    .map((node) => node.alias || node.name)
+    .map((node) => node.alias || node.model || node.name)
     .join(", ");
 }
 
@@ -400,6 +401,7 @@ export class Scheme {
     return {
       key: found.path,
       path: found.path,
+      namesAt: found.path,
       title: found.path === "/" ? this.t("scheme.root") : found.name,
       editable: true,
       nodes,
@@ -412,6 +414,10 @@ export class Scheme {
   /** Лист композиции: строится из выражения и не хранится. */
   compositionSheet(node, sheetPath) {
     const composed = geo.composeSheet(node.implements);
+    // Лист не хранится, но подписи автора у его квадратов - хранятся: запись листа
+    // ключуется путём листа-владельца и именем составного состояния.
+    const key = `${sheetPath}#${node.name}`;
+    const names = this.layout.sheets?.[key]?.names ?? {};
     const nodes = composed.nodes.map((n, i) => ({
       name: n.name,
       kind: "composition",
@@ -419,7 +425,8 @@ export class Scheme {
       x: n.x,
       y: n.y,
       unplaced: false,
-      alias: n.model,
+      alias: names[n.name] ?? "",
+      model: n.model,
       implements: n.path ? { model: { name: n.model, path: n.path } } : null,
       mark: `S${i + 1}`,
     }));
@@ -437,8 +444,9 @@ export class Scheme {
       mark: "",
     }));
     return {
-      key: `${sheetPath}#${node.name}`,
+      key,
       path: null,
+      namesAt: key,
       title: node.name,
       editable: false,
       nodes,
@@ -836,8 +844,8 @@ export class Scheme {
         ? this.t("scheme.nodeComposition", { mark: node.mark, name: node.name })
         : this.t("scheme.node", { mark: node.mark, name: node.name }),
       "data-tip": node.unplaced && sheet.editable
-        ? `${tipOf(node.mark, node.name, node.alias)} · ${this.t("scheme.unplaced")}`
-        : tipOf(node.mark, node.name, node.alias),
+        ? `${tipOf(node.mark, node.model ?? node.name, node.alias)} · ${this.t("scheme.unplaced")}`
+        : tipOf(node.mark, node.model ?? node.name, node.alias),
     });
     if (composition) {
       const h = geo.SIDE / 2;
@@ -1073,7 +1081,7 @@ export class Scheme {
       onEnter: (name) => this.enter(name),
       onAlias: (name, text) => {
         const before = this.text();
-        layoutFile.nameNode(this.layout, sheet.path, name, text);
+        layoutFile.nameNode(this.layout, sheet.namesAt, name, text);
         this.commitQuiet(before);
       },
       onEdgeAlias: (key, text) => {

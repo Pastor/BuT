@@ -85,21 +85,26 @@ export function paintLegend(container, ctx) {
     ),
   );
   for (const node of sheet.nodes) {
+    // Шаг композиции называется моделью, которая его реализует: имя узла листа -
+    // служебное (`Heater#1`), автору оно ничего не говорит.
+    const source = node.model ?? node.name;
     const line = row([
       span("legend-mark", node.mark),
-      span("legend-name", node.name),
-      sheet.editable
+      span("legend-name", source),
+      // Подпись ставится и на листе композиции: он строится из выражения, но
+      // подписи его квадратов живут в раскладке, как у состояний.
+      sheet.namesAt
         ? aliasField(
             node.alias,
             t("scheme.legend.aliasEmpty"),
-            t("scheme.legend.aliasOf", { name: node.name }),
+            t("scheme.legend.aliasOf", { name: source }),
             (text) => ctx.onAlias(node.name, text),
           )
         : span("legend-name", node.alias ?? ""),
       span("legend-kind", ctx.kinds[node.kind] ?? node.kind),
     ]);
     if (node.name === ctx.selectedNode) line.setAttribute("aria-selected", "true");
-    line.setAttribute("data-tip", tipOf(node.mark, node.name, node.alias));
+    line.setAttribute("data-tip", tipOf(node.mark, source, node.alias));
     line.addEventListener("click", (event) => {
       if (event.target.tagName !== "INPUT") ctx.onNode(node.name);
     });
@@ -243,9 +248,9 @@ export function paintNav(container, ctx) {
     line.className = "nav-row nav-state";
     line.type = "button";
     line.setAttribute("aria-selected", String(node.name === ctx.selectedNode));
-    line.setAttribute("data-tip", tipOf(node.mark, node.name, node.alias));
+    line.setAttribute("data-tip", tipOf(node.mark, node.model ?? node.name, node.alias));
     line.appendChild(span("nav-mark", node.mark));
-    line.appendChild(document.createTextNode(node.alias || node.name));
+    line.appendChild(document.createTextNode(node.alias || node.model || node.name));
     line.appendChild(span("nav-kind", ctx.kinds[node.kind] ?? node.kind));
     line.addEventListener("click", () => ctx.onNode(node.name));
     line.addEventListener("dblclick", () => ctx.onEnter(node.name));

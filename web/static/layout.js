@@ -475,6 +475,11 @@ export function legendAt(layout, placeName, x, y) {
   return layout;
 }
 
+/** Ключ записи листа композиции: путь листа-владельца и имя составного состояния. */
+export function compositionKey(path, name) {
+  return `${path}#${name}`;
+}
+
 /**
  * Сверяет раскладку с графом модуля.
  *
@@ -492,6 +497,11 @@ export function reconcile(layout, graph) {
   let extras = 0;
   for (const sheetOfGraph of graph?.sheets ?? []) {
     known.add(sheetOfGraph.path);
+    // Лист композиции не хранится, но подписи его квадратов - хранятся, под ключом
+    // "путь листа#составное состояние": пока состояние есть, запись его.
+    for (const node of sheetOfGraph.nodes) {
+      if (node.implements) known.add(compositionKey(sheetOfGraph.path, node.name));
+    }
     const stored = layout?.sheets?.[sheetOfGraph.path];
     const nodes = isObject(stored?.nodes) ? stored.nodes : {};
     const names = isObject(stored?.names) ? stored.names : {};
@@ -545,8 +555,15 @@ export function prune(layout, graph) {
  */
 export function rename(layout, path, from, to) {
   const out = normalize(layout);
+  if (from === to) return out;
+  // Подписи шагов композиции живут под именем составного состояния - уходят с ним.
+  const inner = out.sheets[compositionKey(path, from)];
+  if (inner) {
+    out.sheets[compositionKey(path, to)] = inner;
+    delete out.sheets[compositionKey(path, from)];
+  }
   const stored = out.sheets[path];
-  if (!stored || from === to) return out;
+  if (!stored) return out;
   for (const map of [stored.nodes, stored.names]) {
     if (map[from] !== undefined) {
       map[to] = map[from];

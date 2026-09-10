@@ -245,6 +245,24 @@ test("раскладка: негодный файл - названная при�
   assert.equal(odd.legend, undefined);
 });
 
+test("раскладка: подписи шагов композиции хранятся и уходят с состоянием", () => {
+  const graph = {
+    sheets: [{ path: "/", nodes: [{ name: "Main", implements: { model: { name: "Heater" } } }, { name: "Done" }], edges: [] }],
+  };
+  const stored = layout.empty();
+  layout.place(stored, "/", "Main", 8, 8);
+  layout.place(stored, "/", "Done", 16, 8);
+  layout.nameNode(stored, layout.compositionKey("/", "Main"), "Heater#1", "Нагреватель");
+  assert.deepEqual(layout.reconcile(stored, graph).extraSheets, [], "запись композиции - не лишняя");
+  assert.equal(layout.prune(stored, graph).sheets["/#Main"].names["Heater#1"], "Нагреватель", "чистка её не снимает");
+  const renamed = layout.rename(stored, "/", "Main", "Work");
+  assert.equal(renamed.sheets["/#Work"].names["Heater#1"], "Нагреватель", "уходит с состоянием");
+  assert.equal(renamed.sheets["/#Main"], undefined);
+  // Состояния больше нет - запись его композиции лишняя.
+  const gone = { sheets: [{ path: "/", nodes: [{ name: "Done" }], edges: [] }] };
+  assert.deepEqual(layout.reconcile(stored, gone).extraSheets, ["/#Main"]);
+});
+
 test("раскладка: сверка находит неразмещённые и лишние записи", () => {
   const stored = layout.empty();
   layout.place(stored, "/", "A", 8, 16);
