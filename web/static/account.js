@@ -1396,7 +1396,14 @@ async function openProject(id) {
   try {
     await openProjectFiles(id);
     const opened = state.project;
-    const first = opened.main_file ?? opened.files[0]?.name ?? null;
+    // Без назначенного активного файла открывается модель, а не первый файл по
+    // алфавиту: `test-cold.json` стоит раньше `test.takt` (`-` меньше `.`), и
+    // проект открывался сценарием при пустом редакторе модели.
+    const first =
+      opened.main_file ??
+      opened.files.find((file) => file.kind === "takt")?.name ??
+      opened.files[0]?.name ??
+      null;
     if (first) {
       await openFile(id, first);
     } else {
