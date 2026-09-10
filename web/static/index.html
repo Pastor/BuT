@@ -423,13 +423,11 @@
               data-i18n-attr="data-tip:file.drop;aria-label:file.drop"
               data-tip="Удалить файл" aria-label="Удалить файл"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l1 12.5h9l1-12.5"/></svg></button>
     </div>
-    <!-- Список доступных проектов стоит в самой панели, а не в окне: проект
-         выбирают глазами и открывают кнопкой, а окно пряталось бы за первым же
-         открытием и не показывало бы, где автор находится. -->
+    <!-- Панель показывает одно из двух: пока проект не открыт - список проектов
+         (выбирают глазами, открывают кнопкой), открыли - его состав. Две части
+         разом заставляли бы искать нужную среди ненужных. -->
     <div id="projects" class="tree-projects list" data-i18n-attr="aria-label:account.projects"
          aria-label="Мои проекты"></div>
-    <div id="treesplit-files" class="split split-h" role="separator" aria-orientation="horizontal"
-         data-i18n-attr="aria-label:tree.rows" aria-label="Высота списка проектов" tabindex="0"></div>
     <div id="tree" class="tree" data-i18n-attr="aria-label:tree.title"
          aria-label="Структура проекта"></div>
   </section>

@@ -875,7 +875,11 @@ async function drop() {
     state.doomed = null;
     // Удалённый проект мог быть открытым: страница возвращается к безымянному
     // буферу, иначе она показывала бы состав того, чего нет.
-    if (state.project?.id === doomed.id) closeProject(false);
+    // Удалённый проект закрывается без сохранения: писать в него уже некуда.
+    if (state.project?.id === doomed.id) {
+      state.level = "none";
+      await closeProject(false);
+    }
     host.say(t("account.dropped", { name: doomed.name }), "ok");
     refresh();
     await list();
@@ -890,7 +894,18 @@ async function drop() {
  * Текст не трогается: закрытие проекта - не потеря работы, и то, что автор
  * набрал, остаётся у него на экране и в черновике.
  */
-function closeProject(say = true) {
+async function closeProject(say = true) {
+  // Выход из проекта - с сохранением: автор уходит из него, а не выбрасывает
+  // работу. Молча терять набранное нельзя, а спрашивать "сохранить ли" на каждый
+  // выход значит спрашивать о том, чего никто не хочет иначе.
+  if (editing() && (state.level === "edit" || state.level === "owner")) {
+    try {
+      await save();
+    } catch {
+      // Отказ записи назван самим сохранением; проект всё равно закрывается -
+      // иначе автор оказался бы заперт в нём отказом сервера.
+    }
+  }
   state.project = null;
   state.file = null;
   state.picked = null;
@@ -1406,6 +1421,11 @@ async function openFile(id, name) {
   if (kindOf(name) === "scenario") {
     await chooseScenario(name);
     host.showTrace();
+    // Полоса действий обновляется и здесь: открытие сценария - такое же
+    // открытие файла, и уйди мы отсюда молча, кнопки открытого проекта не
+    // появились бы вовсе - у проекта, чей активный файл сценарий, полоса
+    // осталась бы полосой закрытого.
+    refresh();
     return;
   }
   // Раскладка - не самостоятельный документ: щелчок по ней открывает парную модель со
@@ -1416,6 +1436,8 @@ async function openFile(id, name) {
       await openFile(id, pair);
       host.showScheme();
     }
+    // Раскладка без своей модели тоже открытие: полоса обязана ответить.
+    refresh();
     return;
   }
   try {
@@ -1681,17 +1703,21 @@ function refresh() {
   // группы разом заставляли бы искать нужную среди ненужных.
   const opened = state.project !== null;
   const writes = opened && (state.level === "edit" || state.level === "owner");
-  // Список проектов стоит в панели всегда, поэтому и действия над ними не
-  // прячутся: открыть выбранный можно и не закрывая текущий. Переименование и
-  // удаление - право владельца: предлагать действие, которое сервер отвергнет,
-  // нельзя.
+  // Панель показывает одно из двух, и полоса отвечает тому, что показано: пока
+  // проект не открыт - список проектов и действия над ними; открыли - его состав
+  // и действия над файлами. Обе группы разом заставляли бы искать нужную среди
+  // ненужных.
   const chosen = state.chosen;
   const mine = chosen?.level === "owner";
-  dom.newproject.hidden = false;
-  dom.openproject.hidden = !chosen;
-  dom.renameproject.hidden = !mine;
-  dom.dropproject.hidden = !mine;
-  dom.importproject.hidden = false;
+  dom.projects.hidden = opened;
+  dom.tree.hidden = !opened;
+  dom.newproject.hidden = opened;
+  dom.openproject.hidden = opened || !chosen;
+  // Переименование и удаление - право владельца: предлагать действие, которое
+  // сервер отвергнет, нельзя.
+  dom.renameproject.hidden = opened || !mine;
+  dom.dropproject.hidden = opened || !mine;
+  dom.importproject.hidden = opened;
   dom.download.hidden = !opened;
   dom.closeproject.hidden = !opened;
   // Заводить и удалять файлы вправе тот, кто вправе писать: чужой проект

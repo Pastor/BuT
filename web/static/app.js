@@ -127,9 +127,6 @@ export async function main() {
   shell.attachLegendCols(dom.legendcols, localStorage);
   // Размер структуры проекта: та же ручка правил, а ось и границы у неё свои -
   // сторону выбирает читатель, а нижнюю границу задаёт длина имён файлов.
-  // Список проектов и состав открытого делят высоту панели: у каждой части свой
-  // предмет, и граница между ними принадлежит читателю.
-  shell.attachProjects(dom["treesplit-files"], localStorage);
   shell.attachTree(dom.treesplit, localStorage, {
     side: () => state.treeSide,
     least: () => measureTree() ?? 0,
@@ -578,7 +575,7 @@ function cache() {
     "tree", "treesplit", "diagnostics-head", "diagclear", "showtree",
     "openproject", "createproject", "createcancel",
     "renameproject", "dropproject", "projectname", "projectnameok", "projectnamecancel",
-    "projectname-modal", "treesplit-files",
+    "projectname-modal",
     "dropok", "dropcancel", "droptext", "fromsample", "closeproject",
     "newfile", "dropfile", "renamefile", "uploadfile", "downloadfile", "filepick",
     "importproject", "filekinds", "filename", "filepreview",

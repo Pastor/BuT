@@ -291,7 +291,6 @@
   "source.actions": "Text actions",
   "settings.wrap.off": "do not wrap",
   "tree.title": "Project files",
-  "tree.rows": "Project list height",
   "tree.width": "Files pane width",
   "modes.tree": "Project",
   "tree.kind.takt": "Models",

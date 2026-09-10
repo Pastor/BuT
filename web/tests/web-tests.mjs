@@ -1056,13 +1056,19 @@ test("файлы проекта: полоса отвечает на один в�
   const account = await readFile(new URL("../static/account.js", import.meta.url), "utf8");
   const api = await readFile(new URL("../static/api.js", import.meta.url), "utf8");
 
-  // Список проектов стоит в панели всегда, и действия над ними не прячутся:
-  // открыть выбранный можно и не закрывая текущий. Открытие спрашивает выбор,
-  // переименование и удаление - право владельца.
-  assert.match(account, /dom\.openproject\.hidden = !chosen;/, "открытие не спрашивает выбор");
-  assert.match(account, /dom\.renameproject\.hidden = !mine;/, "переименование не по праву владельца");
-  assert.match(account, /dom\.dropproject\.hidden = !mine;/, "удаление не по праву владельца");
+  // Панель показывает одно из двух, и полоса отвечает показанному: пока проект
+  // не открыт - список проектов и действия над ними; открыли - его состав и
+  // действия над файлами.
+  assert.match(account, /dom\.projects\.hidden = opened;/, "список проектов виден внутри проекта");
+  assert.match(account, /dom\.tree\.hidden = !opened;/, "состав виден без проекта");
+  assert.match(account, /dom\.newproject\.hidden = opened;/, "заведение проекта видно внутри");
+  assert.match(account, /dom\.openproject\.hidden = opened \|\| !chosen;/, "открытие не спрашивает выбор");
+  assert.match(account, /dom\.renameproject\.hidden = opened \|\| !mine;/, "переименование не по праву владельца");
+  assert.match(account, /dom\.dropproject\.hidden = opened \|\| !mine;/, "удаление не по праву владельца");
   assert.match(account, /dom\.closeproject\.hidden = !opened;/, "закрытие видно без проекта");
+  // Выход из проекта - с сохранением: автор уходит, а не выбрасывает работу.
+  assert.match(account, /async function closeProject[\s\S]{0,400}?await save\(\);/,
+    "закрытие проекта не сохраняет работу");
   // Заводить и удалять файлы вправе тот, кто вправе писать.
   assert.match(account, /dom\.newfile\.hidden = !writes;/, "заведение файла не по праву записи");
   assert.match(account, /dom\.dropfile\.hidden = !writes;/, "удаление файла не по праву записи");
@@ -1331,6 +1337,20 @@ test("схема перестраивается по показанному, а 
   const draw = app.slice(app.indexOf("function drawScheme"), app.indexOf("\n}", app.indexOf("function drawScheme")));
   assert.match(draw, /state\.shown !== "scheme"/, "перестроение не смотрит на показанное");
   assert.match(draw, /setGraph\(/, "перестроение не строит граф");
+});
+
+test("открытие файла любого рода обновляет полосу действий", async () => {
+  // Предмет - полнота ответа полосы. У открытия три ветви: сценарий назначается
+  // активным, раскладка открывает парную модель, прочее читается с сервера.
+  // Уйди ветвь молча - у проекта, чей активный файл сценарий, полоса осталась бы
+  // полосой закрытого: ни закрыть, ни завести файл.
+  const account = await readFile(new URL("../static/account.js", import.meta.url), "utf8");
+  const from = account.indexOf("async function openFile(");
+  const body = account.slice(from, account.indexOf("\n}", account.indexOf("keepScenario", from)));
+  const returns = body.split("\n").filter((line) => line.trim() === "return;").length;
+  const refreshes = body.split("\n").filter((line) => line.trim() === "refresh();").length;
+  assert.ok(returns >= 2, "ветвей раннего выхода стало меньше - проверьте набор");
+  assert.ok(refreshes >= returns, `ветвей ${returns}, обновлений полосы ${refreshes}`);
 });
 
 test("действия над файлом обращены к выбранному в структуре", async () => {

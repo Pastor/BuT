@@ -291,7 +291,6 @@
   "source.actions": "Действия над текстом",
   "settings.wrap.off": "не переносить",
   "tree.title": "Структура проекта",
-  "tree.rows": "Высота списка проектов",
   "tree.width": "Ширина структуры",
   "modes.tree": "Проект",
   "tree.kind.takt": "Модели",
