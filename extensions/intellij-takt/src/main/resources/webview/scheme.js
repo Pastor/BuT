@@ -323,6 +323,7 @@ export class Scheme {
         cond: e.condition ?? null,
         alias: record.name ?? "",
         points: record.points ?? [],
+        ends: layoutFile.endsOf(record),
         label: record.label ?? null,
         loop: e.from === e.to,
         range: e.range,
@@ -699,6 +700,9 @@ export class Scheme {
         group.appendChild(pin);
       });
       group.addEventListener("dblclick", (event) => this.addPinAt(event, sheet, edge, pts));
+      if (!edge.loop) {
+        for (const side of ["from", "to"]) group.appendChild(this.endPin(sheet, edge, pts, side));
+      }
     }
     group.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -1141,6 +1145,70 @@ export class Scheme {
         } else {
           this.selectNode(node.name);
         }
+      },
+      onCancel: () => {
+        this.layout = layoutFile.parse(before).layout;
+        this.draw();
+      },
+    });
+  }
+
+  /**
+   * Ручка конца ребра: там, где ребро примыкает к узлу.
+   *
+   * Видна тогда же, когда изломы, - при выборе ребра и наведении. Конец ведут по
+   * окружности узла (либо стрелками клавиатуры), и он встаёт в ближайшую из
+   * шестнадцати точек; двойной щелчок снимает закрепление, и конец снова ставит
+   * раздача.
+   */
+  endPin(sheet, edge, pts, side) {
+    const at = side === "from" ? pts[0] : pts[pts.length - 1];
+    const node = sheet.nodes.find((n) => n.name === edge[side]);
+    const pin = mk("circle", {
+      class: `pin end-pin${Number.isInteger(edge.ends[side]) ? " fixed" : ""}`,
+      cx: at[0],
+      cy: at[1],
+      r: geo.SNAP / 2,
+      tabindex: 0,
+      role: "button",
+      "aria-label": this.t("scheme.endHint"),
+    });
+    const set = (port) => {
+      const before = this.text();
+      layoutFile.endAt(this.layout, sheet.path, edge.key, side, port);
+      this.selectedEdge = edge.key;
+      this.commit(before);
+    };
+    pin.addEventListener("pointerdown", (event) => this.dragEnd(event, sheet, edge, side, node, at, pin));
+    pin.addEventListener("dblclick", (event) => {
+      event.stopPropagation();
+      set(null);
+    });
+    pin.addEventListener("keydown", (event) => {
+      const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[event.key];
+      if (!step || !node) return;
+      event.preventDefault();
+      event.stopPropagation();
+      set((geo.portToward(node, at) + step + geo.PORTS) % geo.PORTS);
+    });
+    return pin;
+  }
+
+  /** Перенос конца ребра: точка - ближайшая к указателю по направлению из центра узла. */
+  dragEnd(event, sheet, edge, side, node, origin, pin) {
+    if (!node) return;
+    const before = this.text();
+    this.drag(event, {
+      onStart: () => pin.classList.add("dragging"),
+      onMove: (dx, dy) => {
+        layoutFile.endAt(this.layout, sheet.path, edge.key, side, geo.portToward(node, [origin[0] + dx, origin[1] + dy]));
+        this.selectedEdge = edge.key;
+        this.selected = null;
+        this.draw();
+      },
+      onEnd: (moved) => {
+        if (moved) this.commit(before);
+        else this.selectEdge(edge.key);
       },
       onCancel: () => {
         this.layout = layoutFile.parse(before).layout;

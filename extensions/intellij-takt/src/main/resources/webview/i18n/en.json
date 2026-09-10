@@ -171,6 +171,7 @@
   "scheme.cornersRound": "Rounded corners",
   "scheme.crossing.hop": "Bridge",
   "scheme.layoutFromDraft": "Scheme restored from draft",
+  "scheme.endHint": "Edge end: drag it around the node, double-click to reset",
   "scheme.crossing.gap": "Gap",
   "scheme.settings.crossing": "Line crossings",
   "scheme.entryHint": "Start arrow: drag it around the circle",

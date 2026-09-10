@@ -33,6 +33,7 @@
 //         "edges": { "<от>><к>:<номер>": {
 //             "points": [[x, y], ...],
 //             "label": { "place": "start" | "center" | "end" | "own", "x": 0, "y": 0 },
+//             "ends": { "from": 0, "to": 8 },
 //             "name": "подпись условия" } } } } }
 //
 // Запись каноническая: ключи отсортированы, отступ два пробела, числа целые, перевод
@@ -259,7 +260,8 @@ function dropIfBare(layout, path, key) {
   const bare =
     !(Array.isArray(record.points) && record.points.length > 0) &&
     !record.label &&
-    !record.name;
+    !record.name &&
+    !(isObject(record.ends) && Object.keys(record.ends).length > 0);
   if (bare) delete edges[key];
 }
 
@@ -414,6 +416,34 @@ export function entryAt(layout, path, port) {
   return layout;
 }
 
+/**
+ * Закрепляет конец ребра за точкой привязки узла; `null` снимает закрепление.
+ *
+ * Конец без записи ставит раздача (`geo.routeSheet`): автор закрепляет только те,
+ * что ему нужны на своём месте, и остальные концы продолжают обходить занятые.
+ *
+ * @param {"from"|"to"} side конец ребра: у источника либо у цели
+ */
+export function endAt(layout, path, key, side, port) {
+  const record = edgeRecord(layout, path, key);
+  const ends = isObject(record.ends) ? record.ends : {};
+  if (isPort(port)) ends[side] = port;
+  else delete ends[side];
+  if (Object.keys(ends).length > 0) record.ends = ends;
+  else delete record.ends;
+  dropIfBare(layout, path, key);
+  return layout;
+}
+
+/** Закреплённые концы ребра: `{from?, to?}`, негодные номера отброшены. */
+export function endsOf(record) {
+  const out = {};
+  for (const side of ["from", "to"]) {
+    if (isPort(record?.ends?.[side])) out[side] = record.ends[side];
+  }
+  return out;
+}
+
 /** Точка привязки стрелки начального состояния листа. */
 export function entryOf(layout, path) {
   const port = layout?.sheets?.[path]?.entry;
@@ -565,6 +595,8 @@ function normalize(raw) {
       const label = cleanLabel(record.label);
       if (label) clean.label = label;
       if (typeof record.name === "string" && record.name.trim() !== "") clean.name = record.name.trim();
+      const ends = endsOf(record);
+      if (Object.keys(ends).length > 0) clean.ends = ends;
       const points = cleanPoints(record.points);
       if (points.length > 0) clean.points = points;
       if (Object.keys(clean).length > 0) edges[key] = clean;

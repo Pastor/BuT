@@ -159,7 +159,8 @@ function course(from, to, points) {
  * Ход ребра тот же, что у `route` (центры узлов и изломы автора), а концы
  * встают в точки, розданные `assignPorts`. Петля самоперехода своей формы не
  * меняет: её концы занимают точки узла, и чужие рёбра их обходят. Так же
- * занимает точку стрелка начального состояния (`reserved`).
+ * занимают точки стрелка начального состояния (`reserved`) и концы, закреплённые
+ * автором (`edge.ends`): раздаются только свободные концы.
  *
  * Угол, поставленный раскладкой (у ребра без изломов автора), следует за
  * точками: он встаёт на вертикаль точки начала и горизонталь точки конца, и
@@ -168,7 +169,7 @@ function course(from, to, points) {
  * они хранятся в файле и видны точками.
  *
  * @param {Map<string, object>} byName узлы листа по именам
- * @param {{from: string, to: string, loop?: boolean, points: number[][]}[]} edges рёбра в порядке листа
+ * @param {{from: string, to: string, loop?: boolean, points: number[][], ends?: {from?: number, to?: number}}[]} edges рёбра в порядке листа
  * @param {Map<string, number>} reserved занятые заранее точки: имя узла - номер
  * @returns {(number[][]|null)[]} ломаная на каждое ребро; `null` - узла нет на листе
  */
@@ -179,7 +180,15 @@ export function routeSheet(byName, edges, reserved = new Map()) {
     taken.get(name).add(port);
   };
   for (const [name, port] of reserved) take(name, port);
+  // Закреплённые концы занимают точки до раздачи: иначе свободный конец,
+  // выбирающий раньше по порядку листа, мог бы встать в точку автора.
+  for (const edge of edges) {
+    if (edge.loop || edge.from === edge.to) continue;
+    if (Number.isInteger(edge.ends?.from)) take(edge.from, edge.ends.from);
+    if (Number.isInteger(edge.ends?.to)) take(edge.to, edge.ends.to);
+  }
   const out = edges.map(() => null);
+  const fixed = [];
   const ends = [];
   const corners = [];
   edges.forEach((edge, k) => {
@@ -196,9 +205,13 @@ export function routeSheet(byName, edges, reserved = new Map()) {
     const pts = course(from, to, edge.points);
     out[k] = pts;
     if ((edge.points ?? []).length === 0 && pts.length === 3) corners.push(k);
-    ends.push({ k, at: 0, node: from, toward: pts[1], far: [to.x, to.y] });
-    ends.push({ k, at: pts.length - 1, node: to, toward: pts[pts.length - 2], far: [from.x, from.y] });
+    const own = { from: edge.ends?.from, to: edge.ends?.to };
+    if (Number.isInteger(own.from)) fixed.push({ k, at: 0, node: from, port: own.from });
+    else ends.push({ k, at: 0, node: from, toward: pts[1], far: [to.x, to.y] });
+    if (Number.isInteger(own.to)) fixed.push({ k, at: pts.length - 1, node: to, port: own.to });
+    else ends.push({ k, at: pts.length - 1, node: to, toward: pts[pts.length - 2], far: [from.x, from.y] });
   });
+  for (const end of fixed) out[end.k][end.at] = portPoint(end.node, end.port);
   const ports = assignPorts(ends, taken);
   ends.forEach((end, i) => {
     out[end.k][end.at] = portPoint(end.node, ports[i]);

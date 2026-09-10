@@ -2079,6 +2079,10 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 .edge-group.selected .pin { opacity: 1; }
 .pin:hover { fill: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface-raised)); }
 .pin.dragging { fill: var(--accent); stroke: var(--accent); opacity: 1; }
+/* Ручка конца ребра - тот же кружок, что излом, но его не тянут куда угодно, а
+ * ведут по окружности узла; закреплённый автором конец залит. */
+.end-pin { cursor: grab; }
+.end-pin.fixed { fill: var(--on-surface); }
 
 /* ── Крошки уровня (`.crumbs`) ───────────────────────────────────────────
  * Строка над листом: путь входа. Последняя крошка - текущий лист и не

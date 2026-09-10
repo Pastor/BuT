@@ -381,6 +381,10 @@ test("геометрия: шестнадцать точек привязки, р
   const [left, right, middle] = down.map((pts) => pts[0]);
   assert.deepEqual(middle, [216, 98], "прямое ребро - точка строго вниз");
   assert.ok(left[0] < top.x && right[0] > top.x, `повороты расходятся по сторонам: ${JSON.stringify(down)}`);
+  // Конец, закреплённый автором, стоит в своей точке, а свободные его обходят.
+  const pinned = geo.routeSheet(byName, [{ ...edges[0] }, { ...edges[1], ends: { to: 8 } }]);
+  assert.deepEqual(pinned[1][pinned[1].length - 1], geo.portPoint(b, 8), "закреплённый конец на месте");
+  assert.notDeepEqual(pinned[0][pinned[0].length - 1], geo.portPoint(b, 8), "свободный конец не встаёт в чужую точку");
   // Точку, занятую стрелкой начального состояния, ребро обходит.
   const kept = geo.routeSheet(byName, [edges[0]], new Map([["B", 8]]));
   assert.notDeepEqual(kept[0][kept[0].length - 1], geo.portPoint(b, 8));
@@ -388,6 +392,17 @@ test("геометрия: шестнадцать точек привязки, р
   // Пересечение под углом - тоже пересечение; вид "разрыв" прерывает линию.
   assert.deepEqual(geo.crossings([[0, 0], [100, 100]], [[[0, 100], [100, 0]]]), [[50, 50]]);
   assert.equal(geo.buildPath([[0, 50], [100, 50]], [[50, 50]], false, "gap"), "M0 50L46 50M54 50L100 50");
+});
+
+test("раскладка: закреплённые концы ребра пишутся номерами точек и снимаются", () => {
+  const stored = layout.empty();
+  layout.endAt(stored, "/", "A>B:0", "to", 8);
+  layout.endAt(stored, "/", "A>B:0", "from", 99);
+  const text = layout.canonical(stored);
+  assert.match(text, /"ends": \{\s*"to": 8\s*\}/, "негодный номер не пишется");
+  assert.deepEqual(layout.endsOf(layout.parse(text).layout.sheets["/"].edges["A>B:0"]), { to: 8 });
+  layout.endAt(stored, "/", "A>B:0", "to", null);
+  assert.doesNotMatch(layout.canonical(stored), /A>B/, "снятое закрепление не оставляет пустой записи");
 });
 
 test("раскладка: черновик сильнее проекта, но только когда он о другом", () => {
