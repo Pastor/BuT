@@ -666,12 +666,18 @@ export class Scheme {
         : this.t("scheme.edge", { from: edge.from, to: edge.to }),
     });
     const marker = `${edge.kind === "next" ? "arrow-solid" : "arrow-open"}${selected ? "-sel" : ""}`;
+    const d = geo.buildPath(pts, hops, this.layout.corners, layoutFile.viewOf(this.layout).crossing, edge.points.length === 0);
+    // Ореол под линией проступает при наведении: так видно, что щелчок выделит
+    // именно это ребро. Полоса нажатия поверх линии шире штриха - в ребро
+    // попадают, не целясь в пиксель.
+    group.appendChild(mk("path", { class: "edge-halo", d }));
     const line = mk("path", {
       class: `edge${selected ? " selected" : ""}${edge.loop ? " edge-loop" : ""}`,
-      d: geo.buildPath(pts, hops, this.layout.corners, layoutFile.viewOf(this.layout).crossing, edge.points.length === 0),
+      d,
       "marker-end": `url(#${marker})`,
     });
     group.appendChild(line);
+    group.appendChild(mk("path", { class: "edge-hit", d }));
     if (edge.cond) {
       // Умолчание места знака - настройка вида, своё место ребра сильнее: автор мог
       // отвести один знак руками, и общее правило не вправе стирать эту работу.

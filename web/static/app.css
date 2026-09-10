@@ -2011,6 +2011,31 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
   transition: stroke var(--motion);
 }
 .edge.selected { stroke: var(--on-surface); stroke-width: 2; }
+/* Ребро узнаётся под указателем до щелчка: курсор - "рука", под линией
+ * проступает ореол. Ореол, а не смена цвета линии: выбранное ребро уже тёмное, и
+ * наведённое рядом с ним читалось бы вторым выбранным. Полоса нажатия шире
+ * штриха в 1-2,5 px: без неё в ребро попадают через раз. */
+.edge-group { cursor: pointer; }
+.edge-halo {
+  fill: none;
+  stroke: transparent;
+  stroke-width: calc(var(--sheet-edge) + 7.5px);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+  transition: stroke var(--motion);
+}
+.edge-group:hover .edge-halo {
+  stroke: color-mix(in srgb, var(--accent) var(--state-hover), var(--surface-yes));
+}
+.edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 12px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: stroke;
+}
 /* Наконечники - два набора, покоя и выбора: наконечник маркера не наследует
  * чернила ссылающегося ребра (`context-stroke` знают не все браузеры), и
  * выбранное ребро с приглушённой стрелкой читалось бы как половина выбора. */
