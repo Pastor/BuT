@@ -103,12 +103,17 @@ async function run(message) {
   // сколько готов ждать, и остановка называется словами. Такты, сделанные шагами до
   // прогона, в бюджет входят: сессия одна.
   const limit = message.steps ?? 10_000;
-  const portion = Math.max(1, Math.min(message.chunk ?? 256, limit));
+  // Задержка между тактами - темп показа: прогон идёт такт за тактом с паузой, и
+  // схема успевает за автоматом. Без неё такты идут порциями - так быстрее всего.
+  const delay = Math.max(0, Number(message.delay) || 0);
+  const portion = delay > 0 ? 1 : Math.max(1, Math.min(message.chunk ?? 256, limit));
   while (!stopped && done < limit) {
     const outcome = advance(Math.min(portion, limit - done));
     if (!outcome.ok || outcome.finished) return;
-    // Отдаём поток: пришедшая команда "стоп" разбирается между порциями.
-    await Promise.resolve();
+    // Отдаём поток: пришедшая команда "стоп" разбирается между порциями и во время
+    // паузы.
+    if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay * 1000));
+    else await Promise.resolve();
   }
   // Остановленная сессия остаётся открытой: автор вправе продолжить её шагами.
   post({

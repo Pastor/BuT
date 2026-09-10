@@ -341,6 +341,8 @@ export async function main() {
     openScenario: (text, file) => {
       state.scenario = text;
       state.scenarioFile = file ?? "";
+      // Задержка между тактами - своя у каждого сценария: открыт другой - и темп его.
+      dom.tickdelay.value = String(account.delayOf(state.scenarioFile));
       state.scenarioEditor.setValue(text);
       paintScenario();
       if (state.shown === "scenario") showSource("scenario");
@@ -605,7 +607,7 @@ function docks() {
 function cache() {
   for (const id of [
     "editor", "diagnostics", "output", "trace", "version", "target", "args",
-    "scenario", "budget", "share", "format", "say", "modes",
+    "scenario", "budget", "tickdelay", "share", "format", "say", "modes",
     "gentitle", "gensummary", "gentools", "buildsettings", "copyout", "saveout", "genfiles",
     "build-modal", "build-tabs", "build-target", "build-flags", "build-line", "build-save", "build-cancel",
     "lang", "tools-lang", "tools-lang-trace", "update", "showgen", "showdiag", "grip", "split", "hsplit", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
@@ -704,6 +706,12 @@ function wire() {
   dom.budget.addEventListener("change", () =>
     shell.remember(localStorage, shell.UI_KEYS.budget, dom.budget.value)
   );
+  // Задержку хранит проект, по сценарию: поле показывает число, которое записано.
+  dom.tickdelay.addEventListener("change", () => {
+    const seconds = project.runDelay(dom.tickdelay.value);
+    dom.tickdelay.value = String(seconds);
+    account.setDelay(state.scenarioFile, seconds);
+  });
   // Панель включается своей кнопкой и выключается ею же: нажатая ещё раз кнопка
   // закрывает область - так автор освобождает экран под модель.
   dom.showgen.addEventListener("click", () => selectPanel(state.panel === "output" ? null : "output"));
@@ -1519,7 +1527,7 @@ function run() {
   showRun();
   state.running = true;
   setRunButtons({ run: true, step: true, stop: false });
-  worker().postMessage({ type: "run", ...session() });
+  worker().postMessage({ type: "run", ...session(), delay: project.runDelay(dom.tickdelay.value) });
 }
 
 /** Один такт: продолжает открытую сессию либо открывает новую по текущему тексту. */

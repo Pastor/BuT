@@ -28,6 +28,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use axum::{Json, Router};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use crate::access::{self, Level};
@@ -69,6 +70,9 @@ pub struct ProjectJson {
     pub build_target: String,
     /// Ключи сборки одной строкой - те же, что у `taktc compile`.
     pub build_args: String,
+    /// Задержка между тактами прогона по сценариям, секунд; сценария нет в списке -
+    /// прогон идёт без задержки.
+    pub run_delays: BTreeMap<String, f64>,
     pub revision: i64,
     pub size_bytes: i64,
     pub forked_from: Option<String>,
@@ -154,6 +158,9 @@ pub struct PatchRequest {
     /// Ключи сборки одной строкой.
     #[serde(default)]
     pub build_args: Option<String>,
+    /// Задержки прогона по сценариям - список целиком: запись заменяет прежний.
+    #[serde(default)]
+    pub run_delays: Option<BTreeMap<String, f64>>,
     /// Подъём версии модуля - **явное действие владельца**: после него
     /// вывод целей может измениться.
     #[serde(default)]
@@ -248,6 +255,9 @@ async fn rename_project_files(
                 &[&id, name, &target],
             )
             .await?;
+        transaction
+            .execute(RENAME_DELAY, &[&id, name, &target])
+            .await?;
     }
     Ok(())
 }
@@ -294,7 +304,7 @@ async fn list(
         .query(
             "SELECT p.id, p.name, p.description, p.visibility, u.login AS owner,
                     p.takt_lang, p.language_version, p.main_file,
-                    p.main_scenario, p.build_target, p.build_args, p.revision,
+                    p.main_scenario, p.build_target, p.build_args, p.run_delays, p.revision,
                     p.size_bytes, p.forked_from, p.created_at, p.updated_at,
                     g.level AS granted
              FROM projects p
@@ -505,6 +515,29 @@ async fn patch(
             .execute(
                 "UPDATE projects SET main_scenario = $1 WHERE id = $2",
                 &[main_scenario, &id],
+            )
+            .await?;
+    }
+    if let Some(delays) = &request.run_delays {
+        // Задержка - свойство сценария: ключ, который сценарием не является, дал бы
+        // запись, которую страница не покажет никогда.
+        let delays = limits::check_run_delays(delays)?;
+        for name in delays.keys() {
+            has_kind(
+                &transaction,
+                &id,
+                name,
+                Kind::Scenario,
+                "сценарий задержки прогона",
+            )
+            .await?;
+        }
+        let stored =
+            serde_json::to_string(&delays).map_err(|error| ApiError::Internal(error.into()))?;
+        transaction
+            .execute(
+                "UPDATE projects SET run_delays = $1 WHERE id = $2",
+                &[&stored, &id],
             )
             .await?;
     }
@@ -806,7 +839,7 @@ pub(crate) fn check_build(
 
 pub(crate) const SELECT_PROJECT: &str = "SELECT p.id, p.name, p.description, p.visibility,
         u.login AS owner, p.takt_lang, p.language_version, p.main_file,
-        p.main_scenario, p.build_target, p.build_args, p.revision,
+        p.main_scenario, p.build_target, p.build_args, p.run_delays, p.revision,
         p.size_bytes, p.forked_from, p.created_at, p.updated_at, p.owner_id,
         p.touched_at, p.archived_at
     FROM projects p JOIN users u ON u.id = p.owner_id WHERE p.id = $1";
@@ -824,6 +857,7 @@ pub(crate) fn project_of(row: &tokio_postgres::Row) -> ProjectJson {
         main_scenario: row.get("main_scenario"),
         build_target: row.get("build_target"),
         build_args: row.get("build_args"),
+        run_delays: delays_of(row.get("run_delays")),
         revision: row.get("revision"),
         size_bytes: row.get("size_bytes"),
         forked_from: row.get("forked_from"),
@@ -831,6 +865,27 @@ pub(crate) fn project_of(row: &tokio_postgres::Row) -> ProjectJson {
         updated_at: row.get("updated_at"),
     }
 }
+
+/// Задержки прогона из колонки: объект JSON "сценарий - секунды".
+///
+/// Негодный текст даёт пустой список: колонку пишет только сервер, и отказ чтения
+/// проекта из-за показа прогона стоил бы дороже потерянного темпа.
+pub(crate) fn delays_of(stored: String) -> BTreeMap<String, f64> {
+    serde_json::from_str(&stored).unwrap_or_default()
+}
+
+/// Переносит задержку прогона на новое имя сценария: `$1` - проект, `$2` - прежнее
+/// имя, `$3` - новое. Ключ задержки - имя файла, и без переноса переименованный
+/// сценарий потерял бы свой темп.
+pub(crate) const RENAME_DELAY: &str = "UPDATE projects
+    SET run_delays = ((run_delays::jsonb - $2::text)
+        || jsonb_build_object($3::text, run_delays::jsonb -> $2::text))::text
+    WHERE id = $1 AND run_delays::jsonb ? $2::text";
+
+/// Забывает задержку удалённого сценария: `$1` - проект, `$2` - имя.
+pub(crate) const FORGET_DELAY: &str = "UPDATE projects
+    SET run_delays = (run_delays::jsonb - $2::text)::text
+    WHERE id = $1 AND run_delays::jsonb ? $2::text";
 
 /// Идентификатор проекта: 16 случайных байт, base64url.
 ///

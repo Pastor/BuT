@@ -2264,7 +2264,8 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 .run-steps { font-size: var(--text-xs); color: var(--on-surface-soft); }
 /* Поле числа тактов стоит на холсте, и ширина ему нужна по содержимому: своей
  * ширины у `input[type=number]` избыток, и панель отнимала бы лист. */
-.tool-panel #budget { width: 7ch; padding: 0 var(--gap-half); }
+.tool-panel #budget,
+.tool-panel #tickdelay { width: 7ch; padding: 0 var(--gap-half); }
 .scheme-run input[type="number"] {
   width: 6ch;
   height: var(--h-dense);

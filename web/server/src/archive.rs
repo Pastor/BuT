@@ -24,6 +24,7 @@
 //! проверяет их **сервер**: архив приходит извне, и доверять ему нельзя. Имя файла
 //! судится тем же правилом, что при записи.
 
+use std::collections::BTreeMap;
 use std::io::{Cursor, Read as _, Write as _};
 
 use serde::{Deserialize, Serialize};
@@ -55,8 +56,9 @@ pub const GENERATED: &str = "generated/";
 /// которых проект восстановится наполовину. Род поднимает версию наравне с
 /// полем: прежний сервис отверг бы `.md` как негодное имя файла, и причина
 /// ("расширение '.takt' либо '.json'") не назвала бы настоящую - устаревший
-/// сервис.
-pub const FORMAT: u32 = 3;
+/// сервис. Версия `4` принесла задержки прогона по сценариям: прежний сервис
+/// потерял бы их молча, приняв архив за целый.
+pub const FORMAT: u32 = 4;
 
 /// Метаданные проекта в архиве.
 #[derive(Debug, Serialize, Deserialize)]
@@ -96,6 +98,10 @@ pub struct Manifest {
     /// формата.
     #[serde(default)]
     pub build_args: String,
+    /// Задержки прогона по сценариям, секунд; пусто - без задержек либо архив
+    /// прежней версии формата.
+    #[serde(default)]
+    pub run_delays: BTreeMap<String, f64>,
 }
 
 /// Запись состава.
@@ -289,6 +295,7 @@ pub fn manifest_of(
         generated_target,
         build_target: project.build_target.clone(),
         build_args: project.build_args.clone(),
+        run_delays: project.run_delays.clone(),
     }
 }
 
@@ -331,6 +338,7 @@ mod tests {
             main_scenario: Some("run.json".to_string()),
             build_target: "sv-mmio".into(),
             build_args: "--bus=apb".into(),
+            run_delays: BTreeMap::from([("run.json".to_string(), 0.5)]),
             revision: 1,
             size_bytes: 10,
             forked_from: None,

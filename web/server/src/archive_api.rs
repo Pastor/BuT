@@ -27,6 +27,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::Deserialize;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use crate::access::Level;
@@ -236,6 +237,23 @@ async fn import(
             .iter()
             .any(|file| &file.name == name && file.kind == limits::Kind::Scenario.as_str())
     });
+    // Задержки прогона - тоже только у сценариев архива и только в пределе: архив
+    // правят руками, а негодная задержка не стоит отказа всей загрузки.
+    let run_delays: BTreeMap<String, f64> = parsed
+        .manifest
+        .run_delays
+        .iter()
+        .filter(|(name, _)| {
+            parsed
+                .sources
+                .iter()
+                .any(|file| &file.name == *name && file.kind == limits::Kind::Scenario.as_str())
+        })
+        .map(|(name, seconds)| (name.clone(), *seconds))
+        .collect();
+    let run_delays = limits::check_run_delays(&run_delays).unwrap_or_default();
+    let run_delays =
+        serde_json::to_string(&run_delays).map_err(|error| ApiError::Internal(error.into()))?;
 
     let id = projects::new_id();
     let now = db::now();
@@ -248,9 +266,9 @@ async fn import(
         .execute(
             "INSERT INTO projects(id, owner_id, name, description, visibility,
                                   takt_lang, language_version, main_file, main_scenario,
-                                  build_target, build_args, revision,
+                                  build_target, build_args, run_delays, revision,
                                   size_bytes, created_at, updated_at, touched_at)
-             VALUES ($1, $2, $3, $4, 'private', $5, $6, $7, $8, $9, $10, 1, $11, $12, $12, $12)",
+             VALUES ($1, $2, $3, $4, 'private', $5, $6, $7, $8, $9, $10, $11, 1, $12, $13, $13, $13)",
             &[
                 &id,
                 &user.id,
@@ -262,6 +280,7 @@ async fn import(
                 &main_scenario,
                 &build_target,
                 &build_args,
+                &run_delays,
                 &size,
                 &now,
             ],

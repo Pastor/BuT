@@ -33,6 +33,8 @@
   "trace.kindOutput": "вывод",
   "trace.kindError": "отказ",
   "trace.budgetHint": "Сколько тактов пускать",
+  "trace.delay": "Задержка, с",
+  "trace.delayHint": "Пауза между тактами прогона, секунд; 0 — без паузы. Своя у каждого сценария",
   "trace.log": "Журнал прогона",
   "scheme.legend.rows": "Высота легенды",
   "scheme.legend.cols": "Ширина легенды",

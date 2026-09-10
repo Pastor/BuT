@@ -154,3 +154,21 @@ export function pickScenario(own, current, main) {
   if (own.includes(main)) return main;
   return own[0] ?? null;
 }
+
+/** Наибольшая задержка между тактами прогона, секунд: та же, что у сервера. */
+export const RUN_DELAY_SECONDS = 60;
+
+/**
+ * Задержка между тактами прогона из поля ввода, секунд.
+ *
+ * Дробная, с точностью до миллисекунды; негодное и отрицательное - ноль (без
+ * задержки), больше предела - предел.
+ *
+ * @param {string|number} value
+ * @returns {number}
+ */
+export function runDelay(value) {
+  const seconds = Number(value);
+  if (!Number.isFinite(seconds) || seconds <= 0) return 0;
+  return Math.round(Math.min(seconds, RUN_DELAY_SECONDS) * 1000) / 1000;
+}

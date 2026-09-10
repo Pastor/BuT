@@ -223,6 +223,9 @@
             <label for="budget" class="run-steps" data-i18n="trace.budget">Шаги</label>
             <input id="budget" type="number" min="1" max="1000000" value="200"
             data-i18n-attr="data-tip:trace.budgetHint" data-tip="Сколько тактов пускать">
+            <label for="tickdelay" class="run-steps" data-i18n="trace.delay">Задержка, с</label>
+            <input id="tickdelay" type="number" min="0" max="60" step="0.1" value="0"
+            data-i18n-attr="data-tip:trace.delayHint" data-tip="Пауза между тактами прогона, секунд; 0 — без паузы. Своя у каждого сценария">
             <button class="icon-btn" type="button" data-run="run"
             data-i18n-attr="aria-label:trace.run;data-tip:trace.run"
             aria-label="Прогон" data-tip="Прогон"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 5l11 7-11 7z"/></svg></button>

@@ -33,6 +33,8 @@
   "trace.kindOutput": "output",
   "trace.kindError": "error",
   "trace.budgetHint": "How many ticks to run",
+  "trace.delay": "Delay, s",
+  "trace.delayHint": "Pause between run ticks, seconds; 0 means none. Each scenario keeps its own",
   "trace.log": "Run log",
   "scheme.legend.rows": "Legend height",
   "scheme.legend.cols": "Legend width",

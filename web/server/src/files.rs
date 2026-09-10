@@ -257,6 +257,10 @@ async fn rename_file(
             &[&id, &name, &request.to],
         )
         .await?;
+    // Задержка прогона ключуется именем сценария - она уходит вместе с ним.
+    transaction
+        .execute(crate::projects::RENAME_DELAY, &[&id, &name, &request.to])
+        .await?;
     let written = bump(&transaction, &id, &state.store, &owner).await?;
     transaction.commit().await?;
     Ok(Json(written).into_response())
@@ -304,6 +308,9 @@ async fn remove_file(
             "UPDATE projects SET main_scenario = NULL WHERE id = $1 AND main_scenario = $2",
             &[&id, &name],
         )
+        .await?;
+    transaction
+        .execute(crate::projects::FORGET_DELAY, &[&id, &name])
         .await?;
     let written = bump(&transaction, &id, &state.store, &owner).await?;
     transaction.commit().await?;

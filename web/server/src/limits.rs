@@ -16,6 +16,8 @@
 //! исходник выглядит целым и перестаёт компилироваться в месте, которого автор не
 //! писал.
 
+use std::collections::BTreeMap;
+
 use crate::error::ApiError;
 
 /// Наибольший размер одного файла.
@@ -107,6 +109,51 @@ pub fn check_build_args(text: &str) -> Result<(), ApiError> {
         ));
     }
     Ok(())
+}
+
+/// Наибольшая задержка между тактами прогона, секунд.
+///
+/// Минута - уже не темп показа, а остановка: дольше автор ждать не станет, а
+/// опечатка в тысячу секунд выглядела бы зависшим прогоном.
+pub const RUN_DELAY_SECONDS: f64 = 60.0;
+
+/// Наибольшее число сценариев с задержкой у проекта - по числу файлов.
+pub const RUN_DELAYS: usize = FILES_PER_PROJECT as usize;
+
+/// Проверяет задержки прогона и отдаёт их в хранимом виде.
+///
+/// Задержка - число секунд от нуля до [`RUN_DELAY_SECONDS`], дробное; хранится с
+/// точностью до миллисекунды. Ноль означает "без задержки" и не хранится: запись о
+/// нуле ничего не несёт, а список рос бы от каждого сценария, который открывали.
+/// Что ключ - сценарий проекта, судит вызывающий: состав знает база.
+pub fn check_run_delays(delays: &BTreeMap<String, f64>) -> Result<BTreeMap<String, f64>, ApiError> {
+    let mut kept = BTreeMap::new();
+    for (name, &seconds) in delays {
+        if !seconds.is_finite() || seconds < 0.0 {
+            return Err(ApiError::BadRequest(format!(
+                "задержка прогона у '{name}': число секунд от 0 до {RUN_DELAY_SECONDS}"
+            )));
+        }
+        if seconds > RUN_DELAY_SECONDS {
+            return Err(exceeded(
+                &format!("задержка прогона у '{name}' в секундах"),
+                RUN_DELAY_SECONDS,
+                seconds,
+            ));
+        }
+        let rounded = (seconds * 1000.0).round() / 1000.0;
+        if rounded > 0.0 {
+            kept.insert(name.clone(), rounded);
+        }
+    }
+    if kept.len() > RUN_DELAYS {
+        return Err(exceeded(
+            "число сценариев с задержкой",
+            RUN_DELAYS,
+            kept.len(),
+        ));
+    }
+    Ok(kept)
 }
 
 /// Вид файла по расширению.

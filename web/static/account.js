@@ -1654,6 +1654,33 @@ async function keepBuild() {
   state.project = { ...state.project, ...updated };
 }
 
+/** Задержка между тактами прогона у сценария, секунд; записи нет - без задержки. */
+export function delayOf(file) {
+  return (file && state.project?.run_delays?.[file]) || 0;
+}
+
+/**
+ * Ставит задержку сценарию и записывает её в проект.
+ *
+ * Записывает только владелец - метаданные правит он (правило сервера); у прочих
+ * задержка живёт до перезагрузки страницы. Без сценария записывать не к чему:
+ * задержка - свойство сценария.
+ */
+export async function setDelay(file, seconds) {
+  if (!state.project || !file) return;
+  const delays = { ...(state.project.run_delays ?? {}) };
+  if (seconds > 0) delays[file] = seconds;
+  else delete delays[file];
+  state.project = { ...state.project, run_delays: delays };
+  if (state.level !== "owner") return;
+  try {
+    const updated = await api.patch(state.project.id, { run_delays: delays });
+    state.project = { ...state.project, ...updated };
+  } catch (error) {
+    host.say(text(error), "warning");
+  }
+}
+
 /** Сохраняет открытый файл на сервер. */
 async function save() {
   if (!editing()) {

@@ -639,6 +639,16 @@ test("граф: модуль отдаёт листы лифта, а страни
   assert.ok(broken.error?.code, JSON.stringify(broken));
 });
 
+test("прогон: задержка между тактами - секунды, дробные, в пределе", async () => {
+  const { runDelay } = await import("../static/project.js");
+  assert.equal(runDelay("0.5"), 0.5);
+  assert.equal(runDelay("1.23456"), 1.235, "до миллисекунды");
+  assert.equal(runDelay(""), 0, "пусто - без задержки");
+  assert.equal(runDelay("-2"), 0, "отрицательное - без задержки");
+  assert.equal(runDelay("abc"), 0);
+  assert.equal(runDelay("600"), 60, "больше предела - предел");
+});
+
 test("страница проекта: сценарий прогона - только сценарий открытой модели", async () => {
   const { pickScenario } = await import("../static/project.js");
   const own = ["lift-busy.json", "lift-idle.json"];
