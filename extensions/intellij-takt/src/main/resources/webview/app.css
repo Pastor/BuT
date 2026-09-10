@@ -2087,6 +2087,9 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 .edge-group:hover .edge-halo {
   stroke: color-mix(in srgb, var(--accent) var(--state-hover), var(--surface-yes));
 }
+/* Выбранное ребро несёт ореол постоянно: выбор - тоже "вот это ребро", и без
+ * ореола выбранное рядом с наведённым читалось бы слабее наведённого. */
+.edge-group.selected .edge-halo { stroke: var(--surface-yes); }
 .edge-hit {
   fill: none;
   stroke: transparent;
