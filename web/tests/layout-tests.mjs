@@ -444,6 +444,12 @@ test("геометрия: ярусы дают строки, порядок - с�
   const shifted = geo.sheetSize([{ name: "A", kind: "state", x: -40, y: 100 }]);
   assert.ok(shifted.ox < -40 - geo.R && shifted.oy === 0, "узел левее нуля двигает начало листа по своей оси");
   assert.equal(Math.abs(shifted.ox % geo.SNAP), 0, "начало листа на сетке");
+  // Излом на нулевой вертикали и узел у верхнего края: запас вмещает излом со
+  // знаком и петлю самоперехода - край листа их не срезает.
+  const edge = geo.sheetSize([{ name: "A", kind: "state", x: 216, y: 72 }], [[0, 200]]);
+  assert.ok(edge.ox <= -geo.SNAP * 3, `излом у края срезан: ox ${edge.ox}`);
+  const top = geo.sheetSize([{ name: "A", kind: "state", x: 216, y: 40 }]);
+  assert.ok(40 - geo.R - 20 >= top.oy, `петля над узлом у края срезана: oy ${top.oy}`);
 
   // Вид: вписать и масштаб вокруг точки.
   const box = { width: 400, height: 300 };

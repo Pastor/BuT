@@ -329,7 +329,10 @@ export class Scheme {
         mark: e.condition ? `K${(k += 1)}` : "",
       };
     });
-    const size = geo.sheetSize(nodes, edges.flatMap((e) => e.points));
+    // Своё место знака - тоже часть рисунка: автор отводит знак от линии, и лист
+    // обязан его вместить так же, как излом.
+    const spots = edges.flatMap((e) => (e.label?.place === "own" ? [[e.label.x, e.label.y]] : []));
+    const size = geo.sheetSize(nodes, [...edges.flatMap((e) => e.points), ...spots]);
     return {
       key: found.path,
       path: found.path,

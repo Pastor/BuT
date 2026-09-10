@@ -476,9 +476,22 @@ export function autoPlace(nodes) {
 }
 
 /**
+ * Запас вокруг предмета листа со стороны начала: полширины знака условия с подложкой.
+ *
+ * Им же покрыты петля самоперехода и стрелка начального состояния - обе выходят за
+ * круг узла меньше чем на запас. Без запаса излом на нулевой вертикали (точка
+ * сетки, куда её ставит привязка) давал лист, начинающийся ровно на изломе, и
+ * половину излома, линии и знака срезал край листа.
+ */
+const REACH = SNAP * 3;
+
+/**
  * Размер листа по узлам: рисунок с полями; пустой лист - минимальный. Лист растёт и в
  * сторону отрицательных координат: начало (`ox`, `oy`) уходит левее и выше нуля, когда
- * автор утянул туда узел или излом, - иначе край листа обрезал бы рисунок.
+ * рисунок вместе с запасом `REACH` заходит туда, - иначе край листа обрезал бы его.
+ *
+ * @param {object[]} nodes узлы листа
+ * @param {number[][]} extra прочие точки рисунка: изломы и свои места знаков
  */
 export function sheetSize(nodes, extra = []) {
   let minX = 0;
@@ -486,14 +499,14 @@ export function sheetSize(nodes, extra = []) {
   let maxX = 0;
   let maxY = 0;
   for (const node of nodes) {
-    minX = Math.min(minX, node.x - half(node));
-    minY = Math.min(minY, node.y - half(node));
+    minX = Math.min(minX, node.x - half(node) - REACH);
+    minY = Math.min(minY, node.y - half(node) - REACH);
     maxX = Math.max(maxX, node.x + half(node));
     maxY = Math.max(maxY, node.y + half(node) + SNAP * 4);
   }
   for (const [x, y] of extra) {
-    minX = Math.min(minX, x);
-    minY = Math.min(minY, y);
+    minX = Math.min(minX, x - REACH);
+    minY = Math.min(minY, y - REACH);
     maxX = Math.max(maxX, x);
     maxY = Math.max(maxY, y);
   }
