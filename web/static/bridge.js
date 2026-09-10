@@ -124,8 +124,8 @@ export class Bridge {
     return this.call("takt_graph", { source });
   }
 
-  simOpen(source, scenario, tickMs, files = {}) {
-    return this.call("takt_sim_open", { source, scenario, tick_ms: tickMs ?? 0, files });
+  simOpen(source, scenario, tickMs, files = {}, steps = null) {
+    return this.call("takt_sim_open", { source, scenario, tick_ms: tickMs ?? 0, files, steps });
   }
 
   simTick(id, budget) {

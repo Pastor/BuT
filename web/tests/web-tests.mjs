@@ -224,6 +224,20 @@ start Root = Probe;
   bridge.simClose(opened.id);
 });
 
+test("прогон: длину задаёт число шагов страницы, а сценарий - входы", async () => {
+  // Сценарий из двух шагов при длине 196 обрывал прогон на втором такте: страница
+  // не передавала длину, и эталон брал её у сценария.
+  const bridge = await loadBridge();
+  const model = "in sensor: u8;\nvar seen: u8 := 0;\n\nstart Run {\n    always {\n        seen := sensor;\n    }\n\n    ref Run: 1 = 1;\n}\n";
+  const scenario = JSON.stringify([{ in_ports: { sensor: 3 } }, { in_ports: { sensor: 7 } }]);
+  const opened = bridge.simOpen(model, scenario, 0, {}, 196);
+  assert.equal(opened.ok, true, JSON.stringify(opened));
+  const ticked = bridge.simTick(opened.id, 1000);
+  assert.equal(ticked.lines.length, 196, `тактов: ${ticked.lines.length}`);
+  assert.ok(ticked.lines[195].includes("sensor=7"), ticked.lines[195]);
+  bridge.simClose(opened.id);
+});
+
 test("подсветка: каждая цель красит свой вывод", async () => {
   // У каждой из восьми целей разметка непуста и различает ключевое слово, число
   // и комментарий. Цель, забытая в таблице языков, показывала бы чёрный текст, и

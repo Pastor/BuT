@@ -1385,6 +1385,9 @@ function session() {
     scenario: state.scenario,
     tickMs: 0,
     files: projectFiles(),
+    // Длина прогона - ключ `-n`: сценарий задаёт входы, а не число тактов, и после
+    // его последнего шага прогон идёт дальше с удержанными значениями.
+    steps: Number(dom.budget.value) || 10_000,
   };
 }
 
@@ -1407,7 +1410,7 @@ function run() {
   showRun();
   state.running = true;
   setRunButtons({ run: true, step: true, stop: false });
-  worker().postMessage({ type: "run", ...session(), budget: Number(dom.budget.value) || 10_000 });
+  worker().postMessage({ type: "run", ...session() });
 }
 
 /** Один такт: продолжает открытую сессию либо открывает новую по текущему тексту. */

@@ -48,14 +48,16 @@ self.onmessage = async (event) => {
  *
  * @returns {Promise<boolean>} сессия готова к тактам
  */
-async function ensure({ wasmUrl, source, scenario, tickMs, files }) {
+async function ensure({ wasmUrl, source, scenario, tickMs, files, steps }) {
   if (!bridge) bridge = await Bridge.load(wasmUrl);
   // Состав проекта входит в ключ: правка подключаемого файла меняет модель так же,
   // как правка её самой, и прогон по старому тексту был бы прогоном чужой модели.
-  const key = JSON.stringify([source, scenario ?? "", tickMs ?? 0, files ?? {}]);
+  // Длина прогона - тоже: эталон заканчивает прогон по ней, и сессия, открытая под
+  // другое число шагов, остановилась бы не там, где просит автор.
+  const key = JSON.stringify([source, scenario ?? "", tickMs ?? 0, files ?? {}, steps ?? null]);
   if (session !== null && sessionKey === key) return true;
   close_();
-  const opened = bridge.simOpen(source, scenario ?? "", tickMs ?? 0, files ?? {});
+  const opened = bridge.simOpen(source, scenario ?? "", tickMs ?? 0, files ?? {}, steps ?? null);
   if (!opened.ok) {
     post({ type: "failed", message: opened.error?.message, key: "trace.notOpened", error: opened.error });
     return false;
@@ -100,7 +102,7 @@ async function run(message) {
   // Бюджет всего прогона - свойство прогона, а не модели: автор просит столько тактов,
   // сколько готов ждать, и остановка называется словами. Такты, сделанные шагами до
   // прогона, в бюджет входят: сессия одна.
-  const limit = message.budget ?? 10_000;
+  const limit = message.steps ?? 10_000;
   const portion = Math.max(1, Math.min(message.chunk ?? 256, limit));
   while (!stopped && done < limit) {
     const outcome = advance(Math.min(portion, limit - done));

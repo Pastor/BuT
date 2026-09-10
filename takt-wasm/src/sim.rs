@@ -28,7 +28,9 @@ thread_local! {
 ///
 /// `scenario` - JSON-сценарий той же формы, что файл `-s` у `takt-sim` (пустая строка -
 /// сценария нет). `tick_ms` - период модельных часов; `0` означает "взять из объявления
-/// `clock` модели, иначе 1 мс", как в CLI.
+/// `clock` модели, иначе 1 мс", как в CLI. `steps` - длина прогона, ключ `-n`: сценарий
+/// задаёт входы, и после его последнего шага значения удерживаются.
+///
 /// Предупреждение прогона в форме страницы.
 ///
 /// Код отдельным полем - как у предупреждений компиляции: страница показывает его
@@ -55,6 +57,7 @@ pub fn open(
     scenario: &str,
     tick_ms: i64,
     project_files: std::collections::BTreeMap<String, String>,
+    steps: Option<usize>,
 ) -> String {
     #[derive(Serialize)]
     struct Reply {
@@ -96,7 +99,7 @@ pub fn open(
         Err(diagnostic) => return reply::failed(&diagnostic, source),
     };
 
-    let steps: Vec<SimStep> = if scenario.trim().is_empty() {
+    let scenario_steps: Vec<SimStep> = if scenario.trim().is_empty() {
         Vec::new()
     } else {
         match serde_json::from_str(scenario) {
@@ -109,8 +112,8 @@ pub fn open(
     // `graphics`).
     let mut runner = match SimulationRunner::new(
         unit,
+        scenario_steps,
         steps,
-        None,
         None,
         DEFAULT_FILENAME,
         GraphicsConfig::default().output_mode.clone(),
@@ -259,7 +262,7 @@ mod tests {
     /// Прогон идёт по тактам и отдаёт ту же трассу, что печатает `takt-sim`.
     #[test]
     fn ticks_yield_trace_lines() {
-        let opened = json(&open(COUNTER, "", 0, Default::default()));
+        let opened = json(&open(COUNTER, "", 0, Default::default(), None));
         assert_eq!(opened["ok"], Value::Bool(true), "{opened}");
         let id = opened["id"].as_u64().unwrap() as u32;
 
@@ -308,7 +311,7 @@ mod tests {
     /// запрошенного числа тактов.
     #[test]
     fn budget_stops_endless_model() {
-        let opened = json(&open(COUNTER, "", 0, Default::default()));
+        let opened = json(&open(COUNTER, "", 0, Default::default(), None));
         let id = opened["id"].as_u64().unwrap() as u32;
         for _ in 0..3 {
             let reply = json(&tick(id, 5));
@@ -322,7 +325,7 @@ mod tests {
     /// Завершающаяся модель отдаёт исход и сводку - ту же, что печатает CLI.
     #[test]
     fn terminating_model_reports_outcome() {
-        let opened = json(&open("start S;\n", "", 0, Default::default()));
+        let opened = json(&open("start S;\n", "", 0, Default::default(), None));
         let id = opened["id"].as_u64().unwrap() as u32;
         let reply = json(&tick(id, 10));
         assert_eq!(reply["done"], Value::Bool(true), "{reply}");
@@ -340,7 +343,7 @@ mod tests {
     fn scenario_drives_inputs() {
         let model = "in sensor: u8;\nvar seen: u8 := 0;\n\nstart Run {\n    always {\n        seen := sensor;\n    }\n\n    ref Run: 1 = 1;\n}\n";
         let scenario = r#"[{"in_ports": {"sensor": 7}}]"#;
-        let opened = json(&open(model, scenario, 0, Default::default()));
+        let opened = json(&open(model, scenario, 0, Default::default(), None));
         assert_eq!(opened["ok"], Value::Bool(true), "{opened}");
         let id = opened["id"].as_u64().unwrap() as u32;
         let reply = json(&tick(id, 1));
@@ -348,6 +351,26 @@ mod tests {
             reply["lines"][0].as_str().unwrap().contains("sensor=7"),
             "вход сценария обязан доехать: {reply}"
         );
+        json(&close(id));
+    }
+
+    /// Длину прогона задаёт `steps`, а сценарий - входы: сценарий из двух шагов не
+    /// обрывает прогон на втором такте, значения входов удерживаются дальше.
+    #[test]
+    fn scenario_shorter_than_run_keeps_inputs() {
+        let model = "in sensor: u8;\nvar seen: u8 := 0;\n\nstart Run {\n    always {\n        seen := sensor;\n    }\n\n    ref Run: 1 = 1;\n}\n";
+        let scenario = r#"[{"in_ports": {"sensor": 3}}, {"in_ports": {"sensor": 7}}]"#;
+        let opened = json(&open(model, scenario, 0, Default::default(), Some(5)));
+        assert_eq!(opened["ok"], Value::Bool(true), "{opened}");
+        let id = opened["id"].as_u64().unwrap() as u32;
+        let reply = json(&tick(id, 196));
+        let lines = reply["lines"].as_array().unwrap();
+        assert_eq!(lines.len(), 5, "длина прогона - пять тактов: {reply}");
+        assert!(
+            lines[4].as_str().unwrap().contains("sensor=7"),
+            "после сценария вход удерживается: {reply}"
+        );
+        assert_eq!(reply["done"], Value::Bool(true), "{reply}");
         json(&close(id));
     }
 
@@ -359,6 +382,7 @@ mod tests {
             "",
             0,
             Default::default(),
+            None,
         ));
         assert_eq!(reply["ok"], Value::Bool(false), "{reply}");
         assert!(reply["error"]["code"].as_str().is_some(), "{reply}");

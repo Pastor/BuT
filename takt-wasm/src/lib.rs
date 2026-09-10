@@ -279,6 +279,9 @@ struct SimOpenRequest {
     /// Состав проекта для `import`.
     #[serde(default)]
     files: std::collections::BTreeMap<String, String>,
+    /// Длина прогона в тактах - ключ `-n` у `takt-sim`; нет - длину задаёт сценарий.
+    #[serde(default)]
+    steps: Option<usize>,
 }
 
 /// Запрос такта прогона.
@@ -299,7 +302,7 @@ struct SimCloseRequest {
 #[unsafe(no_mangle)]
 pub extern "C" fn takt_sim_open(len: u32) -> u32 {
     call(len, |r: SimOpenRequest| {
-        sim::open(&r.source, &r.scenario, r.tick_ms, r.files)
+        sim::open(&r.source, &r.scenario, r.tick_ms, r.files, r.steps)
     })
 }
 
