@@ -142,7 +142,7 @@ test("мост: страница и модуль сходятся формой �
 
   const version = bridge.version();
   assert.equal(version.ok, true);
-  assert.equal(version.targets.length, 8, "целей восемь");
+  assert.equal(version.targets.length, 7, "целей семь");
 
   const compiled = bridge.compile("c", "heater.takt", MODEL);
   assert.equal(compiled.ok, true, JSON.stringify(compiled));
@@ -304,8 +304,8 @@ test("генерация: панель устроена как прочие, а 
   }
   // Группы целей: известные - по назначению, незнакомая модулю цель не пропадает.
   const { groupTargets } = await import("../static/build-settings.js");
-  const groups = groupTargets(["c", "st", "rust", "plantuml", "sv-mmio", "zig"]);
-  assert.deepEqual(groups.map((g) => g.id), ["mcu", "plc", "rust", "fpga", "diagram", "other"]);
+  const groups = groupTargets(["c", "st", "rust", "sv-mmio", "zig"]);
+  assert.deepEqual(groups.map((g) => g.id), ["mcu", "plc", "rust", "fpga", "other"]);
   assert.deepEqual(groups.at(-1).targets, ["zig"], "незнакомая цель - в прочих");
   assert.deepEqual(groupTargets(["c"]).map((g) => g.id), ["mcu"], "пустые группы не показываются");
 });
@@ -316,7 +316,7 @@ test("подсветка: каждая цель красит свой вывод
   // заметил бы это лишь человек, открывший её вкладку.
   const bridge = await loadBridge();
   const targets = bridge.version().targets;
-  assert.equal(targets.length, 8);
+  assert.equal(targets.length, 7);
   for (const target of targets) {
     const compiled = bridge.compile(target, "heater.takt", MODEL);
     assert.equal(compiled.ok, true, `${target}: ${JSON.stringify(compiled)}`);
@@ -338,9 +338,8 @@ test("подсветка: каждая цель красит свой вывод
       }
     }
     // "Различает ключевое слово, число и комментарий" проверяется не здесь:
-    // в выводе цели `plantuml` нет ни чисел, ни комментариев, и требование к
-    // нему было бы требованием к фикстуре. Это свойство языка, и его проверяют
-    // пробы у самих словарей (`takt-wasm/src/highlight`).
+    // требование к выводу цели было бы требованием к фикстуре. Это свойство
+    // языка, и его проверяют пробы у самих словарей (`takt-wasm/src/highlight`).
   }
 });
 
@@ -886,8 +885,7 @@ test("ключи сборки: строка — единственная вел�
 
   // Ключ, чьё значение цель не принимает, в строку не идёт: иначе страница
   // обещала бы сборку, которую компилятор отвергнет.
-  assert.equal(flags.line(flags.parse("--fsm=table"), "plantuml"), "");
-  assert.equal(flags.line(flags.parse("--fsm=switch"), "plantuml"), "--fsm=switch");
+  assert.equal(flags.line(flags.parse("--fsm=table"), "sv"), "--fsm=table", "табличную форму принимает любая цель");
   assert.equal(flags.line(flags.parse("--bus=apb"), "sv"), "");
   assert.equal(flags.line(flags.parse("--bus=apb"), "sv-mmio"), "--bus=apb");
 });

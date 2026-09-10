@@ -229,7 +229,7 @@ fn every_target_refuses_the_same_input() {
 
     // Список входов генерации - **весь**. Цель, которая перестанет отказывать, обязана
     // попасть в отчёт по имени: молчаливый успех и есть дефект, ради которого фича
-    // заведена (цель `plantuml` печатала `[*] --> `).
+    // заведена.
     let attempts: Vec<(
         &str,
         Result<Vec<takt_lang::diagnostics::Diagnostic>, takt_lang::diagnostics::Diagnostic>,
@@ -273,10 +273,6 @@ fn every_target_refuses_the_same_input() {
         (
             "sv",
             takt_lang::compile_to_sv(&path, &source, &out_dir("sv"), &search, &options),
-        ),
-        (
-            "plantuml",
-            takt_lang::compile_to_plantuml(&path, &source, &out_dir("plantuml"), &search),
         ),
     ];
 

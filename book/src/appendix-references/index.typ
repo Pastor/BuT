@@ -14,5 +14,3 @@
 + Pnueli, A. #emph[The Temporal Logic of Programs.] — 18th Annual
   Symposium on Foundations of Computer Science, 1977. (Основа
   верификации LTL.)
-+ #emph[PlantUML Language Reference Guide.] —
-  #link("https://plantuml.com/"). (Цель `plantuml`\.)

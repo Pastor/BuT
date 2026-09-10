@@ -1,5 +1,5 @@
 #!/bin/sh
-# Снятие замера расхождения - эталон и все восемь целей одной командой.
+# Снятие замера расхождения - эталон и все семь целей одной командой.
 #
 set -eu
 
@@ -38,7 +38,7 @@ trap 'rm -rf "$OUT"' EXIT
 
 STEM="$(basename "$MODEL" .takt)"
 
-echo "Проба: $MODEL (эталон + восемь целей)"
+echo "Проба: $MODEL (эталон + семь целей)"
 echo
 
 # -- 1. Проверка самой пробы --------------------------------------------------
@@ -112,7 +112,7 @@ echo
 # порождён, иначе там код отказа. Раздел 4 читает его, потому что инструменту
 # цели нечего проверять там, где файла нет.
 echo "ЦЕЛИ"
-for t in c c-hal st st-at rust sv sv-mmio plantuml; do
+for t in c c-hal st st-at rust sv sv-mmio; do
     # shellcheck disable=SC2086
     if MSG="$("$TAKTC" compile "$MODEL" -t "$t" -o "$OUT/$t" $INC_ARGS 2>&1)"; then
         printf '  %-9s OK\n' "$t"
@@ -175,7 +175,7 @@ tool_say()  { printf '  %-9s %s\n' "$1" "$2"; }
 tool_show() { grep -vE '^[[:space:]]*$' "$1" | head -n 4 | sed 's/^/             /'; }
 
 echo "ИНСТРУМЕНТЫ ЦЕЛЕЙ (те же команды и флаги, что у гейтов предкоммита)"
-for t in c c-hal st st-at rust sv sv-mmio plantuml; do
+for t in c c-hal st st-at rust sv sv-mmio; do
     GEN="$(cat "$OUT/gen.$t" 2>/dev/null || printf '')"
     if [ -n "$GEN" ]; then
         tool_say "$t" "— вывода нет (taktc: $GEN)"
@@ -246,9 +246,6 @@ for t in c c-hal st st-at rust sv sv-mmio plantuml; do
             else
                 tool_say "$t" "verilator принял, yosys НЕ СИНТЕЗИРОВАЛ:"; tool_show "$ERR"
             fi ;;
-        plantuml)
-            # У диаграммы арбитра нет: PlantUML - не компилируемый артефакт.
-            tool_say "$t" "— инструмента нет (диаграмма)" ;;
     esac
 done
 echo

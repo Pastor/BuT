@@ -311,41 +311,6 @@ fn scenarios_hold_for_sv_mmio() {
     sv_sweep("sv-mmio");
 }
 
-/// Цель `plantuml`: инструмента нет - вердикт даёт непустая диаграмма.
-///
-/// Сценарии с `--fsm=table` сюда не входят: этой цели флаг не адресован, и CLI
-/// отказывает **до** компиляции (носитель `compile_cli::target_flags`).
-#[test]
-fn scenarios_hold_for_plantuml() {
-    let mut failures = Vec::new();
-    for probe in PROBES {
-        for scenario in SCENARIOS {
-            if scenario.flags.contains(&"--fsm=table") {
-                continue;
-            }
-            let name = format!("{}_{}", probe_name(*probe), scenario.name);
-            let dir = work_dir(&format!("plantuml_{name}"));
-            match emit(&dir, "plantuml", *probe, scenario) {
-                Emitted::Ok(out) => {
-                    let text = std::fs::read_to_string(out.join("probe.puml")).unwrap_or_default();
-                    if !text.contains("@startuml") || !text.contains("@enduml") {
-                        failures.push(format!("{name}: диаграмма пуста либо неполна"));
-                    }
-                }
-                Emitted::Refused(code) => {
-                    failures.push(format!("{name}: цель отказала кодом {code}"))
-                }
-            }
-        }
-    }
-    assert!(
-        failures.is_empty(),
-        "цель `plantuml`: {} случаев разошлись с ожиданием:\n{}",
-        failures.len(),
-        failures.join("\n")
-    );
-}
-
 /// Флаги подкоманды `compile`, которые разбирает CLI.
 ///
 /// Список - Данные теста, а не выведенный факт: разбор написан кодом, и реестра флагов

@@ -11,18 +11,11 @@ struct Restricted {
 }
 
 /// Таблица ограниченных флагов.
-const RESTRICTED: &[Restricted] = &[
-    Restricted {
-        flag: "--fsm=table",
-        what: "Табличную форму автомата печатают цели",
-        targets: &["c", "c-hal", "rust", "st", "st-at", "sv", "sv-mmio"],
-    },
-    Restricted {
-        flag: "--bus=apb",
-        what: "Адаптер шины печатает цель",
-        targets: &["sv-mmio"],
-    },
-];
+const RESTRICTED: &[Restricted] = &[Restricted {
+    flag: "--bus=apb",
+    what: "Адаптер шины печатает цель",
+    targets: &["sv-mmio"],
+}];
 
 /// Проверяет применимость поднятых флагов к цели.
 ///
@@ -52,15 +45,8 @@ mod tests {
     use super::check;
 
     #[test]
-    fn table_form_is_refused_for_plantuml() {
-        let err = check("plantuml", &["--fsm=table"]).unwrap_err();
-        assert!(err.contains("--fsm=table"), "текст: {err}");
-        assert!(err.contains("plantuml"), "текст: {err}");
-    }
-
-    #[test]
     fn bus_is_refused_for_every_target_but_sv_mmio() {
-        for target in ["c", "c-hal", "rust", "st", "st-at", "sv", "plantuml"] {
+        for target in ["c", "c-hal", "rust", "st", "st-at", "sv"] {
             let err = check(target, &["--bus=apb"]).unwrap_err();
             assert!(err.contains("sv-mmio"), "цель {target}, текст: {err}");
         }
@@ -69,6 +55,8 @@ mod tests {
 
     #[test]
     fn unrestricted_flag_passes_anywhere() {
-        assert!(check("plantuml", &[]).is_ok());
+        // Табличную форму автомата печатают все цели - флаг ни одной не отвергается.
+        assert!(check("c", &["--fsm=table"]).is_ok());
+        assert!(check("sv", &[]).is_ok());
     }
 }

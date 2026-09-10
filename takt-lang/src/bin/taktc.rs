@@ -452,7 +452,7 @@ fn print_usage() {
     eprintln!("                         Флаги --verbose и --quiet взаимоисключающие");
     eprintln!("  --guard-enable         Включить генерацию проверок Guard-формул (по умолчанию)");
     eprintln!("  --guard-disable        Выключить генерацию проверок Guard-формул");
-    eprintln!("  --fsm=switch|table     Форма автомата (все цели, кроме plantuml):");
+    eprintln!("  --fsm=switch|table     Форма автомата (все цели):");
     eprintln!(
         "                         switch — по умолчанию; table — переходы данными (таблица + диспетчер)"
     );
@@ -499,7 +499,6 @@ fn print_usage() {
     eprintln!("Целевые платформы:");
     eprintln!("  c         Генерация C-заголовочного файла");
     eprintln!("  c-hal     C + таблица адресов портов и дефолтный HAL (фича 0020)");
-    eprintln!("  plantuml  Генерация диаграммы состояний PlantUML (.puml)");
     eprintln!("  st        Генерация Structured Text IEC 61131-3 (.st), язык ПЛК (фича 0041)");
     eprintln!("  st-at     ST + размещение портов по карте адресов (AT %...)");
     eprintln!("  rust      Генерация no_std Rust (.rs) — прошивка МК (фича 0050)");

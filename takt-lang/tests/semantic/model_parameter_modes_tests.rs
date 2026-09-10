@@ -13,8 +13,8 @@
 
 use takt_lang::GenerateOptions;
 use takt_lang::{
-    compile_to_c, compile_to_c_hal, compile_to_plantuml, compile_to_rust, compile_to_st,
-    compile_to_st_at, compile_to_sv, compile_to_sv_mmio,
+    compile_to_c, compile_to_c_hal, compile_to_rust, compile_to_st, compile_to_st_at,
+    compile_to_sv, compile_to_sv_mmio,
 };
 
 /// Модель с параметром; два экземпляра с **разными** настройками.
@@ -89,7 +89,6 @@ fn try_target(target: &str, src: &str, specialize: bool) -> Result<(), String> {
         "rust" => compile_to_rust(name, src, &path, &[], &options),
         "sv" => compile_to_sv(name, src, &path, &[], &options),
         "sv-mmio" => compile_to_sv_mmio(name, src, &path, &[], &[], &Default::default(), &options),
-        "plantuml" => compile_to_plantuml(name, src, &path, &[]),
         other => panic!("неизвестная цель '{other}' в тесте"),
     };
     result.map(|_| ()).map_err(|d| {
@@ -101,10 +100,8 @@ fn try_target(target: &str, src: &str, specialize: bool) -> Result<(), String> {
     })
 }
 
-/// Все цели, включая потребителей адресов и диаграмму.
-const TARGETS: [&str; 8] = [
-    "c", "c-hal", "st", "st-at", "rust", "sv", "sv-mmio", "plantuml",
-];
+/// Все цели, включая потребителей адресов.
+const TARGETS: [&str; 7] = ["c", "c-hal", "st", "st-at", "rust", "sv", "sv-mmio"];
 
 // --- Обе стороны флага на обоих наборах значений ------------------------
 

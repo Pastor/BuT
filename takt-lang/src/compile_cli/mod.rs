@@ -131,7 +131,7 @@ pub struct CompileOptions {
 ///
 /// | Флаг | Описание |
 /// |------------------------|-------------------------------------------|
-/// | `--target`, `-t` | Целевой язык: `c` (по умолчанию), `c-hal`, `plantuml`, `st`, `st-at`, `rust` |
+/// | `--target`, `-t` | Целевой язык: `c` (по умолчанию), `c-hal`, `st`, `st-at`, `rust` |
 /// | `--output`, `-o` | Путь к выходному файлу/директории |
 /// | `--include-dirs`, `-I` | Пути поиска импортов (`:` или `;`) |
 /// | `-I<путь>` | Слитная форма без пробела |
@@ -577,9 +577,6 @@ pub fn run_compile(args: &[String]) -> i32 {
     // принимает флаг, которого не исполняет, - рапорт об успехе на невыполненной
     // просьбе.
     let mut raised: Vec<&str> = Vec::new();
-    if options.fsm == crate::generator::FsmForm::Table {
-        raised.push("--fsm=table");
-    }
     if options.bus.is_some() {
         raised.push("--bus=apb");
     }

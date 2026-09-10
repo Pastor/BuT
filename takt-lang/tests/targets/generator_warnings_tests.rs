@@ -219,11 +219,11 @@ fn sv_mmio_returns_generator_warning_too() {
     );
 }
 
-/// Цели без собственных предупреждений возвращают **пустой** список, а не
+/// Цель без собственных предупреждений возвращает **пустой** список, а не
 /// отсутствие канала. Появится первое предупреждение цели `c` - поедет по нему без
 /// смены сигнатуры.
 #[test]
-fn c_and_plantuml_return_an_empty_channel() {
+fn c_returns_an_empty_channel() {
     let dir = tmp("c_empty");
     let path = dir.to_str().expect("путь");
     let c = takt_lang::compile_to_c(
@@ -235,14 +235,6 @@ fn c_and_plantuml_return_an_empty_channel() {
     )
     .expect("цель c");
     assert!(c.is_empty(), "у цели c предупреждений нет: {:?}", codes(&c));
-
-    let puml = takt_lang::compile_to_plantuml("plain.takt", VAR_DIVIDER, path, &[])
-        .expect("цель plantuml");
-    assert!(
-        puml.is_empty(),
-        "у цели plantuml предупреждений нет: {:?}",
-        codes(&puml)
-    );
 }
 
 /// Библиотека не разговаривает с пользователем - печати из `generator/` не

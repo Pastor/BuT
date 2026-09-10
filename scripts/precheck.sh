@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Предкоммит-проверка: ссылки в Markdown + fmt + check + clippy + test +
 # формат примеров (taktc fmt --check) +
-# генерация C/PlantUML/ST/Rust/SV из примеров Takt + проверка воспроизводимости
+# генерация C/ST/Rust/SV из примеров Takt + проверка воспроизводимости
 # + сборка сгенерированного кода (C - cmake/ninja, Rust - cargo +
 # прогон проверок по моделям, SV - verilator + yosys).
 # Запускать из любого каталога.
@@ -550,7 +550,7 @@ $CARGO_CMD build -p takt-sim --no-default-features --lib
 # Стоит после сборки бинарников, а не рядом с реестром кодов: проверка
 # судит напечатанное, то есть гоняет `taktc`, - со старым бинарником он мерил
 # бы прошлый прогон. Шаг, стоящий выше сборки, отвергает исправленный
-# класс. ~11 с (корпус на восемь целей).
+# класс. ~11 с (корпус на семь целей).
 "$(dirname "$0")/test-check-diagnostic-quality.sh"
 "$(dirname "$0")/check-diagnostic-quality.py"
 
@@ -584,7 +584,6 @@ $TAKTC fmt --check examples/ || {
 }
 
 C_OUTPUT="examples/generated/c"
-PLANTUML_OUTPUT="examples/generated/plantuml"
 ST_OUTPUT="examples/generated/st"
 RUST_OUTPUT="examples/generated/rust"
 SV_OUTPUT="examples/generated/sv"
@@ -653,7 +652,6 @@ for takt_file in examples/*.takt; do
   name="$(basename "$takt_file" .takt)"
   echo "  $takt_file → $C_OUTPUT/${name}.c / ${name}.h"
   $TAKTC compile "$takt_file" -o "$C_OUTPUT" || echo "    [предупреждение] ошибка генерации $takt_file"
-  $TAKTC compile "$takt_file" -t plantuml -o "$PLANTUML_OUTPUT" || echo "    [предупреждение] ошибка генерации $takt_file"
   # Цель st. Отказ не валит предкоммит: генератор дописывается
   # и на непокрытом узле он закономерно
   # отвечает ST-011 - это замысел ("никакого тихого пропуска"), а не поломка.
@@ -717,7 +715,7 @@ echo "Гейт воспроизводимости: два прогона (+ ре
 repro_failed=0
 for takt_file in examples/*.takt; do
   name="$(basename "$takt_file" .takt)"
-  for spec in "c:" "c-hal:-t c-hal" "plantuml:-t plantuml" "st:-t st" "st-at:-t st-at" "rust:-t rust" "sv:-t sv" "sv-mmio:-t sv-mmio"; do
+  for spec in "c:" "c-hal:-t c-hal" "st:-t st" "st-at:-t st-at" "rust:-t rust" "sv:-t sv" "sv-mmio:-t sv-mmio"; do
     tgt="${spec%%:*}"
     flag="${spec#*:}"
     # float-примерам цели sv/sv-mmio требуют --float-as-q - иначе оба

@@ -55,20 +55,6 @@ fn codegen_handles_deep_state_chain() {
     let _ = std::fs::remove_file(&out);
 }
 
-/// PlantUML - вторая цель поверх той же карты: контроль от правки одной цели.
-#[test]
-fn plantuml_handles_deep_state_chain() {
-    let src = chain_source(DEEP);
-    let out = std::env::temp_dir()
-        .join(format!("takt_pid{}", std::process::id()))
-        .join("takt_deep_chain.puml");
-    // Каталог процесса создаётся здесь: файл пишет не тест, а инструмент.
-    let _ = std::fs::create_dir_all(out.parent().expect("каталог процесса"));
-    takt_lang::compile_to_plantuml("deep.takt", &src, out.to_str().expect("путь"), &[])
-        .expect("цепочка из 5000 состояний обязана давать диаграмму");
-    let _ = std::fs::remove_file(&out);
-}
-
 /// Верификация (nested-DFS) не рекурсирует по состояниям произведения.
 ///
 /// Проверяется **вердикт**, а не факт возврата: `F S4999` на цепочке достижимо и

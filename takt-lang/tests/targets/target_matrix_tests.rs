@@ -501,18 +501,3 @@ fn target_sv_accepts_every_shape() {
 fn target_sv_mmio_accepts_every_shape() {
     sv_sweep("sv-mmio");
 }
-
-/// Цель `plantuml`: инструмента нет, вердикт - непустая диаграмма.
-#[test]
-fn target_plantuml_accepts_every_shape() {
-    let check = |_dir: &Path, out: &Path, _touch: Touch| -> Result<(), String> {
-        let text = std::fs::read_to_string(out.join("probe.puml"))
-            .map_err(|e| format!("диаграмма не читается: {e}"))?;
-        if text.contains("@startuml") && text.contains("@enduml") {
-            Ok(())
-        } else {
-            Err(format!("диаграмма пуста либо неполна:\n{text}"))
-        }
-    };
-    verdict("plantuml", sweep("plantuml", &check));
-}

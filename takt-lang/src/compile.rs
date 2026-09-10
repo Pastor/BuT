@@ -19,8 +19,6 @@ pub enum Target {
     C,
     /// `c-hal` - то же плюс таблица адресов и умолчательная реализация HAL.
     CHal,
-    /// `plantuml` - диаграмма состояний.
-    PlantUml,
     /// `st` - Structured Text (IEC 61131-3).
     St,
     /// `st-at` - ST с размещением портов по карте адресов (`AT %...`).
@@ -35,10 +33,9 @@ pub enum Target {
 
 impl Target {
     /// Все цели в порядке, в каком их перечисляет справка CLI.
-    pub const ALL: [Target; 8] = [
+    pub const ALL: [Target; 7] = [
         Target::C,
         Target::CHal,
-        Target::PlantUml,
         Target::St,
         Target::StAt,
         Target::Rust,
@@ -60,7 +57,6 @@ impl Target {
         match self {
             Target::C => "c",
             Target::CHal => "c-hal",
-            Target::PlantUml => "plantuml",
             Target::St => "st",
             Target::StAt => "st-at",
             Target::Rust => "rust",
@@ -73,7 +69,6 @@ impl Target {
     pub fn language(self) -> Language {
         match self {
             Target::C | Target::CHal => Language::C,
-            Target::PlantUml => Language::PlantUML,
             Target::St | Target::StAt => Language::ST,
             Target::Rust => Language::Rust,
             Target::Sv => Language::SV,
@@ -141,7 +136,6 @@ pub fn compile_texts(target: Target, input: &CompileInput<'_>) -> Result<Output,
         // обращении HAL, и переменный индекс выразим.
         Target::C => plain(input, PortSplit::StructsOnly, false, true, Language::C),
         Target::CHal => with_addresses(input, PortSplit::StructsOnly, Language::C),
-        Target::PlantUml => plantuml(input),
         Target::St => plain(input, PortSplit::ArraysOnly, true, true, Language::ST),
         Target::StAt => with_addresses(input, PortSplit::All, Language::ST),
         Target::Rust => plain(input, PortSplit::All, true, true, Language::Rust),
@@ -251,16 +245,6 @@ fn sv(input: &CompileInput<'_>) -> Result<Output, Diagnostic> {
     unit.emit_texts(Language::SV, input.options)
 }
 
-/// Цель `plantuml`: диаграмма опций не читает - печатается умолчаниями.
-fn plantuml(input: &CompileInput<'_>) -> Result<Output, Diagnostic> {
-    let defaults = GenerateOptions::default();
-    let unit = named_unit(&CompileInput {
-        options: &defaults,
-        ..*input
-    })?;
-    unit.emit_texts(Language::PlantUML, &defaults)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -279,7 +263,11 @@ mod tests {
                 target
             );
         }
-        assert_eq!(Target::ALL.len(), 8, "целей восемь");
+        assert_eq!(Target::ALL.len(), 7, "целей семь");
+        assert!(
+            Target::parse("plantuml").is_none(),
+            "цели диаграмм среди целей нет"
+        );
         assert!(Target::parse("verilog").is_none(), "чужое имя не цель");
     }
 

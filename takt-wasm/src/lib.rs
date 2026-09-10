@@ -438,6 +438,6 @@ mod tests {
             reply["language"],
             Value::String(takt_lang::LANGUAGE_VERSION.to_string())
         );
-        assert_eq!(reply["targets"].as_array().unwrap().len(), 8);
+        assert_eq!(reply["targets"].as_array().unwrap().len(), 7);
     }
 }

@@ -12,7 +12,6 @@ mod indent;
 pub mod keywords;
 pub(crate) mod local_stub;
 pub(crate) mod mixed_sign;
-mod plantuml;
 mod rust;
 mod shift_width;
 mod site;
@@ -36,8 +35,6 @@ use crate::semantic::ModelNode;
 pub enum Language {
     /// Генерация C-кода.
     C,
-    /// Генерация диаграммы состояний PlantUML.
-    PlantUML,
     /// Генерация Structured Text (IEC 61131-3) - язык ПЛК.
     ///
     /// Модель -> `FUNCTION_BLOCK`, состояния -> `CASE state OF`. Потребление карты
@@ -323,7 +320,7 @@ pub trait Generator {
 
     /// Диагностика неудачной записи файла на диск.
     ///
-    /// Код принадлежит цели (`CC-010`, `ST-001`, `RS-001`, `SV-001`, `PU-001`), поэтому
+    /// Код принадлежит цели (`CC-010`, `ST-001`, `RS-001`, `SV-001`), поэтому
     /// общий носитель записи спрашивает его здесь, а не печатает свой: сообщение об
     /// отказе диска обязано быть узнаваемым по коду.
     fn write_failure(&self, error: &std::io::Error) -> Diagnostic;
@@ -336,7 +333,6 @@ pub trait Generator {
 fn generator_of(l: &Language) -> Box<dyn Generator> {
     match l {
         Language::C => Box::new(c::Generator {}),
-        Language::PlantUML => Box::new(plantuml::Generator {}),
         Language::ST => Box::new(st::Generator {}),
         Language::Rust => Box::new(rust::Generator {}),
         Language::SV => Box::new(sv::Generator { mmio: false }),
@@ -471,13 +467,12 @@ mod tests {
         fn language_of(tag: &str) -> Language {
             match tag {
                 "c" => Language::C,
-                "plantuml" => Language::PlantUML,
                 "st" => Language::ST,
                 "rust" => Language::Rust,
                 _ => Language::SV,
             }
         }
-        for tag in ["c", "plantuml", "st", "rust", "sv"] {
+        for tag in ["c", "st", "rust", "sv"] {
             let dir = tmp(tag);
             let path = dir.to_str().expect("путь каталога");
             let model = model_of(src);

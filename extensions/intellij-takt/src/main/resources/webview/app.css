@@ -1218,7 +1218,7 @@ body[data-tree="off"] .work {
 .pick { position: relative; display: inline-flex; min-width: 0; max-width: 100%; }
 
 /* Ширина не пляшет при смене значения: кнопка, сжатая по текущей подписи,
- * прыгала бы с 39 px на "c" до 90 px на "plantuml", сдвигая соседей. */
+ * прыгала бы с 39 px на "c" до 90 px на "sv-mmio", сдвигая соседей. */
 .controls .pick { min-width: 12ch; }
 .pick > select { position: absolute; inset: 0; width: 100%; opacity: 0; pointer-events: none; }
 

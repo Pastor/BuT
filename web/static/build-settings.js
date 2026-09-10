@@ -26,7 +26,6 @@ const GROUPS = [
   { id: "plc", label: "build.group.plc", targets: ["st", "st-at"] },
   { id: "rust", label: "build.group.rust", targets: ["rust"] },
   { id: "fpga", label: "build.group.fpga", targets: ["sv", "sv-mmio"] },
-  { id: "diagram", label: "build.group.diagram", targets: ["plantuml"] },
 ];
 
 /**
@@ -42,7 +41,6 @@ const TARGETS = {
   rust: { label: "build.why.rust", sample: "match self.state\n{ … }" },
   sv: { label: "build.why.sv", sample: "always_ff @(posedge\n  clk) …" },
   "sv-mmio": { label: "build.why.svMmio", sample: "reg_wdata,\nreg_wen …" },
-  plantuml: { label: "build.why.plantuml", sample: "@startuml\n[*] --> Idle" },
 };
 
 /**

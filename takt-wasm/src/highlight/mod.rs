@@ -15,9 +15,8 @@
 //! | SystemVerilog | `takt_lang::generator::keywords::SV` | отказ `SV-012` цели `sv` |
 //! | Structured Text | [`syntax::ST`] | сверяется с `book/st.sublime-syntax` (тест) |
 //! | C | [`syntax::C`] | - |
-//! | PlantUML | [`syntax::PLANTUML`] | - |
 //!
-//! У C и PlantUML носителя в проекте нет, и словарь здесь написан руками. Это названная
+//! У C носителя в проекте нет, и словарь здесь написан руками. Это названная
 //! граница, а не недосмотр: цена промаха здесь **другого класса**, чем у списка IEC.
 //! Там пропущенное имя означало вывод, отвергнутый `iec2c` при нулевом коде возврата;
 //! здесь - слово без цвета. Ни поведение автомата, ни валидность вывода от словаря не
@@ -245,7 +244,7 @@ fn scan_line(
             continue;
         }
 
-        // Директива: `#include` у C, `@startuml` у PlantUML.
+        // Директива: `#include` у C.
         if Some(ch) == syntax.directive_prefix {
             let length = ch.len_utf8() + word_len(&rest[ch.len_utf8()..]);
             push(
@@ -570,17 +569,6 @@ mod tests {
     }
 
     #[test]
-    fn plantuml_directives_and_arrows() {
-        let got = marks(
-            "plantuml",
-            "@startuml\ntitle Heater\n[*] --> Heating\n@enduml\n",
-        );
-        assert!(got.iter().any(|m| m.3 == "keyword" && m.0 == 0));
-        assert!(got.iter().any(|m| m.3 == "keyword" && m.0 == 1));
-        assert!(got.iter().any(|m| m.3 == "operator" && m.0 == 2));
-    }
-
-    #[test]
     fn columns_are_counted_in_utf16() {
         // В комментариях порождённых файлов есть кириллица: счёт в байтах увёл бы
         // подсветку вправо на длину комментария.
@@ -608,9 +596,8 @@ mod tests {
 
     #[test]
     fn each_language_distinguishes_keyword_number_and_comment() {
-        // Условие приёмки. Проверяется на пробе языка, а не на выводе цели: у
-        // `plantuml` в выводе нет ни чисел, ни комментариев, и требование к нему было
-        // бы требованием к фикстуре, а не к подсветке.
+        // Условие приёмки. Проверяется на пробе языка, а не на выводе цели:
+        // требование к выводу было бы требованием к фикстуре, а не к подсветке.
         let probes = [
             ("c", "/* шапка */ static int x = 12;"),
             ("c-hal", "// шапка\nstatic int x = 12;"),
@@ -619,7 +606,6 @@ mod tests {
             ("rust", "// шапка\nlet x = 12;"),
             ("sv", "// шапка\nassign a = 12;"),
             ("sv-mmio", "// шапка\nassign a = 12;"),
-            ("plantuml", "' шапка\nstate S12 : 12"),
         ];
         for (target, probe) in probes {
             let got = roles(target, probe);

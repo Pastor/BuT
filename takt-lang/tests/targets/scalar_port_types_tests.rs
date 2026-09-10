@@ -16,9 +16,7 @@
 use takt_lang::generator::GenerateOptions;
 
 /// Цели проекта, чей вывод проверяется.
-const TARGETS: &[&str] = &[
-    "c", "c-hal", "st", "st-at", "rust", "sv", "sv-mmio", "plantuml",
-];
+const TARGETS: &[&str] = &["c", "c-hal", "st", "st-at", "rust", "sv", "sv-mmio"];
 
 /// Модель с портом типа `duration` заданного направления.
 ///
@@ -218,7 +216,6 @@ fn emit(name: &str, source: &str, tag: &str) -> Result<String, takt_lang::diagno
             options.hal = true;
             takt_lang::compile_to_sv_mmio("probe", source, path, &[], &[], &env, &options)
         }
-        "plantuml" => takt_lang::compile_to_plantuml("probe", source, path, &[]),
         other => panic!("неизвестная цель {other}"),
     };
     result?;

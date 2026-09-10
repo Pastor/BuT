@@ -348,35 +348,6 @@ pub fn compile_to_st_at(
     compile::compile_files(compile::Target::StAt, &input, output_path)
 }
 
-/// Компилирует исходный код Takt в диаграмму состояний PlantUML.
-///
-/// Выполняет полный конвейер: лексический анализ -> синтаксический -> семантический ->
-/// генерация `.puml`.
-///
-/// # Параметры
-///
-/// - `filename` - имя входного файла (используется для именования модели и диагностики)
-/// - `source` - исходный код на языке Takt
-/// - `output_path` - путь к выходному каталогу (создаёт `<filename>.puml`)
-/// - `search_paths` - директории для поиска файлов `import`
-///
-/// # Ошибки
-///
-/// Возвращает [`Diagnostic`] при синтаксической или семантической ошибке.
-pub fn compile_to_plantuml(
-    filename: &str,
-    source: &str,
-    output_path: &str,
-    search_paths: &[String],
-) -> Result<Vec<Diagnostic>, Diagnostic> {
-    let defaults = GenerateOptions::default();
-    compile::compile_files(
-        compile::Target::PlantUml,
-        &compile::CompileInput::new(filename, source, search_paths, &defaults),
-        output_path,
-    )
-}
-
 /// Ce13: возвращает предупреждения о неиспользуемых переменных в модели.
 ///
 /// Обходит все выражения, операторы и условия модели и её вложенных моделей, возвращая

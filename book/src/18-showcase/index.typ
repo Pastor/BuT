@@ -103,7 +103,6 @@ taktc compile -t c-hal  lift.takt -o out/   # прошивка с прямым �
 taktc compile -t rust   lift.takt -o out/   # no_std Rust
 taktc compile -t st     lift.takt -o out/   # ПЛК (Structured Text, IEC 61131-3)
 taktc compile -t sv     lift.takt -o out/   # SystemVerilog (FPGA/ASIC)
-taktc compile -t plantuml lift.takt -o out/ # диаграмма состояний
 ```
 
 Такт модели превращается в шаг целевого кода, а инвариант — в

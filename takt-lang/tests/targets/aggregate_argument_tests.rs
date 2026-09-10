@@ -33,9 +33,7 @@ const ARRAY_ARG: &str = "model Probe {\n\
      }\n\
      start Main = Probe;\n";
 
-const TARGETS: &[&str] = &[
-    "c", "c-hal", "st", "st-at", "rust", "sv", "sv-mmio", "plantuml",
-];
+const TARGETS: &[&str] = &["c", "c-hal", "st", "st-at", "rust", "sv", "sv-mmio"];
 
 fn out_dir(tag: &str) -> std::path::PathBuf {
     let dir = std::env::temp_dir()
@@ -72,7 +70,6 @@ fn emit(
             options.hal = true;
             takt_lang::compile_to_sv_mmio("probe", source, path, &[], &[], &env, &options)
         }
-        "plantuml" => takt_lang::compile_to_plantuml("probe", source, path, &[]),
         other => panic!("неизвестная цель {other}"),
     };
     result?;

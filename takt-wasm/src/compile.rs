@@ -99,9 +99,6 @@ fn prepare(target: &str, args: &str, filename: &str) -> Result<(Target, CompileO
     // Применимость ключа к цели - та же таблица, что у CLI: `--bus=apb` у `rust` обязан
     // отказывать и здесь, а не приниматься молча.
     let mut raised: Vec<&str> = Vec::new();
-    if options.fsm == takt_lang::generator::FsmForm::Table {
-        raised.push("--fsm=table");
-    }
     if options.bus.is_some() {
         raised.push("--bus=apb");
     }

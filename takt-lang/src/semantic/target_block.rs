@@ -28,7 +28,7 @@ use std::rc::Rc;
 ///
 /// Список - языки, а не цели CLI: режимы `c-hal`, `st-at` и `sv-mmio` печатают тот же
 /// язык, что и базовая цель, и своей метки не имеют.
-const TARGET_LANGUAGES: &[&str] = &["c", "st", "rust", "sv", "plantuml"];
+const TARGET_LANGUAGES: &[&str] = &["c", "st", "rust", "sv"];
 
 /// Режимные имена целей: язык у них тот же, метка - базовая.
 const TARGET_MODES: &[(&str, &str)] = &[("c-hal", "c"), ("st-at", "st"), ("sv-mmio", "sv")];
@@ -79,7 +79,7 @@ pub(crate) fn emits_for(target: Option<&str>, language: &str) -> bool {
 /// Язык вывода цели - метка, вставки которой она печатает.
 ///
 /// Режимы печатают язык базовой цели: `c-hal` - тот же C, `sv-mmio` - тот же
-/// SystemVerilog. Поэтому меток пять, а целей восемь.
+/// SystemVerilog. Поэтому меток четыре, а целей семь.
 pub(crate) fn label_of(language: &crate::generator::Language) -> &'static str {
     use crate::generator::Language;
     match language {
@@ -87,7 +87,6 @@ pub(crate) fn label_of(language: &crate::generator::Language) -> &'static str {
         Language::ST => "st",
         Language::Rust => "rust",
         Language::SV | Language::SvMmio => "sv",
-        Language::PlantUML => "plantuml",
     }
 }
 
@@ -222,7 +221,7 @@ mod tests {
         }
     }
 
-    /// Языки вывода принимаются, и все пять (тест падает списком).
+    /// Языки вывода принимаются, и все четыре (тест падает списком).
     #[test]
     fn output_languages_are_accepted() {
         let refused: Vec<_> = TARGET_LANGUAGES
@@ -255,6 +254,14 @@ mod tests {
         let err = check_target(&literal("С")).expect_err("кириллическая 'С' — не язык вывода");
         assert_eq!(err.code.as_deref(), Some("SE-129"));
         assert!(err.message.contains("rust"), "{}", err.message);
+    }
+
+    /// Метки `plantuml` среди языков вывода нет: вставка с ней отказывает, а не
+    /// выключается молча во всех целях.
+    #[test]
+    fn diagram_label_is_refused() {
+        let err = check_target(&literal("plantuml")).expect_err("такого языка вывода нет");
+        assert_eq!(err.code.as_deref(), Some("SE-129"));
     }
 
     /// Безымянная вставка принадлежит каждой цели, именованная - своей.

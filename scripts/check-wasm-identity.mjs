@@ -32,7 +32,7 @@ if (!wasmPath || !taktcPath || !taktSimPath) {
   process.exit(2);
 }
 
-const TARGETS = ["c", "c-hal", "plantuml", "st", "st-at", "rust", "sv", "sv-mmio"];
+const TARGETS = ["c", "c-hal", "st", "st-at", "rust", "sv", "sv-mmio"];
 
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
@@ -267,7 +267,7 @@ async function main() {
   wasm = await loadModule(wasmPath);
   const workDir = await mkdtemp(join(tmpdir(), "takt-wasm-identity-"));
 
-  // 1. Компиляция: корпус `examples/` x восемь целей.
+  // 1. Компиляция: корпус `examples/` x семь целей.
   const examples = (await readdir("examples"))
     .filter((name) => name.endsWith(".takt"))
     .sort();

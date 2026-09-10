@@ -22,7 +22,7 @@
 
 /// Текущая версия языка Takt (SemVer, `x.y.z`). Единственный источник истины;
 /// `README.md` обязан ей соответствовать (проверка `check-language-version.sh`).
-pub const LANGUAGE_VERSION: &str = "0.18.0";
+pub const LANGUAGE_VERSION: &str = "0.19.0";
 
 /// Печать версий инструмента - подкоманда `taktc version`.
 ///

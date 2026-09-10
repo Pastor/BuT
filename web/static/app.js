@@ -1433,7 +1433,7 @@ function refusal(error) {
  *
  * Отрезки приходят от модуля (`takt_highlight`) в той же форме, что токены
  * исходника, и раскладывает их тот же `paintCode`: своего разбора C, ST, Rust,
- * SystemVerilog или PlantUML в браузере нет - он разошёлся бы и с целями, и с
+ * SystemVerilog в браузере нет - он разошёлся бы и с целями, и с
  * подсветкой блоков кода в документе.
  */
 function paintOutput(body, text, header) {

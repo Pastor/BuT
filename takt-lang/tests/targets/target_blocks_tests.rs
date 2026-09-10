@@ -52,10 +52,6 @@ const TARGETS: &[Target] = &[
         name: "sv-mmio",
         label: "sv",
     },
-    Target {
-        name: "plantuml",
-        label: "plantuml",
-    },
 ];
 
 /// Модель со вставкой, адресованной цели `label`, и блоком формул.
@@ -110,7 +106,6 @@ fn emit(name: &str, source: &str, tag: &str) -> Result<String, takt_lang::diagno
             options.hal = true;
             takt_lang::compile_to_sv_mmio("probe", source, path, &[], &[], &env, &options)
         }
-        "plantuml" => takt_lang::compile_to_plantuml("probe", source, path, &[]),
         other => panic!("неизвестная цель {other}"),
     };
     result?;
@@ -149,10 +144,6 @@ fn named_assembly_reaches_only_its_target() {
                     continue;
                 }
             };
-            // `plantuml` тел не печатает вовсе - у него сравнивать нечего.
-            if target.name == "plantuml" {
-                continue;
-            }
             let printed = text.contains("41");
             let expected = target.label == owner.label;
             if printed != expected {
@@ -207,7 +198,7 @@ fn formula_block_is_skipped_by_every_target() {
 /// вставки именно туда. Молча недействующая метка хуже отказа.
 #[test]
 fn unknown_target_label_is_refused() {
-    for label in ["cpp", "c-hal", "st-at", "sv-mmio", "С"] {
+    for label in ["cpp", "c-hal", "st-at", "sv-mmio", "С", "plantuml"] {
         let err = emit("c", &source(label), "bad").expect_err("ожидался отказ семантики");
         assert_eq!(
             err.code.as_deref(),
@@ -280,10 +271,6 @@ fn assembly_reaches_target_from_model_and_state_level() {
                 continue;
             }
         };
-        // `plantuml` тел не печатает вовсе - у него сравнивать нечего.
-        if target.name == "plantuml" {
-            continue;
-        }
         // Признак - Числа приращений: 1 и 40 в выводе иначе не встречаются, а форма
         // записи у целей разная (`+ 40` у C, `wrapping_add(40)` у Rust). Признак -
         // Числа приращений: 37 и 41 в выводе иначе не встречаются, а форма записи у

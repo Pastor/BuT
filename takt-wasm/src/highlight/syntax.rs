@@ -78,7 +78,7 @@ pub struct Syntax {
     pub string_escape: Option<char>,
     /// Знаки операций - красятся одной группой подряд.
     pub operators: &'static str,
-    /// Начало директивы: `#` у C, `@` у PlantUML.
+    /// Начало директивы: `#` у C.
     pub directive_prefix: Option<char>,
     /// Начало локации прямого доступа: `%` у Structured Text.
     pub location_prefix: Option<char>,
@@ -117,7 +117,6 @@ pub fn of(language: Language) -> Option<(&'static str, &'static Syntax)> {
         Language::ST => Some(("Structured Text", &ST)),
         Language::Rust => Some(("Rust", &RUST)),
         Language::SV | Language::SvMmio => Some(("SystemVerilog", &SV)),
-        Language::PlantUML => Some(("PlantUML", &PLANTUML)),
         _ => None,
     }
 }
@@ -357,55 +356,6 @@ pub static SV: Syntax = Syntax {
     hash_number: false,
     // Размерный литерал `8'd12` - одно число: апостроф в SV не кавычка.
     tick_number: true,
-};
-
-// -- PlantUML (цель `plantuml`) -----------------------------------------------
-
-/// Слова диаграммы состояний PlantUML.
-///
-/// Носителя в проекте нет - как и у C. Набор покрывает то, что печатает цель
-/// (`@startuml`, `title`, `state`, `[*]`, `-->`), плюс обиходные слова диаграммы
-/// состояний: вкладку читает человек, и дописанная им строка тоже должна краситься.
-const PLANTUML_WORDS: &[&str] = &[
-    "state",
-    "title",
-    "note",
-    "end",
-    "as",
-    "hide",
-    "show",
-    "skinparam",
-    "left",
-    "right",
-    "of",
-    "top",
-    "bottom",
-    "direction",
-    "fork",
-    "join",
-    "choice",
-    "history",
-    "scale",
-    "caption",
-    "header",
-    "footer",
-    "legend",
-    "newpage",
-];
-
-pub static PLANTUML: Syntax = Syntax {
-    words: &[(PLANTUML_WORDS, Role::Keyword)],
-    case_insensitive: false,
-    // Строчный комментарий PlantUML - апостроф; блочный - `/' ... '/`.
-    line_comments: &["'"],
-    block_comments: &[("/'", "'/")],
-    strings: &['"'],
-    string_escape: None,
-    operators: "-<>*[]{}:|",
-    directive_prefix: Some('@'),
-    location_prefix: None,
-    hash_number: false,
-    tick_number: false,
 };
 
 #[cfg(test)]

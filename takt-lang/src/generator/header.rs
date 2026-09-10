@@ -25,7 +25,7 @@
 //! # Форма комментария принадлежит цели
 //!
 //! Текст один, а обрамление у каждого языка своё: `//` у C, Rust и SystemVerilog, `(*
-//! ... *)` у Structured Text, `'` у PlantUML. Поэтому носитель отдаёт **строки
+//! ... *)` у Structured Text. Поэтому носитель отдаёт **строки
 //! текста**, а обрамление накладывает [`CommentStyle`] - иначе каждая цель завела бы
 //! свою копию шапки, и они разъехались бы молча.
 
@@ -38,8 +38,6 @@ pub enum CommentStyle {
     Slashes,
     /// Блочный комментарий IEC: `(*`, ` * текст`, ` *)`.
     IecBlock,
-    /// Построчный комментарий PlantUML: `' текст`.
-    Quote,
 }
 
 impl CommentStyle {
@@ -53,7 +51,6 @@ impl CommentStyle {
         match self {
             Self::Slashes => format!("// {text}"),
             Self::IecBlock => format!("(* {text} *)"),
-            Self::Quote => format!("' {text}"),
         }
     }
 
@@ -67,7 +64,6 @@ impl CommentStyle {
                 out.push(" *)".to_string());
                 out
             }
-            Self::Quote => lines.iter().map(|l| format!("' {l}")).collect(),
         }
     }
 }
@@ -120,11 +116,7 @@ mod tests {
     /// декоративным.
     #[test]
     fn header_is_latin_only() {
-        for style in [
-            CommentStyle::Slashes,
-            CommentStyle::IecBlock,
-            CommentStyle::Quote,
-        ] {
+        for style in [CommentStyle::Slashes, CommentStyle::IecBlock] {
             let text = file_header("Structured Text (IEC 61131-3)", style).join("\n");
             assert!(
                 !text
@@ -135,7 +127,7 @@ mod tests {
         }
     }
 
-    /// Обрамление принадлежит цели: один текст - три формы.
+    /// Обрамление принадлежит цели: один текст - две формы.
     #[test]
     fn comment_style_belongs_to_the_target() {
         let slashes = file_header("C", CommentStyle::Slashes);
@@ -148,9 +140,6 @@ mod tests {
             iec[1..iec.len() - 1].iter().all(|l| l.starts_with(" * ")),
             "{iec:?}"
         );
-
-        let quote = file_header("PlantUML", CommentStyle::Quote);
-        assert!(quote.iter().all(|l| l.starts_with("' ")), "{quote:?}");
     }
 
     /// Блочная форма IEC не содержит закрывающей последовательности внутри.

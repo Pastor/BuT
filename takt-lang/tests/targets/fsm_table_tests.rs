@@ -351,36 +351,6 @@ fn chain_table_output_compiles_with_gate_flags() {
     );
 }
 
-/// Цель, которая табличную форму не печатает, отвергает флаг.
-///
-/// Взят `plantuml`: он единственный такой - прочие семь целей форму получили,
-/// и полный список поддерживающих проверяет набор
-/// `fsm_table_targets_tests::table_flag_names_supporting_targets`. Диаграмма переходов
-/// и есть отношение переходов, второй его формы у неё быть не может.
-#[test]
-fn table_flag_is_refused_for_other_targets() {
-    let dir = work_dir("target");
-    let input = dir.join("probe.takt");
-    std::fs::write(&input, SIMPLE).expect("запись пробы");
-    let out = taktc()
-        .arg("compile")
-        .args(["-t", "plantuml", "--fsm=table"])
-        .arg(&input)
-        .arg("-o")
-        .arg(dir.join("out"))
-        .output()
-        .expect("запуск taktc compile");
-    assert!(
-        !out.status.success(),
-        "флаг чужой цели обязан быть ошибкой, а не молчаливым умолчанием"
-    );
-    let stderr = String::from_utf8_lossy(&out.stderr);
-    assert!(
-        stderr.contains("c, c-hal"),
-        "ошибка не называет поддерживающие цели:\n{stderr}"
-    );
-}
-
 #[test]
 fn unknown_form_is_refused_with_list() {
     let dir = work_dir("unknown");

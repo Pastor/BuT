@@ -14,7 +14,7 @@
 //!
 //! | Потребитель | Ответ |
 //! |---|---|
-//! | эталон, `st`, `st-at`, `sv`, `sv-mmio`, `plantuml` | берут первую ветвь, инструменты принимают |
+//! | эталон, `st`, `st-at`, `sv`, `sv-mmio` | берут первую ветвь, инструменты принимают |
 //! | `c`, `c-hal` | **`cc`: "duplicate case value"** |
 //! | `rust` | **`clippy`: "these `if` branches have the same condition"** |
 //!

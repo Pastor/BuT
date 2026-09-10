@@ -22,8 +22,6 @@ export const FLAGS = [
     label: "flags.fsm",
     choices: ["switch", "table"],
     fallback: "table",
-    // Цели, принимающие значение (пусто - принимают все): `target_flags.rs`.
-    only: { table: ["c", "c-hal", "rust", "st", "st-at", "sv", "sv-mmio"] },
   },
   { key: "--inline", label: "flags.inline", choices: ["off", "auto"], fallback: "auto" },
   {
@@ -115,8 +113,8 @@ function split(piece) {
  * Собирает строку из состояния конструктора.
  *
  * Ключ, чьё значение цель не принимает, в строку не идёт: иначе страница
- * обещала бы сборку, которую компилятор отвергнет (`--fsm=table` у
- * `plantuml`). Неизвестное (`rest`) едет как есть.
+ * обещала бы сборку, которую компилятор отвергнет (`--bus=apb` у
+ * `sv`). Неизвестное (`rest`) едет как есть.
  */
 export function line({ chosen, rest }, target) {
   const parts = [];

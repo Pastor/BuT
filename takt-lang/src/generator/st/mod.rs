@@ -171,7 +171,7 @@ fn generate_program(map: &StMap) -> Result<(String, Vec<Diagnostic>), Diagnostic
     // MatIEC.
     //
     // Первопричина - `HashMap` в семантическом слое (`semantic/mod.rs`), она общая для
-    // целей `c`/`plantuml` и чинится отдельным кандидатом "Генерация C
+    // цели `c` и чинится отдельным кандидатом "Генерация C
     // недетерминирована" (`FEATURES.md`); здесь снимается только следствие в своём
     // генераторе.
     let mut submodels: Vec<_> = map
@@ -626,8 +626,7 @@ mod tests {
     use super::*;
     use crate::semantic::tree::construct_model;
 
-    /// Строит снимок ST-карты из исходника Takt (по образцу
-    /// `plantuml::tests::make_map`).
+    /// Строит снимок ST-карты из исходника Takt.
     fn make_map(src: &str, name: &str) -> StMap {
         let (ast, _) = crate::parse(src, 0).unwrap();
         let model_rc = construct_model(&ast, None, &[]).unwrap();
