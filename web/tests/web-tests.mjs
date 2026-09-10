@@ -1056,8 +1056,12 @@ test("файлы проекта: полоса отвечает на один в�
   const account = await readFile(new URL("../static/account.js", import.meta.url), "utf8");
   const api = await readFile(new URL("../static/api.js", import.meta.url), "utf8");
 
-  assert.match(account, /dom\.newproject\.hidden = opened;/, "заведение проекта видно при открытом");
-  assert.match(account, /dom\.openproject\.hidden = opened;/, "выбор проекта виден при открытом");
+  // Список проектов стоит в панели всегда, и действия над ними не прячутся:
+  // открыть выбранный можно и не закрывая текущий. Открытие спрашивает выбор,
+  // переименование и удаление - право владельца.
+  assert.match(account, /dom\.openproject\.hidden = !chosen;/, "открытие не спрашивает выбор");
+  assert.match(account, /dom\.renameproject\.hidden = !mine;/, "переименование не по праву владельца");
+  assert.match(account, /dom\.dropproject\.hidden = !mine;/, "удаление не по праву владельца");
   assert.match(account, /dom\.closeproject\.hidden = !opened;/, "закрытие видно без проекта");
   // Заводить и удалять файлы вправе тот, кто вправе писать.
   assert.match(account, /dom\.newfile\.hidden = !writes;/, "заведение файла не по праву записи");
@@ -1117,18 +1121,21 @@ test("проект: действия стоят над его составом, 
   // тем, что показано ниже.
   const tree = html.slice(html.indexOf('class="pane pane-tree"'), html.indexOf("</main>"));
   assert.ok(tree.includes('class="tree-tools"'), "полосы действий над структурой нет");
-  for (const id of ["newproject", "openproject", "download", "closeproject", "newfile", "dropfile"]) {
+  for (const id of ["newproject", "openproject", "renameproject", "dropproject",
+    "download", "closeproject", "newfile", "dropfile"]) {
     assert.ok(tree.includes(`id="${id}"`), `в полосе действий нет '${id}'`);
   }
-  // Удаление проекта ушло из полосы в строку списка: полоса отвечает за
-  // открытый проект, а удаляют выбранный - там его видно по имени.
-  assert.ok(!tree.includes('id="dropproject"'), "удаление проекта осталось в полосе");
-  const order = ['class="tree-tools"', 'id="tree"'].map((mark) => tree.indexOf(mark));
-  assert.deepEqual(order.slice().sort((a, b) => a - b), order, "действия стоят под составом");
+  // Список проектов стоит в самой панели, над составом открытого: сперва "где я
+  // работаю", затем "с чем". Окна выбора нет - оно пряталось за первым же
+  // открытием и не показывало, где автор находится.
+  assert.ok(tree.includes('id="projects"'), "списка проектов нет в панели");
+  assert.ok(!html.includes('id="open-modal"'), "окно выбора проекта осталось");
+  const order = ['class="tree-tools"', 'id="projects"', 'id="tree"'].map((mark) => tree.indexOf(mark));
+  assert.deepEqual(order.slice().sort((a, b) => a - b), order, "порядок панели не тот");
 
-  // Заведение и выбор проекта - разговоры, и у каждого своё окно: список
-  // проектов читают, а не держат на экране.
-  for (const id of ["project-modal", "open-modal", "drop-modal"]) {
+  // Заведение, переименование и удаление проекта - разговоры, и у каждого своё
+  // окно: имя и подтверждение спрашиваются словами.
+  for (const id of ["project-modal", "projectname-modal", "drop-modal"]) {
     assert.ok(html.includes(`id="${id}"`), `окна '${id}' нет`);
   }
   const panel = html.slice(html.indexOf('id="panel"'), html.indexOf('id="finder"'));
@@ -1147,9 +1154,10 @@ test("проект: действия стоят над его составом, 
   assert.ok(account.includes('t("account.dropAsk"'), "удаление не спрашивает");
   assert.match(api, /export async function remove\(id\)[\s\S]{0,160}?method: "DELETE"/,
     "у страницы нет удаления проекта");
-  // Мусорка в строке списка стоит только у своего проекта: отказ сервера на
+  // Переименование и удаление предлагаются только владельцу: отказ сервера на
   // действие, которое страница предложила сама, читается как поломка.
-  assert.match(account, /if \(row\.level === "owner"\)/, "удаление предлагается не владельцу");
+  assert.match(account, /const mine = chosen\?\.level === "owner";/,
+    "право на проект не спрашивается у выбранного");
 });
 
 test("шапка: две полосы, и каждая отвечает на свой вопрос", async () => {

@@ -44,6 +44,13 @@ const state = {
   picked: null,
   /** Проект, назначенный к удалению: строка списка, а не открытый проект. */
   doomed: null,
+  /**
+   * Проект, выбранный в списке панели.
+   *
+   * Не то же, что открытый: список стоит на экране всегда, и действия над
+   * проектом (открыть, переименовать, удалить) обращены к выбранному.
+   */
+  chosen: null,
   /** Ревизия проекта на момент чтения файла. */
   revision: null,
   /** Мой уровень доступа к открытому проекту. */
@@ -79,6 +86,9 @@ let host = null;
 export function attach(nodes, callbacks) {
   dom = nodes;
   host = callbacks;
+  // Список проектов - часть панели, а не окна: он рисуется сразу, и без входа
+  // говорит, что для списка нужен вход.
+  list();
   dom.account.addEventListener("click", () => toggle());
   // Кнопка одна на вход и выход: пока не вошли - открывает панель со формой, после
   // входа - выходит. Двух кнопок, из которых всегда видна одна, читателю не нужно
@@ -102,9 +112,16 @@ export function attach(nodes, callbacks) {
   dom.newname.addEventListener("keydown", (event) => {
     if (event.key === "Enter") make();
   });
-  // Выбор проекта - отдельный разговор: список читают, а не держат на экране.
-  dom.openproject.addEventListener("click", () => openChooser());
-  dom.opencancel.addEventListener("click", () => closeModal(dom["open-modal"]));
+  // Проект выбирают в списке, а действия над ним стоят над списком: открыть,
+  // переименовать, удалить.
+  dom.openproject.addEventListener("click", () => openChosen());
+  dom.renameproject.addEventListener("click", () => openProjectRename());
+  dom.projectnameok.addEventListener("click", () => renameProject());
+  dom.projectnamecancel.addEventListener("click", () => closeModal(dom["projectname-modal"]));
+  dom.projectname.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") renameProject();
+  });
+  dom.dropproject.addEventListener("click", () => openDropChosen());
   dom.dropok.addEventListener("click", () => drop());
   dom.dropcancel.addEventListener("click", () => closeModal(dom["drop-modal"]));
   dom.closeproject.addEventListener("click", () => closeProject());
@@ -131,8 +148,8 @@ export function attach(nodes, callbacks) {
   // Выход из разговора не должен требовать попадания в кнопку: щелчок по
   // затемнению и Escape закрывают любое из трёх окон.
   const MODALS = [
-    "project-modal", "open-modal", "drop-modal", "file-modal", "dropfile-modal",
-    "rename-modal", "scenario-modal",
+    "project-modal", "drop-modal", "file-modal", "dropfile-modal",
+    "rename-modal", "scenario-modal", "projectname-modal",
   ];
   for (const id of MODALS) {
     dom[id].addEventListener("click", (event) => {
@@ -183,17 +200,13 @@ export function attach(nodes, callbacks) {
     exchange(state.ticket, login);
   });
   dom.projects.addEventListener("click", (event) => {
-    // Кнопка удаления живёт внутри строки: сперва спрашиваем её, иначе щелчок по
-    // мусорке открывал бы проект, который автор собрался удалить.
-    const drop = event.target.closest("[data-drop]");
-    if (drop) {
-      openDrop(drop.dataset.drop, drop.dataset.name);
-      return;
-    }
     const row = event.target.closest("[data-project]");
-    if (!row) return;
-    closeModal(dom["open-modal"]);
-    openProject(row.dataset.project);
+    if (row) chooseProject(row.dataset.project);
+  });
+  // Двойной щелчок открывает: тот же приём, что у списка файлов на машине.
+  dom.projects.addEventListener("dblclick", (event) => {
+    const row = event.target.closest("[data-project]");
+    if (row) openProject(row.dataset.project);
   });
   dom.tree.addEventListener("click", (event) => {
     const row = event.target.closest("[data-file]");
@@ -672,8 +685,12 @@ async function leave() {
   await api.signOut();
   state.project = null;
   state.file = null;
+  state.picked = null;
+  state.chosen = null;
   state.revision = null;
   state.level = "none";
+  // Вышли - список чужой: он рисуется заново и говорит, что для него нужен вход.
+  await list();
   refresh();
 }
 
@@ -690,10 +707,75 @@ function openCreate() {
 }
 
 /** Открывает окно выбора: список читается заново - его мог пополнить другой. */
-async function openChooser() {
+function openChosen() {
   if (!signedIn()) return;
-  dom["open-modal"].hidden = false;
-  await list();
+  if (!state.chosen) {
+    host.say(t("account.needChoice"), "warning");
+    return;
+  }
+  openProject(state.chosen.id);
+}
+
+/** Отмечает выбранный проект в списке; выбор один - это место работы. */
+function chooseProject(id) {
+  const row = [...dom.projects.querySelectorAll("[data-project]")].find(
+    (node) => node.dataset.project === id
+  );
+  state.chosen = row ? { id, name: row.dataset.name, level: row.dataset.level } : null;
+  markChosen();
+  refresh();
+}
+
+/** Переносит отметку выбора на строку выбранного проекта. */
+function markChosen() {
+  for (const row of dom.projects.querySelectorAll("[data-project]")) {
+    row.setAttribute("aria-pressed", String(row.dataset.project === state.chosen?.id));
+  }
+}
+
+/** Открывает окно переименования выбранного проекта. */
+function openProjectRename() {
+  if (!signedIn()) return;
+  if (!state.chosen) {
+    host.say(t("account.needChoice"), "warning");
+    return;
+  }
+  dom.projectname.value = state.chosen.name ?? "";
+  dom["projectname-modal"].hidden = false;
+  dom.projectname.focus();
+  dom.projectname.select();
+}
+
+/** Переименовывает выбранный проект. */
+async function renameProject() {
+  const name = dom.projectname.value.trim();
+  if (!state.chosen) return;
+  if (!name) {
+    host.say(t("account.needName"), "warning");
+    return;
+  }
+  try {
+    await api.patch(state.chosen.id, { name });
+    closeModal(dom["projectname-modal"]);
+    // Открытый проект носит то же имя: подпись в шапке обязана его догнать.
+    if (state.project?.id === state.chosen.id) state.project = { ...state.project, name };
+    await list();
+    chooseProject(state.chosen.id);
+    refresh();
+    host.say(t("account.projectRenamed", { name }), "ok");
+  } catch (error) {
+    fail(error);
+  }
+}
+
+/** Открывает окно удаления выбранного проекта. */
+function openDropChosen() {
+  if (!signedIn()) return;
+  if (!state.chosen) {
+    host.say(t("account.needChoice"), "warning");
+    return;
+  }
+  openDrop(state.chosen.id, state.chosen.name);
 }
 
 /** Открывает окно удаления проекта: он назван по имени. */
@@ -1119,55 +1201,45 @@ async function dropFile() {
 
 /** Наполняет список проектов. */
 async function list() {
+  if (!api.signed()) {
+    // Без входа списка нет вовсе: страница говорит об этом словами, а не пустой
+    // областью - пустая читалась бы как поломка.
+    dom.projects.replaceChildren(row(t("account.needSignIn"), "ok"));
+    return;
+  }
   try {
     const rows = await api.projects();
     dom.projects.replaceChildren();
-    for (const row of rows) {
-      const node = document.createElement("div");
-      node.className = "row row-pick";
-      node.dataset.project = row.id;
-      const label = document.createElement("span");
-      label.className = "row-text";
-      label.dataset.project = row.id;
-      label.textContent = t("account.projectRow", {
-        name: row.name,
-        level: levelName(row.level),
+    for (const item of rows) {
+      const node = document.createElement("button");
+      node.type = "button";
+      node.className = "row row-pick project-row";
+      node.dataset.project = item.id;
+      node.dataset.name = item.name;
+      node.dataset.level = item.level;
+      node.textContent = t("account.projectRow", {
+        name: item.name,
+        level: levelName(item.level),
       });
-      node.appendChild(label);
-      // Удаляет владелец, и только он: чужой проект в списке виден, но кнопки
-      // у него нет - предлагать действие, которое сервер отвергнет, нельзя.
-      if (row.level === "owner") {
-        const drop = document.createElement("button");
-        drop.type = "button";
-        drop.className = "icon-btn row-drop";
-        drop.dataset.drop = row.id;
-        drop.dataset.name = row.name;
-        drop.dataset.tip = t("account.dropProject");
-        drop.setAttribute("aria-label", t("account.dropProject"));
-        drop.innerHTML = "";
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.setAttribute("class", "icon");
-        svg.setAttribute("viewBox", "0 0 24 24");
-        svg.setAttribute("aria-hidden", "true");
-        for (const d of ["M4.5 7h15", "M9.5 7V4.5h5V7", "M6.5 7l1 12.5h9l1-12.5"]) {
-          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-          path.setAttribute("d", d);
-          svg.appendChild(path);
-        }
-        drop.appendChild(svg);
-        node.appendChild(drop);
-      }
+      node.setAttribute("aria-pressed", String(item.id === state.chosen?.id));
       dom.projects.appendChild(node);
     }
-    if (rows.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "row row-ok";
-      empty.textContent = t("account.noProjects");
-      dom.projects.appendChild(empty);
-    }
+    if (rows.length === 0) dom.projects.appendChild(row(t("account.noProjects"), "ok"));
+    // Выбор мог указывать на проект, которого больше нет: чужой список ему не
+    // хозяин, и отметка на пустом месте обманывала бы кнопки.
+    if (state.chosen && !rows.some((item) => item.id === state.chosen.id)) state.chosen = null;
+    refresh();
   } catch (error) {
     fail(error);
   }
+}
+
+/** Строка списка словами: пустой список и запрет входа говорятся, а не молчат. */
+function row(text, kind) {
+  const node = document.createElement("div");
+  node.className = `row row-${kind}`;
+  node.textContent = text;
+  return node;
 }
 
 /**
@@ -1609,11 +1681,17 @@ function refresh() {
   // группы разом заставляли бы искать нужную среди ненужных.
   const opened = state.project !== null;
   const writes = opened && (state.level === "edit" || state.level === "owner");
-  dom.newproject.hidden = opened;
-  dom.openproject.hidden = opened;
-  // Загрузка архива - действие над проектами: пока проект открыт, полоса
-  // говорит о нём и его файлах.
-  dom.importproject.hidden = opened;
+  // Список проектов стоит в панели всегда, поэтому и действия над ними не
+  // прячутся: открыть выбранный можно и не закрывая текущий. Переименование и
+  // удаление - право владельца: предлагать действие, которое сервер отвергнет,
+  // нельзя.
+  const chosen = state.chosen;
+  const mine = chosen?.level === "owner";
+  dom.newproject.hidden = false;
+  dom.openproject.hidden = !chosen;
+  dom.renameproject.hidden = !mine;
+  dom.dropproject.hidden = !mine;
+  dom.importproject.hidden = false;
   dom.download.hidden = !opened;
   dom.closeproject.hidden = !opened;
   // Заводить и удалять файлы вправе тот, кто вправе писать: чужой проект

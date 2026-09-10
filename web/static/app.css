@@ -2654,3 +2654,29 @@ body[data-crumbs="off"] #project { display: none; }
 #whoami.clipped {
   mask-image: linear-gradient(to right, #000 calc(100% - 2ch), transparent);
 }
+
+/* ── Список проектов в панели структуры ──────────────────────────────────
+ * Список стоит над составом открытого проекта: сперва "где я работаю", затем
+ * "с чем". Высота его - доля читателя, как и у прочих пар областей; ниже
+ * своей строки он не сжимается: список из одной строки не список. */
+.tree-projects {
+  flex: 0 0 auto;
+  height: var(--projects-h, 12em);
+  min-height: 2.5em;
+  max-height: none;
+  overflow: auto;
+  border-bottom: 1px solid var(--border);
+}
+.project-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--on-surface);
+  cursor: pointer;
+}
+.project-row[aria-pressed="true"] { background: var(--surface-yes); color: var(--on-surface-yes); }
+.project-row:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface));
+}

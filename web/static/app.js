@@ -127,6 +127,9 @@ export async function main() {
   shell.attachLegendCols(dom.legendcols, localStorage);
   // Размер структуры проекта: та же ручка правил, а ось и границы у неё свои -
   // сторону выбирает читатель, а нижнюю границу задаёт длина имён файлов.
+  // Список проектов и состав открытого делят высоту панели: у каждой части свой
+  // предмет, и граница между ними принадлежит читателю.
+  shell.attachProjects(dom["treesplit-files"], localStorage);
   shell.attachTree(dom.treesplit, localStorage, {
     side: () => state.treeSide,
     least: () => measureTree() ?? 0,
@@ -573,13 +576,15 @@ function cache() {
     "found", "more", "doc", "sourcetitle", "openfilename",
     "scheme-notice", "scheme-notice-text", "scheme-drop",
     "tree", "treesplit", "diagnostics-head", "diagclear", "showtree",
-    "openproject", "createproject", "createcancel", "opencancel",
+    "openproject", "createproject", "createcancel",
+    "renameproject", "dropproject", "projectname", "projectnameok", "projectnamecancel",
+    "projectname-modal", "treesplit-files",
     "dropok", "dropcancel", "droptext", "fromsample", "closeproject",
     "newfile", "dropfile", "renamefile", "uploadfile", "downloadfile", "filepick",
     "importproject", "filekinds", "filename", "filepreview",
     "fileok", "filecancel", "dropfileok", "dropfilecancel", "dropfiletext",
     "renamename", "renamepreview", "renameok", "renamecancel",
-    "project-modal", "open-modal", "drop-modal", "file-modal", "dropfile-modal",
+    "project-modal", "drop-modal", "file-modal", "dropfile-modal",
     "rename-modal", "pickscenario", "scenario-modal", "scenarios",
     "scenarioload", "scenariocancel",
     "crumbs", "scheme-up", "stage", "scheme", "sheet", "nav", "map",

@@ -332,6 +332,29 @@ export function attachTree(split, storage, plan = {}) {
   });
 }
 
+/**
+ * Ручка списка проектов: сколько высоты панели отдано списку.
+ *
+ * Своя доля, а не общая с деревом файлов: список читают выбором, а состав -
+ * работой, и одна ручка на двоих меняла бы не то, что тянут.
+ */
+export function attachProjects(split, storage) {
+  attachDivider(split, {
+    storage,
+    key: PROJECTS_KEY,
+    axis: "y",
+    fallback: PROJECTS_DEFAULT,
+    box: () => split.parentElement.getBoundingClientRect(),
+    apply: (ratio, root) => {
+      root.style.setProperty("--projects-h", `${ratio * 100}%`);
+    },
+  });
+}
+
+/** Ключ доли списка проектов и её умолчание: треть панели - списку. */
+const PROJECTS_KEY = "takt.ui.projects";
+const PROJECTS_DEFAULT = 0.3;
+
 export function attachLegendRows(split, storage) {
   attachDivider(split, {
     storage,
