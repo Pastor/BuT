@@ -139,6 +139,9 @@ export function innerLabel(nodes, running) {
     .join(", ");
 }
 
+/** Запас белого поля маски за краем листа: больше любого переноса за один жест. */
+const REACH_ALL = 100000;
+
 export class Scheme {
   /**
    * @param {object} dom узлы: `scheme`, `sheet`, `map`, `stage`, `legend`, `crumbs`,
@@ -758,8 +761,14 @@ export class Scheme {
     const w = mark.length * 8 + 8 + 6;
     const h = 21;
     const id = `edge-gap-${this.gapSeq++}`;
-    const mask = mk("mask", { id, maskUnits: "userSpaceOnUse" });
-    mask.appendChild(mk("rect", { x: sheet.ox, y: sheet.oy, width: sheet.w, height: sheet.h, fill: "white" }));
+    // Область маски задаётся явно: по умолчанию она - окно листа с запасом в
+    // десятую долю, и за ним линия гасла бы так же, как за белым полем.
+    const field = { x: sheet.ox - REACH_ALL, y: sheet.oy - REACH_ALL, width: sheet.w + 2 * REACH_ALL, height: sheet.h + 2 * REACH_ALL };
+    const mask = mk("mask", { id, maskUnits: "userSpaceOnUse", ...field });
+    // Белое поле маски заведомо шире любого листа: пока автор ведёт излом за край,
+    // лист ещё не расширен, и поле размером с лист гасило бы линию за старой
+    // границей - видны оставались одни кружки изломов.
+    mask.appendChild(mk("rect", { ...field, fill: "white" }));
     mask.appendChild(mk("rect", { x: mx - w / 2, y: my - h / 2, width: w, height: h, fill: "black" }));
     group.appendChild(mask);
     line.setAttribute("mask", `url(#${id})`);
@@ -1185,6 +1194,9 @@ export class Scheme {
   drag(event, { onStart, onMove, onEnd, onCancel }) {
     if (event.button) return;
     event.stopPropagation();
+    // Перенос - не выделение текста: протяжка указателя иначе выделяла бы холст
+    // целиком синей заливкой браузера.
+    window.getSelection?.()?.removeAllRanges();
     const start = { x: event.clientX, y: event.clientY };
     let moved = false;
     const move = (e) => {

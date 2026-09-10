@@ -1780,6 +1780,9 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 .scheme .sheet { background: none; border: 0; overflow: visible; }
 
 .scheme.dragging { cursor: grabbing; }
+/* Холст не выделяется как текст: протяжка указателя при переносе узла или излома
+ * иначе закрашивала бы лист синей заливкой выделения браузера. */
+.scheme { user-select: none; -webkit-user-select: none; }
 
 /* ── Места панелей на холсте (`.tool-dock`) ──────────────────────────────
  * Панель ставится не в произвольную точку, а в одно из четырёх мест области:
