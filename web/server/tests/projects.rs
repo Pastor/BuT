@@ -596,6 +596,7 @@ async fn markdown_lives_in_the_project_and_the_active_scenario_is_named() {
         ("readme.md", "# Термореле\n\nГреет, пока холодно."),
         ("cold.json", "[]"),
         ("model.takt-ui", "{\"format\": 1, \"sheets\": {}}"),
+        ("board.takt-map", "BTN = 0x40000000;\n"),
     ] {
         let (status, body) = stand
             .put_as(
@@ -621,6 +622,7 @@ async fn markdown_lives_in_the_project_and_the_active_scenario_is_named() {
     assert_eq!(
         kinds,
         vec![
+            ("board.takt-map", "address_map"),
             ("cold.json", "scenario"),
             ("model.takt", "takt"),
             ("model.takt-ui", "layout"),
@@ -649,6 +651,13 @@ async fn markdown_lives_in_the_project_and_the_active_scenario_is_named() {
             .expect("текст")
             .contains(".takt-ui"),
         "причина не называет раскладку: {body}"
+    );
+    assert!(
+        body["message"]
+            .as_str()
+            .expect("текст")
+            .contains(".takt-map"),
+        "причина не называет карту адресов: {body}"
     );
 
     // Активный файл - только модель, активный сценарий - только сценарий: перепутанные

@@ -79,8 +79,9 @@ fn prepare(target: &str, args: &str, filename: &str) -> Result<(Target, CompileO
     let mut argv = split_args(args)?;
     // Позиционный аргумент - имя файла: `parse_compile_args` требует его, как и
     // командная строка. Своего значения по умолчанию у разбора нет, и это верно: у CLI
-    // файл обязателен.
-    if !argv.iter().any(|a| !a.starts_with('-')) {
+    // файл обязателен. Имя модели узнаётся по расширению, а не по отсутствию дефиса:
+    // значение ключа (`--address-map board.takt-map`, `-I lib`) дефиса тоже не несёт.
+    if !argv.iter().any(|a| a.ends_with(".takt")) {
         // Имя, названное вызывающим, сильнее умолчания: у открытого файла проекта
         // оно своё, и вывод обязан нести его, а не имя безымянного буфера.
         argv.push(if filename.is_empty() {
@@ -138,11 +139,24 @@ pub fn compile(
     };
 
     let generate = generate_options(&options);
+    // Карта адресов (`--address-map`) берётся из состава проекта, как и подключения:
+    // диска у модуля нет, а ключ, принятый и не исполненный, собрал бы прошивку по
+    // адресам модели молча.
+    let external = match options.address_map.as_deref() {
+        None => Vec::new(),
+        Some(name) => match address_map_of(name, &files) {
+            Ok(entries) => entries,
+            Err(message) => return reply::refused(message),
+        },
+    };
     // Состав проекта стоит на время сборки: подключения читаются из него, а не с
     // диска, которого у модуля нет.
     let _project = memory::install(files);
     let search = project_search_paths();
-    let input = CompileInput::new(&options.input_file, source, &search, &generate);
+    let input = CompileInput {
+        external: &external,
+        ..CompileInput::new(&options.input_file, source, &search, &generate)
+    };
     match takt_lang::compile::compile_texts(target, &input) {
         Ok(output) => reply::ok(CompiledJson {
             target: target.name(),
@@ -163,6 +177,25 @@ pub fn compile(
         }),
         Err(diagnostic) => reply::failed(&diagnostic, source),
     }
+}
+
+/// Записи карты адресов из состава проекта; отказ называет карту и причину.
+fn address_map_of(
+    name: &str,
+    files: &BTreeMap<String, String>,
+) -> Result<Vec<takt_lang::AddressMapEntry>, String> {
+    let Some(text) = files.get(memory::key_of(name)) else {
+        return Err(format!(
+            "карта адресов '{name}': такого файла в проекте нет"
+        ));
+    };
+    takt_lang::parse_address_map(text, 1).map_err(|diagnostics| {
+        let reasons: Vec<String> = diagnostics
+            .iter()
+            .map(|d| format!("[{}] {}", d.code.as_deref().unwrap_or("?"), d.message))
+            .collect();
+        format!("карта адресов '{name}': {}", reasons.join("; "))
+    })
 }
 
 /// Разбивает строку ключей на аргументы, уважая кавычки.
@@ -299,6 +332,62 @@ mod tests {
         let source = "import \"lib.takt\";\nout y: u8;\nstart S { always { y := twice(2); } }\n";
         let reply = json(&compile("c", "", source, "", files));
         assert_eq!(reply["ok"], true, "{reply}");
+    }
+
+    #[test]
+    fn address_map_is_taken_from_the_project_files() {
+        let source = "type byte = [bit;8];\nin BTN: byte at 0x00200000;\nout LED: bit;\n\
+                      in SW: bit at 0x00300000:3;\naddress LED = 0x00200004;\n\
+                      start Idle {\n    ref On: BTN;\n}\nstate On {\n    ref Idle: SW;\n}\n";
+        let text_of = |reply: &Value| -> String {
+            reply["files"]
+                .as_array()
+                .map(|files| files.iter().filter_map(|f| f["text"].as_str()).collect())
+                .unwrap_or_default()
+        };
+        let plain = json(&compile("c-hal", "", source, "probe.takt", BTreeMap::new()));
+        assert!(
+            !text_of(&plain).contains("40000000"),
+            "контроль: без карты адрес модели"
+        );
+        let files: BTreeMap<String, String> = [(
+            "plat.takt-map".to_string(),
+            "BTN = 0x40000000;\n".to_string(),
+        )]
+        .into();
+        let reply = json(&compile(
+            "c-hal",
+            "--address-map plat.takt-map",
+            source,
+            "probe.takt",
+            files,
+        ));
+        assert!(
+            text_of(&reply).to_lowercase().contains("40000000"),
+            "адрес карты не применён: {reply}"
+        );
+        // Карты нет в проекте - отказ словами, а не сборка по адресам модели.
+        let missing = json(&compile(
+            "c-hal",
+            "--address-map nope.takt-map",
+            source,
+            "probe.takt",
+            BTreeMap::new(),
+        ));
+        assert!(missing.to_string().contains("nope.takt-map"), "{missing}");
+        assert!(missing["files"].is_null(), "{missing}");
+        // Битая карта - отказ с причиной.
+        let broken: BTreeMap<String, String> =
+            [("bad.takt-map".to_string(), "BTN = ;\n".to_string())].into();
+        let reply = json(&compile(
+            "c-hal",
+            "--address-map bad.takt-map",
+            source,
+            "probe.takt",
+            broken,
+        ));
+        assert!(reply.to_string().contains("bad.takt-map"), "{reply}");
+        assert!(reply["files"].is_null(), "{reply}");
     }
 
     #[test]

@@ -176,6 +176,9 @@ pub enum Kind {
     /// парная модели по имени файла. Компилятор её не читает, сборка от неё не
     /// зависит.
     Layout,
+    /// Внешняя карта адресов портов (`.takt-map`) - формат ключа `--address-map`
+    /// компилятора. Сборку с адресами страница ведёт картой из состава проекта.
+    AddressMap,
 }
 
 impl Kind {
@@ -186,6 +189,7 @@ impl Kind {
             Self::Scenario => "scenario",
             Self::Markdown => "markdown",
             Self::Layout => "layout",
+            Self::AddressMap => "address_map",
         }
     }
 }
@@ -218,9 +222,13 @@ pub fn check_file_name(name: &str) -> Result<Kind, ApiError> {
         // помнить, какое из них где.
         check_stem(stem)?;
         Kind::Markdown
+    } else if let Some(stem) = name.strip_suffix(".takt-map") {
+        check_stem(stem)?;
+        Kind::AddressMap
     } else {
         return Err(ApiError::BadRequest(
-            "имя файла: расширение '.takt', '.json', '.md' либо '.takt-ui'".to_string(),
+            "имя файла: расширение '.takt', '.json', '.md', '.takt-ui' либо '.takt-map'"
+                .to_string(),
         ));
     };
     Ok(kind)
@@ -272,6 +280,10 @@ mod tests {
     #[test]
     fn file_name_becomes_a_model_name_and_is_checked_as_one() {
         assert_eq!(check_file_name("heater.takt").expect("годно"), Kind::Takt);
+        assert_eq!(
+            check_file_name("board.takt-map").expect("годно"),
+            Kind::AddressMap
+        );
         assert_eq!(
             check_file_name("run-1.json").expect("годно"),
             Kind::Scenario

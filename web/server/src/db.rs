@@ -42,7 +42,7 @@ use tokio_postgres::NoTls;
 /// прежней версии **отвергается с обоими номерами**, и это видно словами, а не
 /// проявляется потерей данных на стенде. n подняла до `6`: у проекта появился активный
 /// Сценарий (их бывает несколько).
-pub const SCHEMA_VERSION: i64 = 8;
+pub const SCHEMA_VERSION: i64 = 9;
 
 /// Заводит пул соединений по строке подключения.
 ///
@@ -101,6 +101,14 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (
         7,
         "ALTER TABLE projects ADD COLUMN IF NOT EXISTS run_delays TEXT NOT NULL DEFAULT '{}';",
+    ),
+    // 8 -> 9: род файла `address_map` - внешняя карта адресов портов.
+    (
+        8,
+        "ALTER TABLE project_files DROP CONSTRAINT IF EXISTS project_files_kind_check;
+         ALTER TABLE project_files
+             ADD CONSTRAINT project_files_kind_check
+             CHECK (kind IN ('takt', 'scenario', 'markdown', 'layout', 'address_map'));",
     ),
 ];
 
@@ -248,7 +256,7 @@ CREATE TABLE project_files (
     -- отказать здесь. Расхождение видно сразу — вставка падает, а не молча
     -- заводит файл, о роде которого страница ничего не знает. Сторож —
     -- проверка родов в `tests/projects.rs`.
-    kind       TEXT NOT NULL CHECK (kind IN ('takt', 'scenario', 'markdown', 'layout')),
+    kind       TEXT NOT NULL CHECK (kind IN ('takt', 'scenario', 'markdown', 'layout', 'address_map')),
     size_bytes BIGINT NOT NULL,
     PRIMARY KEY (project_id, name)
 );

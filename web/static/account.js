@@ -972,6 +972,7 @@ const FILE_KINDS = [
   { kind: "layout", label: "file.kind.layout", extension: layoutFile.EXTENSION },
   { kind: "scenario", label: "file.kind.scenario", extension: ".json" },
   { kind: "markdown", label: "file.kind.markdown", extension: ".md" },
+  { kind: "address_map", label: "file.kind.addressMap", extension: ".takt-map" },
 ];
 
 /**
@@ -1295,6 +1296,7 @@ function paintTree(files) {
     { kind: "layout", label: "tree.kind.layout" },
     { kind: "scenario", label: "tree.kind.scenario" },
     { kind: "markdown", label: "tree.kind.markdown" },
+    { kind: "address_map", label: "tree.kind.addressMap" },
   ];
   dom.tree.replaceChildren();
   if (files.length === 0) {
@@ -1373,10 +1375,11 @@ async function openProjectFiles(id) {
 }
 
 /**
- * Читает тексты моделей открытого проекта и отдаёт их странице.
+ * Читает тексты моделей и карт адресов открытого проекта и отдаёт их странице.
  *
- * Нужны они для `import`: у модуля в браузере диска нет, и подключаемый файл он
- * находит только в составе проекта. Читаются модели - подключать можно только их;
+ * Нужны они для `import` и `--address-map`: у модуля в браузере диска нет, и
+ * подключаемый файл и карту он находит только в составе проекта. Читаются модели
+ * и карты - подключать можно только модели, а сборку с адресами ведёт карта;
  * отказ чтения одного файла не валит открытие проекта, а оставляет файл вне
  * состава - подключение его ответит `SE-013` словами.
  */
@@ -1387,7 +1390,7 @@ async function readProjectTexts() {
     host.projectTexts?.(texts);
     return;
   }
-  const models = (project.files ?? []).filter((file) => file.kind === "takt");
+  const models = (project.files ?? []).filter((file) => file.kind === "takt" || file.kind === "address_map");
   await Promise.all(
     models.map(async (file) => {
       try {
@@ -1652,6 +1655,19 @@ async function keepBuild() {
   if (Object.keys(fields).length === 0) return;
   const updated = await api.patch(state.project.id, fields);
   state.project = { ...state.project, ...updated };
+}
+
+/**
+ * Карта адресов открытого проекта: файл носит имя проекта, как и первая модель
+ * (`firstFileName`), - `ports16.takt-map`. `null` - проекта нет.
+ *
+ * @returns {{name: string, present: boolean}|null}
+ */
+export function addressMap() {
+  if (!state.project) return null;
+  const name = firstFileName(state.project.name).replace(/\.takt$/, ".takt-map");
+  const present = Boolean(state.project.files?.some((file) => file.name === name && file.kind === "address_map"));
+  return { name, present };
 }
 
 /** Задержка между тактами прогона у сценария, секунд; записи нет - без задержки. */

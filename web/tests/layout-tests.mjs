@@ -664,6 +664,16 @@ test("граф: модуль отдаёт листы лифта, а страни
   assert.ok(broken.error?.code, JSON.stringify(broken));
 });
 
+test("сборка: цель с адресами получает карту проекта, явная карта сильнее", async () => {
+  const { ADDRESS_TARGETS, namesAddressMap, withAddressMap } = await import("../static/project.js");
+  assert.deepEqual(ADDRESS_TARGETS, ["c-hal", "st-at", "sv-mmio"]);
+  assert.equal(withAddressMap("", "ports16.takt-map"), "--address-map ports16.takt-map");
+  assert.equal(withAddressMap("--fsm=table", "ports16.takt-map"), "--fsm=table --address-map ports16.takt-map");
+  assert.equal(withAddressMap("--address-map board.takt-map", "ports16.takt-map"), "--address-map board.takt-map", "явная карта сильнее");
+  assert.equal(namesAddressMap("--address-map=board.takt-map"), true);
+  assert.equal(namesAddressMap("--address-maps"), false, "чужой ключ - не карта");
+});
+
 test("справка: поиск без учёта регистра, раздел читателя - по положению заголовков", async () => {
   const { findRanges, sectionAt } = await import("../static/help.js");
   assert.deepEqual(findRanges("Модель model МОДЕЛЬ", "модель"), [[0, 6], [13, 19]]);

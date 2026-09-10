@@ -1075,7 +1075,7 @@ test("структура проекта: область справа, файлы
 
   // Роды перечислены ключами словаря: собранный ключ сверке невидим, и подпись
   // рода пропала бы молча.
-  for (const key of ["tree.kind.takt", "tree.kind.layout", "tree.kind.scenario", "tree.kind.markdown"]) {
+  for (const key of ["tree.kind.takt", "tree.kind.layout", "tree.kind.scenario", "tree.kind.markdown", "tree.kind.addressMap"]) {
     assert.ok(account.includes(`"${key}"`), `род '${key}' не назван ключом`);
   }
 });
@@ -1196,6 +1196,14 @@ test("файлы проекта: полоса отвечает на один в�
   // Расширение ставит род файла, а не автор: правило проекта не перекладывается
   // на того, кто заводит файл.
   assert.match(account, /const FILE_KINDS = \[[\s\S]{0,300}?extension: "\.takt"/, "родов файла нет");
+  // Карта адресов - род наравне с прочими; её текст едет в состав проекта для
+  // `--address-map`, а сама она моделью не собирается.
+  assert.match(account, /kind: "address_map", label: "file\.kind\.addressMap", extension: "\.takt-map"/);
+  assert.match(account, /file\.kind === "takt" \|\| file\.kind === "address_map"/, "карты не читаются в состав");
+  const app = await readFile(new URL("../static/app.js", import.meta.url), "utf8");
+  assert.match(app, /if \(state\.kind === "address_map"\) \{\s*state\.editor\.highlight\(state\.bridge\.tokens\(source\), \[\]\);/, "карта собирается как модель");
+  // Цель с адресами без карты проекта не собирается - отказ словами.
+  assert.match(app, /project\.ADDRESS_TARGETS\.includes\(state\.target\)[\s\S]{0,200}account\.addressMap\(\)/, "карта проекта не спрашивается");
   assert.ok(account.includes('extension: ".json"') && account.includes('extension: ".md"'),
     "род сценария или пояснения не заведён");
   // Раскладка стоит в ряду наравне с прочими: она появляется и сама, но завести

@@ -172,3 +172,26 @@ export function runDelay(value) {
   if (!Number.isFinite(seconds) || seconds <= 0) return 0;
   return Math.round(Math.min(seconds, RUN_DELAY_SECONDS) * 1000) / 1000;
 }
+
+/**
+ * Цели, которые собираются с картой адресов: адрес порта у них - часть вывода
+ * (обращения HAL, локации `AT`, регистровый файл).
+ */
+export const ADDRESS_TARGETS = ["c-hal", "st-at", "sv-mmio"];
+
+/** Названа ли карта адресов в строке ключей явно. */
+export function namesAddressMap(args) {
+  return /(^|\s)--address-map(\s|=|$)/.test(args ?? "");
+}
+
+/**
+ * Строка ключей с картой адресов проекта; карта, названная в ключах явно, сильнее.
+ *
+ * @param {string} args ключи сборки
+ * @param {string} map имя файла карты
+ */
+export function withAddressMap(args, map) {
+  const line = (args ?? "").trim();
+  if (namesAddressMap(line)) return line;
+  return line ? `${line} --address-map ${map}` : `--address-map ${map}`;
+}

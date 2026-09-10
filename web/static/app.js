@@ -992,6 +992,14 @@ function refresh() {
     showDoc();
     return;
   }
+  // Карта адресов - не модель: её судит компилятор, когда собирает цель с адресами
+  // (`--address-map`), а своего разбора у страницы нет. Текст красится лексером
+  // языка: комментарии, имена и числа у карты те же.
+  if (state.kind === "address_map") {
+    state.editor.highlight(state.bridge.tokens(source), []);
+    showDiagnostics([]);
+    return;
+  }
   const diagnostics = state.bridge.diagnostics(source, projectFiles());
   const tokens = state.bridge.tokens(source);
   state.editor.highlight(tokens, diagnostics.diagnostics ?? []);
@@ -1016,7 +1024,7 @@ function refresh() {
  */
 function drawScheme(opened = false) {
   if (state.shown !== "scheme" || !state.bridge || !state.scheme) return;
-  if (state.kind === "markdown") {
+  if (state.kind === "markdown" || state.kind === "address_map") {
     state.scheme.setGraph(null);
     return;
   }
@@ -1256,9 +1264,28 @@ function compile() {
     showTargetDiagnostics([]);
     return;
   }
+  // Цель с адресами собирается картой проекта: файл носит имя проекта, как и его
+  // первая модель (`<проект>.takt-map`). Нет файла - отказ словами, а не сборка по
+  // адресам модели. Карта, названная в ключах явно, сильнее.
+  let args = state.args;
+  if (project.ADDRESS_TARGETS.includes(state.target) && !project.namesAddressMap(args)) {
+    const map = account.addressMap();
+    if (!map?.present) {
+      state.outFiles = [];
+      dom.output.replaceChildren();
+      drawGenFiles();
+      const message = map
+        ? t("output.noAddressMap", { target: state.target, file: map.name })
+        : t("output.noProjectMap", { target: state.target });
+      showTargetDiagnostics([refusal({ code: null, message })]);
+      dom.output.appendChild(row(t("output.empty"), "ok"));
+      return;
+    }
+    args = project.withAddressMap(args, map.name);
+  }
   const reply = state.bridge.compile(
     state.target,
-    state.args,
+    args,
     state.editor.value(),
     state.file,
     projectFiles()
@@ -1523,7 +1550,7 @@ function session() {
  */
 function projectFiles() {
   const files = { ...state.projectTexts };
-  if (state.file && state.kind === "takt") files[state.file] = state.editor.value();
+  if (state.file && (state.kind === "takt" || state.kind === "address_map")) files[state.file] = state.editor.value();
   return files;
 }
 
@@ -1824,7 +1851,8 @@ function showSource(what) {
   // Подпись области и имя рядом с ней говорят о показанном, а не об открытом
   // файле: сценарий и раскладку открывают, не меняя рода, и подпись "Модель" над
   // сценарием читалась бы как потерянная модель.
-  const own = state.kind === "markdown" ? "source.titleDoc" : "source.title";
+  const own =
+    state.kind === "markdown" ? "source.titleDoc" : state.kind === "address_map" ? "source.titleMap" : "source.title";
   const shownKey = what === "scenario" ? "source.titleScenario" : "source.titleScheme";
   const key = what === "code" || what === "none" ? own : shownKey;
   dom.sourcetitle.dataset.i18n = key;
@@ -1843,7 +1871,7 @@ function showSource(what) {
 /** Канон того, что показано: `takt` - модель, `scenario` - JSON, иначе - никакого. */
 function canonOf() {
   if (state.shown === "scenario") return "scenario";
-  if (state.shown === "code" && state.kind !== "markdown") return "takt";
+  if (state.shown === "code" && state.kind === "takt") return "takt";
   return "";
 }
 
