@@ -289,6 +289,27 @@ test("воркер без сети: стратегия по форме адре�
   assert.equal(await registerOffline(win, "http://x/takt/b/0123abcd/offline.js"), "ok");
 });
 
+test("генерация: панель устроена как прочие, а цель и ключи - в окне настроек сборки", async () => {
+  // Шапка и полоса действий - как у кода и структуры проекта; вкладок в панели
+  // больше нет: цель и ключи выбирает окно, и носители величин прежние.
+  const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
+  const pane = /<section class="pane pane-result">([\s\S]*?)<\/section>/.exec(html)[1];
+  assert.match(pane, /class="pane-head"/);
+  assert.match(pane, /class="pane-toolbar"/);
+  assert.match(pane, /id="buildsettings"/);
+  assert.ok(!pane.includes('id="tabs"'), "вкладки остались в панели");
+  const modal = /<div id="build-modal"[\s\S]*?<div id="scheme-modal"/.exec(html)[0];
+  for (const need of ['data-tab="target"', 'data-tab="flags"', 'id="flags"', 'id="target"', 'id="build-save"', 'id="build-cancel"']) {
+    assert.ok(modal.includes(need), `в окне нет ${need}`);
+  }
+  // Группы целей: известные - по назначению, незнакомая модулю цель не пропадает.
+  const { groupTargets } = await import("../static/build-settings.js");
+  const groups = groupTargets(["c", "st", "rust", "plantuml", "sv-mmio", "zig"]);
+  assert.deepEqual(groups.map((g) => g.id), ["mcu", "plc", "rust", "fpga", "diagram", "other"]);
+  assert.deepEqual(groups.at(-1).targets, ["zig"], "незнакомая цель - в прочих");
+  assert.deepEqual(groupTargets(["c"]).map((g) => g.id), ["mcu"], "пустые группы не показываются");
+});
+
 test("подсветка: каждая цель красит свой вывод", async () => {
   // У каждой из восьми целей разметка непуста и различает ключевое слово, число
   // и комментарий. Цель, забытая в таблице языков, показывала бы чёрный текст, и
@@ -524,7 +545,7 @@ test("язык: порядок выбора — сохранённый, брау
  * `index.html` нет, а забытый модуль остался бы без обеих проверок молча.
  */
 const PAGE_SCRIPTS = [
-  "account.js", "alerts.js", "api.js", "app.js", "boot.js", "bridge.js", "build.js",
+  "account.js", "alerts.js", "api.js", "app.js", "boot.js", "bridge.js", "build.js", "build-settings.js",
   "draft.js", "editor.js", "i18n.js", "layout.js", "legend.js", "pick.js",
   "panels.js", "project.js", "sample.js", "scheme.js", "scheme-geometry.js",
   "scheme-host.js",

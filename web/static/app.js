@@ -11,6 +11,7 @@ import { encodeState, decodeState } from "./share.js";
 import * as i18n from "./i18n.js";
 import { t } from "./i18n.js";
 import { enhance } from "./pick.js";
+import { attachBuildSettings } from "./build-settings.js";
 import * as build from "./build.js";
 import * as shell from "./shell.js";
 import * as tip from "./tip.js";
@@ -143,7 +144,6 @@ export async function main() {
   shell.attachFontSize(dom.fontless, dom.fontmore, dom.fontsize, localStorage);
   // Прочие настройки интерфейса - оттуда же: вкладка и бюджет прогона.
   dom.budget.value = shell.setting(localStorage, shell.UI_KEYS.budget, dom.budget.value);
-  selectTab(shell.setting(localStorage, shell.UI_KEYS.tab, "output"));
   // Читается только известное значение: в памяти читателя мог остаться выбор
   // области, которой больше нет, и страница открылась бы без вывода вовсе.
   selectPanel(shell.setting(localStorage, shell.UI_KEYS.panel, "output") === "output" ? "output" : null);
@@ -178,7 +178,42 @@ export async function main() {
   dom.version.removeAttribute("data-i18n");
   showVersion();
   fillTargets(version.targets ?? []);
-  picks.target = enhance(dom.target);
+  // Цель и ключи выбираются окном настроек сборки; носители величин прежние - список
+  // `#target` и строка `#args`, - и окно правит их тем же путём, что и смена цели в списке.
+  state.buildSettings = attachBuildSettings(
+    {
+      modal: dom["build-modal"],
+      tabs: dom["build-tabs"],
+      targetPage: dom["build-target"],
+      flagsPage: dom["build-flags"],
+      line: dom["build-line"],
+      save: dom["build-save"],
+      cancel: dom["build-cancel"],
+      opener: dom.buildsettings,
+    },
+    {
+      t,
+      targets: () => [...dom.target.options].map((option) => option.value),
+      target: () => state.target,
+      args: () => state.args,
+      pick: (name) => {
+        if (name === state.target) return;
+        setPick("target", name);
+        dom.target.dispatchEvent(new Event("change"));
+      },
+      restore: ({ target, args }) => {
+        state.target = target;
+        setPick("target", target);
+        state.args = args;
+        dom.args.value = args;
+        drawFlags();
+        compile();
+        saveDraft();
+      },
+      tab: () => shell.setting(localStorage, shell.UI_KEYS.tab, "target"),
+      rememberTab: (name) => shell.remember(localStorage, shell.UI_KEYS.tab, name),
+    },
+  );
   watchBuild();
   for (const node of [dom.editor, dom.output, dom.diagnostics, dom.trace]) fade(node);
 
@@ -570,7 +605,9 @@ function docks() {
 function cache() {
   for (const id of [
     "editor", "diagnostics", "output", "trace", "version", "target", "args",
-    "scenario", "budget", "share", "format", "say", "tabs", "modes",
+    "scenario", "budget", "share", "format", "say", "modes",
+    "gentitle", "gensummary", "gentools", "buildsettings", "copyout", "saveout", "genfiles",
+    "build-modal", "build-tabs", "build-target", "build-flags", "build-line", "build-save", "build-cancel",
     "lang", "tools-lang", "tools-lang-trace", "update", "showgen", "showdiag", "grip", "split", "hsplit", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
     "account", "session", "icon-enter", "icon-leave",
     "save", "openfile", "panel", "signedout", "signedin", "whoami",
@@ -691,14 +728,9 @@ function wire() {
   dom["showdiag-tab"].addEventListener("click", () => showDiagTab("diagnostics"));
   dom["showtrace-tab"].addEventListener("click", () => showDiagTab("trace"));
   dom.share.addEventListener("click", share);
-  dom.tabs.addEventListener("click", (event) => {
-    const tab = event.target.closest("[data-tab]");
-    if (tab) {
-      selectTab(tab.dataset.tab);
-      // Открытая вкладка - настройка читателя: он вернётся туда, где работал.
-      shell.remember(localStorage, shell.UI_KEYS.tab, tab.dataset.tab);
-    }
-  });
+  dom.buildsettings.addEventListener("click", () => state.buildSettings?.open());
+  dom.copyout.addEventListener("click", copyShown);
+  dom.saveout.addEventListener("click", saveShown);
   dom.modes.addEventListener("click", (event) => {
     const mode = event.target.closest("[data-mode]");
     if (mode) selectMode(mode.dataset.mode);
@@ -871,6 +903,7 @@ function drawFlags() {
 
   const usable = flags.FLAGS.filter((spec) => flags.applicable(spec, target)).length;
   dom["flags-applies"].textContent = t("flags.applies", { n: usable, all: flags.FLAGS.length });
+  drawGenSummary();
 }
 
 /** Выбор значения ключа: сегменты для набора, поля для чисел. */
@@ -1217,6 +1250,9 @@ function compile() {
     projectFiles()
   );
   dom.output.replaceChildren();
+  state.outFiles = reply.ok ? reply.files ?? [] : [];
+  if (!state.outFiles.some((file) => file.name === state.outFile)) state.outFile = state.outFiles[0]?.name ?? "";
+  drawGenFiles();
   if (!reply.ok) {
     // Отказ цели - замечание к модели, и место у него то же, что у прочих:
     // панель диагностики. Область вывода при этом не молчит - пустая область
@@ -1225,14 +1261,21 @@ function compile() {
     dom.output.appendChild(row(t("output.empty"), "ok"));
     return;
   }
-  for (const file of reply.files ?? []) {
+  // Показан один файл: какой - выбирают переключатели в полосе панели. Прочие
+  // построены и спрятаны - переключение не зовёт сборку заново.
+  for (const file of state.outFiles) {
+    const box = document.createElement("div");
+    box.className = "out-file";
+    box.dataset.file = file.name;
+    box.hidden = file.name !== state.outFile;
     const header = document.createElement("div");
     header.className = "file-name";
     header.textContent = file.name;
     const body = document.createElement("pre");
     body.className = "file-text";
     paintOutput(body, file.text, header);
-    dom.output.append(header, body);
+    box.append(header, body);
+    dom.output.append(box);
   }
   // Предупреждения цели - тоже её замечания к модели: они идут туда же, куда
   // отказ, и рядом с ними стоят замечания разбора.
@@ -1243,6 +1286,72 @@ function compile() {
       severity: "warning",
     }))
   );
+}
+
+/** Переключатели файлов вывода в полосе панели; действия - над показанным файлом. */
+function drawGenFiles() {
+  dom.genfiles.replaceChildren();
+  for (const file of state.outFiles ?? []) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip";
+    chip.setAttribute("role", "tab");
+    chip.setAttribute("aria-selected", String(file.name === state.outFile));
+    chip.setAttribute("aria-pressed", String(file.name === state.outFile));
+    chip.textContent = file.name;
+    chip.addEventListener("click", () => showOutFile(file.name));
+    dom.genfiles.append(chip);
+  }
+  const has = (state.outFiles ?? []).length > 0;
+  dom.copyout.disabled = !has;
+  dom.saveout.disabled = !has;
+}
+
+/** Показывает один файл вывода; сборку не зовёт - файлы уже построены. */
+function showOutFile(name) {
+  state.outFile = name;
+  for (const box of dom.output.querySelectorAll(".out-file")) box.hidden = box.dataset.file !== name;
+  drawGenFiles();
+}
+
+/** Показанный файл вывода: `{name, text}` либо `null`. */
+function shownFile() {
+  return (state.outFiles ?? []).find((file) => file.name === state.outFile) ?? null;
+}
+
+/** Копирует показанный файл в буфер обмена. */
+async function copyShown() {
+  const file = shownFile();
+  if (!file) return;
+  try {
+    await navigator.clipboard.writeText(file.text);
+    say(t("gen.copied"), "ok");
+  } catch {
+    // Буфер обмена требует разрешения и жеста; отказ называется, а не глотается.
+    say(t("gen.copyFailed"), "warning");
+  }
+}
+
+/** Скачивает показанный файл под его именем. */
+function saveShown() {
+  const file = shownFile();
+  if (!file) return;
+  const url = URL.createObjectURL(new Blob([file.text], { type: "text/plain;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Сводка сборки в шапке генерации: цель и число включённых ключей. */
+function drawGenSummary() {
+  if (!dom.gensummary) return;
+  const on = [...flags.parse(state.args).chosen.values()].filter((chosen) => chosen.on).length;
+  dom.gensummary.textContent = t("gen.summary", { target: state.target, n: on });
+  state.buildSettings?.paint();
 }
 
 /** Две диагностики об одном: код, место и текст. */
@@ -1544,24 +1653,6 @@ async function share() {
 }
 
 /**
- * Выбирает вкладку внутри панели генерации: вывод цели либо ключи сборки.
- *
- * Симуляция вкладкой больше не является:
- * у неё своя панель, и открывается она своей кнопкой.
- */
-function selectTab(name) {
-  for (const tab of dom.tabs.querySelectorAll("[data-tab]")) {
-    const active = tab.dataset.tab === name;
-    tab.classList.toggle("active", active);
-    tab.setAttribute("aria-selected", String(active));
-  }
-  for (const panel of panels("output", "flags")) {
-    panel.hidden = panel.dataset.panel !== name;
-  }
-  state.tab = name;
-}
-
-/**
  * Показывает панель правой области: генерацию, симуляцию либо ни одной.
  *
  * Скрытая генерация не выполняется: при закрытой панели проверяются только
@@ -1748,11 +1839,14 @@ function selectPanel(name) {
   // Пояснение компилировать нечем: вкладка "Ключи сборки" говорила бы о сборке,
   // которой не будет, и область вывода у пояснения закрыта.
   const doc = state.kind === "markdown";
-  dom.tabs.hidden = name !== "output" || doc;
-  if (name === "output" && !doc) selectTab(state.tab === "flags" ? "flags" : "output");
-  if (name !== "output" || doc) {
-    for (const hidden of panels("output", "flags")) hidden.hidden = true;
-  }
+  // У пояснения полоса действий над выводом не нужна: строить нечего, и шапка
+  // называет показ пояснения, а не генерацию.
+  dom.gentools.hidden = doc;
+  dom.gensummary.hidden = doc;
+  const title = doc ? "source.titleDoc" : "gen.title";
+  dom.gentitle.dataset.i18n = title;
+  dom.gentitle.textContent = t(title);
+  for (const shown of panels("output")) shown.hidden = name !== "output" || doc;
   // У пояснения место вывода цели занимает показ разметки: компилировать его
   // нечем, а видеть результат рядом с текстом надо.
   dom.doc.hidden = !(doc && name === "output");

@@ -285,43 +285,34 @@
   <div id="split" class="split" role="separator" aria-orientation="vertical"
        data-i18n-attr="aria-label:bar.split" aria-label="Ширина областей" tabindex="0"></div>
   <section class="pane pane-result">
-    <nav id="tabs" class="tabs" role="tablist">
-      <button class="tab active" data-tab="output" role="tab" aria-selected="true" type="button" data-i18n="tabs.output">Вывод цели</button>
-      <button class="tab" data-tab="flags" role="tab" aria-selected="false" type="button" data-i18n="tabs.flags">Ключи сборки</button>
-    </nav>
+    <div class="pane-head">
+      <span id="gentitle" data-i18n="gen.title">Генерация</span>
+      <span id="gensummary" class="muted"></span>
+    </div>
+    <!-- Действия над выводом стоят над ним же, как у кода и структуры проекта:
+         что строить (настройки сборки), копировать и скачать показанный файл,
+         какой файл показан. -->
+    <div id="gentools" class="pane-toolbar" data-i18n-attr="aria-label:gen.actions" aria-label="Действия над выводом">
+      <button id="buildsettings" class="icon-btn" type="button"
+              data-i18n-attr="data-tip:build.title;aria-label:build.title"
+              data-tip="Настройки сборки" aria-label="Настройки сборки"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
+      <button id="copyout" class="icon-btn" type="button"
+              data-i18n-attr="data-tip:gen.copy;aria-label:gen.copy"
+              data-tip="Копировать файл" aria-label="Копировать файл"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 8.5h10v11h-10z"/><path d="M5.5 15.5v-11h10"/></svg></button>
+      <button id="saveout" class="icon-btn" type="button"
+              data-i18n-attr="data-tip:gen.download;aria-label:gen.download"
+              data-tip="Скачать файл" aria-label="Скачать файл"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4.5v11"/><path d="M7.5 11l4.5 4.5 4.5-4.5"/><path d="M5 19.5h14"/></svg></button>
+      <span id="genfiles" class="gen-files" role="tablist" data-i18n-attr="aria-label:gen.files" aria-label="Файлы вывода"></span>
+    </div>
 
     <!-- Показ пояснения: он занимает место вывода цели, потому что пояснение
          компилировать нечем, а видеть разметку рядом с текстом надо. -->
     <div id="doc" class="doc" hidden></div>
 
     <div data-panel="output" class="panel">
-      <div class="controls">
-        <label for="target" data-i18n="output.target">Цель</label>
-        <select id="target"></select>
-        <!-- Поле ключей с экрана убрано: их
-             задаёт вкладка «Ключи сборки». Узел остаётся носителем СТРОКИ —
-             величина одна, и конструктор пишет именно в неё. -->
-        <input id="args" type="hidden" value="">
-      </div>
+      <!-- Строка ключей - носитель величины: её пишет окно настроек сборки. -->
+      <input id="args" type="hidden" value="">
       <div id="output" class="output"></div>
-    </div>
-
-    
-
-    <!-- Схема состояний: уведомление о расхождении раскладки с моделью,
-         крошки уровня, полоса холста с легендой. Узлы холста строит `scheme.js`
-         построением, не разметкой из данных: имена состояний пишет автор. -->
-    
-    <!-- Ключи сборки выбором: та же строка, что в поле "Ключи сборки", только
-         собранная контролами. Список ключей строит `flags.js` и сверяет с
-         разбором аргументов сторож — свой список разошёлся бы молча. -->
-
-    <div data-panel="flags" class="panel" hidden>
-      <div class="controls">
-        <span class="muted" data-i18n="flags.title">Ключи сборки — выбором</span>
-        <span id="flags-applies" class="muted"></span>
-      </div>
-      <div id="flags" class="flags"></div>
     </div>
   </section>
    </div>
@@ -488,6 +479,30 @@
      `scheme-settings.js` построением - кнопки-образцы рисуются теми же классами,
      что и лист, и второго набора правил рисования не заводится. Правка видна на
      схеме сразу; "Отменить" возвращает раскладку к снимку при открытии. -->
+<!-- Настройки сборки: цель и ключи. Окно того же вида, что основные настройки:
+     вкладки, образцы, "Отменить" и "Сохранить". Список целей остаётся носителем
+     величины - кнопки окна правят его, и обвязка смены цели прежняя. -->
+<div id="build-modal" class="modal" hidden>
+  <div class="modal-box build-box" role="dialog" aria-modal="true"
+       data-i18n-attr="aria-label:build.title" aria-label="Настройки сборки">
+    <div class="modal-head" data-i18n="build.title">Настройки сборки</div>
+    <div id="build-tabs" class="tabs" role="tablist">
+      <button class="tab active" data-tab="target" role="tab" aria-selected="true" type="button" data-i18n="build.tabTarget">Цель</button>
+      <button class="tab" data-tab="flags" role="tab" aria-selected="false" type="button" data-i18n="tabs.flags">Ключи сборки</button>
+    </div>
+    <div id="build-target" class="modal-body settings-body build-body"></div>
+    <div id="build-flags" class="modal-body settings-body build-body" hidden>
+      <span id="flags-applies" class="muted"></span>
+      <div id="flags" class="flags"></div>
+    </div>
+    <select id="target" hidden></select>
+    <div class="modal-foot">
+      <span id="build-line" class="build-line"></span>
+      <button id="build-cancel" type="button" data-i18n="scheme.settingsCancel">Отменить</button>
+      <button id="build-save" type="button" class="primary" data-i18n="scheme.settingsSave">Сохранить</button>
+    </div>
+  </div>
+</div>
 <div id="scheme-modal" class="modal" hidden>
   <div class="modal-box" role="dialog" aria-modal="true"
        data-i18n-attr="aria-label:settings.title" aria-label="Настройки">

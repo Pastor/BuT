@@ -1092,6 +1092,49 @@ body[data-tree="off"] .work {
 .brand-btn { display: flex; align-items: center; gap: var(--gap-half); width: 100%; }
 .brand-mark { width: var(--h-compact); height: var(--h-compact); flex: none; }
 
+/* ── Окно настроек сборки ────────────────────────────────────────────────
+ * Размер постоянный: вкладки "Цель" и "Ключи сборки" разной длины, и окно,
+ * меняющее высоту при переключении, прыгало бы под указателем. Тело берёт
+ * оставшуюся высоту и прокручивается. */
+.build-box {
+  width: min(40rem, 100%);
+  min-height: min(34rem, calc(100dvh - 2 * var(--gap-lg)));
+  max-height: min(34rem, calc(100dvh - 2 * var(--gap-lg)));
+}
+.build-body { flex: 1 1 auto; min-height: 0; max-height: none; }
+.build-body .flags { flex: none; overflow: visible; padding: 0; }
+.build-step { width: 10rem; }
+/* Образец цели - фрагмент её вывода: цель узнают по тому, что она печатает. */
+.build-sample {
+  width: 100%;
+  padding: var(--gap-half);
+  font-family: var(--font-code);
+  font-size: var(--text-xs);
+  white-space: pre;
+  text-align: left;
+  overflow: hidden;
+}
+.build-why { font-size: var(--text-xs); text-align: center; }
+.build-box .modal-foot { display: flex; align-items: center; gap: var(--gap-half); }
+.build-box .modal-foot .primary {
+  background: var(--surface-yes);
+  color: var(--on-surface-yes);
+  border-color: var(--accent);
+}
+/* Итоговая строка ключей - та, что получит компилятор; длинная затеняется. */
+.build-line {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-code);
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Переключатели файлов вывода: плотные, как выбор кегля в шапке. */
+.gen-files { display: flex; flex-wrap: wrap; gap: var(--gap-quarter); margin-left: var(--gap-half); }
+.gen-files .chip { height: var(--h-dense); padding: 0 var(--gap-half); font-size: var(--text-xs); }
+
 /* ── Ключи сборки: карточка на ключ ──────────────────────────────────────
  * Ключ включается флажком, у ключа со значением рядом появляется его выбор.
  * Неприменимый к цели гаснет и говорит почему - иначе читатель ставит ключ,
