@@ -37,6 +37,9 @@ export const ZOOM_STEP = 1.1;
 export const WHEEL_ZOOM_STEP = 1.04;
 /** Порог начала переноса, пикселей экрана. */
 export const DRAG_THRESHOLD = 4;
+/** Порог тяги для пальца: касание дрожит сильнее мыши, и короткое касание
+ * уходило бы в перенос - квадрат перерисовывался, а вход в него терялся. */
+export const TOUCH_THRESHOLD = 10;
 
 /** Привязка к сетке. */
 export function snap(value) {

@@ -163,6 +163,20 @@ function markerOf(kind, selected, next) {
   return `${kind === "next" ? "arrow-solid" : "arrow-open"}${selected ? "-sel" : next ? "-next" : ""}`;
 }
 
+/** Предел между касаниями двойного касания, мс. */
+const DOUBLE_TAP_MS = 400;
+
+/**
+ * Двойное касание: второе касание того же узла вскоре после первого.
+ *
+ * @param {{name: string, at: number}|null|undefined} last прежнее касание
+ * @param {string} name узел нынешнего касания
+ * @param {number} at время нынешнего касания, мс
+ */
+export function doubleTap(last, name, at) {
+  return Boolean(last) && last.name === name && at - last.at <= DOUBLE_TAP_MS;
+}
+
 export class Scheme {
   /**
    * @param {object} dom узлы: `scheme`, `sheet`, `map`, `stage`, `legend`, `crumbs`,
@@ -839,7 +853,11 @@ export class Scheme {
         enter.appendChild(mk("circle", { class: "node-enter", cx: node.x + h - 20, cy: node.y + h - 20, r: 14 }));
         enter.appendChild(mk("path", { class: "node-enter-mark", d: `M${node.x + h - 26} ${node.y + h - 20}h10` }));
         enter.appendChild(mk("path", { class: "node-enter-mark", d: `M${node.x + h - 24} ${node.y + h - 24}l4 4-4 4` }));
-        enter.addEventListener("click", (event) => {
+        // Кнопка входа - не часть квадрата: касание её не начинает перенос, а вход
+        // делает отпускание над ней. Щелчок после касания iPad присылает не всегда,
+        // и кнопка под пальцем молчала.
+        enter.addEventListener("pointerdown", (event) => event.stopPropagation());
+        enter.addEventListener("pointerup", (event) => {
           event.stopPropagation();
           this.enter(node.name);
         });
@@ -1229,9 +1247,10 @@ export class Scheme {
     // целиком синей заливкой браузера.
     window.getSelection?.()?.removeAllRanges();
     const start = { x: event.clientX, y: event.clientY };
+    const threshold = event.pointerType === "mouse" ? geo.DRAG_THRESHOLD : geo.TOUCH_THRESHOLD;
     let moved = false;
     const move = (e) => {
-      if (!moved && Math.hypot(e.clientX - start.x, e.clientY - start.y) < geo.DRAG_THRESHOLD) return;
+      if (!moved && Math.hypot(e.clientX - start.x, e.clientY - start.y) < threshold) return;
       if (!moved) {
         moved = true;
         onStart?.();
@@ -1275,6 +1294,17 @@ export class Scheme {
           this.selected = node.name;
           this.commit(before);
         } else {
+          // Двойного щелчка касание не даёт - iPad его не присылает, - и вход в
+          // квадрат двойным касанием узнаётся по двум касаниям подряд одного узла.
+          // Время берётся у самого касания и проверяется до выбора: выбор ведёт
+          // курсор редактора к имени, это небыстро, и замер после него растягивал
+          // промежуток между касаниями за предел.
+          if (event.pointerType !== "mouse" && doubleTap(this.lastTap, node.name, event.timeStamp)) {
+            this.lastTap = null;
+            this.enter(node.name);
+            return;
+          }
+          this.lastTap = event.pointerType === "mouse" ? null : { name: node.name, at: event.timeStamp };
           this.selectNode(node.name);
         }
       },

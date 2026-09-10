@@ -454,6 +454,14 @@ test("раскладка: черновик сильнее проекта, но �
   assert.equal(layout.preferDraft(layout.canonical(moved), "").fromDraft, true);
 });
 
+test("схема: двойное касание входит в квадрат", async () => {
+  const { doubleTap } = await import("../static/scheme.js");
+  assert.equal(doubleTap(null, "Main", 100), false, "первое касание");
+  assert.equal(doubleTap({ name: "Main", at: 100 }, "Main", 400), true, "второе вскоре - вход");
+  assert.equal(doubleTap({ name: "Main", at: 100 }, "Main", 600), false, "второе поздно - снова первое");
+  assert.equal(doubleTap({ name: "Idle", at: 100 }, "Main", 200), false, "другой узел");
+});
+
 test("прогон: подсвечена стрелка, которая сработает на следующем такте", async () => {
   const { nextEdgeKeys } = await import("../static/scheme.js");
   const edges = [
