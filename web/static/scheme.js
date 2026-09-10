@@ -930,9 +930,13 @@ export class Scheme {
       }
       const box = group.querySelector(".node-inner-box");
       if (!box) continue;
-      const label = this.running.has(node.name) && inner ? innerLabel(inner.nodes, this.running) : "";
+      // Имени самого квадрата в списке модуля может не быть: у состояния,
+      // реализованного моделью, список несёт одни внутренние имена. Плашку и
+      // отметку прогона даёт само внутреннее состояние.
+      const label = inner ? innerLabel(inner.nodes, this.running) : "";
       box.querySelector(".node-inner").textContent = label;
       box.toggleAttribute("hidden", label === "");
+      if (label) group.classList.add("running");
     }
   }
 

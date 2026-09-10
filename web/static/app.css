@@ -2039,10 +2039,11 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 .mini-node { fill: var(--on-surface-soft); stroke: none; }
 .mini-edge { fill: none; stroke: var(--on-surface-soft); stroke-width: 1; }
 /* Прогон внутри композиции: миниатюра оживает - активное внутреннее состояние
- * залито акцентом, только что пройденный переход подсвечен, - а плашка под
- * квадратом называет текущее внутреннее состояние. */
-.mini-node.run { fill: var(--accent); }
-.mini-edge.hot { stroke: var(--accent); stroke-width: 2; }
+ * и только что пройденный переход горят тоном предупреждения: акцент рядом с
+ * чернилами миниатюры почти не различим, - а плашка под квадратом называет
+ * текущее внутреннее состояние. */
+.mini-node.run { fill: var(--warn); }
+.mini-edge.hot { stroke: var(--warn); stroke-width: 2.5; }
 .node-inner-box[hidden] { display: none; }
 .node-inner-bg { fill: var(--surface-yes); stroke: var(--accent); stroke-width: 1; }
 .node-inner { fill: var(--on-surface-yes); font-size: var(--text-xs); text-anchor: middle; dominant-baseline: central; }
