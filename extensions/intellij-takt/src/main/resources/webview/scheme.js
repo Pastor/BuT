@@ -125,6 +125,20 @@ function span(touches) {
   };
 }
 
+/**
+ * Текст плашки композиции: активные внутренние состояния - подписью автора, если
+ * она есть, иначе именем; у параллели их несколько, через запятую.
+ *
+ * @param {{name: string, alias?: string}[]} nodes узлы внутреннего листа
+ * @param {Set<string>} running активные состояния такта (имена всех уровней)
+ */
+export function innerLabel(nodes, running) {
+  return nodes
+    .filter((node) => running.has(node.name))
+    .map((node) => node.alias || node.name)
+    .join(", ");
+}
+
 export class Scheme {
   /**
    * @param {object} dom узлы: `scheme`, `sheet`, `map`, `stage`, `legend`, `crumbs`,
@@ -239,6 +253,7 @@ export class Scheme {
    * @param {string[][]} next ожидаемые переходы парами "из, в"
    */
   setRunning(names, next = []) {
+    this.runningBefore = this.running;
     this.running = new Set(names ?? []);
     this.expected = new Set((next ?? []).filter((pair) => this.running.has(pair[0])).map((pair) => pair[1]));
     const sheet = this.current();
@@ -252,6 +267,7 @@ export class Scheme {
       node.classList.toggle("expected", !running && this.expected.has(name));
       node.classList.toggle("reachable", !running && !this.expected.has(name) && reachable.has(name));
     }
+    this.paintInner();
   }
 
   /** Снимает записи, которых в модели нет. */
@@ -636,6 +652,7 @@ export class Scheme {
       this.drawEdge(sheet, edge, pts, hops);
     });
     for (const node of sheet.nodes) this.drawNode(sheet, node);
+    this.paintInner();
     svg.style.transformOrigin = "0 0";
     svg.style.transform = `translate(${this.view.x}px, ${this.view.y}px)`;
     // Сетка холста едет с листом: шаг масштабируется, а при мелком масштабе удваивается,
@@ -761,6 +778,7 @@ export class Scheme {
       group.appendChild(mk("rect", { class: "node-ring", x: node.x - h - 4, y: node.y - h - 4, width: geo.SIDE + 8, height: geo.SIDE + 8, rx: 12 }));
       group.appendChild(mk("rect", { class: "node-comp", x: node.x - h, y: node.y - h, width: geo.SIDE, height: geo.SIDE }));
       this.drawMini(group, sheet, node);
+      this.drawInner(group, node);
       const text = mk("text", { class: "node-mark", x: node.x - h + 22, y: node.y - h + 26 });
       markText(text, node.mark, "node-num");
       group.appendChild(text);
@@ -850,10 +868,59 @@ export class Scheme {
       const to = byName.get(edge.to);
       if (!from || !to) continue;
       const pts = geo.route(from, edge.loop ? from : to, edge.points).map((p) => [ox + p[0] * s, oy + p[1] * s]);
-      group.appendChild(mk("path", { class: "mini-edge", d: `M${pts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("L")}` }));
+      group.appendChild(mk("path", {
+        class: "mini-edge",
+        "data-from": edge.from,
+        "data-to": edge.to,
+        d: `M${pts.map((p) => `${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join("L")}`,
+      }));
     }
     for (const inside of inner.nodes) {
-      group.appendChild(mk("circle", { class: "mini-node", cx: (ox + inside.x * s).toFixed(1), cy: (oy + inside.y * s).toFixed(1), r: 3 }));
+      group.appendChild(mk("circle", { class: "mini-node", "data-name": inside.name, cx: (ox + inside.x * s).toFixed(1), cy: (oy + inside.y * s).toFixed(1), r: 3 }));
+    }
+  }
+
+  /**
+   * Плашка под квадратом композиции: текущее внутреннее состояние на прогоне.
+   *
+   * Рисуется пустой и скрытой; текст и видимость ставит `paintInner` - на каждом
+   * такте, без перестроения листа.
+   */
+  drawInner(group, node) {
+    const h = geo.SIDE / 2;
+    const box = mk("g", { class: "node-inner-box", "data-inner": node.name, hidden: "" });
+    box.appendChild(mk("rect", { class: "node-inner-bg", x: node.x - h, y: node.y + h + 8, width: geo.SIDE, height: 20, rx: 10 }));
+    box.appendChild(mk("text", { class: "node-inner", x: node.x, y: node.y + h + 18 }));
+    group.appendChild(box);
+  }
+
+  /**
+   * Прогон внутри композиций листа: миниатюра заливает активное внутреннее
+   * состояние и подсвечивает только что пройденный переход, плашка называет
+   * текущее внутреннее состояние - подписью автора, если она есть.
+   *
+   * Активные состояния модуль отдаёт плоским списком имён всех уровней, поэтому
+   * внутреннее состояние узнаётся по имени на внутреннем листе.
+   */
+  paintInner() {
+    const sheet = this.current();
+    const before = this.runningBefore ?? new Set();
+    for (const node of sheet.nodes) {
+      if (node.kind !== "composition") continue;
+      const group = [...this.dom.sheet.querySelectorAll(".node")].find((g) => g.dataset.name === node.name);
+      if (!group) continue;
+      const level = this.target(sheet, node);
+      const inner = level ? this.sheetOf(level) : null;
+      for (const dot of group.querySelectorAll(".mini-node")) dot.classList.toggle("run", this.running.has(dot.dataset.name));
+      for (const line of group.querySelectorAll(".mini-edge")) {
+        const hot = line.dataset.from !== line.dataset.to && before.has(line.dataset.from) && this.running.has(line.dataset.to) && !before.has(line.dataset.to);
+        line.classList.toggle("hot", hot);
+      }
+      const box = group.querySelector(".node-inner-box");
+      if (!box) continue;
+      const label = this.running.has(node.name) && inner ? innerLabel(inner.nodes, this.running) : "";
+      box.querySelector(".node-inner").textContent = label;
+      box.toggleAttribute("hidden", label === "");
     }
   }
 

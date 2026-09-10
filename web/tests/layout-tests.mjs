@@ -441,6 +441,15 @@ test("раскладка: черновик сильнее проекта, но �
   assert.equal(layout.preferDraft(layout.canonical(moved), "").fromDraft, true);
 });
 
+test("прогон: плашка композиции называет текущее внутреннее состояние", async () => {
+  const { innerLabel } = await import("../static/scheme.js");
+  const nodes = [{ name: "Idle", alias: "" }, { name: "Heat", alias: "Нагрев" }, { name: "Cool" }];
+  assert.equal(innerLabel(nodes, new Set(["Main", "Idle"])), "Idle", "без подписи - имя");
+  assert.equal(innerLabel(nodes, new Set(["Main", "Heat"])), "Нагрев", "подпись автора сильнее имени");
+  assert.equal(innerLabel(nodes, new Set(["Main", "Heat", "Cool"])), "Нагрев, Cool", "у параллели - все активные");
+  assert.equal(innerLabel(nodes, new Set(["Done"])), "", "внутри не идёт ничего");
+});
+
 test("раскладка: форма рёбер «кривые Безье» переживает круговой рейс", () => {
   const stored = layout.empty();
   stored.corners = "bezier";
