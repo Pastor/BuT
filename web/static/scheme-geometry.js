@@ -49,6 +49,165 @@ function half(node) {
 }
 
 /**
+ * Число точек привязки на рамке узла: через 22,5°.
+ *
+ * Четыре точки (середины граней) сводили в одну все рёбра, идущие в одну
+ * сторону: три входа справа сливались у круга в одну линию, и по рисунку нельзя
+ * было сосчитать переходы. На шестнадцати соседние точки круга расходятся
+ * примерно на десять пикселей - шаг, различимый глазом.
+ */
+export const PORTS = 16;
+/** Точка стрелки начального состояния по умолчанию: слева, откуда читают лист. */
+export const ENTRY_PORT = 8;
+
+/** Координата с точностью до десятой: запись пути короче, а минус-ноль не рождается. */
+const tenth = (value) => Math.round(value * 10) / 10 + 0;
+
+/**
+ * Точка привязки `index` узла: на окружности круга либо на рамке квадрата
+ * композиции по лучу из центра, с тем же зазором, что у `anchor`. Счёт идёт от
+ * направления "вправо" по часовой стрелке экрана (ось y смотрит вниз).
+ */
+export function portPoint(node, index) {
+  const angle = (index * 2 * Math.PI) / PORTS;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const h = half(node);
+  const reach = (node.kind === "composition" ? h / Math.max(Math.abs(cos), Math.abs(sin)) : h) + 2;
+  return [tenth(node.x + cos * reach), tenth(node.y + sin * reach)];
+}
+
+/**
+ * Направление на точку `to` в шагах точек привязки: дробное, от 0 до 16.
+ *
+ * Округлено до миллионной: ход строго вниз обязан давать ровно 4, иначе шум
+ * вычисления решал бы за правило, какой из двух равных соседей взять.
+ */
+function bearing(node, to) {
+  const turn = Math.atan2(to[1] - node.y, to[0] - node.x) / (2 * Math.PI);
+  return Math.round(((((turn * PORTS) % PORTS) + PORTS) % PORTS) * 1e6) / 1e6;
+}
+
+/** Номер точки привязки, ближайшей к направлению на точку `to`. */
+export function portToward(node, to) {
+  return Math.round(bearing(node, to)) % PORTS;
+}
+
+/**
+ * Расстояние по кругу между точкой `port` и направлением `at`, в шагах.
+ *
+ * Округлено до миллионной: равные по смыслу расстояния обязаны сравниваться
+ * равными, иначе порядок раздачи решал бы последний разряд вычитания.
+ */
+function turnGap(port, at) {
+  const d = Math.abs(port - at) % PORTS;
+  return Math.round(Math.min(d, PORTS - d) * 1e6) / 1e6;
+}
+
+/**
+ * Раздаёт концам рёбер точки привязки: каждый конец берёт ближайшую к своему
+ * ходу свободную точку своего узла.
+ *
+ * Первыми выбирают концы, чей ход ближе всего к какой-нибудь точке. При равном
+ * ходе первым выбирает прямое ребро - то, чей узел на другом конце лежит прямо
+ * по ходу (`far`). Точка оценивается суммой двух расстояний: до хода и до
+ * направления на дальний узел, - так ребро, которое дальше поворачивает, уходит
+ * со своей занятой точки в сторону поворота, даже если соседняя с другой стороны
+ * ближе: иначе два ребра перехлёстывались бы у самого узла. При равной сумме
+ * берётся точка ближе к ходу. Дальше решает порядок листа, поэтому один
+ * лист раскладывается одинаково от открытия к открытию. Концов больше
+ * шестнадцати - лишние делят ближайшую точку: иначе им негде встать.
+ *
+ * @param {{node: {name: string, x: number, y: number}, toward: number[], far?: number[]}[]} ends концы рёбер
+ * @param {Map<string, Set<number>>} taken занятые заранее точки по имени узла (меняется на месте)
+ * @returns {number[]} номер точки на каждый конец, в порядке `ends`
+ */
+export function assignPorts(ends, taken = new Map()) {
+  const wanted = ends.map((end) => bearing(end.node, end.toward));
+  const aim = ends.map((end) => bearing(end.node, end.far ?? end.toward));
+  const miss = (i) => turnGap(Math.round(wanted[i]) % PORTS, wanted[i]);
+  const bend = (i) => turnGap(wanted[i], aim[i]);
+  const order = ends.map((_, i) => i).sort((i, j) => miss(i) - miss(j) || bend(i) - bend(j) || i - j);
+  const out = new Array(ends.length);
+  for (const i of order) {
+    const name = ends[i].node.name;
+    if (!taken.has(name)) taken.set(name, new Set());
+    const used = taken.get(name);
+    const score = (port) => turnGap(port, wanted[i]) + turnGap(port, aim[i]);
+    const free = [...Array(PORTS).keys()]
+      .filter((port) => !used.has(port))
+      .sort((p, q) => score(p) - score(q) || turnGap(p, wanted[i]) - turnGap(q, wanted[i]) || p - q);
+    const port = free[0] ?? Math.round(wanted[i]) % PORTS;
+    used.add(port);
+    out[i] = port;
+  }
+  return out;
+}
+
+/** Ход ребра без привязки: центры узлов и изломы; без изломов - один угол. */
+function course(from, to, points) {
+  const pins = (points ?? []).map((p) => [p[0], p[1]]);
+  if (pins.length === 0 && from.x !== to.x && from.y !== to.y) {
+    return [[from.x, from.y], [from.x, to.y], [to.x, to.y]];
+  }
+  return [[from.x, from.y], ...pins, [to.x, to.y]];
+}
+
+/**
+ * Ломаные всех рёбер листа с раздачей точек привязки.
+ *
+ * Ход ребра тот же, что у `route` (центры узлов и изломы автора), а концы
+ * встают в точки, розданные `assignPorts`. Петля самоперехода своей формы не
+ * меняет: её концы занимают точки узла, и чужие рёбра их обходят. Так же
+ * занимает точку стрелка начального состояния (`reserved`).
+ *
+ * Угол, поставленный раскладкой (у ребра без изломов автора), следует за
+ * точками: он встаёт на вертикаль точки начала и горизонталь точки конца, и
+ * ломаная остаётся ортогональной. Оставь его в центре хода - конец в соседней
+ * точке тянулся бы наискось через весь отрезок. Изломы автора не двигаются:
+ * они хранятся в файле и видны точками.
+ *
+ * @param {Map<string, object>} byName узлы листа по именам
+ * @param {{from: string, to: string, loop?: boolean, points: number[][]}[]} edges рёбра в порядке листа
+ * @param {Map<string, number>} reserved занятые заранее точки: имя узла - номер
+ * @returns {(number[][]|null)[]} ломаная на каждое ребро; `null` - узла нет на листе
+ */
+export function routeSheet(byName, edges, reserved = new Map()) {
+  const taken = new Map();
+  const take = (name, port) => {
+    if (!taken.has(name)) taken.set(name, new Set());
+    taken.get(name).add(port);
+  };
+  for (const [name, port] of reserved) take(name, port);
+  const out = edges.map(() => null);
+  const ends = [];
+  const corners = [];
+  edges.forEach((edge, k) => {
+    const from = byName.get(edge.from);
+    const to = byName.get(edge.to);
+    if (!from || !to) return;
+    if (edge.loop || from === to) {
+      const pts = route(from, from, edge.points);
+      take(from.name, portToward(from, pts[0]));
+      take(from.name, portToward(from, pts[pts.length - 1]));
+      out[k] = pts;
+      return;
+    }
+    const pts = course(from, to, edge.points);
+    out[k] = pts;
+    if ((edge.points ?? []).length === 0 && pts.length === 3) corners.push(k);
+    ends.push({ k, at: 0, node: from, toward: pts[1], far: [to.x, to.y] });
+    ends.push({ k, at: pts.length - 1, node: to, toward: pts[pts.length - 2], far: [from.x, from.y] });
+  });
+  const ports = assignPorts(ends, taken);
+  ends.forEach((end, i) => {
+    out[end.k][end.at] = portPoint(end.node, ports[i]);
+  });
+  for (const k of corners) out[k][1] = [out[k][0][0], out[k][2][1]];
+  return out;
+}
+
+/**
  * Точка присоединения ребра к грани узла со стороны точки `to`: горизонтальная грань
  * при преимущественно горизонтальном ходе, иначе вертикальная; зазор в два пикселя,
  * чтобы наконечник не въезжал в рамку.
@@ -83,39 +242,42 @@ export function route(from, to, points) {
       [from.x + h + 2, from.y - 8],
     ];
   }
-  const pins = (points ?? []).map((p) => [p[0], p[1]]);
-  let pts = [[from.x, from.y], ...pins, [to.x, to.y]];
-  if (pins.length === 0 && from.x !== to.x && from.y !== to.y) {
-    pts = [[from.x, from.y], [from.x, to.y], [to.x, to.y]];
-  }
+  const pts = course(from, to, points);
   pts[0] = anchor(from, pts[1]);
   pts[pts.length - 1] = anchor(to, pts[pts.length - 2]);
   return pts;
 }
 
 const near = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
-const between = (v, a, b, m) => v > Math.min(a, b) + m && v < Math.max(a, b) - m;
 const segments = (pts) => pts.slice(1).map((p, i) => [pts[i], p]);
+const cross = (u, v) => u[0] * v[1] - u[1] * v[0];
 
 /**
- * Точки, где ломаная `mine` пересекает ломаные `others`: только строго перпендикулярные
- * встречи внутри обоих отрезков. Общая точка у входа в узел (слияние) мостика не
- * получает, и на неё пересечение не считается.
+ * Точки, где ломаная `mine` пересекает ломаные `others`: встречи под любым углом
+ * внутри обоих отрезков. Угол нужен: конец ребра в соседней точке привязки идёт
+ * наискось, и пересечение с ним не менее настоящее, чем прямое. Параллельные
+ * отрезки пересечения не дают - общий путь разводит раскладка изломами. Общая
+ * точка у входа в узел (слияние) мостика не получает, и на неё пересечение не
+ * считается.
  */
 export function crossings(mine, others) {
   const out = [];
   for (const [a, b] of segments(mine)) {
-    const vertical = a[0] === b[0];
-    if (vertical && a[1] === b[1]) continue;
+    const r = [b[0] - a[0], b[1] - a[1]];
+    const len = Math.hypot(r[0], r[1]);
+    if (len === 0) continue;
     for (const list of others) {
       for (const [c, d] of segments(list)) {
-        const otherVertical = c[0] === d[0];
-        if (vertical === otherVertical) continue;
-        const x = vertical ? a[0] : c[0];
-        const y = vertical ? c[1] : a[1];
-        const insideMine = vertical ? between(y, a[1], b[1], HOP + 2) : between(x, a[0], b[0], HOP + 2);
-        const insideOther = otherVertical ? between(y, c[1], d[1], 1) : between(x, c[0], d[0], 1);
-        const p = [x, y];
+        const s = [d[0] - c[0], d[1] - c[1]];
+        const otherLen = Math.hypot(s[0], s[1]);
+        const denom = cross(r, s);
+        if (otherLen === 0 || Math.abs(denom) < 1e-9 * len * otherLen) continue;
+        const ac = [c[0] - a[0], c[1] - a[1]];
+        const t = cross(ac, s) / denom;
+        const u = cross(ac, r) / denom;
+        const insideMine = t * len > HOP + 2 && t * len < len - HOP - 2;
+        const insideOther = u * otherLen > 1 && u * otherLen < otherLen - 1;
+        const p = [tenth(a[0] + r[0] * t), tenth(a[1] + r[1] * t)];
         if (
           insideMine &&
           insideOther &&
@@ -131,13 +293,15 @@ export function crossings(mine, others) {
 }
 
 /**
- * Путь SVG по ломаной: с мостиками на пересечениях и скруглёнными углами по форме.
+ * Путь SVG по ломаной: с мостиками либо разрывами на пересечениях и скруглёнными
+ * углами по форме.
  *
  * @param {number[][]} pts точки ломаной
- * @param {number[][]} hops точки пересечений, где рисуется мостик
+ * @param {number[][]} hops точки пересечений
  * @param {boolean} round углы скруглённые
+ * @param {"hop"|"gap"} crossing вид пересечения: мостик-полукруг либо разрыв линии
  */
-export function buildPath(pts, hops = [], round = false) {
+export function buildPath(pts, hops = [], round = false, crossing = "hop") {
   let cur = pts[0];
   let d = `M${cur[0]} ${cur[1]}`;
   for (let i = 1; i < pts.length; i += 1) {
@@ -154,7 +318,10 @@ export function buildPath(pts, hops = [], round = false) {
       .sort((p, q) => p.t - q.t);
     for (const { h } of on) {
       d += `L${h[0] - dir[0] * HOP} ${h[1] - dir[1] * HOP}`;
-      d += `A${HOP} ${HOP} 0 0 1 ${h[0] + dir[0] * HOP} ${h[1] + dir[1] * HOP}`;
+      // Разрыв той же ширины, что мостик: вид меняется, место пересечения нет.
+      d += crossing === "gap"
+        ? `M${h[0] + dir[0] * HOP} ${h[1] + dir[1] * HOP}`
+        : `A${HOP} ${HOP} 0 0 1 ${h[0] + dir[0] * HOP} ${h[1] + dir[1] * HOP}`;
     }
     d += `L${end[0]} ${end[1]}`;
     if (trim) {

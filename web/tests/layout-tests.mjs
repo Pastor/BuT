@@ -334,6 +334,80 @@ test("геометрия: ломаная ребра, пересечение мо
   assert.equal(geo.snap(13), 16);
 });
 
+test("геометрия: шестнадцать точек привязки, раздача без слияния, пересечение под углом", () => {
+  const a = { name: "A", kind: "state", x: 100, y: 100 };
+  // Точки идут от направления "вправо" по часовой стрелке экрана, с зазором в два пикселя.
+  assert.deepEqual(geo.portPoint(a, 0), [126, 100]);
+  assert.deepEqual(geo.portPoint(a, 4), [100, 126]);
+  assert.deepEqual(geo.portPoint(a, 8), [74, 100]);
+  assert.deepEqual(geo.portPoint(a, 12), [100, 74]);
+  assert.deepEqual(geo.portPoint({ name: "C", kind: "composition", x: 0, y: 0 }, 2), [73.4, 73.4], "угол квадрата");
+  assert.equal(geo.portToward(a, [100, 0]), 12);
+
+  // Три входа в одну сторону узла - три разные точки, а не одна на всех.
+  const b = { name: "B", kind: "state", x: 300, y: 100 };
+  const byName = new Map([
+    ["A", a],
+    ["B", b],
+    ["D", { name: "D", kind: "state", x: 100, y: 300 }],
+    ["E", { name: "E", kind: "state", x: 100, y: -100 }],
+  ]);
+  const edges = [
+    { from: "A", to: "B", points: [] },
+    { from: "D", to: "B", points: [] },
+    { from: "E", to: "B", points: [] },
+  ];
+  const routes = geo.routeSheet(byName, edges);
+  const ends = routes.map((pts) => pts[pts.length - 1]);
+  assert.equal(new Set(ends.map(String)).size, 3, `три входа - три точки: ${JSON.stringify(ends)}`);
+  assert.deepEqual(ends[0], [274, 100], "прямой ход получает свою точку первым");
+  for (const [x, y] of ends) assert.ok(Math.abs(Math.hypot(x - b.x, y - b.y) - (geo.R + 2)) < 0.2, "точка на окружности");
+  assert.deepEqual(routes, geo.routeSheet(byName, edges), "лист раскладывается одинаково");
+  // Ребро снизу берёт соседнюю точку снизу, ребро сверху - сверху: не перехлёстываются.
+  assert.ok(ends[1][1] > b.y && ends[2][1] < b.y, JSON.stringify(ends));
+  // Угол раскладки следует за точками: ломаная остаётся ортогональной.
+  const [start, corner, end] = routes[1];
+  assert.deepEqual(corner, [start[0], end[1]], JSON.stringify(routes[1]));
+  // Своя точка занята - ребро уходит в сторону поворота, а не в ближнюю с другой
+  // стороны: три ребра вниз из одного узла, прямое посередине.
+  const top = { name: "T", kind: "state", x: 216, y: 72 };
+  const fan = new Map([
+    ["T", top],
+    ["L", { name: "L", kind: "state", x: 72, y: 192 }],
+    ["M", { name: "M", kind: "state", x: 216, y: 192 }],
+    ["R", { name: "R", kind: "state", x: 360, y: 192 }],
+  ]);
+  const down = geo.routeSheet(fan, ["L", "R", "M"].map((to) => ({ from: "T", to, points: [] })));
+  const [left, right, middle] = down.map((pts) => pts[0]);
+  assert.deepEqual(middle, [216, 98], "прямое ребро - точка строго вниз");
+  assert.ok(left[0] < top.x && right[0] > top.x, `повороты расходятся по сторонам: ${JSON.stringify(down)}`);
+  // Точку, занятую стрелкой начального состояния, ребро обходит.
+  const kept = geo.routeSheet(byName, [edges[0]], new Map([["B", 8]]));
+  assert.notDeepEqual(kept[0][kept[0].length - 1], geo.portPoint(b, 8));
+
+  // Пересечение под углом - тоже пересечение; вид "разрыв" прерывает линию.
+  assert.deepEqual(geo.crossings([[0, 0], [100, 100]], [[[0, 100], [100, 0]]]), [[50, 50]]);
+  assert.equal(geo.buildPath([[0, 50], [100, 50]], [[50, 50]], false, "gap"), "M0 50L46 50M54 50L100 50");
+});
+
+test("раскладка: место стрелки начального состояния и вид пересечения пишутся ступенями", () => {
+  const stored = layout.empty();
+  layout.entryAt(stored, "/", 12);
+  layout.setView(stored, "crossing", "gap");
+  const text = layout.canonical(stored);
+  assert.match(text, /"entry": 12/);
+  assert.match(text, /"crossing": "gap"/);
+  const read = layout.parse(text).layout;
+  assert.equal(layout.entryOf(read, "/"), 12);
+  assert.equal(layout.viewOf(read).crossing, "gap");
+  // Умолчания не пишутся; чужой номер точки читается умолчанием.
+  layout.entryAt(stored, "/", geo.ENTRY_PORT);
+  layout.setView(stored, "crossing", "hop");
+  assert.doesNotMatch(layout.canonical(stored), /entry|crossing/);
+  const alien = layout.parse('{"format": 1, "sheets": {"/": {"entry": 99}}}').layout;
+  assert.equal(layout.entryOf(alien, "/"), geo.ENTRY_PORT);
+});
+
 test("геометрия: ярусы дают строки, порядок - столбцы, и всё на сетке", () => {
   const placed = geo.autoPlace([
     { name: "A", kind: "start", rank: 0, order: 0 },

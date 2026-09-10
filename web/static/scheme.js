@@ -614,16 +614,23 @@ export class Scheme {
     for (const frame of sheet.frames) {
       svg.appendChild(mk("rect", { class: "node-frame", x: frame.x, y: frame.y, width: frame.w, height: frame.h, rx: 12 }));
     }
+    // Стрелка начального состояния занимает свою точку привязки: рёбра встают
+    // в соседние, а не под неё.
+    const reserved = new Map();
+    for (const node of sheet.nodes) {
+      if (node.start && node.kind !== "composition") reserved.set(node.name, layoutFile.entryOf(this.layout, sheet.path));
+    }
+    const routes = geo.routeSheet(byName, sheet.edges, reserved);
+    this.routes = new Map();
     const drawn = [];
-    for (const edge of sheet.edges) {
-      const from = byName.get(edge.from);
-      const to = byName.get(edge.to);
-      if (!from || !to) continue;
-      const pts = geo.route(from, edge.loop ? from : to, edge.points);
+    sheet.edges.forEach((edge, i) => {
+      const pts = routes[i];
+      if (!pts) return;
       const hops = geo.crossings(pts, drawn);
       drawn.push(pts);
+      this.routes.set(edge.key, pts);
       this.drawEdge(sheet, edge, pts, hops);
-    }
+    });
     for (const node of sheet.nodes) this.drawNode(sheet, node);
     svg.style.transformOrigin = "0 0";
     svg.style.transform = `translate(${this.view.x}px, ${this.view.y}px)`;
@@ -657,7 +664,7 @@ export class Scheme {
     const marker = `${edge.kind === "next" ? "arrow-solid" : "arrow-open"}${selected ? "-sel" : ""}`;
     const line = mk("path", {
       class: `edge${selected ? " selected" : ""}${edge.loop ? " edge-loop" : ""}`,
-      d: geo.buildPath(pts, hops, this.layout.corners === "round"),
+      d: geo.buildPath(pts, hops, this.layout.corners === "round", layoutFile.viewOf(this.layout).crossing),
       "marker-end": `url(#${marker})`,
     });
     group.appendChild(line);
@@ -758,10 +765,7 @@ export class Scheme {
     } else {
       group.appendChild(mk("circle", { class: "node-ring", cx: node.x, cy: node.y, r: geo.R + 4 }));
       group.appendChild(mk("circle", { class: "node-body", cx: node.x, cy: node.y, r: geo.R }));
-      if (node.start) {
-        group.appendChild(mk("path", { class: "node-entry", d: `M${node.x - geo.R - 16} ${node.y}h12` }));
-        group.appendChild(mk("path", { class: "node-entry", d: `M${node.x - geo.R - 8} ${node.y - 4}l4 4-4 4` }));
-      }
+      if (node.start) this.drawEntry(group, sheet, node);
       if (node.kind === "end") group.appendChild(mk("circle", { class: "node-final", cx: node.x, cy: node.y, r: geo.R - 5 }));
       const text = mk("text", { class: "node-mark", x: node.x, y: node.y + 5 });
       markText(text, node.mark, "node-num");
@@ -780,6 +784,42 @@ export class Scheme {
       }
     });
     this.dom.sheet.appendChild(group);
+  }
+
+  /**
+   * Стрелка начального состояния: входит в круг в своей точке привязки.
+   *
+   * Место стрелки - работа автора, как и место узла: её ведут по окружности за
+   * наконечник (либо стрелками клавиатуры), и она встаёт в ближайшую из
+   * шестнадцати точек. Занятую стрелкой точку рёбра обходят.
+   */
+  drawEntry(group, sheet, node) {
+    const port = layoutFile.entryOf(this.layout, sheet.path);
+    const angle = (port * 2 * Math.PI) / geo.PORTS;
+    const out = [Math.cos(angle), Math.sin(angle)];
+    const side = [-out[1], out[0]];
+    const at = (reach, lateral = 0) =>
+      `${(node.x + out[0] * reach + side[0] * lateral).toFixed(1)} ${(node.y + out[1] * reach + side[1] * lateral).toFixed(1)}`;
+    const tip = at(geo.R + 4);
+    const grip = mk("g", { class: "node-entry-grip" });
+    if (sheet.editable) grip.appendChild(mk("path", { class: "node-entry-hit", d: `M${at(geo.R + 18)}L${tip}` }));
+    grip.appendChild(mk("path", { class: "node-entry", d: `M${at(geo.R + 16)}L${tip}` }));
+    grip.appendChild(mk("path", { class: "node-entry", d: `M${at(geo.R + 8, 4)}L${tip}L${at(geo.R + 8, -4)}` }));
+    group.appendChild(grip);
+    if (!sheet.editable) return;
+    grip.setAttribute("tabindex", 0);
+    grip.setAttribute("role", "button");
+    grip.setAttribute("aria-label", this.t("scheme.entryHint"));
+    grip.addEventListener("pointerdown", (event) => this.dragEntry(event, sheet, node, grip));
+    grip.addEventListener("keydown", (event) => {
+      const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[event.key];
+      if (!step) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const before = this.text();
+      layoutFile.entryAt(this.layout, sheet.path, (port + step + geo.PORTS) % geo.PORTS);
+      this.commit(before);
+    });
   }
 
   /** Миниатюра листа внутри квадрата композиции: точки и линии, без текста. */
@@ -1129,6 +1169,26 @@ export class Scheme {
     });
   }
 
+  /** Перенос стрелки начального состояния: точка - ближайшая к указателю по направлению из центра. */
+  dragEntry(event, sheet, node, grip) {
+    const before = this.text();
+    const origin = geo.portPoint(node, layoutFile.entryOf(this.layout, sheet.path));
+    this.drag(event, {
+      onStart: () => grip.classList.add("dragging"),
+      onMove: (dx, dy) => {
+        layoutFile.entryAt(this.layout, sheet.path, geo.portToward(node, [origin[0] + dx, origin[1] + dy]));
+        this.draw();
+      },
+      onEnd: (moved) => {
+        if (moved) this.commit(before);
+      },
+      onCancel: () => {
+        this.layout = layoutFile.parse(before).layout;
+        this.draw();
+      },
+    });
+  }
+
   dragMark(event, sheet, edge, pts, text) {
     const before = this.text();
     const origin = geo.markSpot(edge.label ?? { place: this.labelPlace() }, pts);
@@ -1207,7 +1267,7 @@ export class Scheme {
     const before = this.text();
     const from = sheet.nodes.find((n) => n.name === edge.from);
     const to = sheet.nodes.find((n) => n.name === edge.to);
-    const pts = geo.route(from, edge.loop ? from : to, edge.points);
+    const pts = this.routes?.get(edge.key) ?? geo.route(from, edge.loop ? from : to, edge.points);
     const [mx, my] = geo.longestMid(pts);
     layoutFile.bend(this.layout, sheet.path, edge.key, [...edge.points, [this.snapped(mx), this.snapped(my)]]);
     this.commit(before);

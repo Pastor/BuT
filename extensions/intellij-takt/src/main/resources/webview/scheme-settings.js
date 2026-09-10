@@ -142,6 +142,15 @@ const TABS = [
         ],
       },
       {
+        id: "crossing",
+        label: "scheme.settings.crossing",
+        sample: crossingSample,
+        steps: [
+          { value: "hop", label: "scheme.crossing.hop" },
+          { value: "gap", label: "scheme.crossing.gap" },
+        ],
+      },
+      {
         id: "labelPlace",
         label: "scheme.settings.labelPlace",
         sample: placeSample,
@@ -431,6 +440,14 @@ function arrowSample(step) {
 function cornerSample(step) {
   const svg = box();
   const d = step === "round" ? "M8 22V16a6 6 0 0 1 6-6h34" : "M8 22V10h40";
+  svg.appendChild(mk("path", { class: "edge", d, "stroke-width": 1.5 }));
+  return svg;
+}
+
+function crossingSample(step) {
+  const svg = box();
+  svg.appendChild(mk("path", { class: "edge", d: "M28 3v22", "stroke-width": 1.5 }));
+  const d = step === "gap" ? "M6 14h18M32 14h18" : "M6 14h18a4 4 0 0 1 8 0h18";
   svg.appendChild(mk("path", { class: "edge", d, "stroke-width": 1.5 }));
   return svg;
 }

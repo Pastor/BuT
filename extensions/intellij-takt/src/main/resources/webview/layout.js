@@ -23,9 +23,11 @@
 //               "stateSize" | "condSize": "xs" | "sm" | "md" | "lg",
 //               "gamma": "draft" | "color" | "contrast",
 //               "grid": "off" | "small" | "medium" | "large",
-//               "snap": true | false, "marks": true | false },
+//               "snap": true | false, "marks": true | false,
+//               "crossing": "hop" | "gap" },
 //     "legend": { "place": "bottom" | "right" | "float", "x": 24, "y": 72 },
 //     "sheets": { "<путь листа>": {
+//         "entry": 0,
 //         "nodes": { "<имя>": { "x": 0, "y": 0 } },
 //         "names": { "<имя>": "подпись автора" },
 //         "edges": { "<от>><к>:<номер>": {
@@ -55,6 +57,8 @@
 // при записи. Отказа нет ни в каком случае: компилятор файла не читает.
 //
 // Знания о языке здесь нет: что есть на листе, говорит граф модуля (`takt_graph`).
+
+import { ENTRY_PORT, PORTS } from "./scheme-geometry.js";
 
 /** Версия формата файла. */
 export const FORMAT = 1;
@@ -90,6 +94,9 @@ export const VIEW = {
   grid: ["medium", "small", "large", "off"],
   snap: [true, false],
   marks: [true, false],
+  // Пересечение рёбер: мостик либо разрыв линии. Оба говорят "не соединено";
+  // мостик виднее на мелком масштабе, разрыв тише на плотном листе.
+  crossing: ["hop", "gap"],
 };
 
 /** Настройки вида по умолчанию. */
@@ -369,6 +376,29 @@ export function viewOf(layout) {
   return { ...defaultView(), ...cleanView(layout?.view) };
 }
 
+/** Номер точки привязки: целое от нуля до числа точек на рамке узла. */
+const isPort = (value) => Number.isInteger(value) && value >= 0 && value < PORTS;
+
+/**
+ * Ставит точку привязки стрелки начального состояния листа; умолчание (слева)
+ * и негодный номер записи не оставляют.
+ *
+ * Место стрелки - свойство листа, а не узла: начальное состояние у листа одно,
+ * и запись переживает переименование состояния.
+ */
+export function entryAt(layout, path, port) {
+  const stored = sheet(layout, path);
+  if (isPort(port) && port !== ENTRY_PORT) stored.entry = port;
+  else delete stored.entry;
+  return layout;
+}
+
+/** Точка привязки стрелки начального состояния листа. */
+export function entryOf(layout, path) {
+  const port = layout?.sheets?.[path]?.entry;
+  return isPort(port) ? port : ENTRY_PORT;
+}
+
 /**
  * Ставит умолчание места знака условия; центр - умолчание и не записывается.
  *
@@ -530,9 +560,10 @@ function normalize(raw) {
       const point = storedNodes[name];
       if (isPoint(point)) nodes[name] = { x: whole(point.x), y: whole(point.y) };
     }
+    const entry = isPort(stored.entry) && stored.entry !== ENTRY_PORT ? stored.entry : null;
     // Пустой лист - шум: записи о нём нет, как нет и файла у модели без раскладки.
-    if (Object.keys(edges).length + Object.keys(names).length + Object.keys(nodes).length === 0) continue;
-    out.sheets[path] = { edges, names, nodes };
+    if (Object.keys(edges).length + Object.keys(names).length + Object.keys(nodes).length === 0 && entry === null) continue;
+    out.sheets[path] = entry === null ? { edges, names, nodes } : { edges, entry, names, nodes };
   }
   return out;
 }

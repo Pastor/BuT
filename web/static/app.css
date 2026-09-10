@@ -1918,6 +1918,12 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  * (правило доступности книги раздел 7: состояние никогда не только цветом). */
 .node-entry { fill: none; stroke: var(--on-surface); stroke-width: 1.5; }
 .node-final { fill: none; stroke: var(--on-surface-soft); stroke-width: 1.5; }
+/* Стрелку начального состояния ведут по окружности узла за широкую невидимую
+ * линию: штрих в полтора пикселя пальцем не поймать. */
+.node-entry-grip[role="button"] { cursor: grab; }
+.node-entry-hit { fill: none; stroke: transparent; stroke-width: 12; }
+.node-entry-grip.dragging { cursor: grabbing; }
+.node-entry-grip.dragging .node-entry { stroke: var(--accent); }
 
 /* Наведение и нажатие - формулой одной плотности, а не своей заливкой. */
 .node:hover .node-body {
