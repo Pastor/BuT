@@ -1254,6 +1254,11 @@ async function list() {
         level: levelName(item.level),
       });
       node.setAttribute("aria-pressed", String(item.id === state.chosen?.id));
+      // Описание проекта - подсказкой при наведении: в строке места ему нет, а
+      // выбирать проект по одному имени приходится вслепую. Пустое описание
+      // подсказки не даёт - пустая всплывашка читалась бы как поломка.
+      const about = typeof item.description === "string" ? item.description.trim() : "";
+      if (about) node.dataset.tip = about;
       dom.projects.appendChild(node);
     }
     if (rows.length === 0) dom.projects.appendChild(row(t("account.noProjects"), "ok"));

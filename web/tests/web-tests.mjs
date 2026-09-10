@@ -1162,6 +1162,8 @@ test("файлы проекта: полоса отвечает на один в�
   // Раскладка пишется в существующий файл с ревизией проекта: без неё сервер
   // отвечает конфликтом, и правка схемы терялась при каждом сохранении, кроме первого.
   assert.match(account, /api\.write\(state\.project\.id, pair, current, state\.layoutFile \? state\.revision : null\)/);
+  // Описание проекта приходит подсказкой у строки списка, пустое - не приходит.
+  assert.match(account, /if \(about\) node\.dataset\.tip = about;/);
   assert.match(account, /dom\.projects\.hidden = opened;/, "список проектов виден внутри проекта");
   assert.match(account, /dom\.tree\.hidden = !opened;/, "состав виден без проекта");
   assert.match(account, /dom\.newproject\.hidden = opened;/, "заведение проекта видно внутри");
