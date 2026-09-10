@@ -31,7 +31,7 @@ mod extend_args;
 pub mod formula;
 pub(crate) mod fresh;
 mod function;
-pub(crate) mod import; // правила поиска файла нужны и области LSP
+pub mod import; // наружу: носитель состава проекта (браузер) и подсказка SE-102
 pub mod index;
 pub mod inline;
 pub(crate) mod internal;

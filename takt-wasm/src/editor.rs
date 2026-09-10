@@ -1,8 +1,11 @@
 //! Операции редактора: те же функции, что у языкового сервера.
 
+use std::collections::BTreeMap;
+
 use serde::Serialize;
 use takt_lang::lsp;
 use takt_lang::lsp::lsp_types::{HoverContents, MarkedString, Position, Range};
+use takt_lang::semantic::import::memory;
 
 use crate::reply;
 
@@ -20,13 +23,17 @@ struct EditorDiagnosticJson {
 /// Берутся у слоя LSP, а не у компилятора напрямую: слой добавляет к ошибкам
 /// предупреждения и канон именования (`CS-001`), и именно этот набор видит автор в
 /// редакторе. Взяв другой, браузер показывал бы не то, что показывает `takt-lsp`.
-pub fn diagnostics(source: &str) -> String {
+pub fn diagnostics(source: &str, files: BTreeMap<String, String>) -> String {
     #[derive(Serialize)]
     struct Reply {
         diagnostics: Vec<EditorDiagnosticJson>,
     }
+    // Тот же состав проекта и тот же путь поиска, что у сборки: подчёркивание обязано
+    // сходиться со сборкой, иначе верный `import` краснел бы в редакторе.
+    let _project = memory::install(files);
+    let search = crate::compile::project_search_paths();
     reply::ok(Reply {
-        diagnostics: lsp::collect_diagnostics(source)
+        diagnostics: lsp::collect_diagnostics_at("", source, &search)
             .into_iter()
             .map(|d| EditorDiagnosticJson {
                 code: d.code.map(|c| match c {
@@ -291,7 +298,7 @@ mod tests {
     #[test]
     fn diagnostics_answer_on_incomplete_source() {
         for source in ["start S {", "var x: ", "model M {\n  start"] {
-            let reply = json(&diagnostics(source));
+            let reply = json(&diagnostics(source, Default::default()));
             assert_eq!(reply["ok"], Value::Bool(true), "{source}: {reply}");
             assert!(reply["diagnostics"].is_array());
         }

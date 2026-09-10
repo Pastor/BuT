@@ -6,6 +6,7 @@
 pub(in crate::semantic) mod adopt;
 pub(in crate::semantic) mod build;
 pub mod importers; // "кто подключает эту библиотеку" - подсказка SE-102
+pub mod memory; // состав проекта вместо диска - модуль в браузере
 pub(in crate::semantic) mod select;
 
 use crate::diagnostics::Diagnostic;
@@ -83,12 +84,35 @@ pub(crate) fn read_import_file(
         }
     };
 
+    // Проект в памяти (модуль в браузере): подключение ищется в его составе, а не на
+    // диске. Кандидаты те же - правило путей одно, меняется только источник.
+    if memory::active()
+        && let Some((name, content)) = files
+            .iter()
+            .find_map(|candidate| memory::read(candidate).map(|text| (candidate, text)))
+    {
+        let key = memory::key_of(name).to_string();
+        if !key.ends_with(".takt") {
+            return Err(
+                Diagnostic::error(loc, msg!(keys::SE_014_IMPORT_EXTENSION, file = key))
+                    .with_code("SE-014"),
+            );
+        }
+        return Ok((content, key));
+    }
+
     // Оставляем только существующие файлы
-    let found: Vec<String> = files
-        .iter()
-        .filter(|f| exists(f).is_ok_and(|r| r))
-        .cloned()
-        .collect();
+    let found: Vec<String> = if memory::active() {
+        // В памяти файла нет - на диск за ним не ходим: у модуля в браузере диска
+        // нет, а у проекта в памяти состав задан целиком.
+        Vec::new()
+    } else {
+        files
+            .iter()
+            .filter(|f| exists(f).is_ok_and(|r| r))
+            .cloned()
+            .collect()
+    };
 
     if found.is_empty() {
         let path_str = match path {
@@ -198,6 +222,33 @@ mod tests {
             unicode: false,
             loc: Location::default(),
         })
+    }
+
+    // --- Проект в памяти ---------------------------------------------------------
+
+    /// Подключение берётся из состава проекта, а имя возвращается ключом проекта.
+    #[test]
+    fn import_is_read_from_the_project_in_memory() {
+        let project = [("lib.takt".to_string(), "start L;".to_string())]
+            .into_iter()
+            .collect();
+        let _guard = memory::install(project);
+        let (content, name) =
+            read_import_file(&[".".to_string()], &filename_path("lib.takt")).unwrap();
+        assert_eq!(content, "start L;");
+        assert_eq!(name, "lib.takt", "имя - ключ проекта, а не путь на диске");
+    }
+
+    /// Файла нет в проекте - `SE-013`, и на диск за ним не ходят: у модуля в
+    /// браузере диска нет, а состав проекта задан целиком.
+    #[test]
+    fn missing_file_in_memory_is_not_looked_up_on_disk() {
+        // Файл с тем же именем лежит на диске в каталоге поиска - и не должен найтись.
+        let (dir, _) = make_tmp_but("disk.takt", "start D;");
+        let _guard = memory::install(std::collections::BTreeMap::new());
+        let search = vec![dir.path().to_string_lossy().into_owned()];
+        let err = read_import_file(&search, &filename_path("disk.takt")).unwrap_err();
+        assert_eq!(err.code.as_deref(), Some("SE-013"), "{err:?}");
     }
 
     // --- Позитивные тесты -----------------------------------------------------

@@ -9,13 +9,17 @@
 //! условие критерия приёмки - вывод в браузере обязан совпадать с выводом `taktc`
 //! **байт в байт**, а совпадение двух реализаций проверить нечем.
 //!
-//! Импорт в браузере не работает: файловой системы нет, список путей поиска пуст, и
-//! `import "file.takt";` кончается `SE-001`. Это названная граница (фичи), а
-//! не недоделка.
+//! Импорт в браузере разрешается по **составу проекта**: диска у модуля нет, и
+//! страница передаёт файлы проекта запросом (имя - текст). Путь поиска один -
+//! каталог проекта, `.`; файла нет в составе - `SE-013`, как у компилятора, не
+//! нашедшего файл на диске.
+
+use std::collections::BTreeMap;
 
 use serde::Serialize;
 use takt_lang::compile::{CompileInput, Target};
 use takt_lang::compile_cli::{CompileOptions, generate_options, parse_compile_args, target_flags};
+use takt_lang::semantic::import::memory;
 
 use crate::reply::{self, DiagnosticJson};
 
@@ -26,6 +30,14 @@ use crate::reply::{self, DiagnosticJson};
 /// правило: страница, которой важно имя, передаёт его позиционным аргументом - ровно
 /// как в командной строке.
 pub const DEFAULT_FILENAME: &str = "playground.takt";
+
+/// Пути поиска `import` в браузере: каталог проекта.
+///
+/// Носитель один на сборку, диагностики и прогон: разойдись они, модель, которую
+/// страница подчёркивает как верную, не собиралась бы - или наоборот.
+pub fn project_search_paths() -> Vec<String> {
+    vec![".".to_string()]
+}
 
 /// Один файл вывода.
 #[derive(Debug, Serialize)]
@@ -113,14 +125,24 @@ pub fn check(target: &str, args: &str) -> String {
 ///
 /// `args` - строка ключей `taktc compile` (`--fsm=table -I lib`, имя файла позиционным
 /// аргументом). Ключ `-o` разбирается, но не действует: писать некуда.
-pub fn compile(target: &str, args: &str, source: &str, filename: &str) -> String {
+pub fn compile(
+    target: &str,
+    args: &str,
+    source: &str,
+    filename: &str,
+    files: BTreeMap<String, String>,
+) -> String {
     let (target, options) = match prepare(target, args, filename) {
         Ok(prepared) => prepared,
         Err(message) => return reply::refused(message),
     };
 
     let generate = generate_options(&options);
-    let input = CompileInput::new(&options.input_file, source, &[], &generate);
+    // Состав проекта стоит на время сборки: подключения читаются из него, а не с
+    // диска, которого у модуля нет.
+    let _project = memory::install(files);
+    let search = project_search_paths();
+    let input = CompileInput::new(&options.input_file, source, &search, &generate);
     match takt_lang::compile::compile_texts(target, &input) {
         Ok(output) => reply::ok(CompiledJson {
             target: target.name(),
@@ -196,7 +218,7 @@ mod tests {
     /// Цель `c` отдаёт два файла, названных по имени входа.
     #[test]
     fn compiles_c_into_two_files() {
-        let reply = json(&compile("c", "stacker.takt", MODEL, ""));
+        let reply = json(&compile("c", "stacker.takt", MODEL, "", BTreeMap::new()));
         assert_eq!(reply["ok"], Value::Bool(true), "{reply}");
         let names: Vec<&str> = reply["files"]
             .as_array()
@@ -211,7 +233,7 @@ mod tests {
     /// Без имени входа берётся [`DEFAULT_FILENAME`].
     #[test]
     fn nameless_source_gets_default_filename() {
-        let reply = json(&compile("rust", "", MODEL, ""));
+        let reply = json(&compile("rust", "", MODEL, "", BTreeMap::new()));
         assert_eq!(reply["ok"], Value::Bool(true), "{reply}");
         assert_eq!(
             reply["files"][0]["name"],
@@ -222,7 +244,7 @@ mod tests {
     /// Неизвестная цель - отказ вызова со списком поддерживаемых.
     #[test]
     fn unknown_target_is_refused_with_list() {
-        let reply = json(&compile("verilog", "", MODEL, ""));
+        let reply = json(&compile("verilog", "", MODEL, "", BTreeMap::new()));
         assert_eq!(reply["ok"], Value::Bool(false));
         let message = reply["error"]["message"].as_str().unwrap();
         assert!(message.contains("sv-mmio"), "нет списка целей: {message}");
@@ -237,6 +259,7 @@ mod tests {
             "",
             "start S {\n    ref Missing: 1 = 1;\n}\n",
             "",
+            BTreeMap::new(),
         ));
         assert_eq!(reply["ok"], Value::Bool(false), "{reply}");
         assert!(
@@ -253,7 +276,7 @@ mod tests {
     /// Ключ, неприменимый к цели, отвергается - той же таблицей, что у CLI.
     #[test]
     fn flag_not_applicable_to_target_is_refused() {
-        let reply = json(&compile("rust", "--bus=apb", MODEL, ""));
+        let reply = json(&compile("rust", "--bus=apb", MODEL, "", BTreeMap::new()));
         assert_eq!(reply["ok"], Value::Bool(false), "{reply}");
         let message = reply["error"]["message"].as_str().unwrap();
         assert!(
@@ -264,8 +287,29 @@ mod tests {
 
     /// Импорт - названная граница: файловой системы нет.
     #[test]
+    fn import_is_resolved_from_the_project_files() {
+        // Состав проекта заменяет диск: подключаемый файл лежит в проекте, и сборка
+        // его находит. Без состава тот же вход кончается `SE-013` (проверка ниже).
+        let files: BTreeMap<String, String> = [(
+            "lib.takt".to_string(),
+            "fn twice(x: u8) -> u8 { return x + x; }\n".to_string(),
+        )]
+        .into_iter()
+        .collect();
+        let source = "import \"lib.takt\";\nout y: u8;\nstart S { always { y := twice(2); } }\n";
+        let reply = json(&compile("c", "", source, "", files));
+        assert_eq!(reply["ok"], true, "{reply}");
+    }
+
+    #[test]
     fn import_is_refused_with_diagnostic() {
-        let reply = json(&compile("c", "", "import \"lib.takt\";\nstart S;\n", ""));
+        let reply = json(&compile(
+            "c",
+            "",
+            "import \"lib.takt\";\nstart S;\n",
+            "",
+            BTreeMap::new(),
+        ));
         assert_eq!(reply["ok"], Value::Bool(false), "{reply}");
         assert!(
             !reply["error"]["message"].as_str().unwrap().is_empty(),

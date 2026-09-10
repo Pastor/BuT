@@ -48,12 +48,14 @@ self.onmessage = async (event) => {
  *
  * @returns {Promise<boolean>} сессия готова к тактам
  */
-async function ensure({ wasmUrl, source, scenario, tickMs }) {
+async function ensure({ wasmUrl, source, scenario, tickMs, files }) {
   if (!bridge) bridge = await Bridge.load(wasmUrl);
-  const key = JSON.stringify([source, scenario ?? "", tickMs ?? 0]);
+  // Состав проекта входит в ключ: правка подключаемого файла меняет модель так же,
+  // как правка её самой, и прогон по старому тексту был бы прогоном чужой модели.
+  const key = JSON.stringify([source, scenario ?? "", tickMs ?? 0, files ?? {}]);
   if (session !== null && sessionKey === key) return true;
   close_();
-  const opened = bridge.simOpen(source, scenario ?? "", tickMs ?? 0);
+  const opened = bridge.simOpen(source, scenario ?? "", tickMs ?? 0, files ?? {});
   if (!opened.ok) {
     post({ type: "failed", message: opened.error?.message, key: "trace.notOpened", error: opened.error });
     return false;

@@ -94,6 +94,8 @@ const state = {
   diagKeep: 500,
   treeSide: "right",
   crumbsShown: true,
+  // Тексты моделей открытого проекта: по ним модуль разрешает `import`.
+  projectTexts: {},
   // Какая из двух записей показана в области: `diagnostics` либо `trace`.
   diagTab: "diagnostics",
   wrap: false,
@@ -310,6 +312,12 @@ export async function main() {
     },
     // Дерево перерисовано: мерка его ширины считается по нарисованным именам.
     treeChanged: () => measureTree(),
+    // Тексты моделей проекта пришли либо сменились: подключения разрешаются по
+    // ним, и диагностики со сборкой обязаны пересчитаться.
+    projectTexts: (texts) => {
+      state.projectTexts = texts;
+      refresh();
+    },
     showTrace: () => showSource("scenario"),
     showScheme: () => showSource("scheme"),
     say,
@@ -937,7 +945,7 @@ function refresh() {
     showDoc();
     return;
   }
-  const diagnostics = state.bridge.diagnostics(source);
+  const diagnostics = state.bridge.diagnostics(source, projectFiles());
   const tokens = state.bridge.tokens(source);
   state.editor.highlight(tokens, diagnostics.diagnostics ?? []);
   showDiagnostics(diagnostics.diagnostics ?? []);
@@ -1205,7 +1213,8 @@ function compile() {
     state.target,
     state.args,
     state.editor.value(),
-    state.file
+    state.file,
+    projectFiles()
   );
   dom.output.replaceChildren();
   if (!reply.ok) {
@@ -1375,7 +1384,21 @@ function session() {
     source: state.editor.value(),
     scenario: state.scenario,
     tickMs: 0,
+    files: projectFiles(),
   };
+}
+
+/**
+ * Состав проекта для `import`: тексты его моделей, имя - текст.
+ *
+ * Открытый файл берётся из редактора, а не с сервера: подключение правят рядом с
+ * моделью, и сборка обязана видеть набранное, а не сохранённое. Без проекта
+ * состав пуст - подключать нечего, и `import` отвечает `SE-013`, словами, что файла нет.
+ */
+function projectFiles() {
+  const files = { ...state.projectTexts };
+  if (state.file && state.kind === "takt") files[state.file] = state.editor.value();
+  return files;
 }
 
 /** Запускает прогон в отдельном потоке: до конца модели либо до бюджета. */

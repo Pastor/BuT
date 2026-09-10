@@ -64,12 +64,16 @@ export class Bridge {
    *
    * @param {string} filename имя файла; пусто - умолчание моста
    */
-  compile(target, args, source, filename = "") {
-    return this.call("takt_compile", { target, args, source, filename });
+  /**
+   * @param {Record<string, string>} files состав проекта (имя - текст): по нему
+   *   модуль разрешает `import`, диска у него нет
+   */
+  compile(target, args, source, filename = "", files = {}) {
+    return this.call("takt_compile", { target, args, source, filename, files });
   }
 
-  diagnostics(source) {
-    return this.call("takt_diagnostics", { source });
+  diagnostics(source, files = {}) {
+    return this.call("takt_diagnostics", { source, files });
   }
 
   tokens(source) {
@@ -120,8 +124,8 @@ export class Bridge {
     return this.call("takt_graph", { source });
   }
 
-  simOpen(source, scenario, tickMs) {
-    return this.call("takt_sim_open", { source, scenario, tick_ms: tickMs ?? 0 });
+  simOpen(source, scenario, tickMs, files = {}) {
+    return this.call("takt_sim_open", { source, scenario, tick_ms: tickMs ?? 0, files });
   }
 
   simTick(id, budget) {

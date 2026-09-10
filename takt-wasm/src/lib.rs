@@ -108,6 +108,10 @@ struct CompileRequest {
     /// вывода**: у открытого проекта это имя его файла, а не имя буфера.
     #[serde(default)]
     filename: String,
+    /// Состав проекта: имя файла - текст. По нему разрешается `import`; пусто -
+    /// подключать нечего, и `import` кончается `SE-013`.
+    #[serde(default)]
+    files: std::collections::BTreeMap<String, String>,
 }
 
 /// Компилирует модель: запрос [`CompileRequest`] в буфере.
@@ -119,6 +123,7 @@ pub extern "C" fn takt_compile(len: u32) -> u32 {
             &request.args,
             &request.source,
             &request.filename,
+            request.files,
         )
     })
 }
@@ -147,6 +152,14 @@ pub extern "C" fn takt_flags(len: u32) -> u32 {
 #[derive(Debug, Deserialize)]
 struct SourceRequest {
     source: String,
+}
+
+/// Запрос диагностик: текст документа и состав проекта для `import`.
+#[derive(Debug, Deserialize)]
+struct DiagnosticsRequest {
+    source: String,
+    #[serde(default)]
+    files: std::collections::BTreeMap<String, String>,
 }
 
 /// Запрос подсветки вывода цели.
@@ -178,7 +191,9 @@ struct RenameRequest {
 /// Диагностики документа.
 #[unsafe(no_mangle)]
 pub extern "C" fn takt_diagnostics(len: u32) -> u32 {
-    call(len, |r: SourceRequest| editor::diagnostics(&r.source))
+    call(len, |r: DiagnosticsRequest| {
+        editor::diagnostics(&r.source, r.files)
+    })
 }
 
 /// Семантические токены (подсветка).
@@ -261,6 +276,9 @@ struct SimOpenRequest {
     /// Период модельного такта в миллисекундах; `0` - как в CLI.
     #[serde(default)]
     tick_ms: i64,
+    /// Состав проекта для `import`.
+    #[serde(default)]
+    files: std::collections::BTreeMap<String, String>,
 }
 
 /// Запрос такта прогона.
@@ -281,7 +299,7 @@ struct SimCloseRequest {
 #[unsafe(no_mangle)]
 pub extern "C" fn takt_sim_open(len: u32) -> u32 {
     call(len, |r: SimOpenRequest| {
-        sim::open(&r.source, &r.scenario, r.tick_ms)
+        sim::open(&r.source, &r.scenario, r.tick_ms, r.files)
     })
 }
 

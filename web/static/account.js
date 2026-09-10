@@ -933,6 +933,7 @@ async function closeProject(say = true) {
   // состав файлов. Остаться на экране им нельзя: показанное принадлежит проекту,
   // и после закрытия оно врало бы о том, что открыто.
   shell.forget(localStorage, shell.UI_KEYS.project);
+  host.projectTexts?.({});
   paintTree([]);
   hideConflict();
   host.open({ source: "", scenario: "", layout: "", file: "", kind: "takt" });
@@ -1351,6 +1352,7 @@ async function openProjectFiles(id) {
   shell.remember(localStorage, shell.UI_KEYS.project, id);
   state.level = opened.level;
   paintTree(opened.files);
+  await readProjectTexts();
   // Сценариев бывает несколько: проект называет свой, и он же становится умолчанием. Не
   // назови - прогон шёл бы по первому по имени, то есть не по тому, на котором автор
   // показывает работу модели.
@@ -1362,6 +1364,35 @@ async function openProjectFiles(id) {
     : (scenarios.includes(opened.main_scenario) ? opened.main_scenario : scenarios[0] ?? null);
   host.scenarios(scenarios, chosen);
   if (chosen !== state.scenarioFile) await chooseScenario(chosen);
+}
+
+/**
+ * Читает тексты моделей открытого проекта и отдаёт их странице.
+ *
+ * Нужны они для `import`: у модуля в браузере диска нет, и подключаемый файл он
+ * находит только в составе проекта. Читаются модели - подключать можно только их;
+ * отказ чтения одного файла не валит открытие проекта, а оставляет файл вне
+ * состава - подключение его ответит `SE-013` словами.
+ */
+async function readProjectTexts() {
+  const texts = {};
+  const project = state.project;
+  if (!project) {
+    host.projectTexts?.(texts);
+    return;
+  }
+  const models = (project.files ?? []).filter((file) => file.kind === "takt");
+  await Promise.all(
+    models.map(async (file) => {
+      try {
+        texts[file.name] = (await api.file(project.id, file.name)).text ?? "";
+      } catch {
+        // Файл остаётся вне состава - см. выше.
+      }
+    })
+  );
+  // Проект могли сменить, пока тексты ехали: чужой состав странице не нужен.
+  if (state.project?.id === project.id) host.projectTexts?.(texts);
 }
 
 /**

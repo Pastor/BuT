@@ -50,7 +50,12 @@ impl From<&takt_sim::runner::RunWarning> for RunWarningJson {
     }
 }
 
-pub fn open(source: &str, scenario: &str, tick_ms: i64) -> String {
+pub fn open(
+    source: &str,
+    scenario: &str,
+    tick_ms: i64,
+    project_files: std::collections::BTreeMap<String, String>,
+) -> String {
     #[derive(Serialize)]
     struct Reply {
         id: u32,
@@ -68,7 +73,12 @@ pub fn open(source: &str, scenario: &str, tick_ms: i64) -> String {
             return reply::failed(&first, source);
         }
     };
-    let model = match construct_model_with_files(&ast, None, &[], &mut files, false) {
+    // Состав проекта стоит на время построения модели: подключения читаются из него.
+    let project = takt_lang::semantic::import::memory::install(project_files);
+    let search = crate::compile::project_search_paths();
+    let built = construct_model_with_files(&ast, None, &search, &mut files, false);
+    drop(project);
+    let model = match built {
         Ok(model) => model,
         Err(diagnostic) => return reply::failed(&diagnostic, source),
     };
@@ -249,7 +259,7 @@ mod tests {
     /// Прогон идёт по тактам и отдаёт ту же трассу, что печатает `takt-sim`.
     #[test]
     fn ticks_yield_trace_lines() {
-        let opened = json(&open(COUNTER, "", 0));
+        let opened = json(&open(COUNTER, "", 0, Default::default()));
         assert_eq!(opened["ok"], Value::Bool(true), "{opened}");
         let id = opened["id"].as_u64().unwrap() as u32;
 
@@ -298,7 +308,7 @@ mod tests {
     /// запрошенного числа тактов.
     #[test]
     fn budget_stops_endless_model() {
-        let opened = json(&open(COUNTER, "", 0));
+        let opened = json(&open(COUNTER, "", 0, Default::default()));
         let id = opened["id"].as_u64().unwrap() as u32;
         for _ in 0..3 {
             let reply = json(&tick(id, 5));
@@ -312,7 +322,7 @@ mod tests {
     /// Завершающаяся модель отдаёт исход и сводку - ту же, что печатает CLI.
     #[test]
     fn terminating_model_reports_outcome() {
-        let opened = json(&open("start S;\n", "", 0));
+        let opened = json(&open("start S;\n", "", 0, Default::default()));
         let id = opened["id"].as_u64().unwrap() as u32;
         let reply = json(&tick(id, 10));
         assert_eq!(reply["done"], Value::Bool(true), "{reply}");
@@ -330,7 +340,7 @@ mod tests {
     fn scenario_drives_inputs() {
         let model = "in sensor: u8;\nvar seen: u8 := 0;\n\nstart Run {\n    always {\n        seen := sensor;\n    }\n\n    ref Run: 1 = 1;\n}\n";
         let scenario = r#"[{"in_ports": {"sensor": 7}}]"#;
-        let opened = json(&open(model, scenario, 0));
+        let opened = json(&open(model, scenario, 0, Default::default()));
         assert_eq!(opened["ok"], Value::Bool(true), "{opened}");
         let id = opened["id"].as_u64().unwrap() as u32;
         let reply = json(&tick(id, 1));
@@ -344,7 +354,12 @@ mod tests {
     /// Ошибка модели - диагностика с кодом, а не строка без роду.
     #[test]
     fn broken_model_is_refused_with_diagnostic() {
-        let reply = json(&open("start S {\n    ref Missing: 1 = 1;\n}\n", "", 0));
+        let reply = json(&open(
+            "start S {\n    ref Missing: 1 = 1;\n}\n",
+            "",
+            0,
+            Default::default(),
+        ));
         assert_eq!(reply["ok"], Value::Bool(false), "{reply}");
         assert!(reply["error"]["code"].as_str().is_some(), "{reply}");
     }
