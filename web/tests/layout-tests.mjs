@@ -323,6 +323,26 @@ test("геометрия: ломаная ребра, пересечение мо
   assert.match(path, /A4 4 0 0 1 54 50/, "мостик радиусом в половину шага");
   assert.match(geo.buildPath([[0, 0], [0, 100], [100, 100]], [], true), /Q0 100 5 100/, "скруглённый угол");
   assert.equal(geo.buildPath([[0, 0], [0, 100], [100, 100]], [], false), "M0 0L0 100L100 100");
+  // Кривые Безье: путь проходит через каждую точку ломаной, отрезок на точку,
+  // мостиков нет; касательная у конца - вдоль последнего отрезка.
+  const curve = geo.buildPath([[0, 0], [0, 100], [100, 100]], [[0, 50]], "bezier");
+  assert.match(curve, /^M0 0C[^C]+ 0 100C[^C]+ 100 100$/, curve);
+  assert.ok(!curve.includes("A"), "на кривой мостика нет");
+  assert.equal(geo.buildPath([[0, 0], [0, 100]], [], "bezier"), "M0 0C0 33.3 0 66.7 0 100", "две точки - прямая");
+  // Ребро без изломов: угол раскладки - контрольная точка одной дуги, крюка за
+  // угол нет; знак - на дуге.
+  assert.equal(geo.buildPath([[216, 98], [216, 144], [82, 144]], [], "bezier", "hop", true), "M216 98Q216 144 82 144");
+  assert.deepEqual(geo.markSpot(null, [[0, 0], [0, 100], [60, 100]], "bezier", true), [15, 75]);
+  // С изломами - ручки по длине своего отрезка: короткий отрезок рядом с длинным
+  // не уводит кривую за ломаную дальше, чем на треть короткого отрезка.
+  const hook = geo.buildPath([[216, 98], [216, 144], [82, 144]], [], "bezier");
+  const xs = [...hook.matchAll(/(-?[\d.]+) (-?[\d.]+)/g)].map((m) => Number(m[1]));
+  assert.ok(Math.max(...xs) - 216 <= 46 / 3 + 0.1, `крюк за угол: ${hook}`);
+  // Знак у кривой - на самой кривой, а не на середине отрезка ломаной.
+  const bent = [[0, 0], [0, 100], [60, 100]];
+  const spot = geo.markSpot(null, bent, "bezier");
+  assert.notDeepEqual(spot, geo.markSpot(null, bent), "знак встал мимо кривой");
+  assert.deepEqual(spot, geo.curvePoint(bent, 0, 0.5));
 
   // Знак условия: центр самого длинного сегмента, начало и конец с отступом, своё.
   const line = [[0, 0], [0, 40], [100, 40]];
@@ -419,6 +439,13 @@ test("раскладка: черновик сильнее проекта, но �
   assert.deepEqual(layout.preferDraft(undefined, savedText), { text: savedText, fromDraft: false });
   // Файла раскладки нет, а в черновике расстановка есть - она и берётся.
   assert.equal(layout.preferDraft(layout.canonical(moved), "").fromDraft, true);
+});
+
+test("раскладка: форма рёбер «кривые Безье» переживает круговой рейс", () => {
+  const stored = layout.empty();
+  stored.corners = "bezier";
+  assert.equal(layout.parse(layout.canonical(stored)).layout.corners, "bezier");
+  assert.equal(layout.parse('{"format": 1, "corners": "spline", "sheets": {}}').layout.corners, "square", "чужая форма - умолчание");
 });
 
 test("раскладка: место стрелки начального состояния и вид пересечения пишутся ступенями", () => {

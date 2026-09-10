@@ -13,7 +13,7 @@
 //
 // # Форма
 //
-//   { "format": 1, "corners": "square" | "round",
+//   { "format": 1, "corners": "square" | "round" | "bezier",
 //     "meta": { "createdBy": "автор", "createdAt": "2026-09-08T18:00:00Z",
 //               "edits": [ { "by": "кто", "at": "2026-09-08T18:20:00Z" } ] },
 //     "labelPlace": "start" | "center" | "end",
@@ -65,7 +65,7 @@ import { ENTRY_PORT, PORTS } from "./scheme-geometry.js";
 export const FORMAT = 1;
 
 /** Формы углов ребра. */
-export const CORNERS = ["square", "round"];
+export const CORNERS = ["square", "round", "bezier"];
 
 /** Места легенды относительно холста. */
 export const LEGEND_PLACES = ["bottom", "right", "float"];

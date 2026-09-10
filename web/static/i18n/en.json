@@ -169,6 +169,7 @@
   "scheme.autoLayout": "Auto layout",
   "scheme.cornersSquare": "Square corners",
   "scheme.cornersRound": "Rounded corners",
+  "scheme.cornersBezier": "Bézier curves",
   "scheme.crossing.hop": "Bridge",
   "scheme.layoutFromDraft": "Scheme restored from draft",
   "scheme.endHint": "Edge end: drag it around the node, double-click to reset",

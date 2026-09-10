@@ -169,6 +169,7 @@
   "scheme.autoLayout": "Автораскладка",
   "scheme.cornersSquare": "Углы прямые",
   "scheme.cornersRound": "Углы скруглённые",
+  "scheme.cornersBezier": "Кривые Безье",
   "scheme.crossing.hop": "Мостик",
   "scheme.layoutFromDraft": "Схема взята из черновика",
   "scheme.endHint": "Конец ребра: ведите по окружности узла, двойной щелчок - на место",

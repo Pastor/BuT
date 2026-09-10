@@ -139,6 +139,7 @@ const TABS = [
         steps: [
           { value: "square", label: "scheme.cornersSquare" },
           { value: "round", label: "scheme.cornersRound" },
+          { value: "bezier", label: "scheme.cornersBezier" },
         ],
       },
       {
@@ -439,7 +440,7 @@ function arrowSample(step) {
 
 function cornerSample(step) {
   const svg = box();
-  const d = step === "round" ? "M8 22V16a6 6 0 0 1 6-6h34" : "M8 22V10h40";
+  const d = { round: "M8 22V16a6 6 0 0 1 6-6h34", bezier: "M8 22C8 12 18 10 48 10" }[step] ?? "M8 22V10h40";
   svg.appendChild(mk("path", { class: "edge", d, "stroke-width": 1.5 }));
   return svg;
 }

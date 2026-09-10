@@ -630,7 +630,7 @@ export class Scheme {
     sheet.edges.forEach((edge, i) => {
       const pts = routes[i];
       if (!pts) return;
-      const hops = geo.crossings(pts, drawn);
+      const hops = this.layout.corners === "bezier" ? [] : geo.crossings(pts, drawn);
       drawn.push(pts);
       this.routes.set(edge.key, pts);
       this.drawEdge(sheet, edge, pts, hops);
@@ -668,14 +668,14 @@ export class Scheme {
     const marker = `${edge.kind === "next" ? "arrow-solid" : "arrow-open"}${selected ? "-sel" : ""}`;
     const line = mk("path", {
       class: `edge${selected ? " selected" : ""}${edge.loop ? " edge-loop" : ""}`,
-      d: geo.buildPath(pts, hops, this.layout.corners === "round", layoutFile.viewOf(this.layout).crossing),
+      d: geo.buildPath(pts, hops, this.layout.corners, layoutFile.viewOf(this.layout).crossing, edge.points.length === 0),
       "marker-end": `url(#${marker})`,
     });
     group.appendChild(line);
     if (edge.cond) {
       // Умолчание места знака - настройка вида, своё место ребра сильнее: автор мог
       // отвести один знак руками, и общее правило не вправе стирать эту работу.
-      const [mx, my] = geo.markSpot(edge.label ?? { place: this.labelPlace() }, pts);
+      const [mx, my] = geo.markSpot(edge.label ?? { place: this.labelPlace() }, pts, this.layout.corners, edge.points.length === 0);
       // Линия расступается под знаком: щель вырезана маской, а не закрыта заливкой -
       // холст под ней остаётся холстом, и точки сетки в просвете видны. Заливка
       // цвета листа поверх линии дала бы прямоугольную заплату на сетке.
@@ -1262,7 +1262,7 @@ export class Scheme {
 
   dragMark(event, sheet, edge, pts, text) {
     const before = this.text();
-    const origin = geo.markSpot(edge.label ?? { place: this.labelPlace() }, pts);
+    const origin = geo.markSpot(edge.label ?? { place: this.labelPlace() }, pts, this.layout.corners, edge.points.length === 0);
     this.drag(event, {
       onStart: () => text.classList.add("dragging"),
       onMove: (dx, dy) => {

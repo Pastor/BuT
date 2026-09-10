@@ -305,16 +305,85 @@ export function crossings(mine, others) {
   return out;
 }
 
+/** Вектор единичной длины; нулевой остаётся нулевым. */
+function unit(v) {
+  const len = Math.hypot(v[0], v[1]) || 1;
+  return [v[0] / len, v[1] / len];
+}
+
+/** Касательная сплайна в точке `i`: вдоль хорды между соседями, у концов - вдоль крайнего отрезка. */
+function tangentAt(pts, i) {
+  const prev = pts[Math.max(0, i - 1)];
+  const next = pts[Math.min(pts.length - 1, i + 1)];
+  return unit([next[0] - prev[0], next[1] - prev[1]]);
+}
+
 /**
- * Путь SVG по ломаной: с мостиками либо разрывами на пересечениях и скруглёнными
- * углами по форме.
+ * Контрольные точки кубического отрезка `i` сплайна через точки ломаной.
+ *
+ * Сплайн проходит через каждую точку: излом автора остаётся на линии, и его
+ * по-прежнему можно взять. Касательная у конца совпадает с последним отрезком
+ * ломаной - наконечник смотрит в узел так же, как у ломаной. Длина ручки -
+ * треть своего отрезка: при равной для всех отрезков ручке короткий отрезок
+ * рядом с длинным давал крюк за пределы ломаной.
+ */
+function curveControls(pts, i) {
+  const a = pts[i];
+  const b = pts[i + 1];
+  const reach = Math.hypot(b[0] - a[0], b[1] - a[1]) / 3;
+  const ta = tangentAt(pts, i);
+  const tb = tangentAt(pts, i + 1);
+  return [
+    [a[0] + ta[0] * reach, a[1] + ta[1] * reach],
+    [b[0] - tb[0] * reach, b[1] - tb[1] * reach],
+  ];
+}
+
+/**
+ * Путь SVG кривыми Безье через точки ломаной.
+ *
+ * У ребра без изломов автора (`auto`) угол ломаной поставила раскладка, и
+ * проходить через него кривой незачем: он становится контрольной точкой одной
+ * дуги. Дуга касается первого отрезка на выходе и последнего на входе и не
+ * выходит за угол; кривая, обязанная пройти через угол, давала там крюк.
+ */
+export function curvePath(pts, auto = false) {
+  if (auto && pts.length === 3) {
+    return `M${pts[0][0]} ${pts[0][1]}Q${pts[1][0]} ${pts[1][1]} ${pts[2][0]} ${pts[2][1]}`;
+  }
+  let d = `M${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 0; i + 1 < pts.length; i += 1) {
+    const [c1, c2] = curveControls(pts, i);
+    d += `C${tenth(c1[0])} ${tenth(c1[1])} ${tenth(c2[0])} ${tenth(c2[1])} ${pts[i + 1][0]} ${pts[i + 1][1]}`;
+  }
+  return d;
+}
+
+/** Точка кривой на отрезке `i` при параметре `t` от 0 до 1. */
+export function curvePoint(pts, i, t) {
+  const [c1, c2] = curveControls(pts, i);
+  const a = pts[i];
+  const b = pts[i + 1];
+  const u = 1 - t;
+  return [0, 1].map((k) => tenth(u * u * u * a[k] + 3 * u * u * t * c1[k] + 3 * u * t * t * c2[k] + t * t * t * b[k]));
+}
+
+/**
+ * Путь SVG по ломаной: с мостиками либо разрывами на пересечениях и углами по
+ * форме - прямыми, скруглёнными либо кривыми Безье.
+ *
+ * На кривых пересечения не отмечаются: их точки считаются по ломаной, и мостик
+ * встал бы мимо кривой.
  *
  * @param {number[][]} pts точки ломаной
  * @param {number[][]} hops точки пересечений
- * @param {boolean} round углы скруглённые
+ * @param {boolean|"square"|"round"|"bezier"} shape форма углов (`true` - скруглённые)
  * @param {"hop"|"gap"} crossing вид пересечения: мостик-полукруг либо разрыв линии
+ * @param {boolean} auto у ребра нет изломов автора (для кривых: угол - контрольная точка)
  */
-export function buildPath(pts, hops = [], round = false, crossing = "hop") {
+export function buildPath(pts, hops = [], shape = false, crossing = "hop", auto = false) {
+  if (shape === "bezier") return curvePath(pts, auto);
+  const round = shape === true || shape === "round";
   let cur = pts[0];
   let d = `M${cur[0]} ${cur[1]}`;
   for (let i = 1; i < pts.length; i += 1) {
@@ -424,15 +493,37 @@ export function longestMid(pts) {
  *
  * @param {{place: string, x?: number, y?: number}|null} label запись места
  * @param {number[][]} pts ломаная ребра
+ * @param {string} shape форма углов: у кривых Безье знак встаёт на кривую
+ * @param {boolean} auto у ребра нет изломов автора (см. `curvePath`)
  */
-export function markSpot(label, pts) {
+export function markSpot(label, pts, shape = "square", auto = false) {
   const placeName = label?.place ?? "center";
   if (placeName === "own" && Number.isFinite(label.x) && Number.isFinite(label.y)) {
     return [label.x, label.y];
   }
   if (placeName === "start") return pointAlong(pts, "start", MARK_OFF);
   if (placeName === "end") return pointAlong(pts, "end", MARK_OFF);
+  // У кривой середина самого длинного отрезка ломаной лежит мимо линии: знак
+  // встаёт на саму кривую, в середину того же отрезка.
+  if (shape === "bezier" && auto && pts.length === 3) {
+    return [0, 1].map((k) => tenth(0.25 * pts[0][k] + 0.5 * pts[1][k] + 0.25 * pts[2][k]));
+  }
+  if (shape === "bezier" && pts.length > 1) return curvePoint(pts, longestIndex(pts), 0.5);
   return longestMid(pts);
+}
+
+/** Номер самого длинного отрезка ломаной. */
+function longestIndex(pts) {
+  let best = 0;
+  let bestLen = -1;
+  for (let i = 1; i < pts.length; i += 1) {
+    const len = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    if (len > bestLen) {
+      bestLen = len;
+      best = i - 1;
+    }
+  }
+  return best;
 }
 
 /**
