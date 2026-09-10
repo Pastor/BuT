@@ -135,3 +135,22 @@ function named(problem) {
   error.params = problem.params;
   return error;
 }
+
+/**
+ * Сценарий прогона открытой модели.
+ *
+ * Сценарий модели - файл `.json`, чьё имя начинается с имени модели. Чужой
+ * сценарий к модели не применяется: его порты - порты другой модели, и эталон
+ * отказал бы `SIM-030`. Выбор - текущий, если он свой; иначе названный
+ * проектом, если он свой; иначе первый свой; своих нет - прогон без сценария.
+ *
+ * @param {string[]} own сценарии модели
+ * @param {string|null} current выбранный сейчас
+ * @param {string|null} main сценарий, названный проектом
+ * @returns {string|null}
+ */
+export function pickScenario(own, current, main) {
+  if (own.includes(current)) return current;
+  if (own.includes(main)) return main;
+  return own[0] ?? null;
+}

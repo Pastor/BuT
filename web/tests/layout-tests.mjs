@@ -606,6 +606,15 @@ test("граф: модуль отдаёт листы лифта, а страни
   assert.ok(broken.error?.code, JSON.stringify(broken));
 });
 
+test("страница проекта: сценарий прогона - только сценарий открытой модели", async () => {
+  const { pickScenario } = await import("../static/project.js");
+  const own = ["lift-busy.json", "lift-idle.json"];
+  assert.equal(pickScenario(own, "lift-idle.json", "lift-busy.json"), "lift-idle.json", "свой текущий остаётся");
+  assert.equal(pickScenario(own, "ports16-run.json", "lift-busy.json"), "lift-busy.json", "чужой текущий уступает названному проектом");
+  assert.equal(pickScenario(own, "ports16-run.json", "ports16-run.json"), "lift-busy.json", "названный проектом, но чужой - первый свой");
+  assert.equal(pickScenario([], "ports16-run.json", "ports16-run.json"), null, "своих нет - без сценария");
+});
+
 test("страница проекта: раскладка берётся парой к активной модели", async () => {
   const { read } = await import("../static/project.js");
   const files = [

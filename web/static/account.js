@@ -12,6 +12,7 @@
 // автором: "перечитать" либо "перезаписать". Молчаливого выбора нет ни в одну сторону:
 // перезаписать чужую работу и потерять свою - одинаково плохо.
 
+import { pickScenario } from "./project.js";
 import * as api from "./api.js";
 import * as draft from "./draft.js";
 import * as layoutFile from "./layout.js";
@@ -1547,6 +1548,14 @@ async function openFile(id, name) {
         ...build(),
       });
       if (layout.fromDraft) host.say(t("scheme.layoutFromDraft"), "warning");
+    }
+    // Сценарий - сценарий открытой модели: чужой к ней не применяется. Выбор при
+    // открытии проекта смотрел на все сценарии проекта, и модель без своих
+    // получала сценарий соседней - прогон кончался отказом `SIM-030`.
+    if (kindOf(name) === "takt") {
+      const own = scenariosOf(name);
+      const chosen = pickScenario(own, state.scenarioFile, state.project?.main_scenario ?? null);
+      if (chosen !== state.scenarioFile) await chooseScenario(chosen);
     }
     refresh();
   } catch (error) {
