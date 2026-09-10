@@ -1576,6 +1576,10 @@ async function keepScenario(revision) {
  * Пустая раскладка при отсутствующем файле не записывается: файла нет и не
  * нужно. Записанный текст запоминается, чтобы следующая запись шла только по
  * новым правкам.
+ *
+ * Запись в существующий файл несёт ревизию проекта - ту же, что у модели и
+ * сценария: без неё сервер отвечает конфликтом, и правка схемы пропадала бы при
+ * каждом сохранении, кроме первого, заводящего файл.
  */
 async function keepLayout() {
   const pair = layoutName(state.file);
@@ -1583,7 +1587,8 @@ async function keepLayout() {
   const current = host.layout();
   if (current === state.layoutRead) return;
   if (!state.layoutFile && current === layoutFile.canonical(layoutFile.empty())) return;
-  await api.write(state.project.id, pair, current, null);
+  const written = await api.write(state.project.id, pair, current, state.layoutFile ? state.revision : null);
+  state.revision = written.revision;
   state.layoutFile = pair;
   state.layoutRead = current;
 }
