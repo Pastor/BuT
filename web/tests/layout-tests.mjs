@@ -582,6 +582,13 @@ test("геометрия: лист композиции - цепочка сле�
   assert.equal(composed.frames.length, 2, "скобки и параллель - по рамке");
   assert.ok(composed.w > composed.h, "цепочка шире, чем выше");
   assert.equal(new Set(composed.nodes.map((n) => n.name)).size, 4, "имена узлов уникальны");
+  // Имя шага - модель и номер среди её шагов: перестановка шагов разных моделей
+  // не меняет имён, и подписи автора остаются у своих квадратов.
+  const heater = { model: { name: "Heater", path: "Heater" } };
+  const pump = { model: { name: "Pump", path: "Pump" } };
+  assert.deepEqual(geo.composeSheet({ chain: [heater, pump] }).nodes.map((n) => n.name), ["Heater#1", "Pump#1"]);
+  assert.deepEqual(geo.composeSheet({ chain: [pump, heater] }).nodes.map((n) => n.name), ["Pump#1", "Heater#1"]);
+  assert.deepEqual(geo.composeSheet({ chain: [heater, pump, heater] }).nodes.map((n) => n.name), ["Heater#1", "Pump#1", "Heater#2"]);
 });
 
 test("ссылка и черновик: раскладка переживает оба рейса", async () => {

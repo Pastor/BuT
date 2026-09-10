@@ -723,6 +723,7 @@ export function centerOn(view, box, x, y) {
  */
 export function composeSheet(implement) {
   const nodes = [];
+  const seen = new Map();
   const edges = [];
   const frames = [];
   const gap = SNAP * 6;
@@ -750,7 +751,12 @@ export function composeSheet(implement) {
   // именами первого и последнего узла для рёбер цепочки.
   const lay = (item, x, y, size) => {
     if (item.model) {
-      const name = `${item.model.name}#${nodes.length + 1}`;
+      // Имя шага - модель и номер среди шагов той же модели: по имени хранится
+      // подпись автора, и перестановка шагов разных моделей её не переносит.
+      // Шаги одной модели различимы только порядком - другого у них нет.
+      const count = (seen.get(item.model.name) ?? 0) + 1;
+      seen.set(item.model.name, count);
+      const name = `${item.model.name}#${count}`;
       nodes.push({
         name,
         model: item.model.name,
