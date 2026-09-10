@@ -12,6 +12,7 @@ import * as i18n from "./i18n.js";
 import { t } from "./i18n.js";
 import { enhance } from "./pick.js";
 import { attachBuildSettings } from "./build-settings.js";
+import { attachHelp } from "./help.js";
 import * as build from "./build.js";
 import * as shell from "./shell.js";
 import * as tip from "./tip.js";
@@ -180,6 +181,7 @@ export async function main() {
   fillTargets(version.targets ?? []);
   // Цель и ключи выбираются окном настроек сборки; носители величин прежние - список
   // `#target` и строка `#args`, - и окно правит их тем же путём, что и смена цели в списке.
+  attachHelp(dom);
   state.buildSettings = attachBuildSettings(
     {
       modal: dom["build-modal"],
@@ -510,11 +512,13 @@ function watchBuild() {
 function showVersion() {
   const at = build.moment(state.build?.built_at);
   const number = state.build?.build;
-  dom.version.textContent = t("bar.version", {
-    language: state.languageVersion,
-    built: number ? t("bar.build", { number }) : at,
-  });
+  // Коротко: версия языка и номер сборки в скобках; слова - в подсказке.
+  dom.version.textContent = number
+    ? t("bar.version", { language: state.languageVersion, number })
+    : t("bar.versionAt", { language: state.languageVersion, built: at });
   dom.version.dataset.tip = t("bar.buildTip", {
+    language: state.languageVersion,
+    number: number || "—",
     built: at || "—",
     commit: state.build?.commit || "—",
     branch: state.build?.branch || "—",
@@ -638,6 +642,8 @@ function cache() {
     "scheme-empty", "legend", "zoom", "alerts",
     "scheme-modal", "scheme-tabs", "scheme-settings", "scheme-save", "scheme-cancel",
     "showdiag-tab", "showtrace-tab", "legendrows", "legendcols",
+    "showhelp", "help", "help-title", "help-search", "help-count", "help-prev", "help-next",
+    "help-close", "help-toc", "help-doc", "repo",
   ]) {
     dom[id] = document.getElementById(id);
   }

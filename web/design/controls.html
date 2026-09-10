@@ -123,6 +123,34 @@
     </div>
   </section>
 
+  <section class="case" data-control=".help">
+    <div class="pane-head"><span>Справка</span></div>
+    <div class="case-body">
+      <!-- Показано на месте: живое окно кроет страницу целиком. -->
+      <div class="help" style="position: static; height: 18rem">
+        <div class="help-head">
+          <span class="help-title">Справка — язык Takt</span>
+          <input class="help-search" type="search" value="Takt" aria-label="Поиск по справке">
+          <span class="help-count muted">1 из 2</span>
+          <span class="spacer"></span>
+          <button class="icon-btn" type="button" aria-label="Закрыть справку"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
+        </div>
+        <div class="help-body">
+          <nav class="help-toc">
+            <button class="help-toc-item help-toc-h2" type="button">1 Обзор языка</button>
+            <button class="help-toc-item help-toc-h3" type="button" aria-current="true">1.1 Одна модель — много целей</button>
+            <button class="help-toc-item help-toc-h3" type="button">1.2 Пример</button>
+          </nav>
+          <article class="help-doc">
+            <h3>1.1 Одна модель — много целей</h3>
+            <p>Модель на <mark class="help-hit current">Takt</mark> транслируется в несколько целей; <mark class="help-hit">Takt</mark> исполняет её и симулятором.</p>
+            <pre><code><strong><span class="tok-keyword">model</span></strong> Lamp { <strong><span class="tok-keyword">in</span></strong> btn: <span class="tok-type">bit</span>; }</code></pre>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section class="case" data-control=".modal">
     <div class="pane-head"><span>Модальное окно</span></div>
     <div class="case-body">

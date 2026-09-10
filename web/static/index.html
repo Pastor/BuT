@@ -40,6 +40,10 @@
 <header class="bar bar-brand">
   <span class="brand">Takt</span>
   <span id="version" class="muted" data-i18n="bar.loading">загрузка модуля…</span>
+  <!-- Репозиторий проекта - значком рядом с номером сборки: исходники находятся
+       в один щелчок, а ссылка открывается рядом, не уводя со страницы. -->
+  <a id="repo" class="icon-btn repo-link" href="https://github.com/Pastor/Takt" target="_blank" rel="noopener"
+     data-i18n-attr="data-tip:bar.repoTip;aria-label:bar.repo" data-tip="Пафнутий" aria-label="Репозиторий на GitHub"><svg class="icon icon-fill" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.69 1.25 3.35.96.1-.75.4-1.25.73-1.54-2.56-.29-5.25-1.28-5.25-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.42-2.7 5.39-5.27 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/></svg></a>
   <!-- Чей образец открыт: страница `/p/<id>` показывает чужой проект, и
        читатель обязан видеть автора — иначе чужая модель выглядит его
        собственной работой (задача 0531-09c). -->
@@ -90,6 +94,10 @@
             data-i18n="bar.fontMore" data-i18n-attr="data-tip:bar.fontHint" data-tip="Крупнее">+</button>
   </span>
   <span class="spacer"></span>
+  <!-- Справка - описание языка из документа book/ во всю область страницы. -->
+  <button id="showhelp" class="icon-btn" type="button" aria-pressed="false"
+          data-i18n-attr="data-tip:help.open;aria-label:help.open"
+          data-tip="Справка" aria-label="Справка"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="M9.7 9.5a2.4 2.4 0 1 1 3.3 2.2c-.6.3-1 .8-1 1.5v.5"/><circle cx="12" cy="16.4" r="0.9" fill="currentColor" stroke="none"/></svg></button>
   <button id="showgen" class="icon-btn" type="button" aria-pressed="true"
           data-i18n-attr="data-tip:panel.generate;aria-label:panel.generate"
           data-tip="Генерация" aria-label="Генерация"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 8.5 4.5 12 9 15.5"/><path d="M15 8.5 19.5 12 15 15.5"/></svg></button>
@@ -485,6 +493,28 @@
 <!-- Настройки сборки: цель и ключи. Окно того же вида, что основные настройки:
      вкладки, образцы, "Отменить" и "Сохранить". Список целей остаётся носителем
      величины - кнопки окна правят его, и обвязка смены цели прежняя. -->
+<!-- Справка: описание языка поверх рабочего места, во всю область страницы.
+     Слева оглавление, сверху поиск по тексту; закрывается крестиком и Escape. -->
+<div id="help" class="help" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
+  <div class="help-head">
+    <span id="help-title" class="help-title" data-i18n="help.title">Справка — язык Takt</span>
+    <input id="help-search" class="help-search" type="search"
+           data-i18n-attr="placeholder:help.search;aria-label:help.search" placeholder="Поиск по справке" aria-label="Поиск по справке">
+    <span id="help-count" class="help-count muted" aria-live="polite"></span>
+    <button id="help-prev" class="icon-btn" type="button"
+            data-i18n-attr="data-tip:help.prev;aria-label:help.prev" data-tip="Предыдущее совпадение" aria-label="Предыдущее совпадение"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 14.5 12 9l5.5 5.5"/></svg></button>
+    <button id="help-next" class="icon-btn" type="button"
+            data-i18n-attr="data-tip:help.next;aria-label:help.next" data-tip="Следующее совпадение" aria-label="Следующее совпадение"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 9.5 12 15l5.5-5.5"/></svg></button>
+    <span class="spacer"></span>
+    <button id="help-close" class="icon-btn" type="button"
+            data-i18n-attr="data-tip:help.close;aria-label:help.close" data-tip="Закрыть справку" aria-label="Закрыть справку"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
+  </div>
+  <div class="help-body">
+    <nav id="help-toc" class="help-toc" data-i18n-attr="aria-label:help.toc" aria-label="Содержание"></nav>
+    <article id="help-doc" class="help-doc" tabindex="0"></article>
+  </div>
+</div>
+
 <div id="build-modal" class="modal" hidden>
   <div class="modal-box build-box" role="dialog" aria-modal="true"
        data-i18n-attr="aria-label:build.title" aria-label="Настройки сборки">

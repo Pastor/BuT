@@ -67,18 +67,45 @@ BUILT_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 sha256() { shasum -a 256 "$1" | awk '{print $1}'; }
 
+# -- Справка ------------------------------------------------------------------
+# Описание языка из документа `book/` - тем же Typst, что собирает PDF, но
+# выгрузкой HTML; фрагмент для окна справки готовит `build-web-help.py`.
+# Справка собирается раньше отпечатка бандла и входит в него: правка документа без
+# правки страницы иначе оставила бы прежний адрес `b/<отпечаток>/`, помеченный
+# неизменным, и читатель видел бы вчерашнюю справку.
+# Нет `typst` либо самого документа (сборка в урезанной копии дерева) - справки
+# нет, и страница говорит об этом при открытии окна. Стенд обязан её иметь: там
+# сборка идёт с `TAKT_HELP_REQUIRED=1`.
+HELP_DIR="$(mktemp -d)"
+trap 'rm -rf "$HELP_DIR"' EXIT
+if command -v typst >/dev/null 2>&1 && [[ -f "$ROOT/book/src/main.typ" ]]; then
+  if ! typst compile --features html --format html --root "$ROOT/book" \
+      "$ROOT/book/src/main.typ" "$HELP_DIR/book.html" 2> "$HELP_DIR/typst.log"; then
+    cat "$HELP_DIR/typst.log"
+    echo "  ОШИБКА: документ book/ не собран в HTML"
+    exit 1
+  fi
+  python3 "$ROOT/scripts/build-web-help.py" "$HELP_DIR/book.html" "$HELP_DIR/help.html"
+elif [[ "${TAKT_HELP_REQUIRED:-0}" == "1" ]]; then
+  echo "  ОШИБКА: нет typst либо документа book/, а справка обязательна (TAKT_HELP_REQUIRED=1)"
+  exit 1
+else
+  echo "  пропуск: нет typst либо документа book/ - справка не собрана"
+fi
+
 # -- Отпечаток бандла ---------------------------------------------------------
 # Считается по содержимому всех файлов страницы в устойчивом порядке: правка
 # любого из них даёт новый адрес, а перезапуск сборки без правок - тот же.
 # Дата и версия модуля в отпечаток не входят: иначе он менялся бы на каждой
 # сборке, и кеш читателя обесценивался бы без единой правки.
 BUNDLE="$(
-  find "$STATIC" -type f ! -name ".*" -print0 \
-    | LC_ALL=C sort -z \
-    | xargs -0 shasum -a 256 \
-    | sed "s|$STATIC/||" \
-    | shasum -a 256 \
-    | cut -c1-12
+  {
+    find "$STATIC" -type f ! -name ".*" -print0 \
+      | LC_ALL=C sort -z \
+      | xargs -0 shasum -a 256 \
+      | sed "s|$STATIC/||"
+    if [[ -f "$HELP_DIR/help.html" ]]; then (cd "$HELP_DIR" && shasum -a 256 help.html); fi
+  } | shasum -a 256 | cut -c1-12
 )"
 
 rm -rf "$DIST"
@@ -87,13 +114,14 @@ mkdir -p "$DIST/b/$BUNDLE" "$DIST/wasm/$VERSION"
 # Страница целиком - в каталог бандла. Ссылки внутри относительные, поэтому
 # копируется дерево `web/static` как есть.
 ( cd "$STATIC" && tar cf - . ) | ( cd "$DIST/b/$BUNDLE" && tar xf - )
+if [[ -f "$HELP_DIR/help.html" ]]; then cp "$HELP_DIR/help.html" "$DIST/b/$BUNDLE/help.html"; fi
 
 # Вход остаётся в корне: он `no-cache`, и адрес его меняться не должен -
 # именно им делятся. Ссылки в нём переписываются на каталог бандла.
 mv "$DIST/b/$BUNDLE/index.html" "$DIST/index.html"
-# Переписываются только относительные адреса без схемы: `#`, `data:` и
-# внешние остаются как есть (их в разметке и нет - внешних CDN у страницы нет).
-sed -i.bak -E 's%(href|src)="([^"#:/][^"]*)"%\1="b/'"$BUNDLE"'/\2"%g' "$DIST/index.html"
+# Переписываются только относительные адреса: `#`, `data:` и адреса со схемой
+# (ссылка на репозиторий) остаются как есть - в относительном адресе двоеточия нет.
+sed -i.bak -E 's%(href|src)="([^"#:/][^":]*)"%\1="b/'"$BUNDLE"'/\2"%g' "$DIST/index.html"
 rm -f "$DIST/index.html.bak"
 
 # Холст для панели редактора: та же разметка и те же модули, данные снаружи.

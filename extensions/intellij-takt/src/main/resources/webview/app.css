@@ -2798,3 +2798,104 @@ body[data-crumbs="off"] #project { display: none; }
 .project-row:hover:not(:disabled) {
   background: color-mix(in srgb, var(--on-surface) var(--state-hover), var(--surface));
 }
+
+/* ── Ссылка на репозиторий ──────────────────────────────────────────────────
+ * Значок-ссылка в шапке: кнопка по виду, ссылка по сути - открывается рядом.
+ * Знак GitHub залит, а не обведён: так его узнают. */
+.repo-link { color: inherit; text-decoration: none; }
+.icon-fill { fill: currentColor; stroke: none; }
+
+/* ── Справка ────────────────────────────────────────────────────────────────
+ * Описание языка во всю область страницы, поверх рабочего места и ниже
+ * модальных окон. Оглавление слева, текст справа; поиск - в шапке окна. */
+.help {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  color: var(--on-surface);
+}
+.help[hidden] { display: none; }
+.help-head {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-half);
+  padding: var(--gap-half) var(--gap);
+  border-bottom: 1px solid var(--border);
+}
+.help-title { font-weight: 700; font-size: var(--text-lg); white-space: nowrap; }
+.help-search { flex: 0 1 22rem; min-width: 8rem; height: var(--h-control); }
+.help-count { font-size: var(--text-xs); min-width: 9ch; white-space: nowrap; }
+.help-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(12rem, 20rem) minmax(0, 1fr);
+}
+.help-toc {
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  padding: var(--gap-half);
+  border-right: 1px solid var(--border);
+}
+.help-toc-item {
+  text-align: left;
+  background: none;
+  border: 0;
+  color: var(--on-surface);
+  font-size: var(--text-sm);
+  padding: var(--gap-quarter) var(--gap-half);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.help-toc-item:hover { background: color-mix(in srgb, var(--accent) var(--state-hover), transparent); }
+.help-toc-h2 { font-weight: 700; margin-top: var(--gap-half); }
+.help-toc-h3 { padding-left: var(--gap-lg); }
+/* Раздел читателя - пара "выбранное": тот же знак "вы здесь", что у выбора. */
+.help-toc-item[aria-current="true"] { background: var(--surface-yes); color: var(--on-surface-yes); }
+.help-doc {
+  overflow: auto;
+  padding: var(--gap-lg) calc(var(--gap-lg) * 2);
+  font-size: var(--text-lg);
+  line-height: 1.55;
+}
+.help-doc > * { max-width: 62rem; }
+.help-doc h2 { font-size: var(--text-xl); margin: var(--gap-lg) 0 var(--gap); }
+.help-doc h3 { font-size: var(--text-lg); margin: var(--gap-lg) 0 var(--gap-half); }
+.help-doc h4, .help-doc h5 { font-size: var(--text-md); margin: var(--gap) 0 var(--gap-half); }
+.help-doc pre {
+  background: var(--surface-raised);
+  color: var(--on-surface-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: var(--gap);
+  overflow-x: auto;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+.help-doc code { font-size: var(--text-sm); }
+.help-doc table { display: block; overflow-x: auto; border-collapse: collapse; font-size: var(--text-sm); }
+.help-doc th, .help-doc td {
+  border-bottom: 1px solid var(--border-soft);
+  padding: var(--gap-quarter) var(--gap-half);
+  text-align: left;
+  vertical-align: top;
+}
+.help-doc img { max-width: 100%; }
+.help-doc blockquote { margin: var(--gap) 0; padding-left: var(--gap); border-left: 3px solid var(--border); }
+.help-doc a { color: var(--accent); }
+/* Код справки красится ролями редактора; роли "константа" отдельного класса у
+ * редактора нет - её цвет носит вариант перечисления. */
+.tok-constant { color: var(--tok-constant); }
+/* Найденное - пара "предупреждение", текущее - ещё и рамкой её тона. */
+.help-hit { background: var(--surface-warn); color: var(--on-surface-warn); }
+.help-hit.current { outline: 2px solid var(--warn); }
+@media (max-width: 560px) {
+  .help-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .help-toc { max-height: 30vh; border-right: 0; border-bottom: 1px solid var(--border); }
+  .help-doc { padding: var(--gap); }
+}
+

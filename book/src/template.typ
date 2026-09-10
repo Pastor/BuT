@@ -85,9 +85,9 @@
 // Собирается вручную: части - не заголовки (иначе они сбивали бы сплошную
 // нумерацию глав 1...26), поэтому штатный `#outline()` их не увидел бы. Глубина -
 // только главы, как в прежнем документе.
-#let _toc() = {
+#let _toc() = context if target() == "paged" {
   heading(level: 1, numbering: none, outlined: false)[Содержание]
-  context {
+  {
     let items = query(selector.or(heading.where(level: 1), label("part-marker")))
     for it in items {
       let page-no = counter(page).at(it.location()).first()
@@ -162,12 +162,12 @@
 
   // У Fira Code нет курсивного начертания: наклон синтезируется сдвигом. В
   // прежней сборке ту же роль играл `AutoFakeSlant=0.2` шрифтовых опций xelatex.
-  show emph: it => box(skew(ax: -12deg, it.body))
+  show emph: it => context if target() == "paged" { box(skew(ax: -12deg, it.body)) } else { it }
 
   // Заголовки: глава - с новой страницы, нумерация сплошная (1...26), приложения
   // продолжают счёт - как было в mdBook.
   set heading(numbering: "1.1.1")
-  show heading.where(level: 1): it => {
+  show heading.where(level: 1): it => context if target() != "paged" { it } else {
     pagebreak(weak: true)
     block(above: 1.2em, below: 1.4em)[
       #text(size: 17pt, weight: "bold")[
@@ -176,18 +176,24 @@
       ]
     ]
   }
-  show heading.where(level: 2): it => block(above: 1.6em, below: 0.9em)[
-    #text(size: 12.5pt, weight: "bold")[#it.body]
-  ]
-  show heading.where(level: 3): it => block(above: 1.3em, below: 0.8em)[
-    #text(size: 10.5pt, weight: "bold")[#it.body]
-  ]
+  show heading.where(level: 2): it => context if target() != "paged" { it } else {
+    block(above: 1.6em, below: 0.9em)[
+      #text(size: 12.5pt, weight: "bold")[#it.body]
+    ]
+  }
+  show heading.where(level: 3): it => context if target() != "paged" { it } else {
+    block(above: 1.3em, below: 0.8em)[
+      #text(size: 10.5pt, weight: "bold")[#it.body]
+    ]
+  }
   // Четвёртый уровень появляется там, где файл раздела несёт второй заголовок
   // первого уровня: при переводе он опускается в подзаголовок вместе со своими
   // подразделами (приложение "Порождённый код примера").
-  show heading.where(level: 4): it => block(above: 1.1em, below: 0.7em)[
-    #text(size: 10pt, weight: "bold", style: "oblique")[#it.body]
-  ]
+  show heading.where(level: 4): it => context if target() != "paged" { it } else {
+    block(above: 1.1em, below: 0.7em)[
+      #text(size: 10pt, weight: "bold", style: "oblique")[#it.body]
+    ]
+  }
 
   // Подсветка блоков кода: определение синтаксиса Takt и палитра tango - те же
   // роли, что играли `takt.kate.xml` и `highlight-style` в прежней сборке.
@@ -216,12 +222,12 @@
   set table(stroke: (_, y) => if y == 1 { (top: 0.5pt) } else { none },
     inset: (x: 5pt, y: 3.5pt),
     align: left + top,)
-  show table: it => block(width: 100%, above: 1.1em, below: 1.1em)[
+  show table: it => context if target() != "paged" { it } else { block(width: 100%, above: 1.1em, below: 1.1em)[
     #line(length: 100%, stroke: 0.6pt)
     #text(size: 9pt, it)
     #v(-0.4em)
     #line(length: 100%, stroke: 0.6pt)
-  ]
+  ] }
 
   // Врезка (в исходниках Markdown это была цитата `>`): отступ слева, без рамки —
   // как печатал прежний конвейер.

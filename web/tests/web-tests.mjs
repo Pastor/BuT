@@ -16,6 +16,7 @@
 //
 // Запуск: node web/tests/web-tests.mjs <модуль.wasm>
 
+import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
@@ -546,7 +547,7 @@ test("язык: порядок выбора — сохранённый, брау
  */
 const PAGE_SCRIPTS = [
   "account.js", "alerts.js", "api.js", "app.js", "boot.js", "bridge.js", "build.js", "build-settings.js",
-  "draft.js", "editor.js", "i18n.js", "layout.js", "legend.js", "pick.js",
+  "draft.js", "editor.js", "help.js", "i18n.js", "layout.js", "legend.js", "pick.js",
   "panels.js", "project.js", "sample.js", "scheme.js", "scheme-geometry.js",
   "scheme-host.js",
   "scheme-settings.js",
@@ -663,6 +664,20 @@ test("сборка: опись модуля несёт его контрольн
   ]) {
     assert.match(value ?? "", /^\d+\.\d+\.\d+$/, `${where}: не версия — '${value}'`);
   }
+});
+
+// Справку собирают из документа `book/`: в урезанной копии дерева, на которой
+// проверяют саму проверку веб-части, документа нет, и справки в сборке быть не
+// должно; в полном дереве она обязательна.
+const HAS_BOOK = existsSync(fileURLToPath(new URL("../../book/src/main.typ", import.meta.url)));
+
+test("сборка: справка лежит в бандле - заголовки с якорями, код ролями страницы", { skip: !DIST || !HAS_BOOK }, async () => {
+  const version = JSON.parse(await readFile(join(DIST, "version.json"), "utf8"));
+  const help = await readFile(join(DIST, "b", version.bundle, "help.html"), "utf8");
+  assert.match(help, /<h2[^>]* id="h-/, "у глав есть якоря");
+  assert.match(help, /class="tok-keyword"/, "ключевые слова - ролью страницы");
+  assert.doesNotMatch(help, /style="color:/, "цветов печати в справке нет");
+  assert.doesNotMatch(help, /<body|<html/, "фрагмент без обвязки документа");
 });
 
 test("сборка: воркер в корне, бандл и список предзагрузки подставлены", { skip: !DIST }, async () => {

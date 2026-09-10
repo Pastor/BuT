@@ -664,6 +664,17 @@ test("граф: модуль отдаёт листы лифта, а страни
   assert.ok(broken.error?.code, JSON.stringify(broken));
 });
 
+test("справка: поиск без учёта регистра, раздел читателя - по положению заголовков", async () => {
+  const { findRanges, sectionAt } = await import("../static/help.js");
+  assert.deepEqual(findRanges("Модель model МОДЕЛЬ", "модель"), [[0, 6], [13, 19]]);
+  assert.deepEqual(findRanges("aaaa", "aa"), [[0, 2], [2, 4]], "вхождения не перекрываются");
+  assert.deepEqual(findRanges("текст", "т"), [], "одна буква - не поиск");
+  const tops = [{ id: "a", top: -300 }, { id: "b", top: -10 }, { id: "c", top: 400 }];
+  assert.equal(sectionAt(tops, 24), "b", "последний поднявшийся выше отметки");
+  assert.equal(sectionAt([{ id: "a", top: 50 }], 24), "a", "выше первого заголовка - первый раздел");
+  assert.equal(sectionAt([], 24), null);
+});
+
 test("прогон: задержка между тактами - секунды, дробные, в пределе", async () => {
   const { runDelay } = await import("../static/project.js");
   assert.equal(runDelay("0.5"), 0.5);

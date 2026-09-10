@@ -15,6 +15,13 @@ WORKDIR /src
 # носитель версии разошёлся бы с первым.
 COPY rust-toolchain.toml ./
 RUN rustup target add wasm32-unknown-unknown
+# Typst собирает справку страницы из документа `book/` (выгрузка HTML). Ставится
+# из crates.io с `--locked` - версия и зависимости закреплены, двоичных файлов со
+# стороны нет; слой стоит до `COPY . .` и пересобирается только при смене версии.
+ARG TYPST_VERSION=0.15.1
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
+    cargo install typst-cli --version ${TYPST_VERSION} --locked
 
 COPY . .
 
@@ -35,7 +42,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,target=/src/target,sharing=locked \
     cargo build --profile ${WASM_PROFILE} --target wasm32-unknown-unknown -p takt-wasm \
- && TAKT_WASM_PROFILE=${WASM_PROFILE} TAKT_WEB_DIST=/out/static scripts/build-web.sh
+ && TAKT_WASM_PROFILE=${WASM_PROFILE} TAKT_WEB_DIST=/out/static TAKT_HELP_REQUIRED=1 scripts/build-web.sh
 
 # Сервер - свой workspace (полторы сотни зависимостей не должны собираться на
 # каждой правке компилятора).

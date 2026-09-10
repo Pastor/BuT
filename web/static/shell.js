@@ -577,6 +577,8 @@ export function attachFontSize(less, more, label, storage) {
  * который ключуется проектом и файлом.
  */
 export const UI_KEYS = {
+  /** Раздел справки, на котором читатель остановился: якорь заголовка. */
+  helpAt: "takt.ui.helpAt",
   /** Открытая вкладка области вывода: `output` либо `trace`. */
   tab: "takt.ui.tab",
   /** Бюджет прогона, тактов. */
