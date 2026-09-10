@@ -267,6 +267,28 @@ test("манифест приложения: адреса от бандла, и�
   await readFile(new URL(apple[1], base));
 });
 
+test("воркер без сети: стратегия по форме адреса", async () => {
+  // Воркер - классический скрипт без модулей: он исполняется в подставном
+  // окружении, и проверяется решение, а не браузерный кеш.
+  const { runInNewContext } = await import("node:vm");
+  const source = await readFile(new URL("../static/sw.js", import.meta.url), "utf8");
+  const context = { self: { addEventListener() {} }, URL };
+  runInNewContext(source, context);
+  const { strategyOf } = context;
+  assert.equal(strategyOf("", true), "page", "переход - страница");
+  assert.equal(strategyOf("p/AbCd", true), "page", "страница проекта - та же разметка");
+  assert.equal(strategyOf("api/projects", false), "network", "данные сервера из кеша не отдаются");
+  assert.equal(strategyOf("b/0123abcd/app.js", false), "cache", "бандл неизменен");
+  assert.equal(strategyOf("wasm/0.61.0/takt.wasm", false), "cache", "модуль неизменен");
+  assert.equal(strategyOf("version.json", false), "fresh", "опись - сначала сеть");
+  // Несобранная страница воркера не получает: подставлять ему нечего.
+  const { registerOffline } = await import("../static/offline.js");
+  const win = { navigator: { serviceWorker: { register: () => Promise.resolve("ok") } }, location: { protocol: "http:" }, document: { baseURI: "http://x/takt/" } };
+  assert.equal(registerOffline(win, "http://x/takt/offline.js"), null);
+  assert.equal(registerOffline({ ...win, navigator: {} }, "http://x/takt/b/0123abcd/offline.js"), null);
+  assert.equal(await registerOffline(win, "http://x/takt/b/0123abcd/offline.js"), "ok");
+});
+
 test("подсветка: каждая цель красит свой вывод", async () => {
   // У каждой из восьми целей разметка непуста и различает ключевое слово, число
   // и комментарий. Цель, забытая в таблице языков, показывала бы чёрный текст, и
@@ -508,7 +530,7 @@ const PAGE_SCRIPTS = [
   "scheme-host.js",
   "scheme-settings.js",
   "flags.js", "json.js",
-  "md.js", "share.js", "shell.js", "showcase.js", "tip.js", "worker.js",
+  "md.js", "offline.js", "share.js", "shell.js", "showcase.js", "sw.js", "tip.js", "worker.js",
 ];
 
 /**
@@ -620,6 +642,20 @@ test("сборка: опись модуля несёт его контрольн
   ]) {
     assert.match(value ?? "", /^\d+\.\d+\.\d+$/, `${where}: не версия — '${value}'`);
   }
+});
+
+test("сборка: воркер в корне, бандл и список предзагрузки подставлены", { skip: !DIST }, async () => {
+  const version = JSON.parse(await readFile(join(DIST, "version.json"), "utf8"));
+  const sw = await readFile(join(DIST, "sw.js"), "utf8");
+  assert.ok(!sw.includes("__TAKT_"), "подстановка не сделана");
+  assert.ok(sw.includes(`const BUNDLE = ${JSON.stringify(version.bundle)};`), "воркер знает чужой бандл");
+  const list = JSON.parse(/const PRECACHE = (\[[\s\S]*?\]);/.exec(sw)[1]);
+  for (const need of ["./", "version.json", version.wasm, `b/${version.bundle}/app.js`]) {
+    assert.ok(list.includes(need), `в предзагрузке нет ${need}`);
+  }
+  // Каждый адрес списка существует: промах одного роняет всю установку воркера.
+  for (const entry of list.filter((e) => e !== "./")) await readFile(join(DIST, entry.split("?")[0]));
+  await assert.rejects(readFile(join(DIST, "b", version.bundle, "sw.js")), "воркер остался в бандле");
 });
 
 test("сборка: текстовые файлы предсжаты", { skip: !DIST }, async () => {

@@ -167,6 +167,35 @@ cat > "$DIST/version.json" <<JSON
 }
 JSON
 
+# -- Служебный воркер ---------------------------------------------------------
+# Воркер переезжает из бандла в корень: область воркера - каталог его адреса, и из
+# `b/<отпечаток>/` он не видел бы страницы. В корне он `no-cache`, как вход, и
+# браузер сверяет его при каждом заходе. Сборка подставляет бандл и список
+# предзагрузки: вход, опись, модуль с отпечатком и каждый файл бандла. Текст
+# воркера меняется с каждым бандлом - браузер сам ставит новый, а тот снимает
+# кеш прежнего.
+mv "$DIST/b/$BUNDLE/sw.js" "$DIST/sw.js"
+python3 - "$DIST" "$BUNDLE" "wasm/$VERSION/takt.wasm?$WASM_TAG" <<'PY'
+import json
+import pathlib
+import sys
+
+dist, bundle, wasm = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+files = sorted(
+    p.relative_to(dist).as_posix()
+    for p in (dist / "b" / bundle).rglob("*")
+    if p.is_file() and p.suffix not in (".gz", ".br")
+)
+sw = dist / "sw.js"
+text = sw.read_text(encoding="utf-8")
+for mark in ('"__TAKT_BUNDLE__"', '["__TAKT_PRECACHE__"]'):
+    if mark not in text:
+        sys.exit(f"  ОШИБКА: в sw.js нет места подстановки {mark}")
+text = text.replace('"__TAKT_BUNDLE__"', json.dumps(bundle))
+text = text.replace('["__TAKT_PRECACHE__"]', json.dumps(["./", "version.json", wasm, *files], indent=2))
+sw.write_text(text, encoding="utf-8")
+PY
+
 # -- Предсжатие ---------------------------------------------------------------
 # Стенд ничего не считает на лету: модуль 3,3 мб, и сжимать его каждому первому
 # заходу - лишняя работа. `brotli` берётся,

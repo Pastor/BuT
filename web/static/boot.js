@@ -9,6 +9,7 @@
 import { main } from "./app.js";
 import { t } from "./i18n.js";
 import * as alerts from "./alerts.js";
+import { registerOffline } from "./offline.js";
 
 main().catch((error) => {
   // Отказ загрузки модуля обязан быть виден: пустая страница неотличима от работающей,
@@ -20,3 +21,7 @@ main().catch((error) => {
   document.getElementById("version").textContent = text;
   alerts.show(document.getElementById("alerts"), text, t("alerts.dismiss"));
 });
+
+// Воркер ставится независимо от запуска: сбой модуля компилятора не повод
+// оставить страницу без работы вне сети при следующем заходе.
+registerOffline();
