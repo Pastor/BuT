@@ -2769,6 +2769,10 @@ body[data-crumbs="off"] #project { display: none; }
   white-space: nowrap;
   vertical-align: bottom;
 }
+/* Логин в шапке - кнопка без рамки: по виду подпись, по сути дверь в панель
+ * учётной записи. */
+#whoami-bar { background: none; border: 0; padding: 0; cursor: pointer; }
+#whoami-bar:hover { text-decoration: underline; }
 #whoami-bar.clipped,
 #whoami.clipped {
   mask-image: linear-gradient(to right, #000 calc(100% - 2ch), transparent);

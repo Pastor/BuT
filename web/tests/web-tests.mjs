@@ -43,7 +43,6 @@ import * as host from "../static/scheme-host.js";
 import * as build from "../static/build.js";
 import * as project from "../static/project.js";
 import * as api from "../static/api.js";
-import { feed } from "../static/showcase.js";
 
 // Файл раскладки и граф модуля - своим набором.
 import "./layout-tests.mjs";
@@ -552,7 +551,7 @@ const PAGE_SCRIPTS = [
   "scheme-host.js",
   "scheme-settings.js",
   "flags.js", "json.js",
-  "md.js", "offline.js", "share.js", "shell.js", "showcase.js", "sw.js", "tip.js", "worker.js",
+  "md.js", "offline.js", "share.js", "shell.js", "sw.js", "tip.js", "worker.js",
 ];
 
 /**
@@ -1123,7 +1122,7 @@ test("значок настроек: зубчатый контур, а не об
   // от центра принадлежат колесу со спицами - и читался он штурвалом. Проверка
   // держит признак: замкнутый контур и ровно одна окружность - центр.
   const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
-  const button = html.slice(html.indexOf('id="settings"'), html.indexOf('id="showcase"'));
+  const button = html.slice(html.indexOf('id="settings"'), html.indexOf('id="save"'));
   assert.match(button, /<path d="M[^"]*Z"/, "у значка нет замкнутого зубчатого контура");
   assert.equal((button.match(/<circle/g) ?? []).length, 1, "окружностей у значка не одна: обод вернулся");
   assert.ok(!/M12 2\.5v2\.5/.test(button), "лучи от центра вернулись");
@@ -1292,7 +1291,7 @@ test("проект: действия стоят над его составом, 
   for (const id of ["project-modal", "projectname-modal", "drop-modal"]) {
     assert.ok(html.includes(`id="${id}"`), `окна '${id}' нет`);
   }
-  const panel = html.slice(html.indexOf('id="panel"'), html.indexOf('id="finder"'));
+  const panel = html.slice(html.indexOf('id="panel"'), html.indexOf('id="conflict"'));
   assert.ok(!panel.includes('id="newname"'), "заведение проекта осталось в панели учётной записи");
   assert.ok(!panel.includes('id="projects"'), "список проектов остался в панели учётной записи");
 
@@ -1333,7 +1332,14 @@ test("шапка: две полосы, и каждая отвечает на с�
   // Выгрузка архивом ушла отсюда к структуре проекта: это действие над
   // проектом, а не над страницей.
   assert.ok(!tools.includes('id="download"'), "выгрузка осталась в полосе управления");
-  for (const id of ["account", "showcase", "save", "share"]) {
+  // Кнопок "Мои проекты" и "Открытые проекты" нет: проекты живут в структуре
+  // проекта, а панель учётной записи открывает логин в шапке.
+  for (const id of ["account", "showcase", "finder"]) {
+    assert.ok(!html.includes(`id="${id}"`), `'${id}' остался в разметке`);
+  }
+  const accountSource = await readFile(new URL("../static/account.js", import.meta.url), "utf8");
+  assert.match(accountSource, /dom\["whoami-bar"\]\.addEventListener\("click", \(\) => toggle\(\)\)/, "логин не открывает панель учётной записи");
+  for (const id of ["save", "share"]) {
     assert.ok(tools.includes(`id="${id}"`), `полоса управления без '${id}'`);
     assert.ok(!brand.includes(`id="${id}"`), `'${id}' остался в верхней полосе`);
   }
@@ -2262,56 +2268,6 @@ test("витрина и архив: страница просит у серве�
   const created = await api.importArchive(new Uint8Array([80, 75]).buffer);
   assert.equal(created.name, "Копия");
   assert.ok(asked[3].startsWith("POST /api/projects/import"), asked[3]);
-});
-
-test("витрина: следующая страница просится курсором сервера и тем же словом", async () => {
-  // Предмет - лента, а не разметка: где остановиться, знает `showcase.js`,
-  // и это правило проверяется без браузера.
-  const asked = [];
-  const pages = {
-    null: { items: [{ id: "p1" }, { id: "p2" }], next_cursor: "c1" },
-    c1: { items: [{ id: "p3" }], next_cursor: null },
-  };
-  const ask = async (query, cursor) => {
-    asked.push([query, cursor]);
-    return pages[cursor ?? "null"];
-  };
-  const lane = feed(ask);
-
-  assert.equal(lane.hasMore(), false, "до первого запроса продолжения нет");
-  const first = await lane.first("термореле");
-  assert.deepEqual(first.map((item) => item.id), ["p1", "p2"]);
-  assert.ok(lane.hasMore(), "сервер дал курсор, а лента о нём забыла");
-
-  const second = await lane.next();
-  assert.deepEqual(second.map((item) => item.id), ["p3"]);
-  // Слово поиска едет со следующей страницей: курсор задаёт место, а не
-  // отбор, и без слова читатель получил бы под своим поиском всю витрину.
-  assert.deepEqual(asked[1], ["термореле", "c1"], `спрошено ${JSON.stringify(asked[1])}`);
-  assert.equal(lane.hasMore(), false, "страница без курсора — последняя");
-
-  // За последней страницей не ходят: курсора нет, и запрос был бы впустую.
-  assert.deepEqual(await lane.next(), []);
-  assert.equal(asked.length, 2, `лишний запрос: ${JSON.stringify(asked)}`);
-});
-
-test("витрина: новый поиск начинается с первой страницы", async () => {
-  // Унесённый от прежнего поиска курсор отдал бы читателю чужую страницу:
-  // место в одной выдаче ничего не значит в другой.
-  const asked = [];
-  const ask = async (query, cursor) => {
-    asked.push([query, cursor]);
-    return { items: [{ id: "p1" }], next_cursor: "c1" };
-  };
-  const lane = feed(ask);
-  await lane.first("термореле");
-  await lane.next();
-  await lane.first("насос");
-  assert.deepEqual(asked[2], ["насос", null], `спрошено ${JSON.stringify(asked[2])}`);
-
-  // Пустое слово - не слово: список без отбора спрашивается без параметра.
-  await lane.first("");
-  assert.deepEqual(asked[3], [null, null], `спрошено ${JSON.stringify(asked[3])}`);
 });
 
 /**

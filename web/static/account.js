@@ -17,7 +17,6 @@ import * as api from "./api.js";
 import * as draft from "./draft.js";
 import * as layoutFile from "./layout.js";
 import { layoutName, modelName } from "./layout.js";
-import { feed } from "./showcase.js";
 import * as shell from "./shell.js";
 import { SAMPLE } from "./sample.js";
 import { t } from "./i18n.js";
@@ -83,7 +82,6 @@ const state = {
  * "спросить тем, что дал сервер, и остановиться, когда он молчит" живёт одним
  * носителем и проверяется без браузера.
  */
-const showcase = feed((query, cursor) => api.showcase(query, cursor));
 
 /** Узлы страницы и обратные вызовы, которые даёт `app.js`. */
 let dom = null;
@@ -102,7 +100,7 @@ export function attach(nodes, callbacks) {
   // Список проектов - часть панели, а не окна: он рисуется сразу, и без входа
   // говорит, что для списка нужен вход.
   list();
-  dom.account.addEventListener("click", () => toggle());
+  dom["whoami-bar"].addEventListener("click", () => toggle());
   // Кнопка одна на вход и выход: пока не вошли - открывает панель со формой, после
   // входа - выходит. Двух кнопок, из которых всегда видна одна, читателю не нужно
   //
@@ -188,19 +186,6 @@ export function attach(nodes, callbacks) {
   dom.filepick.addEventListener("change", (event) => uploadFile(event.target.files?.[0]));
   dom.downloadfile.addEventListener("click", () => downloadFile());
   dom.setpass.addEventListener("click", () => setPassword());
-  dom.showcase.addEventListener("click", () => toggleShowcase());
-  dom.findbtn.addEventListener("click", () => search());
-  dom.more.addEventListener("click", () => showMore());
-  dom.query.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") search();
-  });
-  dom.found.addEventListener("click", (event) => {
-    const row = event.target.closest("[data-open]");
-    // Обычный переход, а не открытие "внутри": у живой страницы проекта свой адрес, и
-    // он обязан оказаться в адресной строке - иначе им нельзя поделиться, а ради этого
-    // витрина и существует.
-    if (row) location.assign(`${api.apiRoot()}p/${row.dataset.open}`);
-  });
   dom.links.addEventListener("click", (event) => {
     const row = event.target.closest("[data-unlink]");
     if (row) unlinkProvider(row.dataset.unlink);
@@ -422,59 +407,6 @@ function oauthError(key) {
   if (key === "unavailable") return t("oauth.error.unavailable");
   if (key === "identity_taken") return t("oauth.error.identityTaken");
   return t("oauth.error.failed");
-}
-
-/** Показывает или прячет витрину. */
-async function toggleShowcase() {
-  const show = dom.finder.hidden;
-  dom.finder.hidden = !show;
-  if (show) await search();
-}
-
-/** Ищет по витрине открытых проектов - с первой страницы. */
-async function search() {
-  try {
-    const items = await showcase.first(dom.query.value.trim());
-    dom.found.replaceChildren();
-    showRows(items);
-    if (items.length === 0) {
-      const empty = document.createElement("div");
-      empty.className = "row row-ok";
-      empty.textContent = t("showcase.nothing");
-      dom.found.appendChild(empty);
-    }
-  } catch (error) {
-    fail(error);
-  }
-}
-
-/**
- * Досыпает следующую страницу витрины.
- *
- * Записи добавляются, а не заменяют показанные: "ещё" - это продолжение
- * списка, и подмена содержимого выглядела бы потерей найденного.
- */
-async function showMore() {
-  try {
-    showRows(await showcase.next());
-  } catch (error) {
-    fail(error);
-  }
-}
-
-/**
- * Дописывает записи витрины и показывает "ещё" ровно тогда, когда сервер
- * сказал, что продолжение есть.
- */
-function showRows(items) {
-  for (const item of items) {
-    const node = document.createElement("div");
-    node.className = "row";
-    node.dataset.open = item.id;
-    node.textContent = t("showcase.row", { name: item.name, owner: item.owner });
-    dom.found.appendChild(node);
-  }
-  dom.more.hidden = !showcase.hasMore();
 }
 
 /**
