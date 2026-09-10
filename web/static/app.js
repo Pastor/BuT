@@ -662,7 +662,9 @@ function wire() {
   // Панель включается своей кнопкой и выключается ею же: нажатая ещё раз кнопка
   // закрывает область - так автор освобождает экран под модель.
   dom.showgen.addEventListener("click", () => selectPanel(state.panel === "output" ? null : "output"));
-  dom.showdiag.addEventListener("click", () => showDiagnosticsPane(dom.diagnostics.hidden));
+  // Состояние области спрашивается у страницы, а не у списка: в области две
+  // записи, и список диагностик скрыт и тогда, когда показан журнал прогона.
+  dom.showdiag.addEventListener("click", () => showDiagnosticsPane(document.body.dataset.diag === "off"));
   dom.diagclear.addEventListener("click", () => clearDiagnostics());
   dom.diagnostics.addEventListener("scroll", () => markDiagnosticsMore());
   dom.showtree.addEventListener("click", () => showTree(document.body.dataset.tree === "off"));
@@ -1730,7 +1732,10 @@ function selectPanel(name) {
   dom.doc.hidden = !(doc && name === "output");
   if (doc && name === "output") showDoc();
   document.body.dataset.panel = name ?? "none";
-  shell.remember(localStorage, shell.UI_KEYS.panel, name ?? "");
+  // Погашенная панель пишется словом, а не пустой строкой: пустую запись
+  // `setting` читает как "выбора не было" и отвечает умолчанием - и погашенный
+  // вывод цели возвращался при каждой перезагрузке.
+  shell.remember(localStorage, shell.UI_KEYS.panel, name ?? "none");
   // Открыли генерацию - вывод обязан быть свежим: пока панель была закрыта, правки
   // модели в него не печатались. Схема - по тому же правилу, и вдобавок вид листа
   // проверяется: закрыть панель могли с отведённым в сторону холстом.

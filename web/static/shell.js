@@ -229,12 +229,16 @@ export function attachPanes(split, storage) {
  * правке. Разница только в оси и в том, что именно ставится в стилях.
  */
 export function attachRows(split, storage, plan = {}) {
+  // Доля считается от рабочей области целиком: ручка живёт в обёртке журнала, а
+  // процент дорожки сетки - от высоты области. Мерка от обёртки гоняла бы долю по
+  // кругу: обёртка растёт от доли, доля - от обёртки.
+  const box = () => (split.closest(plan.within ?? ".work") ?? split.parentElement).getBoundingClientRect();
   attachDivider(split, {
     storage,
     key: ROWS_KEY,
     axis: "y",
     fallback: ROWS_DEFAULT,
-    box: () => split.parentElement.getBoundingClientRect(),
+    box,
     // Журнал диагностик ужимается до одной записи, а не до общей пятой части
     // высоты: читателю, занятому кодом, довольно видеть
     // последнюю строку - остальное скажет затенение. Сверху граница прежняя:

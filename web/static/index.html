@@ -90,8 +90,8 @@
           data-i18n-attr="data-tip:panel.generate;aria-label:panel.generate"
           data-tip="Генерация" aria-label="Генерация"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 8.5 4.5 12 9 15.5"/><path d="M15 8.5 19.5 12 15 15.5"/></svg></button>
   <button id="showdiag" class="icon-btn" type="button" aria-pressed="true"
-          data-i18n-attr="aria-label:diagnostics.title;data-tip:diagnostics.title"
-          data-tip="Диагностики" aria-label="Диагностики"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4.5l8 14H4z"/><path d="M12 10v4"/><circle cx="12" cy="16.6" r="0.9" fill="currentColor" stroke="none"/></svg></button>
+          data-i18n-attr="aria-label:info.title;data-tip:info.title"
+          data-tip="Информация" aria-label="Информация"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5"/><circle cx="12" cy="7.8" r="0.9" fill="currentColor" stroke="none"/></svg></button>
   <button id="showtree" class="icon-btn" type="button" aria-pressed="true"
           data-i18n-attr="aria-label:tree.title;data-tip:tree.title"
           data-tip="Структура проекта" aria-label="Структура проекта"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 4.5h17v15h-17z"/><path d="M9 4.5v15"/></svg></button>
@@ -321,44 +321,6 @@
     </div>
   </section>
    </div>
-    <!-- Разделитель рядов: сколько отдано областям, сколько журналу диагностик.
-         Правила те же, что у разделителя колонок, ось другая. -->
-    <div id="hsplit" class="split split-h" role="separator" aria-orientation="horizontal"
-         data-i18n-attr="aria-label:bar.rows" aria-label="Высота диагностик" tabindex="0"></div>
-    <!-- Журнал диагностик: во всю ширину рабочего поля, под обеими областями.
-         Прежде он стоял внутри области кода и обрывался по её границе, тогда
-         как строка диагностики длиннее любой строки кода. -->
-    <section class="pane pane-diag">
-      <div id="diagnostics-head" class="pane-head">
-        <span data-i18n="diagnostics.title">Диагностики</span>
-        <div class="pane-tools">
-          <!-- Две записи об одном и том же - что случилось: замечания к модели и
-               ход её прогона. Область у них одна, а переключатель говорит, какая
-               из них показана. -->
-          <button id="showdiag-tab" class="icon-btn" type="button" aria-pressed="true"
-                  data-i18n-attr="data-tip:diagnostics.title;aria-label:diagnostics.title"
-                  data-tip="Диагностики" aria-label="Диагностики"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4.5l8 14H4z"/><path d="M12 10v4"/><circle cx="12" cy="16.6" r="0.9" fill="currentColor" stroke="none"/></svg></button>
-          <button id="showtrace-tab" class="icon-btn" type="button" aria-pressed="false"
-                  data-i18n-attr="data-tip:trace.log;aria-label:trace.log"
-                  data-tip="Журнал прогона" aria-label="Журнал прогона"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button>
-          <!-- Журнал накапливает, и рано или поздно читателю нужно чистое поле:
-               ротация уносит старое сама, но не по его слову. Чистится показанный:
-               кнопка говорит о том, что перед глазами. -->
-          <button id="diagclear" class="icon-btn" type="button"
-                  data-i18n-attr="data-tip:diagnostics.clear;aria-label:diagnostics.clear"
-                  data-tip="Очистить журнал" aria-label="Очистить журнал"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l1 12.5h9l1-12.5"/></svg></button>
-        </div>
-      </div>
-      <!-- Строка-граница: до фичи сообщения инструментов существуют только
-           по-русски, и при другом языке оболочки смешение НАЗЫВАЕТСЯ, а не
-           прячется (задача 0531-10a). -->
-      <div id="tools-lang" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
-      <div id="diagnostics" class="list log" aria-live="polite"></div>
-      <!-- Строка-граница журнала прогона: сообщения эталона пока только
-           по-русски, и при другом языке оболочки смешение называется. -->
-      <div id="tools-lang-trace" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
-      <div id="trace" class="list log trace" aria-live="polite" hidden></div>
-    </section>
   </div>
 
   <!-- Разделитель перед структурой проекта: ширину дерева задаёт читатель, как
@@ -443,6 +405,48 @@
     <div id="tree" class="tree" data-i18n-attr="aria-label:tree.title"
          aria-label="Структура проекта"></div>
   </section>
+  <!-- Журнал с ручкой высоты - одним местом сетки: прячется он целиком, и
+       дорожка, оставшаяся от ручки, держала бы пустое место. -->
+  <div class="work-diag">
+      <!-- Разделитель рядов: сколько отдано областям, сколько журналу диагностик.
+           Правила те же, что у разделителя колонок, ось другая. -->
+      <div id="hsplit" class="split split-h" role="separator" aria-orientation="horizontal"
+           data-i18n-attr="aria-label:bar.rows" aria-label="Высота диагностик" tabindex="0"></div>
+      <!-- Журнал диагностик: во всю ширину рабочей области - под кодом, выводом и
+           структурой проекта разом. Строка диагностики длиннее любой строки кода,
+           и граница соседней области обрывала бы её посередине. -->
+      <section class="pane pane-diag">
+        <div id="diagnostics-head" class="pane-head">
+          <span data-i18n="info.title">Информация</span>
+          <div class="pane-tools">
+            <!-- Две записи об одном и том же - что случилось: замечания к модели и
+                 ход её прогона. Область у них одна, а переключатель говорит, какая
+                 из них показана. -->
+            <button id="showdiag-tab" class="icon-btn" type="button" aria-pressed="true"
+                    data-i18n-attr="data-tip:diagnostics.title;aria-label:diagnostics.title"
+                    data-tip="Диагностики" aria-label="Диагностики"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4.5l8 14H4z"/><path d="M12 10v4"/><circle cx="12" cy="16.6" r="0.9" fill="currentColor" stroke="none"/></svg></button>
+            <button id="showtrace-tab" class="icon-btn" type="button" aria-pressed="false"
+                    data-i18n-attr="data-tip:trace.log;aria-label:trace.log"
+                    data-tip="Журнал прогона" aria-label="Журнал прогона"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button>
+            <!-- Журнал накапливает, и рано или поздно читателю нужно чистое поле:
+                 ротация уносит старое сама, но не по его слову. Чистится показанный:
+                 кнопка говорит о том, что перед глазами. -->
+            <button id="diagclear" class="icon-btn" type="button"
+                    data-i18n-attr="data-tip:diagnostics.clear;aria-label:diagnostics.clear"
+                    data-tip="Очистить журнал" aria-label="Очистить журнал"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l1 12.5h9l1-12.5"/></svg></button>
+          </div>
+        </div>
+        <!-- Строка-граница: до фичи сообщения инструментов существуют только
+             по-русски, и при другом языке оболочки смешение НАЗЫВАЕТСЯ, а не
+             прячется (задача 0531-10a). -->
+        <div id="tools-lang" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
+        <div id="diagnostics" class="list log" aria-live="polite"></div>
+        <!-- Строка-граница журнала прогона: сообщения эталона пока только
+             по-русски, и при другом языке оболочки смешение называется. -->
+        <div id="tools-lang-trace" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
+        <div id="trace" class="list log trace" aria-live="polite" hidden></div>
+      </section>
+  </div>
 </main>
 
 <!-- Полоса сообщений инструмента: что он сделал и чего не смог. Одна на
@@ -459,7 +463,7 @@
 <nav id="modes" class="modes" role="tablist" data-i18n-attr="aria-label:modes.label" aria-label="Область">
   <button class="tab active" data-mode="source" role="tab" aria-selected="true" type="button" data-i18n="modes.source">Код</button>
   <button class="tab" data-mode="output" role="tab" aria-selected="false" type="button" data-i18n="modes.output">Вывод</button>
-  <button class="tab" data-mode="diag" role="tab" aria-selected="false" type="button" data-i18n="modes.diag">Журнал</button>
+  <button class="tab" data-mode="diag" role="tab" aria-selected="false" type="button" data-i18n="modes.diag">Инфо</button>
   <button class="tab" data-mode="tree" role="tab" aria-selected="false" type="button" data-i18n="modes.tree">Проект</button>
 </nav>
 

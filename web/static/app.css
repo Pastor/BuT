@@ -212,6 +212,8 @@
    * дерево, из которого не видно имён, не структура, а полоса. Верхней границы
    * нет - читатель вправе развернуть его целиком. */
   --tree-track: clamp(var(--tree-min, 8rem), var(--tree-w, 15rem), 100%);
+  /* Высота журнала диагностик: доля читателя, не ниже шапки и одной записи. */
+  --diag-track: minmax(var(--diag-min, 3.2rem), var(--rows-b, 30%));
   --tree-track-y: clamp(var(--tree-min-y, 6rem), var(--tree-h, 30%), 100%);
   /* Малое скругление - для того, что вложено в скруглённое: обойма сегментов
    * внутри карточки. Оно тоже употреблялось раньше объявления, и сегменты
@@ -764,51 +766,50 @@ button:disabled, select:disabled, input:disabled, textarea:disabled {
 }
 
 /* ── Рабочая область ──────────────────────────────────────────────────────
- * Два уровня, и это не украшение раскладки, а её смысл. Снаружи стоит
- * структура проекта - её сторону выбирает читатель (слева, справа, сверху,
- * снизу), и меняется от этого только раскладка `.work`. Внутри - рабочее поле:
- * области кода и вывода рядом, журнал диагностик под обеими во всю их ширину.
- * Пока журнал стоял внутри области кода, он обрывался по её границе, хотя
- * строка диагностики длиннее любой строки кода.
+ * Три места, и это не украшение раскладки, а её смысл. Структура проекта стоит
+ * с выбранной читателем стороны (слева, справа, сверху, снизу). Рабочее поле -
+ * код и вывод рядом. Журнал диагностик - снизу во всю ширину области, под
+ * полем и структурой разом: строка диагностики длиннее любой строки кода, и
+ * граница соседней области обрывала бы её посередине.
  * Места названы (`grid-template-areas`): порядок дорожек меняется от стороны, а
- * порядок узлов в разметке - нет. */
+ * порядок узлов в разметке - нет. Высоту журнала задаёт читатель (`--rows-b`), а
+ * нижняя граница - шапка и одна запись: журнал, ужатый в полосу, читается как
+ * пустой. */
 .work {
   flex: 1;
   display: grid;
-  grid-template-areas: "main handle tree";
+  grid-template-areas: "main handle tree" "diag diag diag";
   grid-template-columns: minmax(0, 1fr) auto var(--tree-track);
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) var(--diag-track);
   gap: 1px;
   background: var(--border);
   min-height: 0;
 }
 .work-main { grid-area: main; }
-.work > .split { grid-area: handle; }
+.work > #treesplit { grid-area: handle; }
 .pane-tree { grid-area: tree; }
+.work-diag { grid-area: diag; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.work-diag > .pane-diag { flex: 1; }
 
 body[data-treeside="left"] .work {
-  grid-template-areas: "tree handle main";
+  grid-template-areas: "tree handle main" "diag diag diag";
   grid-template-columns: var(--tree-track) auto minmax(0, 1fr);
 }
 body[data-treeside="top"] .work {
-  grid-template-areas: "tree" "handle" "main";
+  grid-template-areas: "tree" "handle" "main" "diag";
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: var(--tree-track-y) auto minmax(0, 1fr);
+  grid-template-rows: var(--tree-track-y) auto minmax(0, 1fr) var(--diag-track);
 }
 body[data-treeside="bottom"] .work {
-  grid-template-areas: "main" "handle" "tree";
+  grid-template-areas: "main" "handle" "tree" "diag";
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto var(--tree-track-y);
+  grid-template-rows: minmax(0, 1fr) auto var(--tree-track-y) var(--diag-track);
 }
 
-/* Рабочее поле: области сверху, журнал диагностик снизу во всю ширину.
- * Высоту журнала задаёт читатель (`--rows-b`), а нижняя граница дорожки -
- * шапка и одна запись: журнал, ужатый в полосу, читается как пустой. */
+/* Рабочее поле держит одни колонки: журнал из него ушёл. */
 .work-main {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto minmax(var(--diag-min, 3.2rem), var(--rows-b, 30%));
-  gap: 1px;
-  background: var(--border);
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   min-width: 0;
 }
@@ -911,21 +912,20 @@ body[data-panel="none"] .work-panes {
 }
 
 /* Журнал диагностик прячется своей кнопкой - вместе с шапкой и ручкой: ручка,
- * которой нечего делить, тянулась бы в пустоту. Дорожка при этом уходит совсем,
+ * которой нечего делить, тянулась бы в пустоту. Дорожка при этом схлопывается,
  * иначе её нижняя граница держала бы пустое место. */
-body[data-diag="off"] .work-main {
-  grid-template-rows: minmax(0, 1fr);
-}
+body[data-diag="off"] { --diag-track: 0px; }
+body[data-diag="off"] .work-diag { display: none; }
 
 /* Структура проекта прячется, как прочие области, - своей кнопкой. Ручка
  * размера уходит вместе с ней: граница без второй области ничего не делит, а
  * тянуть её всё ещё можно, и доля менялась бы вслепую. */
 body[data-tree="off"] .pane-tree,
-body[data-tree="off"] > .work > .split { display: none; }
+body[data-tree="off"] > .work > #treesplit { display: none; }
 body[data-tree="off"] .work {
-  grid-template-areas: "main";
+  grid-template-areas: "main" "diag";
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) var(--diag-track);
 }
 
 /* Вкладки нужны только генерации: у симуляции панель одна. */
@@ -2486,15 +2486,21 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
   .work,
   body[data-treeside="left"] .work,
   body[data-treeside="top"] .work,
-  body[data-treeside="bottom"] .work {
+  body[data-treeside="bottom"] .work,
+  body[data-tree="off"] .work {
     grid-template-areas: "main";
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
   }
+  /* Показанная область встаёт на единственное место: имена мест широкой
+     раскладки здесь не существуют, и без этого правила область уезжала бы в
+     неявную дорожку. */
+  .work > * { grid-area: main; }
   .work-panes { grid-template-columns: minmax(0, 1fr); }
-  /* Журнал диагностик - такая же область полки: на узком экране он занимает
-     её целиком, а не делит высоту с кодом. */
-  .work-main { grid-template-rows: minmax(0, 1fr); }
+  /* Журнал - такая же область полки: на узком экране он занимает её целиком.
+     Вне своего режима обёртка уходит совсем - иначе, пустая, она легла бы на
+     место поверх показанной области и перехватывала бы нажатия. */
+  body:not([data-mode="diag"]) .work-diag { display: none; }
   .pane { display: none; }
   body[data-mode="source"] .pane-source,
   body[data-mode="output"] .pane-result,
