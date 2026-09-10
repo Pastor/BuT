@@ -454,6 +454,18 @@ test("раскладка: черновик сильнее проекта, но �
   assert.equal(layout.preferDraft(layout.canonical(moved), "").fromDraft, true);
 });
 
+test("прогон: подсвечена стрелка, которая сработает на следующем такте", async () => {
+  const { nextEdgeKeys } = await import("../static/scheme.js");
+  const edges = [
+    { key: "a", from: "Idle", to: "Heat" },
+    { key: "b", from: "Idle", to: "Cool" },
+    { key: "c", from: "Heat", to: "Idle" },
+  ];
+  assert.deepEqual([...nextEdgeKeys(edges, new Set(["Idle"]), [["Idle", "Heat"]])], ["a"], "из нескольких выходящих - та, что сработает");
+  assert.deepEqual([...nextEdgeKeys(edges, new Set(["Heat"]), [["Idle", "Heat"]])], [], "начало не активно - не подсвечивается");
+  assert.deepEqual([...nextEdgeKeys(edges, new Set(["Idle"]), [])], [], "перехода нет - нет и стрелки");
+});
+
 test("прогон: плашка композиции называет текущее внутреннее состояние", async () => {
   const { innerLabel } = await import("../static/scheme.js");
   const nodes = [{ name: "Idle", alias: "" }, { name: "Heat", alias: "Нагрев" }, { name: "Cool" }];

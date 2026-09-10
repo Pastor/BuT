@@ -90,6 +90,8 @@ function defs(arrow = "open") {
     ["arrow-solid", "arrow-solid"],
     ["arrow-open-sel", "arrow-open-sel"],
     ["arrow-solid-sel", "arrow-solid-sel"],
+    ["arrow-open-next", "arrow-open-next"],
+    ["arrow-solid-next", "arrow-solid-next"],
   ]) {
     // Залитый наконечник у ребра `next` остаётся залитым при любой форме: вид
     // ребра говорит о роде перехода, а настройка - о рисунке стрелки.
@@ -142,6 +144,25 @@ export function innerLabel(nodes, running) {
 /** Запас белого поля маски за краем листа: больше любого переноса за один жест. */
 const REACH_ALL = 100000;
 
+/**
+ * Рёбра, которые сработают на следующем такте: ожидаемый переход модуля - пара
+ * "из, в", и ребро узнаётся по ней, если его начало сейчас активно.
+ *
+ * @param {{key: string, from: string, to: string}[]} edges рёбра листа
+ * @param {Set<string>} running активные состояния такта
+ * @param {string[][]} next ожидаемые переходы парами "из, в"
+ * @returns {Set<string>} ключи рёбер
+ */
+export function nextEdgeKeys(edges, running, next) {
+  const pairs = new Set((next ?? []).filter((pair) => running.has(pair[0])).map((pair) => `${pair[0]}\u0000${pair[1]}`));
+  return new Set(edges.filter((edge) => pairs.has(`${edge.from}\u0000${edge.to}`)).map((edge) => edge.key));
+}
+
+/** Наконечник ребра: род перехода задаёт форму, выбор и прогон - чернила. */
+function markerOf(kind, selected, next) {
+  return `${kind === "next" ? "arrow-solid" : "arrow-open"}${selected ? "-sel" : next ? "-next" : ""}`;
+}
+
 export class Scheme {
   /**
    * @param {object} dom узлы: `scheme`, `sheet`, `map`, `stage`, `legend`, `crumbs`,
@@ -170,6 +191,7 @@ export class Scheme {
     this.selectedEdge = null;
     this.running = new Set();
     this.expected = new Set();
+    this.nextEdges = new Set();
     this.fitPending = true;
     // Счётчик масок щели под знаком: имя маски обязано быть своим у каждого ребра,
     // а ключ ребра содержит знаки, которых в имени быть не может.
@@ -260,6 +282,7 @@ export class Scheme {
     this.running = new Set(names ?? []);
     this.expected = new Set((next ?? []).filter((pair) => this.running.has(pair[0])).map((pair) => pair[1]));
     const sheet = this.current();
+    this.nextEdges = nextEdgeKeys(sheet.edges, this.running, next);
     const reachable = new Set(
       sheet.edges.filter((e) => this.running.has(e.from)).map((e) => e.to),
     );
@@ -269,6 +292,13 @@ export class Scheme {
       node.classList.toggle("running", running);
       node.classList.toggle("expected", !running && this.expected.has(name));
       node.classList.toggle("reachable", !running && !this.expected.has(name) && reachable.has(name));
+    }
+    // Стрелка, которая сработает, - в пару к состоянию, куда уйдёт автомат: без
+    // неё из нескольких выходящих переходов нужный угадывался по условиям.
+    for (const group of this.dom.sheet.querySelectorAll(".edge-group")) {
+      const next = this.nextEdges.has(group.dataset.key);
+      group.classList.toggle("next", next);
+      group.querySelector(".edge")?.setAttribute("marker-end", `url(#${markerOf(group.dataset.kind, group.dataset.key === this.selectedEdge, next)})`);
     }
     this.paintInner();
   }
@@ -676,8 +706,9 @@ export class Scheme {
 
   drawEdge(sheet, edge, pts, hops, covered = null) {
     const selected = edge.key === this.selectedEdge;
+    const next = this.nextEdges.has(edge.key);
     const group = mk("g", {
-      class: `edge-group${selected ? " selected" : ""}`,
+      class: `edge-group${selected ? " selected" : ""}${next ? " next" : ""}`,
       "data-key": edge.key,
       "data-kind": edge.kind,
       tabindex: 0,
@@ -686,7 +717,7 @@ export class Scheme {
         ? this.t("scheme.edgeCondition", { from: edge.from, to: edge.to, condition: edge.cond })
         : this.t("scheme.edge", { from: edge.from, to: edge.to }),
     });
-    const marker = `${edge.kind === "next" ? "arrow-solid" : "arrow-open"}${selected ? "-sel" : ""}`;
+    const marker = markerOf(edge.kind, selected, next);
     const d = geo.buildPath(pts, hops, this.layout.corners, layoutFile.viewOf(this.layout).crossing, edge.points.length === 0);
     // Ореол под линией проступает при наведении: так видно, что щелчок выделит
     // именно это ребро. Полоса нажатия поверх линии шире штриха - в ребро
@@ -1114,7 +1145,7 @@ export class Scheme {
       group.classList.toggle("selected", chosen);
       const path = group.querySelector(".edge");
       path?.classList.toggle("selected", chosen);
-      path?.setAttribute("marker-end", `url(#${group.dataset.kind === "next" ? "arrow-solid" : "arrow-open"}${chosen ? "-sel" : ""})`);
+      path?.setAttribute("marker-end", `url(#${markerOf(group.dataset.kind, chosen, this.nextEdges.has(group.dataset.key))})`);
     }
     this.paintSide(sheet);
   }

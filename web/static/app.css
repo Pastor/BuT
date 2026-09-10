@@ -2088,6 +2088,11 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
   pointer-events: none;
   transition: stroke var(--motion);
 }
+/* Стрелка, которая сработает на следующем такте, - на ореоле пары
+ * "предупреждение", сама линия и наконечник - чернилами этой пары. Наведение и
+ * выбор сильнее: их правила ниже. */
+.edge-group.next .edge-halo { stroke: var(--surface-warn); }
+.edge-group.next:not(.selected) .edge { stroke: var(--on-surface-warn); stroke-width: 2; }
 .edge-group:hover .edge-halo {
   stroke: color-mix(in srgb, var(--accent) var(--state-hover), var(--surface-yes));
 }
@@ -2109,6 +2114,8 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
 .arrow-solid { fill: var(--on-surface-soft); stroke: none; }
 .arrow-open-sel { fill: none; stroke: var(--on-surface); stroke-width: 1.5; }
 .arrow-solid-sel { fill: var(--on-surface); stroke: none; }
+.arrow-open-next { fill: none; stroke: var(--on-surface-warn); stroke-width: 1.5; }
+.arrow-solid-next { fill: var(--on-surface-warn); stroke: none; }
 
 /* Петля самоперехода стоит у правого верхнего угла карточки - это
  * геометрия пути, своих объявлений ей не нужно; класс назван, чтобы петлю
