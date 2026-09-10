@@ -770,6 +770,24 @@ test("разделитель областей: незаданная доля —
   assert.equal(shell.panes({ getItem: () => "" }), shell.HALF);
   assert.equal(shell.panes({ getItem: () => "не число" }), shell.HALF);
   assert.equal(shell.panes({ getItem: () => "0.65" }), 0.65, "запомненное читается");
+  // Граница первого мгновения не затирает выбор читателя: имена ещё не
+  // устоялись - дерево шире, устоялись - доля читателя возвращается.
+  const props = {};
+  const split = {
+    ownerDocument: { documentElement: { style: { setProperty: (key, value) => { props[key] = value; } } } },
+    parentElement: { getBoundingClientRect: () => ({ width: 1000, height: 600 }) },
+    addEventListener() {},
+    setAttribute() {},
+  };
+  let least = 700;
+  const handle = shell.attachTree(split, { getItem: () => "0.8", setItem() {} }, { side: () => "right", least: () => least });
+  assert.equal(props["--tree-w"], "70%", "граница загрузки шире выбора");
+  least = 150;
+  handle.refresh();
+  assert.equal(props["--tree-w"], `${(1 - 0.8) * 100}%`, "выбор читателя вернулся");
+  least = 1200;
+  handle.refresh();
+  assert.equal(props["--tree-w"], `${(1 - 0.8) * 100}%`, "имена шире области - граница не распахивает дерево");
   assert.equal(shell.panes({ getItem: () => "0.01" }), shell.MIN_RATIO, "прижимается");
   assert.equal(shell.panes({ getItem: () => { throw new Error("нет доступа"); } }), shell.HALF);
 });

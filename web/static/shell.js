@@ -274,6 +274,10 @@ export function attachRows(split, storage, plan = {}) {
  * два размера одной ручкой.
  */
 export function attachTree(split, storage, plan = {}) {
+  return attachTreeDivider(split, storage, plan);
+}
+
+function attachTreeDivider(split, storage, plan) {
   // Сторона решает и ось, и то, какая величина ставится: слева и справа
   // структура делит ширину, сверху и снизу - высоту. Величины две, а не одна:
   // читатель, переставивший дерево сверху вниз, ждёт прежней высоты, а не
@@ -281,7 +285,7 @@ export function attachTree(split, storage, plan = {}) {
   const sideOf = plan.side ?? (() => "right");
   const vertical = () => sideOf() === "top" || sideOf() === "bottom";
   const first = () => sideOf() === "left" || sideOf() === "top";
-  attachDivider(split, {
+  return attachDivider(split, {
     storage,
     key: TREE_KEY,
     axis: () => (vertical() ? "y" : "x"),
@@ -293,7 +297,9 @@ export function attachTree(split, storage, plan = {}) {
     bounds: (rect) => {
       const room = vertical() ? rect?.height : rect?.width;
       const need = plan.least?.() ?? 0;
-      if (!room || room <= 0) return { min: 0, max: 1 };
+      // Область не разложена либо уже самых длинных имён: граница не спасёт
+      // имена, а распахнула бы дерево во всю область.
+      if (!room || room <= 0 || need >= room) return { min: 0, max: 1 };
       const share = Math.min(1, need / room);
       return first() ? { min: share, max: 1 } : { min: 0, max: 1 - share };
     },
@@ -352,11 +358,17 @@ function attachDivider(split, plan) {
       max: Number.isFinite(own?.max) ? own.max : 1 - MIN_RATIO,
     };
   };
-  let ratio = panes(plan.storage, plan.key, fallback);
+  // Выбор читателя и показанная доля - разные величины. Границы зависят от
+  // содержимого и размера области, а при загрузке они ещё не устоялись: урежь
+  // граница первого мгновения сам выбор - и после каждой перезагрузки область
+  // оставалась бы такой, какой её сжала эта граница. Выбор меняют только руки
+  // читателя; показ урезается границами на каждое переприменение.
+  let wanted = panes(plan.storage, plan.key, fallback);
+  let ratio = wanted;
 
-  const apply = (next) => {
+  const show = () => {
     const { min, max } = limits();
-    ratio = clampWithin(next, fallback, min, max);
+    ratio = clampWithin(wanted, fallback, min, max);
     plan.apply(ratio, root);
     split.setAttribute("aria-orientation", axisOf() === "y" ? "horizontal" : "vertical");
     split.setAttribute("aria-valuenow", String(Math.round(ratio * 100)));
@@ -364,9 +376,16 @@ function attachDivider(split, plan) {
     split.setAttribute("aria-valuemax", String(Math.round(max * 100)));
   };
 
+  /** Движение читателя: выбор становится тем, что он видит. */
+  const apply = (next) => {
+    wanted = next;
+    show();
+    wanted = ratio;
+  };
+
   const remember = () => {
     try {
-      plan.storage.setItem(plan.key, String(ratio));
+      plan.storage.setItem(plan.key, String(wanted));
     } catch {
       // Приватный режим либо запрет сайту: доли действуют до перезагрузки.
     }
@@ -415,7 +434,10 @@ function attachDivider(split, plan) {
     remember();
   });
 
-  apply(ratio);
+  show();
+  // Границы сменились (дерево перерисовано, окно изменило размер) - показ
+  // пересчитывается из выбора читателя, а не из значения, урезанного границей.
+  return { refresh: show };
 }
 
 /**

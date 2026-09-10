@@ -132,7 +132,7 @@ export async function main() {
   shell.attachLegendCols(dom.legendcols, localStorage);
   // Размер структуры проекта: та же ручка правил, а ось и границы у неё свои -
   // сторону выбирает читатель, а нижнюю границу задаёт длина имён файлов.
-  shell.attachTree(dom.treesplit, localStorage, {
+  state.treeSplit = shell.attachTree(dom.treesplit, localStorage, {
     side: () => state.treeSide,
     least: () => measureTree() ?? 0,
   });
@@ -157,6 +157,7 @@ export async function main() {
   // структуры: мерка привязана к окну, а не снята однажды при загрузке.
   window.addEventListener("resize", () => {
     measureTree();
+    state.treeSplit?.refresh();
     markDiagnosticsMore();
   });
   // Подсказки - свои, а не нативные: `title` в разметке нет вовсе.
@@ -350,7 +351,11 @@ export async function main() {
       if (state.shown === "scenario") showSource("scenario");
     },
     // Дерево перерисовано: мерка его ширины считается по нарисованным именам.
-    treeChanged: () => measureTree(),
+    // Граница ширины сменилась вместе с именами: доля читателя переприменяется.
+    treeChanged: () => {
+      measureTree();
+      state.treeSplit?.refresh();
+    },
     // Тексты моделей проекта пришли либо сменились: подключения разрешаются по
     // ним, и диагностики со сборкой обязаны пересчитаться.
     projectTexts: (texts) => {
