@@ -267,7 +267,6 @@
   "scheme.legend": "Легенда обозначений",
   "scheme.legend.states": "Состояния",
   "scheme.legend.conditions": "Условия переходов",
-  "scheme.legend.noConditions": "условий на листе нет",
   "scheme.legend.bottom": "Легенда полкой снизу",
   "scheme.legend.right": "Легенда колонкой справа",
   "scheme.legend.float": "Легенда поверх холста",

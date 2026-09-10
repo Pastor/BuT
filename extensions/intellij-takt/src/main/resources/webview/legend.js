@@ -150,8 +150,9 @@ export function paintLegend(container, ctx) {
     });
     conds.appendChild(line);
   }
-  if (!any) conds.appendChild(row([span("legend-kind", t("scheme.legend.noConditions"))]));
-  container.appendChild(conds);
+  // Условий на листе нет - нет и пункта: заголовок с пустой таблицей занимал место
+  // и ничего не называл.
+  if (any) container.appendChild(conds);
 
   // Расшифровка обозначений идёт последней и по настройке: она объясняет знаки, а
   // не называет содержимое листа, и автору, который их знает, только занимает место.

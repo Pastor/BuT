@@ -267,7 +267,6 @@
   "scheme.legend": "Legend of marks",
   "scheme.legend.states": "States",
   "scheme.legend.conditions": "Transition conditions",
-  "scheme.legend.noConditions": "the sheet has no conditions",
   "scheme.legend.bottom": "Legend as a bottom shelf",
   "scheme.legend.right": "Legend as a right column",
   "scheme.legend.float": "Legend over the canvas",
