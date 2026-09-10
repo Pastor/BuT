@@ -35,7 +35,6 @@
   "trace.kindError": "отказ",
   "trace.budgetHint": "Сколько тактов пускать",
   "trace.log": "Журнал прогона",
-  "trace.logRows": "Высота журнала",
   "scheme.legend.rows": "Высота легенды",
   "scheme.legend.cols": "Ширина легенды",
   "trace.reset": "Сброс",

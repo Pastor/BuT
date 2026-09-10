@@ -28,8 +28,6 @@ export const PANES_KEY = "takt.panes";
 /** Ключ хранилища долей рядов области (редактор и диагностики). */
 export const ROWS_KEY = "takt.rows";
 
-/** Доля высоты, отданная журналу прогона под холстом схемы. */
-export const LOG_KEY = "takt.rows.log";
 /** Доля высоты, отданная легенде-полке, и доля ширины у легенды-колонки. */
 export const LEGEND_ROWS_KEY = "takt.rows.legend";
 export const LEGEND_COLS_KEY = "takt.panes.legend";
@@ -57,14 +55,6 @@ export const HALF = 0.5;
  */
 export const ROWS_DEFAULT = 0.7;
 
-/**
- * Умолчания долей схемы: журнал под холстом, легенда полкой и колонкой.
- *
- * Доля считается от начала области (сверху, слева) - это позиция границы, а не
- * размер нижней части. Журналу и легенде достаётся остаток, поэтому умолчание
- * 0.7 означает "им треть".
- */
-export const LOG_DEFAULT = 0.7;
 export const LEGEND_ROWS_DEFAULT = 0.7;
 export const LEGEND_COLS_DEFAULT = 0.7;
 
@@ -271,28 +261,6 @@ export function attachRows(split, storage, plan = {}) {
  *          box: () => DOMRect, apply: (ratio: number, root: HTMLElement) => void}} plan
  *        чем меряем, где помним, что ставим и к чему возвращаемся
  */
-/**
- * Разделитель журнала прогона: сколько высоты схемы отдано журналу.
- *
- * Доля считается от области схемы, а не от окна: журнал стоит под холстом, и его
- * граница принадлежит этой области, а не странице.
- */
-export function attachLogRows(split, storage) {
-  attachDivider(split, {
-    storage,
-    key: LOG_KEY,
-    axis: "y",
-    fallback: LOG_DEFAULT,
-    box: () => split.parentElement.getBoundingClientRect(),
-    // Доля - часть высоты, отданная холсту: журнал стоит снизу. Величина
-    // берётся от окна (`dvh`), а не от области: процент от растущего родителя
-    // даёт круговую зависимость - журнал тянет панель, панель растит журнал.
-    apply: (ratio, root) => {
-      root.style.setProperty("--log-h", `${(1 - ratio) * 100}dvh`);
-    },
-  });
-}
-
 /** Разделитель легенды-полки: её высота под холстом. */
 /**
  * Ручка ширины структуры проекта.
@@ -611,8 +579,8 @@ export const UI_KEYS = {
   budget: "takt.ui.budget",
   /** Открытая панель правой области: `output` либо пусто. */
   panel: "takt.ui.panel",
-  /** Виден ли журнал прогона под холстом схемы. */
-  log: "takt.ui.log",
+  /** Какая запись показана в области диагностик: `diagnostics` либо `trace`. */
+  diagTab: "takt.ui.diagTab",
   /** Видна ли область диагностик под кодом. */
   diagnostics: "takt.ui.diagnostics",
   /** Доля структуры проекта в рабочей области. */

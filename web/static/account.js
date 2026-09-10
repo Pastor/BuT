@@ -29,6 +29,18 @@ import { t } from "./i18n.js";
  */
 const DEFAULT_FILE = "model.takt";
 
+/**
+ * Имя модели нового проекта: сам проект и даёт его.
+ *
+ * Файлы проекта носят его имя (модель, раскладка, сценарии, пояснение), и
+ * первый файл - не исключение. Имя проекта шире имени файла (пробелы,
+ * кириллица), поэтому негодное для файла имя сводится к общему `model.takt`:
+ * отказать в заведении проекта из-за имени файла было бы подменой предмета.
+ */
+function firstFileName(project) {
+  return /^[A-Za-z0-9_-]+$/.test(project) ? `${project}.takt` : DEFAULT_FILE;
+}
+
 /** Что открыто и чем это можно править. */
 const state = {
   /** Метаданные открытого проекта либо `null`. */
@@ -169,6 +181,7 @@ export function attach(nodes, callbacks) {
   // Поле выбора файла спрятано, а открывает его кнопка: ряд значков не должен
   // разрываться чужим контролом.
   dom.importproject.addEventListener("click", () => dom.upload.click());
+  dom.exportproject.addEventListener("click", () => download(state.chosen?.id, state.chosen?.name));
   dom.upload.addEventListener("change", (event) => upload(event.target.files?.[0]));
   dom.uploadfile.addEventListener("click", () => dom.filepick.click());
   dom.filepick.addEventListener("change", (event) => uploadFile(event.target.files?.[0]));
@@ -469,17 +482,17 @@ function showRows(items) {
  * Байты приходят запросом, а файл отдаётся временной ссылкой: у закрытого
  * проекта архив требует токена, а обычная ссылка заголовков не несёт.
  */
-async function download() {
-  if (!state.project) {
+async function download(id = state.project?.id, name = state.project?.name) {
+  if (!id) {
     host.say(t("account.nothingToSave"), "warning");
     return;
   }
   try {
-    const bytes = await api.archive(state.project.id, host.target());
+    const bytes = await api.archive(id, host.target());
     const url = URL.createObjectURL(new Blob([bytes], { type: "application/zip" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${state.project.name || "takt-project"}.zip`;
+    link.download = `${name || "takt-project"}.zip`;
     link.click();
     // Ссылка живёт до конца загрузки: снятая сразу, она отменила бы её.
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
@@ -849,7 +862,9 @@ async function make() {
   }
   try {
     const created = await api.create(name);
-    if (dom.fromsample.checked) await api.write(created.id, DEFAULT_FILE, SAMPLE, null);
+    if (dom.fromsample.checked) {
+      await api.write(created.id, firstFileName(name), SAMPLE, null);
+    }
     dom.newname.value = "";
     closeModal(dom["project-modal"]);
     await list();
@@ -1388,7 +1403,7 @@ async function openProject(id) {
       // У нового проекта файлов ещё нет, но писать автор начинает сразу. Не назови мы
       // файл здесь - кнопки сохранения не было бы вовсе, и первый же набранный текст
       // оставался бы только в черновике.
-      state.file = DEFAULT_FILE;
+      state.file = firstFileName(opened.name);
       state.revision = null;
       hideConflict();
       // Пустой проект открывается пустым. Оставь мы текст прежнего - он выглядел
@@ -1718,6 +1733,7 @@ function refresh() {
   dom.renameproject.hidden = opened || !mine;
   dom.dropproject.hidden = opened || !mine;
   dom.importproject.hidden = opened;
+  dom.exportproject.hidden = opened || !chosen;
   dom.download.hidden = !opened;
   dom.closeproject.hidden = !opened;
   // Заводить и удалять файлы вправе тот, кто вправе писать: чужой проект

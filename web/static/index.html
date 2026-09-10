@@ -231,9 +231,6 @@
             <button class="icon-btn" type="button" data-run="stop" disabled
             data-i18n-attr="aria-label:trace.stop;data-tip:trace.stop"
             aria-label="Стоп" data-tip="Стоп"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg></button>
-            <button id="showlog" class="icon-btn" type="button" aria-pressed="true"
-            data-i18n-attr="aria-label:trace.log;data-tip:trace.log"
-            aria-label="Журнал прогона" data-tip="Журнал прогона"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button>
           </div>
           </div>
           <div class="tool-dock tool-dock-tr" data-dock="tr">
@@ -275,13 +272,6 @@
              data-i18n-attr="aria-label:scheme.legend.cols" aria-label="Ширина легенды" tabindex="0"></div>
         <div id="legend" class="legend legend-bottom" data-i18n-attr="aria-label:scheme.legend" aria-label="Легенда обозначений"></div>
       </div>
-      <!-- Журнал прогона: он читается вместе со схемой - подсветка говорит, где
-           автомат сейчас, а строки говорят, как он туда пришёл. Полоса убирается
-           кнопкой в ряду прогона, а её высоту автор тянет разделителем. -->
-      <div id="logsplit" class="split split-h" role="separator" aria-orientation="horizontal"
-           data-i18n-attr="aria-label:trace.logRows" aria-label="Высота журнала" tabindex="0"></div>
-      <div id="tools-lang-trace" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
-      <div id="trace" class="list log trace" aria-live="polite"></div>
     </div>
   </section>
 
@@ -341,17 +331,33 @@
     <section class="pane pane-diag">
       <div id="diagnostics-head" class="pane-head">
         <span data-i18n="diagnostics.title">Диагностики</span>
-        <!-- Журнал накапливает, и рано или поздно читателю нужно чистое поле:
-             ротация уносит старое сама, но не по его слову. -->
-        <button id="diagclear" class="icon-btn" type="button"
-                data-i18n-attr="data-tip:diagnostics.clear;aria-label:diagnostics.clear"
-                data-tip="Очистить журнал" aria-label="Очистить журнал"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l1 12.5h9l1-12.5"/></svg></button>
+        <div class="pane-tools">
+          <!-- Две записи об одном и том же - что случилось: замечания к модели и
+               ход её прогона. Область у них одна, а переключатель говорит, какая
+               из них показана. -->
+          <button id="showdiag-tab" class="icon-btn" type="button" aria-pressed="true"
+                  data-i18n-attr="data-tip:diagnostics.title;aria-label:diagnostics.title"
+                  data-tip="Диагностики" aria-label="Диагностики"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4.5l8 14H4z"/><path d="M12 10v4"/><circle cx="12" cy="16.6" r="0.9" fill="currentColor" stroke="none"/></svg></button>
+          <button id="showtrace-tab" class="icon-btn" type="button" aria-pressed="false"
+                  data-i18n-attr="data-tip:trace.log;aria-label:trace.log"
+                  data-tip="Журнал прогона" aria-label="Журнал прогона"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button>
+          <!-- Журнал накапливает, и рано или поздно читателю нужно чистое поле:
+               ротация уносит старое сама, но не по его слову. Чистится показанный:
+               кнопка говорит о том, что перед глазами. -->
+          <button id="diagclear" class="icon-btn" type="button"
+                  data-i18n-attr="data-tip:diagnostics.clear;aria-label:diagnostics.clear"
+                  data-tip="Очистить журнал" aria-label="Очистить журнал"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 7h15"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l1 12.5h9l1-12.5"/></svg></button>
+        </div>
       </div>
       <!-- Строка-граница: до фичи сообщения инструментов существуют только
            по-русски, и при другом языке оболочки смешение НАЗЫВАЕТСЯ, а не
            прячется (задача 0531-10a). -->
       <div id="tools-lang" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
       <div id="diagnostics" class="list log" aria-live="polite"></div>
+      <!-- Строка-граница журнала прогона: сообщения эталона пока только
+           по-русски, и при другом языке оболочки смешение называется. -->
+      <div id="tools-lang-trace" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
+      <div id="trace" class="list log trace" aria-live="polite" hidden></div>
     </section>
   </div>
 
@@ -391,6 +397,12 @@
               data-i18n-attr="data-tip:archive.upload;aria-label:archive.upload"
               data-tip="Загрузить архив" aria-label="Загрузить архив"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 4.5h17v4h-17z"/><path d="M5 8.5v11h14v-11"/><path d="M12 18.5v-7"/><path d="M9 14l3-3 3 3"/></svg></button>
       <input id="upload" type="file" accept=".zip,application/zip" hidden>
+      <!-- Выгрузка архивом стоит рядом с загрузкой: одно действие в обе стороны,
+           и значки у них парные - стрелка внутрь и стрелка наружу. Здесь она
+           берёт выбранный в списке проект; открытый выгружается своей кнопкой. -->
+      <button id="exportproject" class="icon-btn" type="button"
+              data-i18n-attr="data-tip:archive.download;aria-label:archive.download"
+              data-tip="Скачать архивом" aria-label="Скачать архивом"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 4.5h17v4h-17z"/><path d="M5 8.5v11h14v-11"/><path d="M12 11.5v7"/><path d="M9 16l3 3 3-3"/></svg></button>
       <button id="download" class="icon-btn" type="button" hidden
               data-i18n-attr="data-tip:archive.download;aria-label:archive.download"
               data-tip="Скачать архивом" aria-label="Скачать архивом"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 4.5h17v4h-17z"/><path d="M5 8.5v11h14v-11"/><path d="M10 12h4"/></svg></button>

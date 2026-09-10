@@ -1149,9 +1149,10 @@ test("проект: действия стоят над его составом, 
   assert.ok(!panel.includes('id="projects"'), "список проектов остался в панели учётной записи");
 
   // Отметка образца кладёт в новый проект рабочую модель - тем же файлом, каким
-  // проект открывается.
-  assert.match(account, /dom\.fromsample\.checked[\s\S]{0,80}?api\.write\(created\.id, DEFAULT_FILE, SAMPLE/,
+  // проект открывается. Имя файла даёт сам проект: файлы носят его имя.
+  assert.match(account, /dom\.fromsample\.checked[\s\S]{0,120}?api\.write\(created\.id, firstFileName\(name\), SAMPLE/,
     "отметка образца не кладёт модель");
+  assert.match(account, /function firstFileName\(project\)/, "имя первого файла не от проекта");
   // Пустой проект открывается пустым: прежний текст выглядел бы его содержимым.
   assert.match(account, /host\.open\(\{ source: "", scenario: "", layout: "" \}\)/,
     "новый проект открывается прежним текстом");

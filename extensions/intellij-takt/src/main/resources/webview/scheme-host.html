@@ -51,9 +51,6 @@
             <button class="icon-btn" type="button" data-run="stop" disabled
             data-i18n-attr="aria-label:trace.stop;data-tip:trace.stop"
             aria-label="Стоп" data-tip="Стоп"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="6" width="12" height="12" rx="1.5"/></svg></button>
-            <button id="showlog" class="icon-btn" type="button" aria-pressed="true"
-            data-i18n-attr="aria-label:trace.log;data-tip:trace.log"
-            aria-label="Журнал прогона" data-tip="Журнал прогона"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button>
           </div>
           </div>
           <div class="tool-dock tool-dock-tr" data-dock="tr">
@@ -95,13 +92,6 @@
              data-i18n-attr="aria-label:scheme.legend.cols" aria-label="Ширина легенды" tabindex="0"></div>
         <div id="legend" class="legend legend-bottom" data-i18n-attr="aria-label:scheme.legend" aria-label="Легенда обозначений"></div>
       </div>
-      <!-- Журнал прогона: он читается вместе со схемой - подсветка говорит, где
-           автомат сейчас, а строки говорят, как он туда пришёл. Полоса убирается
-           кнопкой в ряду прогона, а её высоту автор тянет разделителем. -->
-      <div id="logsplit" class="split split-h" role="separator" aria-orientation="horizontal"
-           data-i18n-attr="aria-label:trace.logRows" aria-label="Высота журнала" tabindex="0"></div>
-      <div id="tools-lang-trace" class="notice" data-i18n="tools.russianOnly" hidden>Сообщения инструментов пока только на русском</div>
-      <div id="trace" class="list log trace" aria-live="polite"></div>
     </div>
 </main>
 <div id="scheme-modal" class="modal" hidden>

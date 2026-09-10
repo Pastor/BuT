@@ -183,6 +183,87 @@ pub struct WriteResponse {
     pub size_bytes: i64,
 }
 
+/// Переименовывает файлы проекта вслед за его именем.
+///
+/// Правило имени одно на страницу и на сервер: файл принадлежит проекту, если
+/// его имя начинается с имени проекта, а дальше идёт точка (расширение) либо
+/// разделитель `-`/`_` (`test1.takt`, `test1.takt-ui`, `test1-cold.json`).
+/// Прочие файлы не трогаются: `probe.json` в проекте `test1` назван автором, а
+/// не проектом.
+///
+/// Занятое новое имя пропускается, а не отвергает переименование: имя проекта
+/// уже сменилось, и оставить проект без имени ради одного файла хуже, чем
+/// оставить один файл со старым именем.
+async fn rename_project_files(
+    transaction: &tokio_postgres::Transaction<'_>,
+    store: &Arc<Store>,
+    id: &str,
+    was: &str,
+    now: &str,
+) -> Result<(), ApiError> {
+    if was == now {
+        return Ok(());
+    }
+    let owner: String = transaction
+        .query_one("SELECT owner_id FROM projects WHERE id = $1", &[&id])
+        .await?
+        .get(0);
+    let rows = transaction
+        .query(
+            "SELECT name FROM project_files WHERE project_id = $1",
+            &[&id],
+        )
+        .await?;
+    let names: Vec<String> = rows.iter().map(|row| row.get(0)).collect();
+    for name in &names {
+        let Some(tail) = own_file_tail(name, was) else {
+            continue;
+        };
+        let target = format!("{now}{tail}");
+        // Имя обязано остаться годным: длинное имя проекта делает годное имя файла
+        // негодным, и молча ронять на этом переименование проекта нельзя.
+        if limits::check_file_name(&target).is_err() || names.iter().any(|item| item == &target) {
+            continue;
+        }
+        transaction
+            .execute(
+                "UPDATE project_files SET name = $3 WHERE project_id = $1 AND name = $2",
+                &[&id, name, &target],
+            )
+            .await?;
+        store
+            .rename(&owner, id, name, &target)
+            .map_err(ApiError::Internal)?;
+        // Активный файл и активный сценарий названы именем: не переставь их - и
+        // проект откроется, показывая пустоту.
+        transaction
+            .execute(
+                "UPDATE projects SET main_file = $3 WHERE id = $1 AND main_file = $2",
+                &[&id, name, &target],
+            )
+            .await?;
+        transaction
+            .execute(
+                "UPDATE projects SET main_scenario = $3 WHERE id = $1 AND main_scenario = $2",
+                &[&id, name, &target],
+            )
+            .await?;
+    }
+    Ok(())
+}
+
+/// Хвост имени файла, названного по проекту: `test1-cold.json` при `test1` даёт
+/// `-cold.json`. `None` - файл проектом не назван.
+fn own_file_tail(name: &str, project: &str) -> Option<String> {
+    let tail = name.strip_prefix(project)?;
+    let first = tail.chars().next()?;
+    if first == '.' || first == '-' || first == '_' {
+        Some(tail.to_string())
+    } else {
+        None
+    }
+}
+
 /// Маршруты проектов.
 ///
 /// Состояние не подставляется здесь: его ставит внешний роутер один раз на всё дерево
@@ -358,9 +439,18 @@ async fn patch(
     require_level(level, Level::Owner)?;
     if let Some(name) = &request.name {
         limits::check_project_name(name)?;
+        let was: String = transaction
+            .query_one("SELECT name FROM projects WHERE id = $1", &[&id])
+            .await?
+            .get(0);
         transaction
             .execute("UPDATE projects SET name = $1 WHERE id = $2", &[name, &id])
             .await?;
+        // Файлы проекта носят его имя: модель, её раскладка, сценарии, пояснение.
+        // Переименуй проект в одиночку - и связь распалась бы: `test1.takt` в
+        // проекте `test2` читается как чужой файл, а сценарий `test1-cold.json`
+        // перестал бы находиться по имени модели.
+        rename_project_files(&transaction, &state.store, &id, &was, name).await?;
     }
     if let Some(description) = &request.description {
         limits::check_description(description)?;
@@ -768,6 +858,41 @@ mod tests {
                 .chars()
                 .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'),
             "идентификатор попадает в адрес: {first}"
+        );
+    }
+
+    #[test]
+    fn project_owns_files_named_after_it() {
+        // Файл принадлежит проекту, если его имя начинается с имени проекта, а
+        // дальше идёт расширение либо разделитель.
+        assert_eq!(
+            own_file_tail("test1.takt", "test1").as_deref(),
+            Some(".takt")
+        );
+        assert_eq!(
+            own_file_tail("test1.takt-ui", "test1").as_deref(),
+            Some(".takt-ui")
+        );
+        assert_eq!(
+            own_file_tail("test1-cold.json", "test1").as_deref(),
+            Some("-cold.json")
+        );
+        assert_eq!(
+            own_file_tail("test1_hot.json", "test1").as_deref(),
+            Some("_hot.json")
+        );
+        // Прочие файлы названы автором, а не проектом, и не трогаются: общий префикс
+        // без разделителя - другое имя, а не то же с хвостом.
+        assert_eq!(
+            own_file_tail("test10.takt", "test1"),
+            None,
+            "test10 - не test1"
+        );
+        assert_eq!(own_file_tail("probe.json", "test1"), None);
+        assert_eq!(
+            own_file_tail("test1", "test1"),
+            None,
+            "имя без хвоста - не файл"
         );
     }
 }

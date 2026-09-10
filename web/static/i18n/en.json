@@ -35,7 +35,6 @@
   "trace.kindError": "error",
   "trace.budgetHint": "How many ticks to run",
   "trace.log": "Run log",
-  "trace.logRows": "Log height",
   "scheme.legend.rows": "Legend height",
   "scheme.legend.cols": "Legend width",
   "trace.reset": "Reset",

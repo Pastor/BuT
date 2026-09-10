@@ -94,6 +94,8 @@ const state = {
   diagKeep: 500,
   treeSide: "right",
   crumbsShown: true,
+  // Какая из двух записей показана в области: `diagnostics` либо `trace`.
+  diagTab: "diagnostics",
   wrap: false,
   // Что показано в области кода: `code`, `scenario` либо `scheme`. Род открытого
   // файла этого не говорит: сценарий и раскладку открывают, не меняя рода.
@@ -122,7 +124,6 @@ export async function main() {
   shell.attachRows(dom.hsplit, localStorage, { least: () => diagLeast() });
   // Схема делится так же: журнал под холстом, легенда полкой либо колонкой. Доли
   // помнит браузер читателя - это его вид, а не свойство проекта.
-  shell.attachLogRows(dom.logsplit, localStorage);
   shell.attachLegendRows(dom.legendrows, localStorage);
   shell.attachLegendCols(dom.legendcols, localStorage);
   // Размер структуры проекта: та же ручка правил, а ось и границы у неё свои -
@@ -574,7 +575,8 @@ function cache() {
     "scheme-notice", "scheme-notice-text", "scheme-drop",
     "tree", "treesplit", "diagnostics-head", "diagclear", "showtree",
     "openproject", "createproject", "createcancel",
-    "renameproject", "dropproject", "projectname", "projectnameok", "projectnamecancel",
+    "renameproject", "dropproject", "exportproject",
+    "projectname", "projectnameok", "projectnamecancel",
     "projectname-modal",
     "dropok", "dropcancel", "droptext", "fromsample", "closeproject",
     "newfile", "dropfile", "renamefile", "uploadfile", "downloadfile", "filepick",
@@ -588,7 +590,7 @@ function cache() {
     "panel-run", "panel-view", "panel-sheet", "settings",
     "scheme-empty", "legend", "zoom", "alerts",
     "scheme-modal", "scheme-tabs", "scheme-settings", "scheme-save", "scheme-cancel",
-    "showlog", "logsplit", "legendrows", "legendcols",
+    "showdiag-tab", "showtrace-tab", "legendrows", "legendcols",
   ]) {
     dom[id] = document.getElementById(id);
   }
@@ -675,8 +677,9 @@ function wire() {
   }
   // Журнал прогона убирается со схемы кнопкой: лист и журнал читают вместе, но
   // когда рисунок велик, полоса строк отнимает у него половину области.
-  showLog(shell.setting(localStorage, shell.UI_KEYS.log, "1") !== "0");
-  dom.showlog.addEventListener("click", () => showLog(dom.showlog.getAttribute("aria-pressed") !== "true"));
+  showDiagTab(shell.setting(localStorage, shell.UI_KEYS.diagTab, "diagnostics"));
+  dom["showdiag-tab"].addEventListener("click", () => showDiagTab("diagnostics"));
+  dom["showtrace-tab"].addEventListener("click", () => showDiagTab("trace"));
   dom.share.addEventListener("click", share);
   dom.tabs.addEventListener("click", (event) => {
     const tab = event.target.closest("[data-tab]");
@@ -1086,8 +1089,17 @@ function rotateDiagnostics() {
   }
 }
 
-/** Очищает журнал диагностик: набор прошлой отрисовки забывается вместе с ним. */
+/**
+ * Очищает показанную запись: диагностики либо журнал прогона.
+ *
+ * Кнопка говорит о том, что перед глазами: чисти она обе, читатель терял бы
+ * невидимую половину, о которой не просил.
+ */
 function clearDiagnostics() {
+  if (state.diagTab === "trace") {
+    dom.trace.replaceChildren();
+    return;
+  }
   state.diagLast = [];
   dom.diagnostics.replaceChildren();
   paintDiagnosticsEmpty();
@@ -1555,9 +1567,13 @@ function panels(...names) {
  */
 function showDiagnosticsPane(show) {
   document.body.dataset.diag = show ? "on" : "off";
-  dom.diagnostics.hidden = !show;
   dom.hsplit.hidden = !show;
   dom["diagnostics-head"].hidden = !show;
+  if (show) showDiagTab(state.diagTab);
+  else {
+    dom.diagnostics.hidden = true;
+    dom.trace.hidden = true;
+  }
   dom.showdiag.setAttribute("aria-pressed", String(show));
   shell.remember(localStorage, shell.UI_KEYS.diagnostics, show ? "1" : "0");
 }
@@ -1819,16 +1835,19 @@ function setRunButtons(off) {
 }
 
 /**
- * Показывает либо убирает журнал прогона под холстом схемы.
+ * Показывает одну из двух записей области: диагностики либо журнал прогона.
  *
- * Разделитель уходит вместе с журналом: граница без второй области ничего не
- * делит, а нажать её всё ещё можно - и доля менялась бы вслепую.
+ * Записи об одном и том же - что случилось с моделью, - и место у них одно:
+ * читать их порознь значило бы держать в голове два экрана вместо одного.
  */
-function showLog(shown) {
-  dom.showlog.setAttribute("aria-pressed", String(shown));
-  dom.trace.hidden = !shown;
-  dom.logsplit.hidden = !shown;
-  shell.remember(localStorage, shell.UI_KEYS.log, shown ? "1" : "0");
+function showDiagTab(which) {
+  state.diagTab = which === "trace" ? "trace" : "diagnostics";
+  const trace = state.diagTab === "trace";
+  dom.diagnostics.hidden = trace;
+  dom.trace.hidden = !trace;
+  dom["showdiag-tab"].setAttribute("aria-pressed", String(!trace));
+  dom["showtrace-tab"].setAttribute("aria-pressed", String(trace));
+  shell.remember(localStorage, shell.UI_KEYS.diagTab, state.diagTab);
 }
 
 /**
