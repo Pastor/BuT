@@ -369,6 +369,75 @@ export function curvePoint(pts, i, t) {
 }
 
 /**
+ * Где ломаная `mine` лежит на уже нарисованных ломаных `others`.
+ *
+ * Два конца в одной точке привязки законны - автор вправе свести туда рёбра, - но
+ * общий участок, нарисованный дважды, складывается сглаживанием и читается жирной
+ * линией. Ответ - участки совпадения в длине пути от начала (для пропуска
+ * штрихом), полная длина ломаной и признак того, что ребро приходит в конец
+ * нарисованного тем же ходом: тогда второй наконечник лёг бы на первый.
+ *
+ * Совпадением считается отрезок, параллельный чужому и лежащий от него ближе
+ * полупикселя; участки короче полупикселя не считаются.
+ *
+ * @returns {{runs: number[][], total: number, ending: boolean}}
+ */
+export function overlapWith(mine, others) {
+  const raw = [];
+  let offset = 0;
+  for (const [a, b] of segments(mine)) {
+    const r = [b[0] - a[0], b[1] - a[1]];
+    const len = Math.hypot(r[0], r[1]);
+    if (len === 0) continue;
+    for (const list of others) {
+      for (const [c, d] of segments(list)) {
+        const s = [d[0] - c[0], d[1] - c[1]];
+        const otherLen = Math.hypot(s[0], s[1]);
+        if (otherLen === 0 || Math.abs(cross(r, s)) > 1e-6 * len * otherLen) continue;
+        if (Math.abs(cross(r, [c[0] - a[0], c[1] - a[1]])) / len > 0.5) continue;
+        const along = (p) => ((p[0] - a[0]) * r[0] + (p[1] - a[1]) * r[1]) / len;
+        const lo = Math.max(0, Math.min(along(c), along(d)));
+        const hi = Math.min(len, Math.max(along(c), along(d)));
+        if (hi - lo > 0.5) raw.push([offset + lo, offset + hi]);
+      }
+    }
+    offset += len;
+  }
+  raw.sort((p, q) => p[0] - q[0]);
+  const runs = [];
+  for (const run of raw) {
+    const last = runs[runs.length - 1];
+    if (last && run[0] <= last[1] + 0.5) last[1] = Math.max(last[1], run[1]);
+    else runs.push([...run]);
+  }
+  const end = mine[mine.length - 1];
+  const before = mine[mine.length - 2] ?? end;
+  const way = unit([end[0] - before[0], end[1] - before[1]]);
+  const ending = others.some((list) => {
+    const theirs = list[list.length - 1];
+    const prev = list[list.length - 2] ?? theirs;
+    const their = unit([theirs[0] - prev[0], theirs[1] - prev[1]]);
+    return near(end, theirs) < 0.5 && Math.abs(cross(way, their)) < 1e-6 && way[0] * their[0] + way[1] * their[1] > 0;
+  });
+  return { runs: runs.map(([p, q]) => [tenth(p), tenth(q)]), total: tenth(offset), ending };
+}
+
+/**
+ * Штрих с пропусками: видимые куски между участками `runs` на пути длины `total`,
+ * в форме `stroke-dasharray` (штрих, пропуск, штрих...).
+ */
+export function dashFor(total, runs) {
+  const parts = [];
+  let at = 0;
+  for (const [from, to] of runs) {
+    parts.push(tenth(Math.max(0, from - at)), tenth(to - from));
+    at = to;
+  }
+  parts.push(tenth(Math.max(0, total - at)));
+  return parts.join(" ");
+}
+
+/**
  * Путь SVG по ломаной: с мостиками либо разрывами на пересечениях и углами по
  * форме - прямыми, скруглёнными либо кривыми Безье.
  *

@@ -647,9 +647,10 @@ export class Scheme {
       const pts = routes[i];
       if (!pts) return;
       const hops = this.layout.corners === "bezier" ? [] : geo.crossings(pts, drawn);
+      const covered = this.layout.corners === "bezier" ? null : geo.overlapWith(pts, drawn);
       drawn.push(pts);
       this.routes.set(edge.key, pts);
-      this.drawEdge(sheet, edge, pts, hops);
+      this.drawEdge(sheet, edge, pts, hops, covered);
     });
     for (const node of sheet.nodes) this.drawNode(sheet, node);
     this.paintInner();
@@ -670,7 +671,7 @@ export class Scheme {
     this.paintSide(sheet);
   }
 
-  drawEdge(sheet, edge, pts, hops) {
+  drawEdge(sheet, edge, pts, hops, covered = null) {
     const selected = edge.key === this.selectedEdge;
     const group = mk("g", {
       class: `edge-group${selected ? " selected" : ""}`,
@@ -693,6 +694,17 @@ export class Scheme {
       d,
       "marker-end": `url(#${marker})`,
     });
+    // Участок, совпадающий с уже нарисованным ребром, второй раз не рисуется: два
+    // штриха в одном месте складываются сглаживанием и читаются жирной линией.
+    // Длина пути задаётся ломаной (`pathLength`), и пропуски ложатся по ней.
+    // Пропуски ставятся всегда, а у выбранного ребра их снимает оформление: выбор
+    // переключает класс без перестроения листа, и решение, принятое при отрисовке,
+    // застряло бы на ребре, которое уже не выбрано.
+    if (covered?.runs.length) {
+      line.setAttribute("pathLength", covered.total);
+      line.setAttribute("stroke-dasharray", geo.dashFor(covered.total, covered.runs));
+    }
+    if (covered?.ending) line.classList.add("edge-shared-end");
     group.appendChild(line);
     group.appendChild(mk("path", { class: "edge-hit", d }));
     if (edge.cond) {

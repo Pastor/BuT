@@ -409,6 +409,19 @@ test("геометрия: шестнадцать точек привязки, р
   const kept = geo.routeSheet(byName, [edges[0]], new Map([["B", 8]]));
   assert.notDeepEqual(kept[0][kept[0].length - 1], geo.portPoint(b, 8));
 
+  // Общий участок двух рёбер рисуется один раз: у второго он уходит в пропуск
+  // штриха; конец в той же точке тем же ходом не несёт второго наконечника.
+  const first = [[0, 0], [0, 100], [100, 100]];
+  const shared = geo.overlapWith([[0, 0], [0, 100], [-50, 100]], [first]);
+  assert.deepEqual(shared.runs, [[0, 100]]);
+  assert.equal(shared.total, 150);
+  assert.equal(shared.ending, false, "концы разные");
+  assert.equal(geo.dashFor(shared.total, shared.runs), "0 100 50");
+  const same = geo.overlapWith([[100, 0], [100, 100]], [first]);
+  assert.deepEqual(same.runs, [], "перпендикулярный конец - не совпадение");
+  assert.equal(same.ending, false, "в ту же точку, но другим ходом - наконечник свой");
+  assert.equal(geo.overlapWith([[50, 100], [100, 100]], [first]).ending, true, "тот же конец тем же ходом");
+  assert.deepEqual(geo.overlapWith([[0, 200], [0, 300]], [first]).runs, [], "на одной прямой, но не встык - не совпадение");
   // Пересечение под углом - тоже пересечение; вид "разрыв" прерывает линию.
   assert.deepEqual(geo.crossings([[0, 0], [100, 100]], [[[0, 100], [100, 0]]]), [[50, 50]]);
   assert.equal(geo.buildPath([[0, 50], [100, 50]], [[50, 50]], false, "gap"), "M0 50L46 50M54 50L100 50");
