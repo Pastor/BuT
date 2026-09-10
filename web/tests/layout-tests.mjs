@@ -390,6 +390,22 @@ test("геометрия: шестнадцать точек привязки, р
   assert.equal(geo.buildPath([[0, 50], [100, 50]], [[50, 50]], false, "gap"), "M0 50L46 50M54 50L100 50");
 });
 
+test("раскладка: черновик сильнее проекта, но только когда он о другом", () => {
+  const saved = layout.empty();
+  layout.place(saved, "/", "Idle", 72, 72);
+  const savedText = layout.canonical(saved);
+  const moved = layout.parse(savedText).layout;
+  layout.place(moved, "/", "Idle", 216, 72);
+  // Узел подвинут и не сохранён: перезагрузка берёт черновик.
+  assert.deepEqual(layout.preferDraft(layout.canonical(moved), savedText), { text: layout.canonical(moved), fromDraft: true });
+  // Тот же смысл в другой записи - не правка; пустой черновик и его отсутствие - тоже.
+  assert.equal(layout.preferDraft(JSON.stringify(JSON.parse(savedText)), savedText).fromDraft, false);
+  assert.equal(layout.preferDraft(layout.canonical(layout.empty()), savedText).fromDraft, false);
+  assert.deepEqual(layout.preferDraft(undefined, savedText), { text: savedText, fromDraft: false });
+  // Файла раскладки нет, а в черновике расстановка есть - она и берётся.
+  assert.equal(layout.preferDraft(layout.canonical(moved), "").fromDraft, true);
+});
+
 test("раскладка: место стрелки начального состояния и вид пересечения пишутся ступенями", () => {
   const stored = layout.empty();
   layout.entryAt(stored, "/", 12);

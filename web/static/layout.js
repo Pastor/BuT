@@ -371,6 +371,27 @@ export function setView(layout, key, value) {
   return layout;
 }
 
+/**
+ * Раскладка при открытии модели: черновика либо проекта.
+ *
+ * Черновик сильнее проекта, как и для текста модели: автор расставил узлы и не
+ * сохранил, а перезагрузка страницы не вправе стереть эту работу. Сравниваются
+ * канонические формы - файл проекта мог быть записан не каноном, и различие
+ * пробелов не правка. Пустая раскладка черновика ничего не говорит: черновик
+ * пишет её и тогда, когда схему не открывали.
+ *
+ * @param {string} draftText раскладка из черновика (пусто - черновика нет)
+ * @param {string} savedText раскладка из файла проекта
+ * @returns {{text: string, fromDraft: boolean}}
+ */
+export function preferDraft(draftText, savedText) {
+  const saved = savedText ?? "";
+  if (typeof draftText !== "string" || draftText === "") return { text: saved, fromDraft: false };
+  const own = canonical(parse(draftText).layout);
+  if (own === canonical(empty()) || own === canonical(parse(saved).layout)) return { text: saved, fromDraft: false };
+  return { text: draftText, fromDraft: true };
+}
+
 /** Настройки вида раскладки, дополненные умолчаниями. */
 export function viewOf(layout) {
   return { ...defaultView(), ...cleanView(layout?.view) };

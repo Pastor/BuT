@@ -1534,14 +1534,19 @@ async function openFile(id, name) {
       }
     } else {
       hideConflict();
+      // Текст модели тот же, а раскладка черновика своя: автор двигал узлы и не
+      // сохранил. Без этой ветви черновик читался только при правленом тексте, и
+      // перезагрузка стирала расстановку, хотя черновик её хранил.
+      const layout = layoutFile.preferDraft(kept?.layout, state.layoutRead);
       host.open({
         source: body.text,
         file: name,
         kind: kindOf(name),
-        layout: state.layoutRead,
+        layout: layout.text,
         layoutFile: state.layoutFile,
         ...build(),
       });
+      if (layout.fromDraft) host.say(t("scheme.layoutFromDraft"), "warning");
     }
     refresh();
   } catch (error) {

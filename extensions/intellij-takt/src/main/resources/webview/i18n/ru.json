@@ -170,6 +170,7 @@
   "scheme.cornersSquare": "Углы прямые",
   "scheme.cornersRound": "Углы скруглённые",
   "scheme.crossing.hop": "Мостик",
+  "scheme.layoutFromDraft": "Схема взята из черновика",
   "scheme.crossing.gap": "Разрыв",
   "scheme.settings.crossing": "Пересечение линий",
   "scheme.entryHint": "Стрелка начального состояния: ведите по окружности",

@@ -170,6 +170,7 @@
   "scheme.cornersSquare": "Square corners",
   "scheme.cornersRound": "Rounded corners",
   "scheme.crossing.hop": "Bridge",
+  "scheme.layoutFromDraft": "Scheme restored from draft",
   "scheme.crossing.gap": "Gap",
   "scheme.settings.crossing": "Line crossings",
   "scheme.entryHint": "Start arrow: drag it around the circle",
