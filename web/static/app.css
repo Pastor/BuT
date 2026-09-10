@@ -625,6 +625,9 @@ body {
  * вправо - так она не спорит с именем за первый взгляд. */
 .row-pick { display: flex; align-items: center; gap: var(--gap-half); }
 .row-pick .row-text { flex: 1 1 auto; min-width: 0; }
+/* Выбранная строка - пара "выбранное", как файл в дереве и проект в списке:
+ * отметка `aria-pressed` без оформления оставляла выбор невидимым. */
+.row-pick[aria-pressed="true"] { background: var(--surface-yes); color: var(--on-surface-yes); }
 .row-drop { flex: none; }
 
 /* Действия над проектом: ряд кнопок над его составом. Место выбрано по
