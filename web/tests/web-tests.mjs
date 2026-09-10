@@ -238,6 +238,35 @@ test("прогон: длину задаёт число шагов страниц
   bridge.simClose(opened.id);
 });
 
+test("манифест приложения: адреса от бандла, иконки на месте и нужного размера", async () => {
+  // Манифест едет в бандл `b/<отпечаток>/`, а страница стоит двумя уровнями выше:
+  // `start_url` и `scope` считаются от адреса манифеста, и абсолютный `/` увёл бы
+  // приложение мимо префикса стенда (`/takt/`).
+  const base = new URL("../static/", import.meta.url);
+  const manifest = JSON.parse(await readFile(new URL("manifest.webmanifest", base), "utf8"));
+  assert.equal(manifest.start_url, "../../");
+  assert.equal(manifest.scope, "../../");
+  assert.equal(manifest.display, "standalone");
+  const html = await readFile(new URL("index.html", base), "utf8");
+  assert.match(html, /<link rel="manifest" href="manifest\.webmanifest">/);
+  // Для установки нужны растровые 192 и 512; маскируемая - своя, с полями.
+  const png = (manifest.icons ?? []).filter((icon) => icon.type === "image/png");
+  for (const need of ["192x192", "512x512"]) {
+    assert.ok(png.some((icon) => icon.sizes === need && icon.purpose !== "maskable"), `нет иконки ${need}`);
+  }
+  assert.ok(png.some((icon) => icon.purpose === "maskable"), "нет маскируемой иконки");
+  for (const icon of manifest.icons) {
+    const bytes = await readFile(new URL(icon.src, base));
+    if (icon.type !== "image/png") continue;
+    // Размер PNG - в заголовке IHDR: ширина и высота с 16-го байта.
+    const size = `${bytes.readUInt32BE(16)}x${bytes.readUInt32BE(20)}`;
+    assert.equal(size, icon.sizes, `${icon.src}: объявлено ${icon.sizes}, в файле ${size}`);
+  }
+  const apple = /<link rel="apple-touch-icon" href="([^"]+)">/.exec(html);
+  assert.ok(apple, "нет иконки для iOS");
+  await readFile(new URL(apple[1], base));
+});
+
 test("подсветка: каждая цель красит свой вывод", async () => {
   // У каждой из восьми целей разметка непуста и различает ключевое слово, число
   // и комментарий. Цель, забытая в таблице языков, показывала бы чёрный текст, и

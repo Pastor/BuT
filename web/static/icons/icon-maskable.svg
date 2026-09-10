@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Маскируемая иконка: фон во весь квадрат, знак ужат в безопасную зону (80 %). -->
+  <rect width="32" height="32" fill="#1f6f4a"/>
+  <g transform="translate(16 16) scale(0.8) translate(-16 -16)" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round">
+    <circle cx="9" cy="10" r="3.2"/>
+    <circle cx="23" cy="16" r="3.2"/>
+    <circle cx="9" cy="23" r="3.2"/>
+    <path d="M12 11.6 L20 14.6"/>
+    <path d="M20 17.6 L12 21"/>
+  </g>
+</svg>
