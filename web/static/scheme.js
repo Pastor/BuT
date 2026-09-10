@@ -776,12 +776,16 @@ export class Scheme {
       text.setAttribute("data-tip", tipOf(edge.mark, edge.cond, edge.alias));
       if (sheet.editable) {
         text.addEventListener("pointerdown", (event) => this.dragMark(event, sheet, edge, pts, text));
-        text.addEventListener("dblclick", (event) => {
-          event.stopPropagation();
+        const center = () => {
           const before = this.text();
           layoutFile.labelAt(this.layout, sheet.path, edge.key, "center");
           this.commit(before);
+        };
+        text.addEventListener("dblclick", (event) => {
+          event.stopPropagation();
+          center();
         });
+        this.onDoubleTap(text, `mark:${edge.key}`, center);
       }
     }
     if (sheet.editable) {
@@ -791,6 +795,10 @@ export class Scheme {
         group.appendChild(pin);
       });
       group.addEventListener("dblclick", (event) => this.addPinAt(event, sheet, edge, pts));
+      // Излом ставят касанием по самой линии: касание знака или ручки у них своё.
+      this.onDoubleTap(group, `edge:${edge.key}`, (event) => this.addPinAt(event, sheet, edge, pts), (event) =>
+        event.target.classList.contains("edge-hit") || event.target.classList.contains("edge"),
+      );
       if (!edge.loop) {
         for (const side of ["from", "to"]) group.appendChild(this.endPin(sheet, edge, pts, side));
       }
@@ -1247,6 +1255,33 @@ export class Scheme {
 
   // ── Тяга: узел, излом, знак, легенда ────────────────────────────────────
 
+  /**
+   * Двойное касание предмета листа - то же, что двойной щелчок.
+   *
+   * iPad не присылает `dblclick` на касание, и двойное касание узнаётся по двум
+   * касаниям подряд одного предмета: не дольше `DOUBLE_TAP_MS` и без сдвига
+   * пальца за порог тяги - иначе это перенос. Предмет называет `key`, а не
+   * элемент: между касаниями лист бывает перерисован. `accept` отсеивает касания
+   * вложенных предметов со своим двойным касанием (знак и ручки внутри ребра).
+   */
+  onDoubleTap(element, key, handler, accept = () => true) {
+    let start = null;
+    element.addEventListener("pointerdown", (event) => {
+      start = event.pointerType !== "mouse" && accept(event) ? { x: event.clientX, y: event.clientY } : null;
+    });
+    element.addEventListener("pointerup", (event) => {
+      const tap = start && Math.hypot(event.clientX - start.x, event.clientY - start.y) < geo.TOUCH_THRESHOLD;
+      start = null;
+      if (!tap) return;
+      if (doubleTap(this.lastTap, key, event.timeStamp)) {
+        this.lastTap = null;
+        handler(event);
+      } else {
+        this.lastTap = { name: key, at: event.timeStamp };
+      }
+    });
+  }
+
     /** Общий приём тяги: порог, движение, отпускание, отмена по Escape. */
   drag(event, { onStart, onMove, onEnd, onCancel }) {
     if (event.button) return;
@@ -1354,6 +1389,7 @@ export class Scheme {
       event.stopPropagation();
       set(null);
     });
+    this.onDoubleTap(pin, `end:${edge.key}:${side}`, () => set(null));
     pin.addEventListener("keydown", (event) => {
       const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[event.key];
       if (!step || !node) return;
