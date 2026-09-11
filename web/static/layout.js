@@ -69,7 +69,7 @@
 //
 // Знания о языке здесь нет: что есть на листе, говорит граф модуля (`takt_graph`).
 
-import { ENTRY_PORT, PORTS, composeSheet } from "./scheme-geometry.js";
+import { ENTRY_PORT, PORTS, autoPlace, composeSheet } from "./scheme-geometry.js";
 
 /** Версия формата файла. */
 export const FORMAT = 1;
@@ -541,6 +541,30 @@ export function reconcile(layout, graph) {
   const extraSheets = Object.keys(layout?.sheets ?? {}).filter((p) => !known.has(p)).sort();
   extras += extraSheets.length;
   return { sheets, extraSheets, extras };
+}
+
+/**
+ * Полная раскладка по графу: каждый узел каждого листа поставлен автоматически -
+ * лист модели по ярусам (`autoPlace`), лист композиции по форме выражения
+ * (`composeSheet`). Ровно то, что страница показывает при первом открытии, но
+ * записанное: сверка такой раскладки не находит неразмещённых.
+ *
+ * @param {{sheets: object[]}} graph ответ `takt_graph`
+ * @returns {object} новая раскладка
+ */
+export function placeAll(graph) {
+  const out = empty();
+  for (const sheetOfGraph of graph?.sheets ?? []) {
+    const placed = autoPlace(sheetOfGraph.nodes);
+    for (const node of sheetOfGraph.nodes) {
+      const at = placed[node.name];
+      if (at) place(out, sheetOfGraph.path, node.name, at.x, at.y);
+      if (!hasCompositionSheet(node.implements)) continue;
+      const key = compositionKey(sheetOfGraph.path, node.name);
+      for (const step of composeSheet(node.implements).nodes) place(out, key, step.name, step.x, step.y);
+    }
+  }
+  return out;
 }
 
 /** Сверка одного листа: узлы без записи, лишние узлы и лишние рёбра. */

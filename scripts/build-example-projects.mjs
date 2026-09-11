@@ -9,8 +9,10 @@
 //   `examples/` и `examples/include/`: без них проект на странице не соберётся;
 // - описание - `<имя>.md` из ведущего комментария модели: страница показывает
 //   пояснение рядом с моделью, а автор модели уже написал его в шапке файла;
-// - схема - `<имя>.takt-ui`, раскладка состояний по ярусам: ровно та, что страница
-//   строит сама при первом показе схемы, - той же функцией (`autoPlace`);
+// - схема - `<имя>.takt-ui`, раскладка каждого листа: состояния по ярусам, шаги
+//   листа композиции по форме выражения - ровно та, что страница строит сама при
+//   первом показе схемы, той же функцией (`layout.placeAll`). Файл полон: в нём
+//   нет неразмещённых узлов, и экспорт по нему не отказывает;
 // - сценарии прогона - `examples/simulations/<имя>.json` и `<имя>_*.json`: по
 //   правилу имени они принадлежат модели и выбираются в окне сценариев.
 //
@@ -41,7 +43,6 @@ import { crc32, deflateRawSync, inflateRawSync } from "node:zlib";
 
 import { Bridge } from "../web/static/bridge.js";
 import * as layout from "../web/static/layout.js";
-import * as geo from "../web/static/scheme-geometry.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const EXAMPLES = join(ROOT, "examples");
@@ -226,17 +227,9 @@ function firstLine(source) {
   return match ? match[1].trim().slice(0, 200) : null;
 }
 
-/** Схема: раскладка каждого листа по ярусам той же функцией, что у страницы. */
+/** Схема: полная раскладка всех листов той же функцией, что у страницы. */
 function scheme(sheets) {
-  const result = layout.empty();
-  for (const sheet of sheets) {
-    const placed = geo.autoPlace(sheet.nodes);
-    for (const node of sheet.nodes) {
-      const at = placed[node.name];
-      if (at) layout.place(result, sheet.path, node.name, at.x, at.y);
-    }
-  }
-  return layout.canonical(result);
+  return layout.canonical(layout.placeAll({ sheets }));
 }
 
 /**

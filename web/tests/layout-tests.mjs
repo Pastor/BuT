@@ -873,7 +873,15 @@ test("граф: модуль отдаёт листы лифта, а страни
   // Раскладка сверяется с настоящим графом: свежая - все не размещены, лишнего нет.
   const report = layout.reconcile(layout.empty(), graph);
   assert.equal(report.sheets.Engine.unplaced.length, 5);
+  assert.equal(report.sheets["/#Middle"].unplaced.length, 6, "лист композиции сверяется по шагам");
   assert.equal(report.extras, 0);
+  // Полная раскладка - та, что пишет скрипт примеров: каждый лист, включая лист
+  // композиции, записан, и сверка не находит ни неразмещённых, ни лишнего.
+  const full = layout.placeAll(graph);
+  assert.equal(Object.keys(full.sheets["/#Middle"].nodes).length, 6, "шесть шагов лифта записаны");
+  const complete = layout.reconcile(full, graph);
+  for (const [key, found] of Object.entries(complete.sheets)) assert.deepEqual(found.unplaced, [], `лист ${key} полон`);
+  assert.equal(complete.extras, 0);
   // Ярусы лифта раскладываются без наложений: центры узлов различны.
   const placed = geo.autoPlace(engine.nodes);
   assert.equal(new Set(Object.values(placed).map((p) => `${p.x}:${p.y}`)).size, 5);
