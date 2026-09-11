@@ -1,0 +1,19 @@
+[package]
+name = "takt-scheme"
+version = "0.1.0"
+authors = ["Pastor <viruszold@gmail.com>"]
+description = "Takt — учебный DSL конечных автоматов: схема модели вне страницы — раскладка, геометрия, чертёж. Язык сделан в учебных целях и показывает принципы автоматного подхода к разработке"
+homepage = "https://but.ru"
+repository = "https://github.com/Pastor/Takt"
+readme = "../README.md"
+keywords = ["Takt", "scheme", "diagram"]
+license = "BSD"
+edition = "2024"
+# MSRV: проверено на пине толчейна (rust-toolchain.toml).
+rust-version = "1.97"
+include = ["Cargo.toml", "src/**/*", "README.md", "LICENSE*"]
+
+[dependencies]
+takt-lang = { path = "../takt-lang" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

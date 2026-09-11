@@ -1565,6 +1565,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "takt-scheme"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "takt-lang",
+]
+
+[[package]]
 name = "takt-sim"
 version = "0.15.0"
 dependencies = [
@@ -1592,6 +1601,7 @@ dependencies = [
  "serde",
  "serde_json",
  "takt-lang",
+ "takt-scheme",
  "takt-sim",
 ]
 

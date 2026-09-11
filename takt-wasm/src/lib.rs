@@ -266,6 +266,31 @@ pub extern "C" fn takt_graph(len: u32) -> u32 {
     call(len, |r: SourceRequest| graph::graph(&r.source))
 }
 
+/// Запрос рисунка схемы: текст модели и файла раскладки.
+#[derive(Debug, Deserialize)]
+struct SchemeRequest {
+    source: String,
+    layout: String,
+}
+
+/// Рисунок всех листов в числах - тот, что чертёж возьмёт у носителя схемы.
+///
+/// Страница сверяет его со своим холстом: геометрия живёт в двух языках, и
+/// расхождение иначе дошло бы до картинки молча.
+#[unsafe(no_mangle)]
+pub extern "C" fn takt_scheme_geometry(len: u32) -> u32 {
+    call(
+        len,
+        |r: SchemeRequest| match takt_scheme::drawn::geometry_json(&r.source, &r.layout) {
+            Ok(json) => {
+                let sheets: serde_json::Value = serde_json::from_str(&json).unwrap_or_default();
+                reply::ok(serde_json::json!({ "sheets": sheets }))
+            }
+            Err(message) => reply::refused(message),
+        },
+    )
+}
+
 /// Запрос открытия прогона.
 #[derive(Debug, Deserialize)]
 struct SimOpenRequest {
