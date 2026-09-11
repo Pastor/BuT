@@ -73,6 +73,10 @@ cargo test <имя>                                # один тест по им
 
 # Прогон всех симуляций из examples/simulations/
 ./scripts/run_simulations.sh
+
+# Экспорт схемы и видео прогона по файлам раскладки (проект: каталог, .zip, модель)
+cargo run --bin takt-sim -- export <проект> --format svg --format png
+cargo run --bin takt-sim -- project <проект>   # состав проекта для скриптов
 ```
 
 **Толчейн и CI** описаны один раз — в разделе «Документ и процесс»: пин
