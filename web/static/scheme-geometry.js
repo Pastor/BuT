@@ -604,17 +604,31 @@ function longestIndex(pts) {
  * @returns {number} индекс начала сегмента
  */
 export function nearestSegment(pts, p) {
-  let best = 0;
+  return nearestOnLine(pts, p).at;
+}
+
+/**
+ * Ближайшая к точке точка ломаной и номер её сегмента.
+ *
+ * Излом кнопкой встаёт туда, где ребро выделили: касание ложится рядом с линией
+ * (полоса нажатия шире штриха), и точка опускается на саму линию - иначе новое
+ * звено сразу давало бы изгиб, которого автор не просил.
+ *
+ * @returns {{at: number, point: number[]}} индекс начала сегмента и точка на нём
+ */
+export function nearestOnLine(pts, p) {
+  let best = { at: 0, point: pts[0] };
   let bestDist = Infinity;
   for (let i = 1; i < pts.length; i += 1) {
     const a = pts[i - 1];
     const b = pts[i];
     const len2 = (b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2 || 1;
     const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * (b[0] - a[0]) + (p[1] - a[1]) * (b[1] - a[1])) / len2));
-    const d = Math.hypot(a[0] + (b[0] - a[0]) * t - p[0], a[1] + (b[1] - a[1]) * t - p[1]);
+    const point = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    const d = Math.hypot(point[0] - p[0], point[1] - p[1]);
     if (d < bestDist) {
       bestDist = d;
-      best = i - 1;
+      best = { at: i - 1, point };
     }
   }
   return best;

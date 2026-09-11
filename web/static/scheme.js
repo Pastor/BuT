@@ -803,9 +803,29 @@ export class Scheme {
         for (const side of ["from", "to"]) group.appendChild(this.endPin(sheet, edge, pts, side));
       }
     }
+    // Место, где ребро выделили по линии, запоминается: туда кнопка панели ставит
+    // излом. Помнится точка листа, а не элемент - лист между касанием и кнопкой
+    // бывает перерисован.
+    const choose = (event) => {
+      if (event.target.classList.contains("edge-hit") || event.target.classList.contains("edge")) {
+        this.edgeSpot = { key: edge.key, at: this.sheetPoint(event, false) };
+      }
+      if (this.selectedEdge !== edge.key || this.selected) this.selectEdge(edge.key);
+    };
     group.addEventListener("click", (event) => {
       event.stopPropagation();
-      this.selectEdge(edge.key);
+      choose(event);
+    });
+    // Щелчок после касания iPad присылает не всегда (см. кнопку входа в квадрат):
+    // ребро выделяется и отпусканием пальца без сдвига.
+    let down = null;
+    group.addEventListener("pointerdown", (event) => {
+      down = event.pointerType === "mouse" ? null : { x: event.clientX, y: event.clientY };
+    });
+    group.addEventListener("pointerup", (event) => {
+      const tap = down && Math.hypot(event.clientX - down.x, event.clientY - down.y) < geo.TOUCH_THRESHOLD;
+      down = null;
+      if (tap) choose(event);
     });
     this.dom.sheet.appendChild(group);
   }
@@ -1235,11 +1255,12 @@ export class Scheme {
     this.draw();
   }
 
-  /** Точка листа под указателем с привязкой к сетке. */
-  sheetPoint(event) {
+  /** Точка листа под указателем; `snap` - с привязкой к сетке. */
+  sheetPoint(event, snap = true) {
     const box = this.dom.scheme.getBoundingClientRect();
     const sheet = this.current();
     const [x, y] = geo.toSheet(this.view, event.clientX - box.left, event.clientY - box.top);
+    if (!snap) return [x + sheet.ox, y + sheet.oy];
     return [this.snapped(x + sheet.ox), this.snapped(y + sheet.oy)];
   }
 
@@ -1531,11 +1552,12 @@ export class Scheme {
   }
 
   /**
-   * Звено кнопкой панели: на середину самого длинного сегмента выбранного ребра.
+   * Звено кнопкой панели: туда, где выбранное ребро выделили.
    *
-   * Точка ложится ровно на линию - изгиба она пока не даёт и живёт, пока ребро в
-   * фокусе. Автор ведёт её туда, где линии нужен угол; оставит на месте - звено
-   * снимется само, когда фокус уйдёт.
+   * Место касания опускается на линию - изгиба точка пока не даёт и живёт, пока
+   * ребро в фокусе. Автор ведёт её туда, где линии нужен угол; оставит на месте -
+   * звено снимется само, когда фокус уйдёт. Места нет (ребро выбрано клавиатурой
+   * либо место уже занято прошлым нажатием) - середина самого длинного сегмента.
    */
   pinByButton() {
     const sheet = this.current();
@@ -1545,8 +1567,13 @@ export class Scheme {
     const from = sheet.nodes.find((n) => n.name === edge.from);
     const to = sheet.nodes.find((n) => n.name === edge.to);
     const pts = this.routes?.get(edge.key) ?? geo.route(from, edge.loop ? from : to, edge.points);
-    const [mx, my] = geo.longestMid(pts);
-    layoutFile.bend(this.layout, sheet.path, edge.key, [...edge.points, [this.snapped(mx), this.snapped(my)]]);
+    const spot = this.edgeSpot?.key === edge.key && !edge.loop ? this.edgeSpot.at : null;
+    this.edgeSpot = null;
+    const { at, point } = geo.nearestOnLine(pts, spot ?? geo.longestMid(pts));
+    const points = [...edge.points];
+    // Петля строится без изломов автора, и сегмент её ломаной на них не ложится.
+    points.splice(edge.loop ? points.length : at, 0, [this.snapped(point[0]), this.snapped(point[1])]);
+    layoutFile.bend(this.layout, sheet.path, edge.key, points);
     this.commit(before);
   }
 
@@ -1595,8 +1622,15 @@ export class Scheme {
       // Второй палец уже на холсте - это щипок, а не панорама.
       if (touches.size > 1) return;
       const start = { x: event.clientX, y: event.clientY, vx: this.view.x, vy: this.view.y };
+      const threshold = event.pointerType === "mouse" ? geo.DRAG_THRESHOLD : geo.TOUCH_THRESHOLD;
+      let moved = false;
       scheme.classList.add("dragging");
       const move = (e) => {
+        // Панорама начинается за порогом тяги: палец на iPad дрожит всегда, и
+        // перерисовка на каждое движение пересоздавала предмет под пальцем -
+        // касание ребра не доходило ни до выбора, ни до двойного касания.
+        if (!moved && Math.hypot(e.clientX - start.x, e.clientY - start.y) < threshold) return;
+        moved = true;
         this.view = { k: this.view.k, x: start.vx + e.clientX - start.x, y: start.vy + e.clientY - start.y };
         this.draw();
       };

@@ -369,6 +369,9 @@ test("геометрия: ломаная ребра, пересечение мо
   assert.deepEqual(geo.markSpot({ place: "end" }, line), [76, 40]);
   assert.deepEqual(geo.markSpot({ place: "own", x: 8, y: 16 }, line), [8, 16]);
   assert.equal(geo.nearestSegment(line, [60, 38]), 1, "излом встаёт в ближайший сегмент");
+  // Касание рядом с линией опускается на неё: звено кнопкой изгиба не даёт.
+  assert.deepEqual(geo.nearestOnLine(line, [60, 46]), { at: 1, point: [60, 40] });
+  assert.deepEqual(geo.nearestOnLine(line, [-5, 10]), { at: 0, point: [0, 10] });
   assert.equal(geo.snap(13), 16);
 });
 
