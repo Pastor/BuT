@@ -1,0 +1,91 @@
+{
+  "corners": "square",
+  "format": 1,
+  "sheets": {
+    "/": {
+      "edges": {},
+      "names": {},
+      "nodes": {
+        "End": {
+          "x": 72,
+          "y": 600
+        },
+        "Main": {
+          "x": 72,
+          "y": 120
+        },
+        "Middle": {
+          "x": 72,
+          "y": 384
+        }
+      }
+    },
+    "/#Middle": {
+      "edges": {},
+      "names": {},
+      "nodes": {
+        "Engine#1": {
+          "x": 144,
+          "y": 288
+        },
+        "Engine#2": {
+          "x": 384,
+          "y": 192
+        },
+        "Engine#3": {
+          "x": 384,
+          "y": 384
+        },
+        "Engine#4": {
+          "x": 624,
+          "y": 288
+        },
+        "Engine#5": {
+          "x": 816,
+          "y": 288
+        },
+        "Engine#6": {
+          "x": 1008,
+          "y": 288
+        }
+      }
+    },
+    "Engine": {
+      "edges": {
+        "Idle>DoorClosing:0": {
+          "label": {
+            "place": "start"
+          }
+        }
+      },
+      "names": {
+        "Idle": "Ожидание"
+      },
+      "nodes": {
+        "DoorClosing": {
+          "x": 144,
+          "y": 192
+        },
+        "DoorOpening": {
+          "x": 144,
+          "y": 432
+        },
+        "Idle": {
+          "x": 144,
+          "y": 72
+        },
+        "MovingDown": {
+          "x": 72,
+          "y": 312
+        },
+        "MovingUp": {
+          "x": 216,
+          "y": 312
+        }
+      }
+    }
+  },
+  "legend": {
+    "place": "right"
+  }
+}

@@ -200,3 +200,53 @@ test("паритет: неполная раскладка - отказ, назв
   assert.match(reply.error.message, /не размещены узлы/);
   assert.match(reply.error.message, /Engine — /);
 });
+
+test("паритет: подсветка прогона у холста и чертежа одна на каждом такте", async () => {
+  const run = await import("../static/scheme-run.js");
+  const bridge = await loadBridge();
+  const read = (url) => readFile(url, "utf8");
+  const cases = [
+    { source: await read(new URL("elevator.takt", EXAMPLES)), files: {}, ticks: 40 },
+    { source: await read(new URL("pid_heater.takt", EXAMPLES)), files: { "pid_law.takt": await read(new URL("pid_law.takt", EXAMPLES)) }, ticks: 40 },
+    { source: await read(new URL("../../takt-scheme/tests/data/line.takt", import.meta.url)), files: {}, ticks: 30 },
+  ];
+  const problems = [];
+  let compared = 0;
+  let lit = 0;
+  for (const { source, files, ticks } of cases) {
+    const graph = bridge.graph(source);
+    const stored = layoutFile.placeAll(graph);
+    const scheme = await canvas(graph, stored);
+    const opened = bridge.simOpen(source, "", 0, files, ticks);
+    assert.equal(opened.ok, true, JSON.stringify(opened));
+    const reply = bridge.simTick(opened.id, ticks);
+    assert.equal(reply.ok, true, JSON.stringify(reply));
+    reply.active.forEach((active, i) => {
+      const next = reply.next[i] ?? [];
+      const rust = bridge.schemeGeometry(source, layoutFile.canonical(stored), { active, next });
+      assert.equal(rust.ok, true, JSON.stringify(rust.error));
+      const byKey = new Map(rust.sheets.map((s) => [s.key, s.lit]));
+      for (const level of levels(graph)) {
+        const sheet = scheme.sheetOf(level);
+        const mine = run.sheetRun(sheet, { active, next }, run.placeOf(sheet, graph));
+        const theirs = byKey.get(sheet.key);
+        const shape = (l) => ({
+          running: [...l.running].sort(),
+          expected: [...l.expected].sort(),
+          reachable: [...l.reachable].sort(),
+          next_edges: [...(l.nextEdges ?? l.next_edges)].sort(),
+          counts: Object.fromEntries([...(l.counts instanceof Map ? l.counts : Object.entries(l.counts))].sort()),
+        });
+        compared += 1;
+        if (mine.running.size) lit += 1;
+        try {
+          assert.deepEqual(shape(theirs), shape(mine));
+        } catch {
+          problems.push(`такт ${i + 1} ${sheet.key}: холст ${JSON.stringify(shape(mine))}, чертёж ${JSON.stringify(shape(theirs))}`);
+        }
+      }
+    });
+  }
+  assert.ok(compared >= 100 && lit >= 50, `выборка мала: сверено ${compared}, горящих ${lit}`);
+  assert.deepEqual(problems.slice(0, 10), [], `расхождений ${problems.length}`);
+});

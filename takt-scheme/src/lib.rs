@@ -4,7 +4,11 @@
 //! который правит страница; своей раскладки у носителя нет.
 
 pub mod drawn;
+pub mod fonts;
 pub mod geometry;
 pub mod js;
 pub mod layout;
+pub mod run;
 pub mod sheet;
+pub mod style;
+pub mod svg;

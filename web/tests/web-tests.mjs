@@ -47,6 +47,7 @@ import * as api from "../static/api.js";
 // Файл раскладки и граф модуля - своим набором.
 import "./layout-tests.mjs";
 import "./scheme-parity-tests.mjs";
+import "./scheme-style-tests.mjs";
 
 const MODEL = `var level: u8 := 0;
 

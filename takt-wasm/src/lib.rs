@@ -271,6 +271,9 @@ pub extern "C" fn takt_graph(len: u32) -> u32 {
 struct SchemeRequest {
     source: String,
     layout: String,
+    /// Такт прогона: с ним ответ несёт и подсветку каждого листа.
+    #[serde(default)]
+    tick: Option<takt_scheme::run::Tick>,
 }
 
 /// Рисунок всех листов в числах - тот, что чертёж возьмёт у носителя схемы.
@@ -281,7 +284,11 @@ struct SchemeRequest {
 pub extern "C" fn takt_scheme_geometry(len: u32) -> u32 {
     call(
         len,
-        |r: SchemeRequest| match takt_scheme::drawn::geometry_json(&r.source, &r.layout) {
+        |r: SchemeRequest| match takt_scheme::drawn::geometry_json(
+            &r.source,
+            &r.layout,
+            r.tick.as_ref(),
+        ) {
             Ok(json) => {
                 let sheets: serde_json::Value = serde_json::from_str(&json).unwrap_or_default();
                 reply::ok(serde_json::json!({ "sheets": sheets }))

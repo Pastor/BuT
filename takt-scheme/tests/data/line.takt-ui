@@ -1,0 +1,60 @@
+{
+  "corners": "square",
+  "format": 1,
+  "sheets": {
+    "/": {
+      "edges": {},
+      "names": {},
+      "nodes": {
+        "Finished": {
+          "x": 72,
+          "y": 336
+        },
+        "Line": {
+          "x": 72,
+          "y": 120
+        }
+      }
+    },
+    "/#Line": {
+      "edges": {},
+      "names": {},
+      "nodes": {
+        "Heater#1": {
+          "x": 144,
+          "y": 288
+        },
+        "Heater#2": {
+          "x": 384,
+          "y": 192
+        },
+        "Heater#3": {
+          "x": 384,
+          "y": 384
+        },
+        "Heater#4": {
+          "x": 624,
+          "y": 288
+        }
+      }
+    },
+    "Heater": {
+      "edges": {},
+      "names": {},
+      "nodes": {
+        "Done": {
+          "x": 72,
+          "y": 312
+        },
+        "Heating": {
+          "x": 72,
+          "y": 72
+        },
+        "Holding": {
+          "x": 72,
+          "y": 192
+        }
+      }
+    }
+  }
+}

@@ -32,6 +32,9 @@ pub struct DrawNode {
     pub mark: String,
     /// Модель шага листа композиции - ею шаг и называется в легенде.
     pub model: Option<String>,
+    /// Дерево реализации: у шага композиции - его модель, у состояния с
+    /// реализацией - её выражение. По нему находится лист миниатюры.
+    pub implements: Option<Implement>,
 }
 
 impl DrawNode {
@@ -75,6 +78,12 @@ pub struct DrawSheet {
     pub title: String,
     /// Лист композиции (путь модели у него не хранится).
     pub composition: bool,
+    /// Путь листа модели; у листа композиции - путь листа-владельца.
+    pub owner_path: String,
+    /// Модель листа по пути `owner_path`.
+    pub model_name: String,
+    /// Состояние-владелец у листа композиции.
+    pub owner: Option<String>,
     pub nodes: Vec<DrawNode>,
     pub edges: Vec<DrawEdge>,
     pub frames: Vec<Frame>,
@@ -100,7 +109,7 @@ impl std::fmt::Display for Unplaced {
     }
 }
 
-/// Имя листа для человека: корень - «корень», лист композиции - через `/`.
+/// Имя листа для человека: корень - слово "корень", лист композиции - через `/`.
 fn shown(key: &str) -> String {
     let (owner, state) = key
         .split_once('#')
@@ -131,12 +140,7 @@ pub fn sheets(graph: &Graph, layout: &Layout) -> Result<Vec<DrawSheet>, Unplaced
             if let Some(implement) = &node.implements
                 && !matches!(implement, Implement::Model { .. })
             {
-                check(composition_sheet(
-                    &found.path,
-                    &node.name,
-                    implement,
-                    layout,
-                ));
+                check(composition_sheet(found, &node.name, implement, layout));
             }
         }
     }
@@ -177,6 +181,7 @@ fn model_sheet(
                 alias: stored.names.get(&n.name).cloned().unwrap_or_default(),
                 mark: format!("S{}", i + 1),
                 model: None,
+                implements: n.implements.clone(),
             }
         })
         .collect();
@@ -228,11 +233,28 @@ fn model_sheet(
         key,
         title,
         composition: false,
+        owner_path: found.path.clone(),
+        model_name: found.name.clone(),
+        owner: None,
         nodes,
         edges,
         frames: Vec::new(),
         size,
     })
+}
+
+/// Путь листа модели `name` по листьям выражения; `None` - модель не объявлена в
+/// этом файле.
+fn model_path(implement: &Implement, name: &str) -> Option<String> {
+    match implement {
+        Implement::Model {
+            name: own, path, ..
+        } => (own == name).then(|| path.clone()).flatten(),
+        Implement::Chain(items) | Implement::Parallel(items) => {
+            items.iter().find_map(|i| model_path(i, name))
+        }
+        Implement::Group(inner) => model_path(inner, name),
+    }
 }
 
 /// Дерево реализации в форме геометрии.
@@ -246,12 +268,12 @@ pub fn tree_of(implement: &Implement) -> Tree<'_> {
 }
 
 fn composition_sheet(
-    path: &str,
+    found: &takt_lang::layout::Sheet,
     state: &str,
     implement: &Implement,
     layout: &Layout,
 ) -> Result<DrawSheet, (String, Vec<String>)> {
-    let key = composition_key(path, state);
+    let key = composition_key(&found.path, state);
     let stored = layout.sheets.get(&key).cloned().unwrap_or_default();
     let tree = tree_of(implement);
     let (steps, links) = compose(&tree);
@@ -277,6 +299,13 @@ fn composition_sheet(
                 alias: stored.names.get(name).cloned().unwrap_or_default(),
                 mark: format!("S{}", i + 1),
                 model: Some(model.clone()),
+                // Вход в шаг ведёт на лист его модели - если она объявлена в этом
+                // файле; у модели из подключаемого файла листа нет.
+                implements: model_path(implement, model).map(|path| Implement::Model {
+                    name: model.clone(),
+                    path: Some(path),
+                    loc: takt_lang::diagnostics::Location::Implicit,
+                }),
             }
         })
         .collect();
@@ -313,6 +342,9 @@ fn composition_sheet(
         key,
         title: state.to_string(),
         composition: true,
+        owner_path: found.path.clone(),
+        model_name: found.name.clone(),
+        owner: Some(state.to_string()),
         nodes,
         edges,
         frames,

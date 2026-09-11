@@ -145,14 +145,53 @@ pub fn drawn(sheet: &DrawSheet, layout: &Layout) -> Drawn {
     }
 }
 
-/// Рисунок всех листов модели в JSON: ответ сверки паритета с холстом.
+/// Лист в числах и, если дан такт, что на нём горит.
+#[derive(Debug, Serialize)]
+struct SheetJson {
+    #[serde(flatten)]
+    drawn: Drawn,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    lit: Option<LitJson>,
+}
+
+/// Подсветка листа в форме сверки.
+#[derive(Debug, Serialize)]
+struct LitJson {
+    running: Vec<String>,
+    expected: Vec<String>,
+    reachable: Vec<String>,
+    next_edges: Vec<String>,
+    counts: std::collections::BTreeMap<String, usize>,
+}
+
+/// Рисунок всех листов модели в JSON: ответ сверки паритета с холстом. С тактом -
+/// и подсветка каждого листа по правилу прогона.
 ///
 /// # Ошибки
 /// Текст модели не разбирается, файл раскладки не читается либо неполон.
-pub fn geometry_json(source: &str, layout_text: &str) -> Result<String, String> {
+pub fn geometry_json(
+    source: &str,
+    layout_text: &str,
+    tick: Option<&crate::run::Tick>,
+) -> Result<String, String> {
     let graph = takt_lang::layout::graph_of(source).map_err(|d| d.message.clone())?;
     let layout = crate::layout::parse(layout_text).map_err(|e| e.0)?;
     let sheets = crate::sheet::sheets(&graph, &layout).map_err(|e| e.to_string())?;
-    let all: Vec<Drawn> = sheets.iter().map(|s| drawn(s, &layout)).collect();
+    let all: Vec<SheetJson> = sheets
+        .iter()
+        .map(|s| SheetJson {
+            drawn: drawn(s, &layout),
+            lit: tick.map(|t| {
+                let lit = crate::run::sheet_run(s, t);
+                LitJson {
+                    running: lit.running.into_iter().collect(),
+                    expected: lit.expected.into_iter().collect(),
+                    reachable: lit.reachable.into_iter().collect(),
+                    next_edges: lit.next_edges.into_iter().collect(),
+                    counts: lit.counts,
+                }
+            }),
+        })
+        .collect();
     serde_json::to_string(&all).map_err(|e| e.to_string())
 }

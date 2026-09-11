@@ -523,6 +523,12 @@ $CARGO_CMD build -p takt-sim --no-default-features --lib
 "$(dirname "$0")/test-check-design.sh"
 "$(dirname "$0")/check-design.py"
 
+# Шаг: шрифты чертежа схемы (`takt-scheme/fonts/`) совпадают со шрифтами листа
+# страницы - картинка экспорта набирается теми же глифами, что холст. Сначала
+# самопроверка на порченом шрифте, затем сверка.
+python3 "$(dirname "$0")/check-scheme-fonts.py" --self-test
+python3 "$(dirname "$0")/check-scheme-fonts.py"
+
 # Шаг: сервер проектов - код, вход, хранилище.
 # Половина предмета шага требует PostgreSQL (
 # заменило SQLite): без `TAKT_WEB_TEST_DB` проверки хранилища и HTTP

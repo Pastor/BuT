@@ -125,8 +125,8 @@ export class Bridge {
   }
 
   /** Рисунок всех листов в числах - тот, что возьмёт чертёж; для сверки с холстом. */
-  schemeGeometry(source, layout) {
-    return this.call("takt_scheme_geometry", { source, layout });
+  schemeGeometry(source, layout, tick = null) {
+    return this.call("takt_scheme_geometry", { source, layout, tick });
   }
 
   simOpen(source, scenario, tickMs, files = {}, steps = null) {

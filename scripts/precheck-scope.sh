@@ -67,6 +67,11 @@ if has '^web/'; then
   run python3 "$ROOT/scripts/check-design.py"
 fi
 
+if has '^web/static/font/' || has '^takt-scheme/fonts/'; then
+  run python3 "$ROOT/scripts/check-scheme-fonts.py" --self-test
+  run python3 "$ROOT/scripts/check-scheme-fonts.py"
+fi
+
 if has '^extensions/' || has '^web/static/' ; then
   run python3 "$ROOT/scripts/check-zed-config.py"
   run "$ROOT/scripts/check-zed-extension.sh"

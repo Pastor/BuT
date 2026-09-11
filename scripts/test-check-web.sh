@@ -84,6 +84,11 @@ cp "$ROOT/book/takt.tmTheme" "$TREE/book/"
 # причиной.
 mkdir -p "$TREE/examples"
 cp "$ROOT"/examples/*.takt "$TREE/examples/"
+# Оформление и фикстура чертежа: сверка таблицы носителя с `app.css` читает
+# `style.rs`, сверка подсветки гоняет модель из фикстур крейта.
+mkdir -p "$TREE/takt-scheme/src" "$TREE/takt-scheme/tests/data"
+cp "$ROOT/takt-scheme/src/style.rs" "$TREE/takt-scheme/src/"
+cp "$ROOT/takt-scheme/tests/data/line.takt" "$TREE/takt-scheme/tests/data/"
 cp "$WASM" "$TREE/target/precheck/wasm32-unknown-unknown/$PROFILE/"
 
 run_gate() {  # запускает гейт на копии дерева

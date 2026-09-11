@@ -11,9 +11,13 @@ license = "BSD"
 edition = "2024"
 # MSRV: проверено на пине толчейна (rust-toolchain.toml).
 rust-version = "1.97"
-include = ["Cargo.toml", "src/**/*", "README.md", "LICENSE*"]
+include = ["Cargo.toml", "src/**/*", "fonts/**/*", "README.md", "LICENSE*"]
 
 [dependencies]
 takt-lang = { path = "../takt-lang" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# Метрики вшитых шрифтов: ширина подписи легенды и обрезка по колонке считаются по
+# таблице `hmtx` того же файла, которым набран чертёж.
+ttf-parser = { version = "0.25.1", default-features = false, features = ["std"] }
+base64 = "0.22.1"
