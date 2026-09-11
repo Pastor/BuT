@@ -25,17 +25,15 @@ pub(crate) mod anon_cell;
 mod context;
 pub(crate) mod eval;
 pub(crate) mod expression;
+/// Кадры прогона: такт эталона - цветной вид листа по файлу раскладки.
 #[cfg(feature = "graphics")]
-pub(crate) mod gif;
-pub mod graphics_config;
+pub mod film;
 pub mod json_input;
 /// Реестр имён портов и переменных модели.
 pub mod port_names;
 mod predicate;
 pub mod runner;
 pub mod state_io;
-#[cfg(feature = "graphics")]
-pub(crate) mod svg;
 /// Трасса прогона строками: шаг и сводка.
 pub mod trace;
 mod unit;

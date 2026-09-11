@@ -21,3 +21,25 @@ serde_json = "1"
 # таблице `hmtx` того же файла, которым набран чертёж.
 ttf-parser = { version = "0.25.1", default-features = false, features = ["std"] }
 base64 = "0.22.1"
+# Растр: PNG чертежа и кадры видео. Без системных шрифтов и без картинок внутри SVG -
+# начертания растеризатор получает вшитыми байтами, и картинка не зависит от машины.
+resvg = { version = "0.47.0", default-features = false, features = ["text"], optional = true }
+# Видео прогона: GIF и AV1 в MP4. `rav1e` без ассемблера и потоков - вывод одинаков у
+# командной строки и модуля под браузер. `v_frame` закреплён прямой зависимостью:
+# 0.3.9 и новее под `wasm32-unknown-unknown` безусловно тянут `wasm-bindgen`, и модуль
+# получил бы импорты, на которые страница и сервер не рассчитаны. `rav1e` 0.8 требует
+# именно такой `v_frame`, поэтому и он закреплён на 0.7.
+gif = { version = "0.14.2", optional = true }
+rav1e = { version = "=0.7.1", default-features = false, optional = true }
+v_frame = { version = "=0.3.7", optional = true }
+
+[dev-dependencies]
+# Чтение растра и видео обратно в тестах.
+png = "0.18"
+gif = "0.14.2"
+
+[features]
+# PNG чертежа.
+raster = ["dep:resvg"]
+# GIF и MP4 прогона: кадр растеризуется тем же носителем, что PNG.
+video = ["raster", "dep:gif", "dep:rav1e", "dep:v_frame"]

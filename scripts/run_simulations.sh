@@ -46,8 +46,6 @@ for sim_file in "$SIM_DIR"/*.json; do
     [[ "$candidate" == *_* ]] || break
     candidate="${candidate%_*}"
   done
-  output_path="$ROOT/examples/simulations/graphics"
-  config_file="$ROOT/examples/graphics-configs/default_svg.json"
 
   if [[ -z "$takt_file" ]]; then
     echo "[ ПРОПУСК ] $base  (не найден ${model}.takt)"
@@ -60,9 +58,10 @@ for sim_file in "$SIM_DIR"/*.json; do
   step_arg=""
   [[ -n "$n_steps" ]] && step_arg="-n $n_steps"
 
-  # Запуск симуляции
+  # Запуск симуляции. Кадров скрипт не пишет: GIF прогона рисуется по файлу
+  # раскладки `.takt-ui`, а у примеров его в дереве нет.
   # shellcheck disable=SC2086
-  if output="$("$BINARY" "$takt_file" -s "$sim_file" -o "$output_path" --graphics-config $config_file $step_arg 2>&1)"; then
+  if output="$("$BINARY" "$takt_file" -s "$sim_file" $step_arg 2>&1)"; then
     echo "[  OK  ] $base"
     ((pass++)) || true
   else

@@ -5,9 +5,7 @@
 //! `-n` короче сценария по-прежнему усекает прогон. Иначе правка молча сменила бы два
 //! поведения вместо одного.
 
-use std::path::PathBuf;
 use takt_lang::semantic::tree::construct_model;
-use takt_sim::graphics_config::{GraphicsConfig, OutputMode};
 use takt_sim::json_input::SimStep;
 use takt_sim::runner::{PortNames, RunResult, SimulationRunner};
 use takt_sim::{Value, build_unit};
@@ -33,18 +31,7 @@ fn run(scenario: &str, steps: Option<usize>) -> (RunResult, i128) {
     let names = PortNames::from_model(&model.borrow());
     let steps_json: Vec<SimStep> = serde_json::from_str(scenario).expect("разбор сценария");
 
-    let mut runner = SimulationRunner::new(
-        unit,
-        steps_json,
-        steps,
-        None::<&PathBuf>,
-        "test",
-        OutputMode::Gif,
-        names,
-        None,
-        GraphicsConfig::default(),
-    )
-    .expect("создание бегуна");
+    let mut runner = SimulationRunner::new(unit, steps_json, steps, names);
     let outcome = runner.run().expect("прогон");
     let ticks = match runner.unit().variable("ticks") {
         Some(Value::Number(n)) => n,

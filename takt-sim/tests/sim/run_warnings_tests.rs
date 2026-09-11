@@ -26,17 +26,8 @@ fn library_does_not_print() {
     // Разрешённые места названы поимённо, а не оговоркой про исключения:
     //
     // - `bin/` - это и есть вызывающий;
-    // - `runner/mod.rs` - там живёт `run`, цикл печати трассы;
-    // - `runner/graphics.rs` - печать замеров времени на кадр, и она вне предмета
-    //   правила: это не диагностика и не вывод модели, а замер работы самого
-    //   инструмента, включаемый флагом кадров. Потребителя без консоли у него нет -
-    //   модуль под браузер собирается без фичи `graphics` вовсе. Класс назван
-    //   отдельной записью в бэклоге и в объём этой работы не входит.
-    let allowed = [
-        PathBuf::from("bin"),
-        PathBuf::from("runner").join("mod.rs"),
-        PathBuf::from("runner").join("graphics.rs"),
-    ];
+    // - `runner/mod.rs` - там живёт `run`, цикл печати трассы.
+    let allowed = [PathBuf::from("bin"), PathBuf::from("runner").join("mod.rs")];
     let mut offenders = Vec::new();
     let mut stack = vec![root.clone()];
     while let Some(dir) = stack.pop() {

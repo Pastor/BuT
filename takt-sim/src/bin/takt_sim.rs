@@ -1,7 +1,7 @@
 //! CLI-симулятор Takt-моделей.
 //!
 //! Запускает пошаговую симуляцию модели, переданной в аргументах командной строки.
-//! Поддерживает: JSON-файл входных данных, проверку guard, запись в GIF.
+//! Поддерживает: JSON-файл входных данных, проверку guard, GIF прогона.
 
 use clap::Parser;
 use std::path::PathBuf;
@@ -9,7 +9,7 @@ use std::process::ExitCode;
 use takt_lang::parse;
 use takt_lang::semantic::tree::construct_model_with_files;
 use takt_sim::build_unit;
-use takt_sim::graphics_config::GraphicsConfig;
+use takt_sim::film::{Film, PAUSE_MS, ROOT_SHEET};
 use takt_sim::json_input::load_sim_steps;
 use takt_sim::runner::{PortNames, RunResult, SimulationRunner};
 use takt_sim::state_io;
@@ -47,8 +47,9 @@ struct Args {
     #[arg(long = "bounds-check")]
     bounds_check: bool,
 
-    /// Директория для сохранения графики (GIF или SVG). Режим выбирается полем
-    /// output_mode в --graphics-config ("gif" по умолчанию).
+    /// Каталог для GIF прогона: кадр на такт - схема корневого листа цветным видом
+    /// и строка трассы. Схема рисуется по файлу раскладки `<модель>.takt-ui` рядом
+    /// с моделью; без него - отказ до прогона.
     #[arg(short = 'o', long = "output", value_name = "DIR")]
     output_dir: Option<PathBuf>,
 
@@ -64,9 +65,9 @@ struct Args {
     #[arg(long = "save-state", value_name = "FILE")]
     save_state: Option<PathBuf>,
 
-    /// Путь к JSON-файлу с настройками генерации GIF (см.
-    /// examples/graphics-configs/*.json)
-    #[arg(long = "graphics-config", value_name = "FILE")]
+    /// Снятый ключ настроек прежней графики. Принимается ради внятного отказа:
+    /// неизвестный ключ `clap` отверг бы справкой, не назвав причину.
+    #[arg(long = "graphics-config", value_name = "FILE", hide = true)]
     graphics_config: Option<PathBuf>,
 
     /// Мягкий режим инвариантов: нарушение записывается, и прогон продолжается, вместо
@@ -119,6 +120,16 @@ fn main() -> ExitCode {
 }
 
 fn run(args: Args) -> Result<RunResult, String> {
+    // Снятый ключ - отказ словами, а не молчание: прежний вызов со своими
+    // настройками получил бы другую картинку и не узнал бы об этом.
+    if args.graphics_config.is_some() {
+        return Err(
+            "ключ `--graphics-config` снят: кадры прогона рисуются по файлу \
+                    раскладки `<модель>.takt-ui` рядом с моделью, вид схемы задаёт он"
+                .to_string(),
+        );
+    }
+
     // 1. Читаем исходный файл модели
     let source = std::fs::read_to_string(&args.model_file)
         .map_err(|e| format!("Не удалось прочитать {}: {e}", args.model_file.display()))?;
@@ -164,9 +175,8 @@ fn run(args: Args) -> Result<RunResult, String> {
         return Err(format_diagnostic(&d, &files));
     }
 
-    // 4. Извлекаем имена портов, имя модели и объявленную частоту
+    // 4. Извлекаем имена портов и объявленную частоту
     let port_names = extract_port_names(&model_rc.borrow());
-    let model_name = model_rc.borrow().name.clone();
     let clock_hz = model_rc.borrow().clock_hz;
 
     // 5. Строим Unit
@@ -188,33 +198,15 @@ fn run(args: Args) -> Result<RunResult, String> {
         vec![]
     };
 
-    // Загружаем конфигурацию GIF (если указан --gif-config)
-    let gif_config = match &args.graphics_config {
-        Some(path) => GraphicsConfig::from_file(path)?,
-        None => GraphicsConfig::default(),
+    // Лента кадров - до прогона: нет файла раскладки или он неполон - отказ, пока
+    // ничего не исполнено и не записано.
+    let mut film = match &args.output_dir {
+        Some(_) => Some(film_of(&args.model_file, &source)?),
+        None => None,
     };
 
     // 7. Создаём и запускаем runner
-    // Имя выходного файла берётся из файла симуляции; если он не задан - из файла модели.
-    let input_stem = args
-        .sim_file
-        .as_ref()
-        .or(Some(&args.model_file))
-        .and_then(|p| p.file_stem())
-        .map(|s| s.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "output".to_string());
-    let output_mode = gif_config.output_mode.clone();
-    let mut runner = SimulationRunner::new(
-        unit,
-        sim_steps,
-        args.steps,
-        args.output_dir.as_ref(),
-        &input_stem,
-        output_mode,
-        port_names,
-        model_name,
-        gif_config,
-    )?;
+    let mut runner = SimulationRunner::new(unit, sim_steps, args.steps, port_names);
     runner.set_invariant_soft(args.invariant_soft);
     // Период такта модельных часов: флаг > частота модели > умолчание 1 мс. Приоритет
     // тот же, что у профиля времени в компиляторе: явно заданное побеждает выведенное.
@@ -224,18 +216,73 @@ fn run(args: Args) -> Result<RunResult, String> {
         runner.set_tick_period_ns(1_000_000_000 / i64::try_from(hz).unwrap_or(i64::MAX));
     }
 
-    let result = runner.run()?;
+    let result = runner.run_with(|step| {
+        if let Some(film) = &mut film {
+            film.record(step);
+        }
+        Ok(())
+    })?;
 
-    // 9. Сохраняем состояние модели до потребления runner (если указано)
+    // 8. Сохраняем состояние модели (если указано)
     if let Some(path) = &args.save_state {
         state_io::save_to_file(runner.unit(), path)?;
         println!("Состояние сохранено в {}", path.display());
     }
 
-    // 8. Сохраняем вывод графики (потребляет runner)
-    runner.save_output()?;
+    // 9. GIF прогона: имя - по файлу сценария, без него - по файлу модели.
+    if let (Some(dir), Some(film)) = (&args.output_dir, &film) {
+        let stem = args
+            .sim_file
+            .as_ref()
+            .unwrap_or(&args.model_file)
+            .file_stem()
+            .map_or_else(
+                || "output".to_string(),
+                |s| s.to_string_lossy().into_owned(),
+            );
+        write_gif(film, &dir.join(format!("{stem}.gif")))?;
+    }
 
     Ok(result)
+}
+
+/// Лента корневого листа по файлу раскладки рядом с моделью.
+fn film_of(model_file: &std::path::Path, source: &str) -> Result<Film, String> {
+    let layout_file = model_file.with_extension("takt-ui");
+    let layout = std::fs::read_to_string(&layout_file).map_err(|e| {
+        format!(
+            "раскладки нет: {} ({e}) - кадры прогона рисуются по файлу раскладки \
+             схемы, его пишет редактор",
+            layout_file.display()
+        )
+    })?;
+    Film::new(source, &layout, ROOT_SHEET, true)
+        .map_err(|e| format!("{}: {e}", layout_file.display()))
+}
+
+/// Пишет GIF ленты. Файл появляется целиком либо не появляется вовсе: запись идёт
+/// во временный файл рядом и переименовывается по готовности. Прогон без единого
+/// такта кадров не даёт, и файла нет - исход прогона уже назван сводкой.
+fn write_gif(film: &Film, path: &std::path::Path) -> Result<(), String> {
+    if film.frames() == 0 {
+        return Ok(());
+    }
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)
+            .map_err(|e| format!("Не удалось создать каталог {}: {e}", dir.display()))?;
+    }
+    let part = path.with_extension("gif.part");
+    let written = std::fs::File::create(&part)
+        .map_err(|e| format!("Не удалось создать {}: {e}", part.display()))
+        .and_then(|file| film.gif(PAUSE_MS, std::io::BufWriter::new(file)))
+        .and_then(|()| {
+            std::fs::rename(&part, path)
+                .map_err(|e| format!("Не удалось записать {}: {e}", path.display()))
+        });
+    if written.is_err() {
+        let _ = std::fs::remove_file(&part);
+    }
+    written
 }
 
 // -- Вспомогательные функции ---------------------------------------------------

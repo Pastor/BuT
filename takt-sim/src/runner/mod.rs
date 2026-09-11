@@ -1,9 +1,5 @@
-#[cfg(feature = "graphics")]
-mod graphics;
-
 use crate::context::Context;
 use crate::eval::value::Value;
-use crate::graphics_config::{GraphicsConfig, OutputMode};
 use crate::json_input::{Guard, PortValues, SimStep, json_to_value};
 // Реестр имён вынесен в свой модуль, но потребители зовут его прежним путём
 // `takt_sim::runner::PortNames` - реэкспорт держит контракт.
@@ -11,12 +7,7 @@ pub use crate::port_names::{PortDirectionKind, PortNames};
 // Человекочитаемая длительность переехала в носитель трассы; прежний путь
 // `takt_sim::runner::format_duration` держит реэкспорт.
 pub use crate::trace::format_duration;
-#[cfg(feature = "graphics")]
-use crate::unit::viewport::CachedLayout;
 use crate::unit::{TickResult, Unit};
-#[cfg(feature = "graphics")]
-use graphics::GraphicsRecorder;
-use std::path::PathBuf;
 
 // -- Результат симуляции ------------------------------------------------------
 
@@ -109,20 +100,7 @@ pub struct SimulationRunner {
     unit: Unit,
     sim_steps: Vec<SimStep>,
     max_steps: Option<usize>,
-    #[cfg(feature = "graphics")]
-    graphics_recorder: Option<GraphicsRecorder>,
-    #[cfg(feature = "graphics")]
-    gif_frame_size: Option<(u32, u32)>,
     port_names: PortNames,
-    // Имя модели и настройки холста нужны только кадрам: без фичи `graphics` они не
-    // поля, а мусор - и компилятор об этом честно говорит.
-    #[cfg(feature = "graphics")]
-    model_name: Option<String>,
-    #[cfg(feature = "graphics")]
-    gif_config: GraphicsConfig,
-    // Раскладка графа вычисляется один раз перед первым кадром.
-    #[cfg(feature = "graphics")]
-    cached_layout: Option<CachedLayout>,
     /// Мягкий режим инвариантов: нарушение записывается и прогон продолжается, вместо
     /// останова. Умолчание - `false`, то есть жёсткий режим.
     soft_invariants: bool,
@@ -154,44 +132,22 @@ pub struct SimulationRunner {
 }
 
 impl SimulationRunner {
-    #[allow(clippy::too_many_arguments)]
+    /// Бегун прогона: дерево модели, шаги сценария, предел тактов (`None` - длину
+    /// задаёт сценарий, а без него - приход в терминальное состояние) и реестр имён.
+    ///
+    /// Кадров бегун не пишет: такт отдаёт [`Step`] с активными состояниями и
+    /// ожидаемыми переходами, и кадр из них рисует вызывающий (`run_with`).
     pub fn new(
         unit: Unit,
         sim_steps: Vec<SimStep>,
         max_steps: Option<usize>,
-        output_dir: Option<&PathBuf>,
-        input_stem: &str,
-        output_mode: OutputMode,
         port_names: PortNames,
-        model_name: Option<String>,
-        gif_config: GraphicsConfig,
-    ) -> Result<Self, String> {
-        #[cfg(feature = "graphics")]
-        let (graphics_recorder, gif_frame_size) =
-            graphics::recorder_of(output_dir, input_stem, output_mode, &gif_config)?;
-        // Без графики запрос на кадры - отказ, а не молчаливый пропуск: автор просил
-        // картинку, и рапорт об успехе без неё был бы ложью.
-        #[cfg(not(feature = "graphics"))]
-        if output_dir.is_some() {
-            let _ = (input_stem, output_mode, &model_name, &gif_config);
-            return Err("запись кадров недоступна: крейт собран без фичи `graphics`".to_string());
-        }
-
-        Ok(Self {
+    ) -> Self {
+        Self {
             unit,
             sim_steps,
             max_steps,
-            #[cfg(feature = "graphics")]
-            graphics_recorder,
-            #[cfg(feature = "graphics")]
-            gif_frame_size,
             port_names,
-            #[cfg(feature = "graphics")]
-            model_name,
-            #[cfg(feature = "graphics")]
-            gif_config,
-            #[cfg(feature = "graphics")]
-            cached_layout: None,
             soft_invariants: false,
             completed: 0,
             soft_violations: Vec::new(),
@@ -199,7 +155,7 @@ impl SimulationRunner {
             pending_warnings: std::cell::RefCell::new(Vec::new()),
             now_ns: 0,
             tick_period_ns: 1_000_000,
-        })
+        }
     }
 
     /// Включает и выключает мягкий режим инвариантов. По умолчанию выключен: жёсткий
@@ -229,6 +185,17 @@ impl SimulationRunner {
     /// WebAssembly) тикает тем же `step`, иначе две реализации прогона разошлись бы
     /// молча - и сверки перестали бы что-либо доказывать.
     pub fn run(&mut self) -> Result<RunResult, String> {
+        self.run_with(|_| Ok(()))
+    }
+
+    /// Тот же цикл печати, что [`SimulationRunner::run`], и `on_step` на каждом такте -
+    /// после его строки трассы. Так кадры прогона пишутся тем же обходом, что трасса:
+    /// второй цикл исполнения разошёлся бы с первым молча. Отказ `on_step`
+    /// останавливает прогон.
+    pub fn run_with(
+        &mut self,
+        mut on_step: impl FnMut(&Step) -> Result<(), String>,
+    ) -> Result<RunResult, String> {
         for warning in self.ambiguous_name_warnings() {
             eprintln!("{}", crate::trace::warning_line(&warning));
         }
@@ -244,9 +211,10 @@ impl SimulationRunner {
             for line in &step.output {
                 eprintln!("{line}");
             }
-            if let Some(line) = step.line {
+            if let Some(line) = &step.line {
                 println!("{line}");
             }
+            on_step(&step)?;
             if let Some(result) = step.result {
                 return Ok(result);
             }
@@ -338,18 +306,6 @@ impl SimulationRunner {
         let line =
             crate::trace::step_line(&self.unit, &self.port_names, self.completed, self.now_ns);
 
-        // Записываем кадры в графику (если нужно)
-        #[cfg(feature = "graphics")]
-        if self.graphics_recorder.is_some() {
-            // Highlight-кадры для каждого сработавшего перехода (включая параллельные)
-            let transitions = self.unit.take_last_transitions();
-            for (from, to, _pred) in &transitions {
-                self.capture_frame_with_highlight(Some((from.as_str(), to.as_str())))?;
-            }
-            // Обычный кадр с новым активным состоянием
-            self.capture_frame()?;
-        }
-
         // Проверяем guard
         if let Some(step) = &sim_step
             && let Some(guard) = &step.guard
@@ -395,15 +351,6 @@ impl SimulationRunner {
                 steps: self.completed,
             }
         }
-    }
-
-    /// Сохраняет результат записи (вызывается после завершения run).
-    pub fn save_output(self) -> Result<(), String> {
-        #[cfg(feature = "graphics")]
-        if let Some(recorder) = self.graphics_recorder {
-            recorder.save()?;
-        }
-        Ok(())
     }
 
     /// Возвращает ссылку на Unit для чтения состояния после завершения симуляции.

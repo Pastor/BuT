@@ -9,8 +9,6 @@ mod initial;
 pub(crate) mod instance;
 pub(crate) mod statement;
 mod tick;
-#[cfg(feature = "graphics")]
-pub(crate) mod viewport;
 
 use crate::context::Context;
 use crate::eval::value::Value;
@@ -118,7 +116,7 @@ pub enum TickResult {
 pub struct Unit(UnitKind);
 
 /// Внутренняя форма [`Unit`]. `pub(crate)`: имя доступно потребителям крейта
-/// (`state_io`, `builder`, `viewport`), но наружу не реэкспортируется.
+/// (`state_io`, `builder`), но наружу не реэкспортируется.
 // `Node` - доминирующий вариант (реальные автоматы), `None`/композиты редки:
 // боксировать `Node` ради выравнивания размера значило бы платить за общий случай.
 // Осознанный компромисс (как было и у прежнего `enum Unit`).

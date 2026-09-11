@@ -8,7 +8,13 @@ pub mod fonts;
 pub mod geometry;
 pub mod js;
 pub mod layout;
+#[cfg(feature = "video")]
+pub mod mp4;
+#[cfg(feature = "raster")]
+pub mod raster;
 pub mod run;
 pub mod sheet;
 pub mod style;
 pub mod svg;
+#[cfg(feature = "video")]
+pub mod video;

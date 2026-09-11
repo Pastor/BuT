@@ -20,9 +20,9 @@ include = ["Cargo.toml", "src/**/*", "README.md", "LICENSE*"]
 [lib]
 bench = false
 
-# CLI требует графики: он умеет писать GIF и SVG, и без них половина его
-# ключей не имела бы смысла. Библиотека без графики - для
-# потребителя без файловой системы и без растеризатора (модуль WebAssembly).
+# CLI требует графики: `-o` пишет GIF прогона, и без растеризатора ключ не
+# имел бы смысла. Библиотека без графики - для потребителя, который рисует
+# кадры сам (модуль WebAssembly зовёт крейт рисунка напрямую).
 [[bin]]
 name = "takt-sim"
 bench = false
@@ -32,21 +32,19 @@ required-features = ["graphics"]
 [dependencies]
 takt-lang = { path = "../takt-lang" }
 log = "0.4.29"
-svg = { version = "0.18.0", optional = true }
-petgraph = { version = "0.8.3", optional = true }
-rand = { version = "0.10.1", optional = true }
-rand_distr = { version = "0.6.0", optional = true }
+# Кадры прогона - чертёж листа по файлу раскладки: рисунок, растр и видео у
+# эталона те же, что у страницы.
+takt-scheme = { path = "../takt-scheme", features = ["video"], optional = true }
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-resvg = { version = "0.47.0", optional = true }
-base64 = { version = "0.23.0", optional = true }
-gif = { version = "0.14.2", optional = true }
 env_logger = "0.11"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 tempfile = "3"
+# Чтение GIF прогона обратно: число кадров - число тактов.
+gif = "0.14.2"
 
 # Бенчмарк симуляции. См. комментарий в takt-lang/Cargo.toml.
 [[bench]]
@@ -55,10 +53,10 @@ harness = false
 
 [features]
 default = ["graphics"]
-# Визуализация прогона: раскладка графа, SVG-кадры, GIF-запись.
+# Кадры прогона: такт эталона рисуется чертежом листа по файлу раскладки
+# `.takt-ui` и кодируется в GIF крейтом рисунка.
 #
-# Выключается не ради веса, а ради переносимости: растеризатор и файловая
-# система есть не у всякого потребителя эталона - модуль WebAssembly (фича
-# исполняет модель в браузере, где нет ни того, ни другого. Умолчание
-# оставлено включённым: прежние потребители не замечают фичи вовсе.
-graphics = ["dep:svg", "dep:petgraph", "dep:rand", "dep:rand_distr", "dep:resvg", "dep:base64", "dep:gif"]
+# Выключается не ради веса, а ради переносимости: модуль WebAssembly исполняет
+# модель без неё и рисует кадры, зовя крейт рисунка сам. Умолчание оставлено
+# включённым: прежние потребители не замечают фичи вовсе.
+graphics = ["dep:takt-scheme"]

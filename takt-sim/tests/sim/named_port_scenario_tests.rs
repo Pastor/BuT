@@ -6,9 +6,7 @@
 //! не только "именованная форма работает", но и "опечатка и двусмысленность становятся
 //! ошибкой".
 
-use std::path::PathBuf;
 use takt_lang::semantic::tree::construct_model;
-use takt_sim::graphics_config::{GraphicsConfig, OutputMode};
 use takt_sim::json_input::SimStep;
 use takt_sim::runner::{PortNames, RunResult, RunWarning, SimulationRunner};
 use takt_sim::{Value, build_unit};
@@ -53,19 +51,7 @@ fn run(src: &str, scenario: &str, steps: usize) -> Result<RunResult, String> {
     let names = PortNames::from_model(&model.borrow());
     let steps_json: Vec<SimStep> = serde_json::from_str(scenario).expect("разбор сценария");
 
-    let mut runner = SimulationRunner::new(
-        unit,
-        steps_json,
-        Some(steps),
-        None::<&PathBuf>,
-        "test",
-        // Графика не пишется: `output_dir = None`, поэтому режим не важен.
-        OutputMode::Gif,
-        names,
-        None,
-        GraphicsConfig::default(),
-    )
-    .expect("создание бегуна");
+    let mut runner = SimulationRunner::new(unit, steps_json, Some(steps), names);
     runner.run()
 }
 
@@ -80,18 +66,7 @@ pub(super) fn collect_warnings_of(src: &str, scenario: &str, steps: usize) -> Ve
     let unit = build_unit(model.clone()).expect("построение Unit");
     let names = PortNames::from_model(&model.borrow());
     let steps_json: Vec<SimStep> = serde_json::from_str(scenario).expect("разбор сценария");
-    let mut runner = SimulationRunner::new(
-        unit,
-        steps_json,
-        Some(steps),
-        None::<&PathBuf>,
-        "test",
-        OutputMode::Gif,
-        names,
-        None,
-        GraphicsConfig::default(),
-    )
-    .expect("создание бегуна");
+    let mut runner = SimulationRunner::new(unit, steps_json, Some(steps), names);
 
     let mut collected = Vec::new();
     loop {
@@ -452,18 +427,7 @@ start Root = Probe;
     let model = construct_model(&ast, None, &[]).expect("семантика");
     let unit = build_unit(model.clone()).expect("построение Unit");
     let names = PortNames::from_model(&model.borrow());
-    let mut runner = SimulationRunner::new(
-        unit,
-        Vec::new(),
-        Some(2),
-        None::<&PathBuf>,
-        "test",
-        OutputMode::Gif,
-        names,
-        None,
-        GraphicsConfig::default(),
-    )
-    .expect("создание бегуна");
+    let mut runner = SimulationRunner::new(unit, Vec::new(), Some(2), names);
 
     let mut output = Vec::new();
     let mut warnings = Vec::new();

@@ -5,10 +5,10 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use takt_lang::diagnostics::FileTable;
 use takt_lang::semantic::tree::construct_model_with_files;
+use takt_sim::build_unit;
 use takt_sim::json_input::SimStep;
 use takt_sim::port_names::PortNames;
 use takt_sim::runner::SimulationRunner;
-use takt_sim::{build_unit, graphics_config::GraphicsConfig};
 
 use crate::compile::DEFAULT_FILENAME;
 use crate::reply::{self, DiagnosticJson};
@@ -131,7 +131,6 @@ pub fn open(
     }
 
     let port_names = PortNames::from_model(&model.borrow());
-    let model_name = model.borrow().name.clone();
     let clock_hz = model.borrow().clock_hz;
     let unit = match build_unit(model) {
         Ok(unit) => unit,
@@ -147,22 +146,8 @@ pub fn open(
         }
     };
 
-    // Каталога вывода нет - кадры в браузере не пишутся (крейт эталона собран без фичи
-    // `graphics`).
-    let mut runner = match SimulationRunner::new(
-        unit,
-        scenario_steps,
-        steps,
-        None,
-        DEFAULT_FILENAME,
-        GraphicsConfig::default().output_mode.clone(),
-        port_names,
-        model_name,
-        GraphicsConfig::default(),
-    ) {
-        Ok(runner) => runner,
-        Err(message) => return reply::refused(message),
-    };
+    // Кадров бегун не пишет: подсветку схемы страница берёт из полей шага.
+    let mut runner = SimulationRunner::new(unit, scenario_steps, steps, port_names);
     // Период такта: явный аргумент > частота модели > умолчание 1 мс - тот же
     // приоритет, что у CLI.
     if tick_ms > 0 {

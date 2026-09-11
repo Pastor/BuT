@@ -1,0 +1,20 @@
+model Heater {
+    var t: u8 := 0;
+    start Heating {
+        always {
+            t := t + 1;
+        }
+        ref Holding: t > 3;
+    }
+    state Holding {
+        always {
+            t := t + 1;
+        }
+        ref Done: t > 6;
+    }
+    state Done;
+}
+start Line = Heater + (Heater | Heater) + Heater {
+    next Finished;
+}
+state Finished;

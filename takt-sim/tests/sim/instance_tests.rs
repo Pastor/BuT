@@ -7,7 +7,6 @@
 
 use std::path::PathBuf;
 use takt_lang::semantic::tree::construct_model;
-use takt_sim::graphics_config::{GraphicsConfig, OutputMode};
 use takt_sim::runner::{PortNames, SimulationRunner};
 use takt_sim::{ActiveState, Segment, TickResult, Unit, build_unit};
 
@@ -211,18 +210,7 @@ fn runner_step_carries_instances_of_pid_heater() {
     let model = construct_model(&ast, None, &search).expect("семантика");
     let unit = build_unit(model.clone()).expect("построение юнита");
     let names = PortNames::from_model(&model.borrow());
-    let mut runner = SimulationRunner::new(
-        unit,
-        Vec::new(),
-        Some(BUDGET * 2),
-        None::<&PathBuf>,
-        "test",
-        OutputMode::Gif,
-        names,
-        None,
-        GraphicsConfig::default(),
-    )
-    .expect("создание бегуна");
+    let mut runner = SimulationRunner::new(unit, Vec::new(), Some(BUDGET * 2), names);
     let mut steps = Vec::new();
     loop {
         let step = runner.step().expect("такт");
