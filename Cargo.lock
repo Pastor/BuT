@@ -1810,6 +1810,18 @@ dependencies = [
 name = "takt-wasm"
 version = "0.3.0"
 dependencies = [
+ "serde",
+ "serde_json",
+ "takt-lang",
+ "takt-project",
+ "takt-sim",
+ "takt-wasm-io",
+]
+
+[[package]]
+name = "takt-wasm-export"
+version = "0.1.0"
+dependencies = [
  "base64",
  "serde",
  "serde_json",
@@ -1817,6 +1829,16 @@ dependencies = [
  "takt-project",
  "takt-scheme",
  "takt-sim",
+ "takt-wasm-io",
+]
+
+[[package]]
+name = "takt-wasm-io"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "takt-lang",
 ]
 
 [[package]]

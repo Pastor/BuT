@@ -648,6 +648,9 @@ test("сборка: опись модуля несёт его контрольн
   const bytes = await readFile(join(dir, "takt.wasm"));
   assert.equal(manifest.sha256, createHash("sha256").update(bytes).digest("hex"));
   assert.equal(manifest.size, bytes.length);
+  const exported = await readFile(join(dir, manifest.export.file));
+  assert.equal(manifest.export.sha256, createHash("sha256").update(exported).digest("hex"), "сумма модуля экспорта");
+  assert.equal(manifest.export.size, exported.length);
   assert.equal(manifest.takt_lang, version.takt_lang);
   const index = JSON.parse(await readFile(join(DIST, "wasm", "index.json"), "utf8"));
   assert.equal(index.latest, version.takt_lang);
@@ -689,6 +692,10 @@ test("сборка: воркер в корне, бандл и список пр�
   for (const need of ["./", "version.json", version.wasm, `b/${version.bundle}/app.js`]) {
     assert.ok(list.includes(need), `в предзагрузке нет ${need}`);
   }
+  // Модуль экспорта в предзагрузку не входит: он кешируется при первом экспорте,
+  // иначе каждая установка воркера тянула бы его ради одной кнопки.
+  assert.ok(version.export_wasm, "опись не называет модуль экспорта");
+  assert.ok(!list.some((e) => e.includes("takt-export")), "модуль экспорта в предзагрузке");
   // Каждый адрес списка существует: промах одного роняет всю установку воркера.
   for (const entry of list.filter((e) => e !== "./")) await readFile(join(DIST, entry.split("?")[0]));
   await assert.rejects(readFile(join(DIST, "b", version.bundle, "sw.js")), "воркер остался в бандле");
@@ -2451,4 +2458,54 @@ test("экспорт: запрос из выбора окна и порядок 
   });
   assert.equal(refused, false);
   assert.equal(said.at(-1), "error");
+});
+
+test("экспорт: модуль экспорта грузит поток прогона по первой команде, и один раз", async () => {
+  // Предмет - деление модулей: ядро грузится при каждом открытии, модуль
+  // экспорта - только когда экспорт попросили. Поток прогона - на подменах: сеть
+  // и компиляция модуля записывают, что у них спросили.
+  const fetched = [];
+  const posted = [];
+  const saved = { self: globalThis.self, fetch: globalThis.fetch, instantiate: WebAssembly.instantiate };
+  globalThis.self = { postMessage: (message) => posted.push(message) };
+  globalThis.fetch = async (url) => {
+    fetched.push(String(url));
+    return { arrayBuffer: async () => new ArrayBuffer(8) };
+  };
+  const memory = new WebAssembly.Memory({ initial: 1 });
+  const answer = new TextEncoder().encode(JSON.stringify({ ok: true, files: [], names: [], notes: [] }));
+  WebAssembly.instantiate = async () => ({
+    instance: {
+      exports: {
+        memory,
+        takt_io_ptr: () => 0,
+        takt_io_reserve: () => 65536,
+        takt_export: () => {
+          new Uint8Array(memory.buffer, 0, answer.length).set(answer);
+          return answer.length;
+        },
+      },
+    },
+  });
+  try {
+    await import(`../static/worker.js?export-${Date.now()}`);
+    for (const id of [1, 2]) {
+      await globalThis.self.onmessage({ data: { type: "export", id, exportUrl: "wasm/x/takt-export.wasm?t", request: {} } });
+    }
+    assert.deepEqual(fetched, ["wasm/x/takt-export.wasm?t"], "модуль экспорта загружен один раз и по своему адресу");
+    assert.deepEqual(
+      posted.map((m) => m.type),
+      ["exportLoading", "exported", "exported"],
+      "о загрузке сказано один раз, ответы - на каждую команду"
+    );
+    assert.deepEqual(posted.slice(1).map((m) => m.id), [1, 2]);
+  } finally {
+    globalThis.self = saved.self;
+    globalThis.fetch = saved.fetch;
+    WebAssembly.instantiate = saved.instantiate;
+  }
+  // Главный поток модуль экспорта не грузит: адрес уходит потоку прогона.
+  const app = await readFile(new URL("../static/app.js", import.meta.url), "utf8");
+  assert.ok(!/Bridge\.load\([^)]*export/i.test(app), "главный поток грузит модуль экспорта");
+  assert.match(app, /exportUrl: exportUrl\(\)/, "адрес модуля экспорта не уходит потоку");
 });

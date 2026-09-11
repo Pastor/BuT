@@ -39,7 +39,7 @@ ROOT = os.environ.get(
 
 # Список крейтов ведётся здесь, и новый крейт обязан в него попасть: иначе
 # его тесты проверке невидимы молча.
-CRATES = ("takt-lang", "takt-sim", "takt-wasm", "takt-project", "takt-scheme")
+CRATES = ("takt-lang", "takt-sim", "takt-wasm", "takt-project", "takt-scheme", "takt-wasm-export", "takt-wasm-io")
 # Каталоги, которые темами не являются: фикстуры и вспомогательные данные.
 NOT_A_THEME = {"data"}
 

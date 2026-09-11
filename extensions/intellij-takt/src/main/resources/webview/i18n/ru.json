@@ -406,5 +406,6 @@
   "export.go": "Выгрузить",
   "export.working": "экспорт…",
   "export.failed": "экспорт не удался: {error}",
-  "export.done": "выгружено файлов: {count}"
+  "export.done": "выгружено файлов: {count}",
+  "export.loading": "загружается модуль экспорта…"
 }

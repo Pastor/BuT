@@ -25,8 +25,10 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
 
 COPY . .
 
-# Статика: модуль + страница. Она же нужна серверу - из неё он берёт
-# `wasm/<версия>/takt.wasm` для архива.
+# Статика: модули + страница. Она же нужна серверу - из неё он берёт
+# `wasm/<версия>/takt.wasm` для архива. Ядро и модуль экспорта собираются
+# отдельными вызовами cargo: общий вызов объединил бы фичи, и ядро получило бы
+# графику эталона.
 # Профиль - `wasm`, а не `release`: `build-web.sh` ищет модуль по
 # `TAKT_WASM_PROFILE` (умолчание `wasm`), и собранный `release` он не находит -
 # "Модуль не собран", сборка образа падает. Профиль назван один раз, здесь же и
@@ -42,6 +44,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=cache,target=/src/target,sharing=locked \
     cargo build --profile ${WASM_PROFILE} --target wasm32-unknown-unknown -p takt-wasm \
+ && cargo build --profile ${WASM_PROFILE} --target wasm32-unknown-unknown -p takt-wasm-export \
  && TAKT_WASM_PROFILE=${WASM_PROFILE} TAKT_WEB_DIST=/out/static TAKT_HELP_REQUIRED=1 scripts/build-web.sh
 
 # Сервер - свой workspace (полторы сотни зависимостей не должны собираться на

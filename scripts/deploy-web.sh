@@ -56,21 +56,26 @@ BUNDLE="$(sed -n 's/.*"bundle": "\([^"]*\)".*/\1/p' "$DIST/version.json" | head 
 echo "  собрано: бандл $BUNDLE, модуль $VERSION"
 
 # -- 2. Отказ на подмене модуля -----------------------------------------------
-NEW_SUM="$(shasum -a 256 "$DIST/wasm/$VERSION/takt.wasm" | cut -d' ' -f1)"
-OLD="$STAND/wasm/$VERSION/takt.wasm"
-if [[ -f "$OLD" ]]; then
-  OLD_SUM="$(shasum -a 256 "$OLD" | cut -d' ' -f1)"
-  if [[ "$OLD_SUM" != "$NEW_SUM" ]]; then
-    echo "  ОШИБКА: под адресом wasm/$VERSION/ уже лежит ДРУГОЙ модуль"
-    echo "    на стенде: $OLD_SUM"
-    echo "    собранный: $NEW_SUM"
-    echo "  Адрес с версией обещает неизменность, и выложить под ним другой файл —"
-    echo "  молчаливая порча у каждого, кто уже кешировал. Поднимите версию крейта"
-    echo "  takt-lang (Cargo.toml) и соберите заново."
-    exit 1
+# Модулей два - ядро и модуль экспорта, - и правило одно у обоих: адрес с
+# версией обещает неизменность.
+for module in takt.wasm takt-export.wasm; do
+  [[ -f "$DIST/wasm/$VERSION/$module" ]] || continue
+  NEW_SUM="$(shasum -a 256 "$DIST/wasm/$VERSION/$module" | cut -d' ' -f1)"
+  OLD="$STAND/wasm/$VERSION/$module"
+  if [[ -f "$OLD" ]]; then
+    OLD_SUM="$(shasum -a 256 "$OLD" | cut -d' ' -f1)"
+    if [[ "$OLD_SUM" != "$NEW_SUM" ]]; then
+      echo "  ОШИБКА: под адресом wasm/$VERSION/$module уже лежит ДРУГОЙ модуль"
+      echo "    на стенде: $OLD_SUM"
+      echo "    собранный: $NEW_SUM"
+      echo "  Адрес с версией обещает неизменность, и выложить под ним другой файл —"
+      echo "  молчаливая порча у каждого, кто уже кешировал. Поднимите версию крейта"
+      echo "  takt-lang (Cargo.toml) и соберите заново."
+      exit 1
+    fi
+    echo "  модуль $module $VERSION уже выложен и совпадает — не трогаем"
   fi
-  echo "  модуль $VERSION уже выложен и совпадает — не трогаем"
-fi
+done
 
 if [[ "$DRY" == "1" ]]; then
   echo "  --dry-run: на стенд ничего не положено"

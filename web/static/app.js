@@ -36,6 +36,9 @@ import * as alerts from "./alerts.js";
  */
 const WASM_DEFAULT = "takt.wasm";
 
+/** Адрес модуля экспорта, если описи сборки нет (см. [`WASM_DEFAULT`]). */
+const EXPORT_WASM_DEFAULT = "takt-export.wasm";
+
 /**
  * Порог, за которым вывод цели показывается без подсветки.
  *
@@ -1648,12 +1651,20 @@ async function exportContext() {
   };
 }
 
+/**
+ * Адрес модуля экспорта - из той же описи выкладки, что адрес ядра: модули одной
+ * выкладки не расходятся у читателя в кеше. Без описи - файл рядом со страницей.
+ */
+function exportUrl() {
+  return state.build?.export_wasm ?? new URL(EXPORT_WASM_DEFAULT, location.href).href;
+}
+
 /** Экспорт в потоке прогона: ответ приходит сообщением `exported` со своим номером. */
 function exportInWorker(request) {
   return new Promise((resolve) => {
     state.exportSeq += 1;
     state.exports.set(state.exportSeq, resolve);
-    worker().postMessage({ type: "export", id: state.exportSeq, wasmUrl: session().wasmUrl, request });
+    worker().postMessage({ type: "export", id: state.exportSeq, exportUrl: exportUrl(), request });
   });
 }
 
@@ -1717,6 +1728,9 @@ function resetRun() {
 
 function onWorker(message) {
   switch (message.type) {
+    case "exportLoading":
+      say(t("export.loading"), "ok");
+      break;
     case "exported":
       state.exports.get(message.id)?.(message.reply);
       state.exports.delete(message.id);

@@ -90,6 +90,9 @@ mkdir -p "$TREE/takt-scheme/src" "$TREE/takt-scheme/tests/data"
 cp "$ROOT/takt-scheme/src/style.rs" "$TREE/takt-scheme/src/"
 cp "$ROOT/takt-scheme/tests/data/line.takt" "$TREE/takt-scheme/tests/data/"
 cp "$WASM" "$TREE/target/precheck/wasm32-unknown-unknown/$PROFILE/"
+# Модуль экспорта лежит рядом с ядром: сборка статики кладёт оба, а сверка
+# паритета геометрии спрашивает рисунок у него.
+cp "$(dirname "$WASM")/takt_wasm_export.wasm" "$TREE/target/precheck/wasm32-unknown-unknown/$PROFILE/"
 
 run_gate() {  # запускает гейт на копии дерева
   ( cd "$TREE" && CARGO_TARGET_DIR="$TREE/target/precheck" bash scripts/check-web.sh 2>&1 )

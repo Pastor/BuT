@@ -1,4 +1,4 @@
-//! Экспорт проекта и пары "модель - сценарии" для страницы.
+//! Экспорт проекта для страницы.
 //!
 //! Мост без своего знания: проект из состава запроса строит крейт проекта (род
 //! файла по расширению), картинки и видео - `takt_sim::export`, тот же, что зовёт
@@ -17,7 +17,7 @@ use takt_scheme::raster::Background;
 use takt_scheme::style::View;
 use takt_sim::export::{Format, Request, export};
 
-use crate::reply;
+use takt_wasm_io::reply;
 
 /// Запрос экспорта.
 #[derive(Debug, Deserialize)]
@@ -157,43 +157,4 @@ pub fn run(request: &ExportRequest) -> String {
         .map(|f| serde_json::json!({ "name": f.name, "data": base64.encode(&f.bytes) }))
         .collect();
     reply::ok(serde_json::json!({ "files": files, "names": names, "notes": out.notes }))
-}
-
-/// Запрос пар "модель - сценарии": имена файлов проекта.
-#[derive(Debug, Deserialize)]
-pub struct ScenariosRequest {
-    names: Vec<String>,
-}
-
-/// Сценарии каждой модели по правилу принадлежности крейта проекта: из моделей,
-/// подходящих по имени, сценарий достаётся самой длинной основе.
-pub fn scenarios(request: &ScenariosRequest) -> String {
-    let stem = |name: &str| takt_project::stem_of(name).map(|(s, k)| (s.to_string(), k));
-    let models: Vec<String> = request
-        .names
-        .iter()
-        .filter_map(|n| match stem(n) {
-            Some((s, takt_project::Kind::Takt)) => Some(s),
-            _ => None,
-        })
-        .collect();
-    let stems: Vec<&str> = models.iter().map(String::as_str).collect();
-    let scenario_names = request
-        .names
-        .iter()
-        .filter(|n| matches!(stem(n), Some((_, takt_project::Kind::Scenario))));
-    let pairs: BTreeMap<String, Vec<String>> = models
-        .iter()
-        .map(|model| {
-            (
-                format!("{model}.takt"),
-                takt_project::scenarios_of(
-                    model,
-                    scenario_names.clone().map(String::as_str),
-                    &stems,
-                ),
-            )
-        })
-        .collect();
-    reply::ok(serde_json::json!({ "scenarios": pairs }))
 }

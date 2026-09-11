@@ -55,7 +55,7 @@ fi
 find_sources() {
     # Каждый крейт перечислен явно: новый обязан быть назван
     # здесь, иначе предел размера его не касается - молча.
-    find "$ROOT/takt-lang/src" "$ROOT/takt-sim/src" "$ROOT/takt-wasm/src" "$ROOT/takt-project/src" "$ROOT/takt-scheme/src" \
+    find "$ROOT/takt-lang/src" "$ROOT/takt-sim/src" "$ROOT/takt-wasm/src" "$ROOT/takt-project/src" "$ROOT/takt-scheme/src" "$ROOT/takt-wasm-export/src" "$ROOT/takt-wasm-io/src" \
          "$ROOT/web/server/src" "$ROOT/web/server/tests" \
          "$ROOT/takt-lang/tests" "$ROOT/takt-sim/tests" \
          -name '*.rs' -type f 2>/dev/null | sed "s|^$ROOT/||" | sort

@@ -45,6 +45,8 @@ echo "Гейт веб-части (фича 0531)..."
 
 command -v "$NODE" >/dev/null 2>&1 || skip_or_fail "не найден node"
 [[ -f "$WASM" ]] || skip_or_fail "модуль не собран (см. check-wasm.sh)"
+[[ -f "$TARGET_DIR/wasm32-unknown-unknown/$PROFILE/takt_wasm_export.wasm" ]] \
+  || skip_or_fail "модуль экспорта не собран (см. check-wasm.sh)"
 
 # -- 1. Сборка статики --------------------------------------------------------
 DIST="$(mktemp -d)/dist"
@@ -109,6 +111,9 @@ if grep -REn '"(start|state|model|invariant)"[[:space:]]*,[[:space:]]*"(start|st
 fi
 
 # -- 5. Проверки в node -------------------------------------------------------
-"$NODE" "$ROOT/web/tests/web-tests.mjs" "$WASM" "$DIST"
+# Рисунок в числах для сверки паритета холста отдаёт модуль экспорта - он лежит
+# рядом с ядром.
+TAKT_EXPORT_WASM="$TARGET_DIR/wasm32-unknown-unknown/$PROFILE/takt_wasm_export.wasm" \
+  "$NODE" "$ROOT/web/tests/web-tests.mjs" "$WASM" "$DIST"
 
 rm -rf "$(dirname "$DIST")"

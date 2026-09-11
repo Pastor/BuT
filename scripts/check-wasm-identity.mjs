@@ -17,7 +17,10 @@
 // (JSON, буфер, UTF-8), и потерять в нём хвост файла или строку трассы можно
 // молча - вывод останется валидным и будет другим.
 //
-// Запуск: node scripts/check-wasm-identity.mjs <модуль.wasm> <taktc> <takt-sim>
+// Запуск: node scripts/check-wasm-identity.mjs <модуль.wasm> <taktc> <takt-sim> [модуль-экспорта.wasm]
+//
+// Экспорт сверяется по модулю экспорта: картинки рисует он, а не ядро. Без
+// четвёртого аргумента путь берётся рядом с ядром.
 
 import { readFile, writeFile, mkdtemp, readdir, rm } from "node:fs/promises";
 import { requireInput } from "./gatelib.mjs";
@@ -28,7 +31,8 @@ import { join, basename } from "node:path";
 
 const run = promisify(execFile);
 
-const [wasmPath, taktcPath, taktSimPath] = process.argv.slice(2);
+const [wasmPath, taktcPath, taktSimPath, exportArg] = process.argv.slice(2);
+const exportPath = exportArg ?? wasmPath?.replace(/takt_wasm\.wasm$/, "takt_wasm_export.wasm");
 if (!wasmPath || !taktcPath || !taktSimPath) {
   console.error("Использование: node check-wasm-identity.mjs <модуль.wasm> <taktc> <takt-sim>");
   process.exit(2);
@@ -39,6 +43,8 @@ const TARGETS = ["c", "c-hal", "st", "st-at", "rust", "sv", "sv-mmio"];
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
 let wasm;
+/** Модуль экспорта: его операцию `takt_export` сверяет четвёртая часть. */
+let exporter;
 
 /** Загружает модуль и возвращает его экспорты. */
 async function loadModule(path) {
@@ -54,11 +60,16 @@ async function loadModule(path) {
  * старый указатель после роста ведёт в чужую память.
  */
 function call(operation, request) {
+  return callOn(wasm, operation, request);
+}
+
+/** То же, что [`call`], у названного модуля: буфер у каждого модуля свой. */
+function callOn(module, operation, request) {
   const bytes = encoder.encode(JSON.stringify(request));
-  wasm.takt_io_reserve(bytes.length);
-  new Uint8Array(wasm.memory.buffer, wasm.takt_io_ptr(), bytes.length).set(bytes);
+  module.takt_io_reserve(bytes.length);
+  new Uint8Array(module.memory.buffer, module.takt_io_ptr(), bytes.length).set(bytes);
   const length = operation(bytes.length);
-  const text = decoder.decode(new Uint8Array(wasm.memory.buffer, wasm.takt_io_ptr(), length));
+  const text = decoder.decode(new Uint8Array(module.memory.buffer, module.takt_io_ptr(), length));
   return JSON.parse(text);
 }
 
@@ -266,7 +277,7 @@ async function checkExport(projectDir, workDir) {
       fail(what, `takt-sim отказал: ${(error.stderr ?? "").split("\n")[0]}`);
       continue;
     }
-    const reply = call(wasm.takt_export, {
+    const reply = callOn(exporter, exporter.takt_export, {
       files,
       main_file: manifest.main_file ?? null,
       main_scenario: manifest.main_scenario ?? null,
@@ -319,6 +330,7 @@ function checkEditorAnswers(name, source) {
 
 async function main() {
   wasm = await loadModule(wasmPath);
+  exporter = await loadModule(exportPath);
   const workDir = await mkdtemp(join(tmpdir(), "takt-wasm-identity-"));
 
   // 1. Компиляция: корпус `examples/` x семь целей.

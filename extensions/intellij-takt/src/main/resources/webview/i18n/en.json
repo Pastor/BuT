@@ -406,5 +406,6 @@
   "export.go": "Export",
   "export.working": "exporting…",
   "export.failed": "export failed: {error}",
-  "export.done": "files exported: {count}"
+  "export.done": "files exported: {count}",
+  "export.loading": "loading the export module…"
 }

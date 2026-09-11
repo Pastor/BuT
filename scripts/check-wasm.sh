@@ -28,6 +28,11 @@ TARGET_DIR="$(dirname "$BIN_DIR")"
 # Cargo.toml) - браузеру важен размер, а `taktc` собирается для машины.
 PROFILE="${TAKT_WASM_PROFILE:-wasm}"
 WASM="$TARGET_DIR/wasm32-unknown-unknown/$PROFILE/takt_wasm.wasm"
+EXPORT_WASM="$TARGET_DIR/wasm32-unknown-unknown/$PROFILE/takt_wasm_export.wasm"
+# Предел веса ядра, КиБ. Ядро грузится при каждом открытии страницы, и всё, что
+# нужно одной кнопке, живёт в модуле экспорта; ядро, переросшее предел, значит,
+# что в него вернулось чужое - растеризатор, шрифты, кодировщик.
+CORE_LIMIT_KIB="${TAKT_WASM_CORE_LIMIT_KIB:-3700}"
 
 skip_or_fail() {  # $1 = причина
   if [[ "$STRICT" == "1" ]]; then
@@ -49,14 +54,27 @@ rustup target list --installed 2>/dev/null | grep -qx "wasm32-unknown-unknown" \
   || skip_or_fail "не установлен таргет wasm32-unknown-unknown (rustup target add wasm32-unknown-unknown)"
 
 CARGO_CMD="${CARGO_CMD:-cargo}"
+# Ядро и модуль экспорта - отдельными вызовами: общий вызов объединил бы фичи, и
+# ядро получило бы графику эталона.
 $CARGO_CMD build -p takt-wasm --profile "$PROFILE" --target wasm32-unknown-unknown
+$CARGO_CMD build -p takt-wasm-export --profile "$PROFILE" --target wasm32-unknown-unknown
 
 [[ -f "$WASM" ]] || {
   echo "  ОШИБКА: модуль не собран: $WASM"
   exit 1
 }
+[[ -f "$EXPORT_WASM" ]] || {
+  echo "  ОШИБКА: модуль экспорта не собран: $EXPORT_WASM"
+  exit 1
+}
 size_kib=$(( $(wc -c < "$WASM") / 1024 ))
-echo "  модуль собран: $WASM (${size_kib} КиБ)"
+export_kib=$(( $(wc -c < "$EXPORT_WASM") / 1024 ))
+echo "  модули собраны: ядро ${size_kib} КиБ, модуль экспорта ${export_kib} КиБ"
+if (( size_kib > CORE_LIMIT_KIB )); then
+  echo "  ОШИБКА: ядро ${size_kib} КиБ сверх предела ${CORE_LIMIT_KIB} КиБ — в ядро вернулось то,"
+  echo "  что нужно только экспорту (растеризатор, шрифты, кодировщик)"
+  exit 1
+fi
 
 TAKTC="${TAKTC:-$BIN_DIR/taktc}"
 TAKT_SIM="${TAKT_SIM:-$BIN_DIR/takt-sim}"
@@ -67,4 +85,4 @@ for tool in "$TAKTC" "$TAKT_SIM"; do
   }
 done
 
-"$NODE" "$ROOT/scripts/check-wasm-identity.mjs" "$WASM" "$TAKTC" "$TAKT_SIM"
+"$NODE" "$ROOT/scripts/check-wasm-identity.mjs" "$WASM" "$TAKTC" "$TAKT_SIM" "$EXPORT_WASM"

@@ -37,9 +37,12 @@ export async function describe(fetchJson = defaultFetch) {
   const bundle = own();
   try {
     const remote = await fetchJson();
-    return { bundle, ...remote, wasm: absolute(remote.wasm) };
+    // Адреса обоих модулей - ядра и модуля экспорта - считаются от корня статики:
+    // модуль экспорта грузит поток прогона, и относительный адрес ушёл бы от
+    // каталога бандла.
+    return { bundle, ...remote, wasm: absolute(remote.wasm), export_wasm: absolute(remote.export_wasm) };
   } catch {
-    return { bundle, wasm: null };
+    return { bundle, wasm: null, export_wasm: null };
   }
 }
 

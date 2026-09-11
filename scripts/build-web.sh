@@ -42,12 +42,20 @@ BIN_DIR="$("$(dirname "${BASH_SOURCE[0]}")/target-dir.sh")"
 TARGET_DIR="$(dirname "$BIN_DIR")"
 PROFILE="${TAKT_WASM_PROFILE:-wasm}"
 WASM="$TARGET_DIR/wasm32-unknown-unknown/$PROFILE/takt_wasm.wasm"
+# Модуль экспорта: картинки и видео. Свой файл, а не часть ядра - растеризатор,
+# шрифты и кодировщики нужны одной кнопке, а ядро грузится при каждом открытии.
+EXPORT_WASM="$TARGET_DIR/wasm32-unknown-unknown/$PROFILE/takt_wasm_export.wasm"
 DIST="${TAKT_WEB_DIST:-$ROOT/web/dist}"
 STATIC="$ROOT/web/static"
 
 if [[ ! -f "$WASM" ]]; then
   echo "Модуль не собран: $WASM"
   echo "Соберите: cargo build -p takt-wasm --profile $PROFILE --target wasm32-unknown-unknown"
+  exit 1
+fi
+if [[ ! -f "$EXPORT_WASM" ]]; then
+  echo "Модуль экспорта не собран: $EXPORT_WASM"
+  echo "Соберите: cargo build -p takt-wasm-export --profile $PROFILE --target wasm32-unknown-unknown"
   exit 1
 fi
 
@@ -140,6 +148,13 @@ WASM_SIZE="$(wc -c < "$DIST/wasm/$VERSION/takt.wasm" | tr -d ' ')"
 # 0.60.0). Путь на диске прежний - его знает и сервер (`module.rs`), - меняется
 # запрос: для кеша это другой ресурс, для файловой системы тот же файл.
 WASM_TAG="${WASM_SHA:0:12}"
+# Модуль экспорта лежит рядом под тем же правилом: версия в пути, отпечаток в
+# запросе. Адрес страница берёт из той же описи, что адрес ядра, - модули одной
+# выкладки не расходятся у читателя в кеше.
+cp "$EXPORT_WASM" "$DIST/wasm/$VERSION/takt-export.wasm"
+EXPORT_SHA="$(sha256 "$DIST/wasm/$VERSION/takt-export.wasm")"
+EXPORT_SIZE="$(wc -c < "$DIST/wasm/$VERSION/takt-export.wasm" | tr -d ' ')"
+EXPORT_TAG="${EXPORT_SHA:0:12}"
 
 # -- Номер сборки сервиса -----------------------------------------------------
 # Инкрементальный номер, как у образца: читателю он говорит "свежее или
@@ -165,6 +180,7 @@ cat > "$DIST/wasm/$VERSION/manifest.json" <<JSON
   "language": "$LANGUAGE",
   "sha256": "$WASM_SHA",
   "size": $WASM_SIZE,
+  "export": { "file": "takt-export.wasm", "sha256": "$EXPORT_SHA", "size": $EXPORT_SIZE },
   "built_at": "$BUILT_AT"
 }
 JSON
@@ -188,6 +204,7 @@ cat > "$DIST/version.json" <<JSON
   "takt_lang": "$VERSION",
   "language": "$LANGUAGE",
   "wasm": "wasm/$VERSION/takt.wasm?$WASM_TAG",
+  "export_wasm": "wasm/$VERSION/takt-export.wasm?$EXPORT_TAG",
   "built_at": "$BUILT_AT",
   "build": "$BUILD_NUMBER",
   "commit": "$BUILD_COMMIT",
@@ -240,6 +257,7 @@ done < <(find "$DIST" -type f \( -name '*.js' -o -name '*.css' -o -name '*.html'
            ! -name 'index.json')
 
 size_kib=$(( WASM_SIZE / 1024 ))
+export_kib=$(( EXPORT_SIZE / 1024 ))
 files=$(find "$DIST" -type f | wc -l | tr -d ' ')
-echo "  статика собрана: $DIST ($files файлов, модуль ${size_kib} КиБ, версия $VERSION)"
+echo "  статика собрана: $DIST ($files файлов, модуль ${size_kib} КиБ, модуль экспорта ${export_kib} КиБ, версия $VERSION)"
 echo "  бандл b/$BUNDLE, предсжато файлов: $compressed$(command -v brotli >/dev/null 2>&1 && echo ' (gzip + brotli)' || echo ' (gzip; brotli не найден)')"

@@ -11,18 +11,16 @@
 //!
 //! # Протокол обмена
 //!
-//! Плоский C-ABI без `wasm-bindgen`:
+//! Плоский C-ABI без `wasm-bindgen`, общий с модулем экспорта (`takt-wasm-export`):
+//! буфер ввода-вывода, вызов операции и форма ответа живут в крейте
+//! `takt-wasm-io`, здесь - только обёртки `takt_io_*` и операции ядра.
 //!
-//! - [`takt_io_ptr`]/[`takt_io_cap`] - буфер ввода-вывода. Страница пишет туда
-//!   UTF-8 JSON запроса и зовёт операцию с его длиной; операция кладёт JSON
-//!   ответа в **тот же** буфер и возвращает его длину.
-//! - [`takt_io_reserve`] растит буфер под большой запрос или ответ. После
-//!   него (и после любой операции) адрес буфера надо перечитать: `Vec` при
-//!   росте переезжает, а память модуля - тем более.
-//! - Ответ всегда одной формы: `{"ok": true, ...}` либо
-//!   `{"ok": false, "error": {...}}` (модуль [`reply`]).
+//! # Ядро и модуль экспорта
 //!
-//! Модуль однопоточен, вызовы не реентерабельны - состояние живёт в `thread_local`.
+//! Этот модуль - ядро: то, что страница делает всегда (редактор, сборка,
+//! прогон). Растеризатор, шрифты и кодировщики видео нужны одной кнопке
+//! "Экспорт" и живут в модуле экспорта, который поток прогона грузит по
+//! требованию.
 //!
 //! Единственный `unsafe` крейта - атрибуты `#[unsafe(no_mangle)]`, без которых символы
 //! не экспортируются (edition 2024).
@@ -31,25 +29,16 @@
 
 pub mod compile;
 pub mod editor;
-pub mod export;
 pub mod graph;
 pub mod highlight;
-pub mod reply;
+pub mod project;
 pub mod sim;
 
+/// Форма ответа - общая с модулем экспорта.
+pub use takt_wasm_io::reply;
+use takt_wasm_io::{call, write_reply};
+
 use serde::Deserialize;
-use std::cell::RefCell;
-
-/// Начальная ёмкость буфера ввода-вывода.
-///
-/// 64 КиБ хватает запросу (исходник модели) и большинству ответов; вывод цели `c` на
-/// крупной модели больше - под него страница зовёт [`takt_io_reserve`].
-const IO_INITIAL_CAP: usize = 64 * 1024;
-
-thread_local! {
-    /// Буфер ввода-вывода: сюда страница кладёт запрос, отсюда читает ответ.
-    static IO: RefCell<Vec<u8>> = RefCell::new(vec![0; IO_INITIAL_CAP]);
-}
 
 /// Адрес буфера ввода-вывода.
 ///
@@ -57,26 +46,19 @@ thread_local! {
 /// с ним.
 #[unsafe(no_mangle)]
 pub extern "C" fn takt_io_ptr() -> *mut u8 {
-    IO.with(|io| io.borrow_mut().as_mut_ptr())
+    takt_wasm_io::ptr()
 }
 
 /// Ёмкость буфера ввода-вывода в байтах.
 #[unsafe(no_mangle)]
 pub extern "C" fn takt_io_cap() -> u32 {
-    IO.with(|io| u32::try_from(io.borrow().len()).unwrap_or(u32::MAX))
+    takt_wasm_io::cap()
 }
 
 /// Гарантирует ёмкость буфера не меньше `len`; возвращает новую ёмкость.
 #[unsafe(no_mangle)]
 pub extern "C" fn takt_io_reserve(len: u32) -> u32 {
-    IO.with(|io| {
-        let mut io = io.borrow_mut();
-        let need = len as usize;
-        if io.len() < need {
-            io.resize(need, 0);
-        }
-        u32::try_from(io.len()).unwrap_or(u32::MAX)
-    })
+    takt_wasm_io::reserve(len)
 }
 
 /// Версия языка и крейтов моста.
@@ -267,38 +249,6 @@ pub extern "C" fn takt_graph(len: u32) -> u32 {
     call(len, |r: SourceRequest| graph::graph(&r.source))
 }
 
-/// Запрос рисунка схемы: текст модели и файла раскладки.
-#[derive(Debug, Deserialize)]
-struct SchemeRequest {
-    source: String,
-    layout: String,
-    /// Такт прогона: с ним ответ несёт и подсветку каждого листа.
-    #[serde(default)]
-    tick: Option<takt_scheme::run::Tick>,
-}
-
-/// Рисунок всех листов в числах - тот, что чертёж возьмёт у носителя схемы.
-///
-/// Страница сверяет его со своим холстом: геометрия живёт в двух языках, и
-/// расхождение иначе дошло бы до картинки молча.
-#[unsafe(no_mangle)]
-pub extern "C" fn takt_scheme_geometry(len: u32) -> u32 {
-    call(
-        len,
-        |r: SchemeRequest| match takt_scheme::drawn::geometry_json(
-            &r.source,
-            &r.layout,
-            r.tick.as_ref(),
-        ) {
-            Ok(json) => {
-                let sheets: serde_json::Value = serde_json::from_str(&json).unwrap_or_default();
-                reply::ok(serde_json::json!({ "sheets": sheets }))
-            }
-            Err(message) => reply::refused(message),
-        },
-    )
-}
-
 /// Запрос открытия прогона.
 #[derive(Debug, Deserialize)]
 struct SimOpenRequest {
@@ -351,54 +301,10 @@ pub extern "C" fn takt_sim_close(len: u32) -> u32 {
     call(len, |r: SimCloseRequest| sim::close(r.id))
 }
 
-/// Экспорт проекта: картинки листов и видео прогона тем же носителем, что у
-/// `takt-sim export`; ответ несёт файлы строкой base64.
-#[unsafe(no_mangle)]
-pub extern "C" fn takt_export(len: u32) -> u32 {
-    call(len, |r: export::ExportRequest| export::run(&r))
-}
-
 /// Сценарии каждой модели проекта по правилу принадлежности крейта проекта.
 #[unsafe(no_mangle)]
 pub extern "C" fn takt_scenarios(len: u32) -> u32 {
-    call(len, |r: export::ScenariosRequest| export::scenarios(&r))
-}
-
-/// Разбирает запрос из буфера, зовёт операцию и кладёт ответ обратно.
-///
-/// Ошибка разбора запроса - отказ **вызова** с текстом, а не паника: паника в модуле
-/// есть `abort`, и страница теряет модуль целиком вместе с открытыми прогонами.
-fn call<T, F>(len: u32, operation: F) -> u32
-where
-    T: for<'de> Deserialize<'de>,
-    F: FnOnce(T) -> String,
-{
-    let request = IO.with(|io| {
-        let io = io.borrow();
-        let len = (len as usize).min(io.len());
-        std::str::from_utf8(&io[..len])
-            .map_err(|e| format!("запрос не UTF-8: {e}"))
-            .and_then(|text| {
-                serde_json::from_str::<T>(text).map_err(|e| format!("запрос не читается: {e}"))
-            })
-    });
-    let answer = match request {
-        Ok(request) => operation(request),
-        Err(message) => reply::refused(message),
-    };
-    write_reply(&answer)
-}
-
-/// Кладёт ответ в буфер, расширяя его при необходимости.
-fn write_reply(answer: &str) -> u32 {
-    IO.with(|io| {
-        let mut io = io.borrow_mut();
-        if io.len() < answer.len() {
-            io.resize(answer.len(), 0);
-        }
-        io[..answer.len()].copy_from_slice(answer.as_bytes());
-        u32::try_from(answer.len()).unwrap_or(u32::MAX)
-    })
+    call(len, |r: project::ScenariosRequest| project::scenarios(&r))
 }
 
 #[cfg(test)]
@@ -408,11 +314,8 @@ mod tests {
 
     /// Кладёт запрос в буфер, зовёт операцию, читает ответ - как это делает страница.
     fn round_trip(request: Value, operation: extern "C" fn(u32) -> u32) -> Value {
-        let text = request.to_string();
-        takt_io_reserve(u32::try_from(text.len()).unwrap());
-        IO.with(|io| io.borrow_mut()[..text.len()].copy_from_slice(text.as_bytes()));
-        let len = operation(u32::try_from(text.len()).unwrap()) as usize;
-        let answer = IO.with(|io| String::from_utf8(io.borrow()[..len].to_vec()).unwrap());
+        let len = takt_wasm_io::put_request(&request.to_string());
+        let answer = takt_wasm_io::take_reply(operation(len));
         serde_json::from_str(&answer).expect("ответ — JSON")
     }
 
@@ -455,7 +358,7 @@ mod tests {
         assert_eq!(reply["ok"], Value::Bool(true), "{reply}");
         let text = reply["files"][1]["text"].as_str().unwrap();
         assert!(
-            text.len() > IO_INITIAL_CAP,
+            text.len() > takt_wasm_io::IO_INITIAL_CAP,
             "ожидался ответ крупнее начального буфера, получено {} байт",
             text.len()
         );
@@ -465,59 +368,10 @@ mod tests {
     /// Битый запрос - отказ вызова, а не паника.
     #[test]
     fn broken_request_is_refused() {
-        let text = "{ это не json";
-        takt_io_reserve(u32::try_from(text.len()).unwrap());
-        IO.with(|io| io.borrow_mut()[..text.len()].copy_from_slice(text.as_bytes()));
-        let len = takt_compile(u32::try_from(text.len()).unwrap()) as usize;
-        let answer = IO.with(|io| String::from_utf8(io.borrow()[..len].to_vec()).unwrap());
+        let len = takt_wasm_io::put_request("{ это не json");
+        let answer = takt_wasm_io::take_reply(takt_compile(len));
         let reply: Value = serde_json::from_str(&answer).unwrap();
         assert_eq!(reply["ok"], Value::Bool(false), "{reply}");
-    }
-
-    /// Экспорт отдаёт байты тех же картинок, что носитель, и архив по просьбе;
-    /// без раскладки - отказ словами.
-    #[test]
-    fn export_returns_pictures_and_refuses_without_a_layout() {
-        use base64::Engine as _;
-        let files = serde_json::json!({
-            "m.takt": "start A {\n    ref B;\n}\nstate B;\n",
-            "m.takt-ui": "{\"format\":1,\"sheets\":{\"/\":{\"nodes\":{\"A\":{\"x\":72,\"y\":72},\"B\":{\"x\":72,\"y\":240}}}}}",
-        });
-        let reply = round_trip(
-            serde_json::json!({ "files": files, "formats": ["svg", "png"] }),
-            takt_export,
-        );
-        assert_eq!(reply["ok"], Value::Bool(true), "{reply}");
-        assert_eq!(
-            reply["names"],
-            serde_json::json!(["m.draft.svg", "m.draft.png"])
-        );
-        let svg = base64::engine::general_purpose::STANDARD
-            .decode(reply["files"][0]["data"].as_str().unwrap())
-            .unwrap();
-        assert!(String::from_utf8(svg).unwrap().starts_with("<svg"), "SVG");
-
-        let zipped = round_trip(
-            serde_json::json!({ "files": files, "formats": ["svg", "png"], "archive": "m.zip" }),
-            takt_export,
-        );
-        assert_eq!(zipped["files"][0]["name"], Value::String("m.zip".into()));
-        let single = round_trip(
-            serde_json::json!({ "files": files, "formats": ["svg"], "archive": "m.zip" }),
-            takt_export,
-        );
-        assert_eq!(
-            single["files"][0]["name"],
-            Value::String("m.draft.svg".into()),
-            "один файл - без архива"
-        );
-
-        let bare = round_trip(
-            serde_json::json!({ "files": { "m.takt": "start A;\n" }, "formats": ["svg"] }),
-            takt_export,
-        );
-        assert_eq!(bare["ok"], Value::Bool(false), "{bare}");
-        assert!(bare.to_string().contains("раскладки нет"), "{bare}");
     }
 
     /// Пары "модель - сценарии": самая длинная основа забирает свои сценарии.
@@ -549,8 +403,7 @@ mod tests {
     /// Версия называет язык, крейт и список целей.
     #[test]
     fn version_names_language_and_targets() {
-        let len = takt_version() as usize;
-        let answer = IO.with(|io| String::from_utf8(io.borrow()[..len].to_vec()).unwrap());
+        let answer = takt_wasm_io::take_reply(takt_version());
         let reply: Value = serde_json::from_str(&answer).unwrap();
         assert_eq!(
             reply["language"],

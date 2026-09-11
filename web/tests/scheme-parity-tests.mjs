@@ -26,11 +26,22 @@ const EXAMPLES = new URL("../../examples/", import.meta.url);
 const EPS = 1e-3;
 
 let loaded = null;
+async function instance(path) {
+  const { instance: made } = await WebAssembly.instantiate(await readFile(path), {});
+  return new Bridge(made.exports);
+}
+
+/**
+ * Модули сверки: ядро отвечает графом и прогоном, модуль экспорта - рисунком в
+ * числах. Путь модуля экспорта - рядом с ядром, если не назван переменной.
+ */
 async function loadBridge() {
   if (loaded) return loaded;
-  const bytes = await readFile(process.argv[2] ?? process.env.TAKT_WASM);
-  const { instance } = await WebAssembly.instantiate(bytes, {});
-  loaded = new Bridge(instance.exports);
+  const core = process.argv[2] ?? process.env.TAKT_WASM;
+  const drawing = process.env.TAKT_EXPORT_WASM ?? core.replace(/takt_wasm\.wasm$/, "takt_wasm_export.wasm");
+  const bridge = await instance(core);
+  bridge.drawing = await instance(drawing);
+  loaded = bridge;
   return loaded;
 }
 
@@ -171,7 +182,7 @@ test("паритет: холст и чертёж считают один рис�
     if (!graph.ok || !graph.sheets.some((s) => s.nodes.length > 0)) continue;
     const base = layoutFile.placeAll(graph);
     for (const stored of [base, perturbed(graph, base, (variant += 1))]) {
-      const reply = bridge.schemeGeometry(source, layoutFile.canonical(stored));
+      const reply = bridge.drawing.schemeGeometry(source, layoutFile.canonical(stored));
       assert.equal(reply.ok, true, `${file}: ${JSON.stringify(reply.error)}`);
       const rust = new Map(reply.sheets.map((s) => [s.key, s]));
       const scheme = await canvas(graph, stored);
@@ -195,7 +206,7 @@ test("паритет: холст и чертёж считают один рис�
 test("паритет: неполная раскладка - отказ, названы узлы", async () => {
   const bridge = await loadBridge();
   const source = await readFile(new URL("elevator.takt", EXAMPLES), "utf8");
-  const reply = bridge.schemeGeometry(source, layoutFile.canonical(layoutFile.empty()));
+  const reply = bridge.drawing.schemeGeometry(source, layoutFile.canonical(layoutFile.empty()));
   assert.equal(reply.ok, false);
   assert.match(reply.error.message, /не размещены узлы/);
   assert.match(reply.error.message, /Engine — /);
@@ -223,7 +234,7 @@ test("паритет: подсветка прогона у холста и че�
     assert.equal(reply.ok, true, JSON.stringify(reply));
     reply.active.forEach((active, i) => {
       const next = reply.next[i] ?? [];
-      const rust = bridge.schemeGeometry(source, layoutFile.canonical(stored), { active, next });
+      const rust = bridge.drawing.schemeGeometry(source, layoutFile.canonical(stored), { active, next });
       assert.equal(rust.ok, true, JSON.stringify(rust.error));
       const byKey = new Map(rust.sheets.map((s) => [s.key, s.lit]));
       for (const level of levels(graph)) {

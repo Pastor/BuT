@@ -3,6 +3,9 @@
 import { Bridge } from "./bridge.js";
 
 let bridge = null;
+// Модуль экспорта: грузится по первой команде экспорта и держится до конца жизни
+// потока. Ядру растеризатор и кодировщики не нужны - прогон его не ждёт.
+let exporter = null;
 let session = null;
 // Ключ открытой сессии: текст, сценарий и период такта. Шаг и прогон продолжают
 // открытую сессию, пока эти трое не изменились; изменились - сессия открывается
@@ -140,8 +143,13 @@ async function step(message) {
 /** Экспорт: отказ среды исполнения становится отказом ответа - страница его ждёт. */
 async function exportProject(message) {
   try {
-    if (!bridge) bridge = await Bridge.load(message.wasmUrl);
-    return bridge.exportProject(message.request);
+    if (!exporter) {
+      // Первая загрузка идёт по сети: страница говорит об этом словами, иначе
+      // первый экспорт выглядел бы зависшим.
+      post({ type: "exportLoading" });
+      exporter = await Bridge.load(message.exportUrl);
+    }
+    return exporter.exportProject(message.request);
   } catch (error) {
     return { ok: false, error: { message: String(error?.message ?? error) } };
   }

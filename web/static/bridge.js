@@ -124,14 +124,18 @@ export class Bridge {
     return this.call("takt_graph", { source });
   }
 
-  /** Рисунок всех листов в числах - тот, что возьмёт чертёж; для сверки с холстом. */
+  /**
+   * Рисунок всех листов в числах - тот, что возьмёт чертёж; для сверки с холстом.
+   * Операция модуля экспорта, а не ядра.
+   */
   schemeGeometry(source, layout, tick = null) {
     return this.call("takt_scheme_geometry", { source, layout, tick });
   }
 
   /**
    * Экспорт проекта: картинки листов и видео прогона тем же носителем, что у
-   * `takt-sim export`. Байты файлов - строкой base64 в поле `data`.
+   * `takt-sim export`. Байты файлов - строкой base64 в поле `data`. Операция
+   * модуля экспорта, а не ядра: его грузит поток прогона по требованию.
    */
   exportProject(request) {
     return this.call("takt_export", request);

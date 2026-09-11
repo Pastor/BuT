@@ -145,7 +145,7 @@ setup_tree() {  # $1 = корень
 run_gate() {  # $1 = корень дерева, $2 = режим модуля
   make_module "$1/module.mjs" "$2"
   ( cd "$1" && node --import "./module.mjs" scripts/check-wasm-identity.mjs \
-      "$1/fake.wasm" "$WORK/taktc" "$WORK/takt-sim" 2>&1 )
+      "$1/fake.wasm" "$WORK/taktc" "$WORK/takt-sim" "$1/fake.wasm" 2>&1 )
 }
 
 TREE="$WORK/tree"
