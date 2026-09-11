@@ -2050,6 +2050,11 @@ input[type="number"] { height: var(--h-dense); padding: 0 var(--gap-half); }
  * текущее внутреннее состояние. */
 .mini-node.run { fill: var(--warn); }
 .mini-edge.hot { stroke: var(--warn); stroke-width: 2.5; }
+/* Счётчик экземпляров: кружок у правого верхнего края узла, когда одно
+ * состояние несут два экземпляра модели и больше. Пара "выбранное", как у
+ * плашки, - это тот же прогон. */
+.node-count-bg { fill: var(--surface-yes); stroke: var(--accent); stroke-width: 1; }
+.node-count-num { fill: var(--on-surface-yes); font-size: var(--text-xs); text-anchor: middle; dominant-baseline: central; }
 .node-inner-box[hidden] { display: none; }
 .node-inner-bg { fill: var(--surface-yes); stroke: var(--accent); stroke-width: 1; }
 .node-inner { fill: var(--on-surface-yes); font-size: var(--text-xs); text-anchor: middle; dominant-baseline: central; }

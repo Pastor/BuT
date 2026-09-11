@@ -547,7 +547,7 @@ const PAGE_SCRIPTS = [
   "account.js", "alerts.js", "api.js", "app.js", "boot.js", "bridge.js", "build.js", "build-settings.js",
   "draft.js", "editor.js", "help.js", "i18n.js", "layout.js", "legend.js", "pick.js",
   "panels.js", "project.js", "sample.js", "scheme.js", "scheme-geometry.js",
-  "scheme-host.js",
+  "scheme-host.js", "scheme-run.js",
   "scheme-settings.js",
   "flags.js", "json.js",
   "md.js", "offline.js", "share.js", "shell.js", "sw.js", "tip.js", "worker.js",

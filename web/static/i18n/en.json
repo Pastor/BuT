@@ -271,6 +271,7 @@
   "scheme.kind.end": "end",
   "scheme.kind.composition": "composition",
   "scheme.kind.model": "sheet",
+  "scheme.instances": "instances: {count}",
   "scheme.unplaced": "not placed — the layout file has no record for this state",
   "scheme.legend": "Legend of marks",
   "scheme.legend.states": "States",

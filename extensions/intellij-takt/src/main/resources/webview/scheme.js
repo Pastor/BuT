@@ -22,6 +22,7 @@ import * as layoutFile from "./layout.js";
 import { paintLegend, paintNav, tipOf } from "./legend.js";
 import { Settings } from "./scheme-settings.js";
 import { Panels, PANELS } from "./panels.js";
+import * as runOf from "./scheme-run.js";
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -128,21 +129,6 @@ function span(touches) {
 }
 
 /**
- * Текст плашки композиции: активные внутренние состояния - подписью автора, если
- * она есть, иначе именем (у шага композиции - именем его модели); у параллели их
- * несколько, через запятую.
- *
- * @param {{name: string, alias?: string, model?: string}[]} nodes узлы внутреннего листа
- * @param {Set<string>} running активные состояния такта (имена всех уровней)
- */
-export function innerLabel(nodes, running) {
-  return nodes
-    .filter((node) => running.has(node.name))
-    .map((node) => node.alias || node.model || node.name)
-    .join(", ");
-}
-
-/**
  * Модели, стоящие в выражениях реализации графа: у них есть шаги на листах
  * композиций.
  *
@@ -175,20 +161,6 @@ export function sheetLabel(key) {
 
 /** Запас белого поля маски за краем листа: больше любого переноса за один жест. */
 const REACH_ALL = 100000;
-
-/**
- * Рёбра, которые сработают на следующем такте: ожидаемый переход модуля - пара
- * "из, в", и ребро узнаётся по ней, если его начало сейчас активно.
- *
- * @param {{key: string, from: string, to: string}[]} edges рёбра листа
- * @param {Set<string>} running активные состояния такта
- * @param {string[][]} next ожидаемые переходы парами "из, в"
- * @returns {Set<string>} ключи рёбер
- */
-export function nextEdgeKeys(edges, running, next) {
-  const pairs = new Set((next ?? []).filter((pair) => running.has(pair[0])).map((pair) => `${pair[0]}\u0000${pair[1]}`));
-  return new Set(edges.filter((edge) => pairs.has(`${edge.from}\u0000${edge.to}`)).map((edge) => edge.key));
-}
 
 /** Наконечник ребра: род перехода задаёт форму, выбор и прогон - чернила. */
 function markerOf(kind, selected, next) {
@@ -235,9 +207,16 @@ export class Scheme {
     this.view = { k: 1, x: 0, y: 0 };
     this.selected = null;
     this.selectedEdge = null;
+    // Последний такт прогона: адреса активных состояний и ожидаемые переходы.
+    // Что из этого горит на листе, считает носитель правила (`scheme-run.js`) - на
+    // каждой отрисовке, потому что лист меняется, а такт нет.
+    this.run = { active: [], next: [] };
     this.running = new Set();
     this.expected = new Set();
+    this.reachable = new Set();
     this.nextEdges = new Set();
+    this.counts = new Map();
+    this.squares = new Map();
     this.fitPending = true;
     // Счётчик масок щели под знаком: имя маски обязано быть своим у каждого ребра,
     // а ключ ребра содержит знаки, которых в имени быть не может.
@@ -328,24 +307,22 @@ export class Scheme {
    * куда переход ожидается при нынешних значениях. Вид переключается без перестроения
    * листа.
    *
-   * @param {string[]} names активные состояния такта
+   * Горит не имя, а экземпляр: на листе композиции - идущий шаг, на листе модели -
+   * все активные экземпляры с их числом. Правило сопоставления - `scheme-run.js`.
+   *
+   * @param {object[]} active адреса активных состояний такта (`{path, model, state, done}`)
    * @param {string[][]} next ожидаемые переходы парами "из, в"
    */
-  setRunning(names, next = []) {
-    this.runningBefore = this.running;
-    this.running = new Set(names ?? []);
-    this.expected = new Set((next ?? []).filter((pair) => this.running.has(pair[0])).map((pair) => pair[1]));
+  setRunning(active = [], next = []) {
+    this.run = { active: active ?? [], next: next ?? [] };
     const sheet = this.current();
-    this.nextEdges = nextEdgeKeys(sheet.edges, this.running, next);
-    const reachable = new Set(
-      sheet.edges.filter((e) => this.running.has(e.from)).map((e) => e.to),
-    );
+    this.computeRun(sheet);
     for (const node of this.dom.sheet.querySelectorAll(".node")) {
       const name = node.dataset.name;
       const running = this.running.has(name);
       node.classList.toggle("running", running);
       node.classList.toggle("expected", !running && this.expected.has(name));
-      node.classList.toggle("reachable", !running && !this.expected.has(name) && reachable.has(name));
+      node.classList.toggle("reachable", !running && !this.expected.has(name) && this.reachable.has(name));
     }
     // Стрелка, которая сработает, - в пару к состоянию, куда уйдёт автомат: без
     // неё из нескольких выходящих переходов нужный угадывался по условиям.
@@ -354,7 +331,39 @@ export class Scheme {
       group.classList.toggle("next", next);
       group.querySelector(".edge")?.setAttribute("marker-end", `url(#${markerOf(group.dataset.kind, group.dataset.key === this.selectedEdge, next)})`);
     }
-    this.paintInner();
+    this.paintCounts(sheet);
+    this.paintInner(true);
+  }
+
+  /** Что горит на листе по последнему такту. */
+  computeRun(sheet) {
+    const lit = runOf.sheetRun(sheet, this.run, runOf.placeOf(sheet, this.graph));
+    this.running = lit.running;
+    this.expected = lit.expected;
+    this.reachable = lit.reachable;
+    this.nextEdges = lit.nextEdges;
+    this.counts = lit.counts;
+  }
+
+  /**
+   * Счётчик экземпляров у края узла: только при двух и более - у одного
+   * экземпляра числа нет. Рисуется на такте, без перестроения листа.
+   */
+  paintCounts(sheet) {
+    for (const old of this.dom.sheet.querySelectorAll(".node-count")) old.remove();
+    const byName = new Map(sheet.nodes.map((n) => [n.name, n]));
+    for (const group of this.dom.sheet.querySelectorAll(".node")) {
+      const count = this.counts.get(group.dataset.name) ?? 0;
+      const node = byName.get(group.dataset.name);
+      if (count < 2 || !node) continue;
+      const edge = node.kind === "composition" ? geo.SIDE / 2 : geo.R * 0.72;
+      const badge = mk("g", { class: "node-count", "aria-label": this.t("scheme.instances", { count }) });
+      badge.appendChild(mk("circle", { class: "node-count-bg", cx: node.x + edge, cy: node.y - edge, r: 9 }));
+      const text = mk("text", { class: "node-count-num", x: node.x + edge, y: node.y - edge });
+      text.textContent = String(count);
+      badge.appendChild(text);
+      group.appendChild(badge);
+    }
   }
 
   /** Снимает записи, которых в модели нет. */
@@ -503,6 +512,10 @@ export class Scheme {
       // Пути модели у листа композиции нет: во вложенную композицию с него не
       // входят, а запись идёт по ключу листа.
       path: null,
+      // Чей лист: состояние-владелец и лист, где оно стоит, - по ним прогон
+      // находит экземпляры шагов.
+      owner: node.name,
+      ownerPath: sheetPath,
       title: node.name,
       editable: true,
       nodes,
@@ -738,6 +751,7 @@ export class Scheme {
         return;
       }
     }
+    this.computeRun(sheet);
     const byName = new Map(sheet.nodes.map((n) => [n.name, n]));
     for (const frame of sheet.frames) {
       svg.appendChild(mk("rect", { class: "node-frame", x: frame.x, y: frame.y, width: frame.w, height: frame.h, rx: 12 }));
@@ -761,7 +775,8 @@ export class Scheme {
       this.drawEdge(sheet, edge, pts, hops, covered);
     });
     for (const node of sheet.nodes) this.drawNode(sheet, node);
-    this.paintInner();
+    this.paintCounts(sheet);
+    this.paintInner(false);
     svg.style.transformOrigin = "0 0";
     svg.style.transform = `translate(${this.view.x}px, ${this.view.y}px)`;
     // Сетка холста едет с листом: шаг масштабируется, а при мелком масштабе удваивается,
@@ -914,7 +929,7 @@ export class Scheme {
     if (node.unplaced && sheet.editable) classes.push("unplaced");
     if (this.running.has(node.name)) classes.push("running");
     else if (this.expected.has(node.name)) classes.push("expected");
-    else if (sheet.edges.some((e) => this.running.has(e.from) && e.to === node.name)) classes.push("reachable");
+    else if (this.reachable.has(node.name)) classes.push("reachable");
     const composition = node.kind === "composition";
     const group = mk("g", {
       class: classes.join(" "),
@@ -1058,33 +1073,61 @@ export class Scheme {
    * состояние и подсвечивает только что пройденный переход, плашка называет
    * текущее внутреннее состояние - подписью автора, если она есть.
    *
-   * Активные состояния модуль отдаёт плоским списком имён всех уровней, поэтому
-   * внутреннее состояние узнаётся по имени на внутреннем листе.
+   * Внутреннее состояние берётся у своего экземпляра, а не по имени: два квадрата
+   * одной модели на листе композиции идут порознь, и у каждого своё. Квадрат
+   * композиции перечисляет идущие шаги с их состояниями.
+   *
+   * @param {boolean} tick перерисовка по такту: прежние миниатюры - прошлый такт
    */
-  paintInner() {
+  paintInner(tick) {
     const sheet = this.current();
-    const before = this.runningBefore ?? new Set();
+    const place = runOf.placeOf(sheet, this.graph);
+    const before = tick ? this.squares : new Map();
+    const squares = new Map();
     for (const node of sheet.nodes) {
       if (node.kind !== "composition") continue;
       const group = [...this.dom.sheet.querySelectorAll(".node")].find((g) => g.dataset.name === node.name);
       if (!group) continue;
       const level = this.target(sheet, node);
       const inner = level ? this.sheetOf(level) : null;
-      for (const dot of group.querySelectorAll(".mini-node")) dot.classList.toggle("run", this.running.has(dot.dataset.name));
+      const { lit, label } = this.innerRun(sheet, node, inner, place);
+      squares.set(node.name, lit);
+      const was = before.get(node.name) ?? new Set();
+      for (const dot of group.querySelectorAll(".mini-node")) dot.classList.toggle("run", lit.has(dot.dataset.name));
       for (const line of group.querySelectorAll(".mini-edge")) {
-        const hot = line.dataset.from !== line.dataset.to && before.has(line.dataset.from) && this.running.has(line.dataset.to) && !before.has(line.dataset.to);
+        const hot = line.dataset.from !== line.dataset.to && was.has(line.dataset.from) && lit.has(line.dataset.to) && !was.has(line.dataset.to);
         line.classList.toggle("hot", hot);
       }
       const box = group.querySelector(".node-inner-box");
       if (!box) continue;
-      // Имени самого квадрата в списке модуля может не быть: у состояния,
-      // реализованного моделью, список несёт одни внутренние имена. Плашку и
-      // отметку прогона даёт само внутреннее состояние.
-      const label = inner ? innerLabel(inner.nodes, this.running) : "";
+      // Имени самого квадрата в списке модуля может не быть: у свёрнутой модели
+      // узла нет, и список несёт одни внутренние имена. Плашку и отметку прогона
+      // даёт само внутреннее состояние.
       box.querySelector(".node-inner").textContent = label;
       box.toggleAttribute("hidden", label === "");
       if (label) group.classList.add("running");
     }
+    this.squares = squares;
+  }
+
+  /** Внутренний прогон квадрата: горящие узлы его миниатюры и текст плашки. */
+  innerRun(sheet, node, inner, place) {
+    if (!inner) return { lit: new Set(), label: "" };
+    const active = this.run.active;
+    if (node.implements?.model) {
+      const states = runOf.statesOf(runOf.squareInstance(sheet, node, active, place));
+      return { lit: states, label: runOf.innerLabel(inner.nodes, states) };
+    }
+    // Квадрат композиции: миниатюра - шаги, плашка - шаги с состояниями.
+    const groups = runOf.stepsOf(active, place, node.name);
+    const lit = new Set([...groups.keys()].map((step) => inner.nodes[step - 1]?.name).filter(Boolean));
+    const label = runOf.stepsLabel(inner.nodes, groups, (step, group) => {
+      const target = this.target(inner, step);
+      const own = target ? this.sheetOf(target) : null;
+      const states = runOf.statesOf(group);
+      return own ? runOf.innerLabel(own.nodes, states) : [...states].join(", ");
+    });
+    return { lit, label };
   }
 
   drawCrumbs(sheet) {

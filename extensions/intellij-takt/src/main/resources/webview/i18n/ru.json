@@ -271,6 +271,7 @@
   "scheme.kind.end": "конец",
   "scheme.kind.composition": "композиция",
   "scheme.kind.model": "лист",
+  "scheme.instances": "экземпляров: {count}",
   "scheme.unplaced": "не размещён — раскладки для этого состояния в файле нет",
   "scheme.legend": "Легенда обозначений",
   "scheme.legend.states": "Состояния",

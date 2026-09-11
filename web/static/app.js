@@ -1625,7 +1625,7 @@ function onWorker(message) {
       // от эталона, разбирать строку трассы страница не вправе.
       if (message.states?.length) {
         const last = message.states.length - 1;
-        state.scheme.setRunning(message.states[last], message.next?.[last] ?? []);
+        state.scheme.setRunning(message.active?.[last] ?? [], message.next?.[last] ?? []);
       }
       break;
     case "warnings":

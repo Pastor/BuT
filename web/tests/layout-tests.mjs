@@ -483,25 +483,140 @@ test("схема: двойное касание входит в квадрат",
   assert.equal(doubleTap({ name: "Idle", at: 100 }, "Main", 200), false, "другой узел");
 });
 
-test("прогон: подсвечена стрелка, которая сработает на следующем такте", async () => {
-  const { nextEdgeKeys } = await import("../static/scheme.js");
-  const edges = [
-    { key: "a", from: "Idle", to: "Heat" },
-    { key: "b", from: "Idle", to: "Cool" },
-    { key: "c", from: "Heat", to: "Idle" },
-  ];
-  assert.deepEqual([...nextEdgeKeys(edges, new Set(["Idle"]), [["Idle", "Heat"]])], ["a"], "из нескольких выходящих - та, что сработает");
-  assert.deepEqual([...nextEdgeKeys(edges, new Set(["Heat"]), [["Idle", "Heat"]])], [], "начало не активно - не подсвечивается");
-  assert.deepEqual([...nextEdgeKeys(edges, new Set(["Idle"]), [])], [], "перехода нет - нет и стрелки");
+test("прогон: на листе модели горит экземпляр, а стрелка - та, что сработает", async () => {
+  const run = await import("../static/scheme-run.js");
+  const sheet = {
+    path: "Engine",
+    nodes: [{ name: "Idle" }, { name: "Heat" }, { name: "Cool" }],
+    edges: [
+      { key: "a", from: "Idle", to: "Heat" },
+      { key: "b", from: "Idle", to: "Cool" },
+      { key: "c", from: "Heat", to: "Idle" },
+    ],
+  };
+  const place = { root: false, model: "Engine", owner: null };
+  const at = (state, model = "Engine") => ({ path: [{ owner: "Main", step: 1, model }], model, state, done: false });
+  const lit = run.sheetRun(sheet, { active: [at("Idle")], next: [["Idle", "Heat"]] }, place);
+  assert.deepEqual([...lit.running], ["Idle"]);
+  assert.deepEqual([...lit.nextEdges], ["a"], "из нескольких выходящих - та, что сработает");
+  assert.deepEqual([...lit.expected], ["Heat"]);
+  assert.deepEqual([...lit.reachable], ["Cool"], "достижимое - прочие цели рёбер из горящего");
+  assert.deepEqual([...run.sheetRun(sheet, { active: [at("Heat")], next: [["Idle", "Heat"]] }, place).nextEdges], [], "начало не горит - стрелки нет");
+  // Чужая модель с тем же именем состояния на этом листе не горит.
+  assert.deepEqual([...run.sheetRun(sheet, { active: [at("Idle", "Pump")], next: [] }, place).running], []);
+  // Два экземпляра в одном состоянии - число на узле.
+  const two = run.sheetRun(sheet, { active: [at("Idle"), at("Idle"), at("Heat")], next: [] }, place);
+  assert.equal(two.counts.get("Idle"), 2);
+  assert.equal(two.counts.get("Heat"), 1);
+  // Корневой лист горит по адресам с пустым путём.
+  const root = run.sheetRun(
+    { path: "/", nodes: [{ name: "Main" }], edges: [] },
+    { active: [{ path: [], model: null, state: "Main", done: false }, at("Main")], next: [] },
+    { root: true, model: null, owner: null },
+  );
+  assert.equal(root.counts.get("Main"), 1, "экземпляр вложенной модели корневой лист не зажигает");
+});
+
+/** Лист композиции `Main = Heater + (Pump | Pump) + Heater` - так, как его строит холст. */
+function composedSheet() {
+  const composed = geo.composeSheet(COMPOSED.sheets[0].nodes[0].implements);
+  return {
+    path: null,
+    owner: "Main",
+    ownerPath: "/",
+    nodes: composed.nodes,
+    edges: composed.edges.map((e) => ({ ...e, key: layout.edgeKey(e) })),
+  };
+}
+
+/** Адрес шага `step` листа `Main` корневой модели. */
+const stepAt = (step, model, state, done = false) => ({ path: [{ owner: "Main", step, model }], model, state, done });
+
+test("прогон: лист композиции горит идущим шагом, а не всеми шагами той же модели", async () => {
+  const run = await import("../static/scheme-run.js");
+  const sheet = composedSheet();
+  const place = run.placeOf(sheet, COMPOSED);
+  assert.deepEqual(place, { root: true, model: null, owner: "Main" });
+  const first = run.sheetRun(sheet, { active: [stepAt(1, "Heater", "Heating")], next: [] }, place);
+  assert.deepEqual([...first.running], ["Heater#1"], "горит первый шаг, второй шаг той же модели - нет");
+  assert.deepEqual([...first.reachable].sort(), ["Pump#1", "Pump#2"]);
+  assert.deepEqual([...first.expected], [], "шаг не завершён - следующего не ждут");
+
+  // Шаг завершён: стрелки к следующему шагу горят, следующий шаг ожидается.
+  const done = run.sheetRun(sheet, { active: [stepAt(1, "Heater", "Done", true)], next: [] }, place);
+  assert.deepEqual([...done.expected].sort(), ["Pump#1", "Pump#2"]);
+  assert.deepEqual([...done.nextEdges].sort(), ["Heater#1>Pump#1:0", "Heater#1>Pump#2:0"]);
+
+  // Параллель горит обеими ветвями; следующий шаг ждут, только когда обе завершены.
+  const half = run.sheetRun(sheet, { active: [stepAt(2, "Pump", "Off", true), stepAt(3, "Pump", "On")], next: [] }, place);
+  assert.deepEqual([...half.running], ["Pump#1", "Pump#2"]);
+  assert.deepEqual([...half.expected], [], "одна ветвь завершена - мало");
+  const both = run.sheetRun(sheet, { active: [stepAt(2, "Pump", "Off", true), stepAt(3, "Pump", "Off", true)], next: [] }, place);
+  assert.deepEqual([...both.expected], ["Heater#2"]);
+  assert.deepEqual([...both.nextEdges].sort(), ["Pump#1>Heater#2:0", "Pump#2>Heater#2:0"]);
+});
+
+test("прогон: одноимённый владелец другой модели чужой лист не зажигает", async () => {
+  const run = await import("../static/scheme-run.js");
+  // Лист композиции состояния Run модели A: шаги под сегментом Run, перед которым
+  // стоит экземпляр модели A.
+  const place = { root: false, model: "A", owner: "Run" };
+  const of = (path) => run.stepsOf([{ path, model: "E", state: "S", done: false }], place, "Run");
+  assert.equal(of([{ owner: "Main", step: 1, model: "A" }, { owner: "Run", step: 2, model: "E" }]).has(2), true);
+  assert.equal(of([{ owner: "Main", step: 1, model: "B" }, { owner: "Run", step: 2, model: "E" }]).size, 0, "владелец Run модели B - чужой");
+  assert.equal(of([{ owner: "Run", step: 2, model: "E" }]).size, 0, "корневой Run - не этот лист");
+});
+
+test("прогон: плашка квадрата перечисляет шаги с состояниями", async () => {
+  const run = await import("../static/scheme-run.js");
+  const steps = [{ name: "Engine#1" }, { name: "Engine#2", alias: "Разгон" }, { name: "Engine#3" }];
+  const groups = run.stepsOf([stepAt(2, "Engine", "Idle"), stepAt(3, "Engine", "Moving")], { root: true, model: null }, "Main");
+  const label = (step, group) => [...run.statesOf(group)].join(", ");
+  assert.equal(run.stepsLabel(steps, groups, label), "Разгон: Idle, Engine#3: Moving", "подпись шага сильнее имени");
+  const one = run.stepsOf([stepAt(3, "Engine", "Moving")], { root: true, model: null }, "Main");
+  assert.equal(run.stepsLabel(steps, one, label), "Moving", "один идущий шаг - без имени шага");
 });
 
 test("прогон: плашка композиции называет текущее внутреннее состояние", async () => {
-  const { innerLabel } = await import("../static/scheme.js");
+  const { innerLabel } = await import("../static/scheme-run.js");
   const nodes = [{ name: "Idle", alias: "" }, { name: "Heat", alias: "Нагрев" }, { name: "Cool" }];
   assert.equal(innerLabel(nodes, new Set(["Main", "Idle"])), "Idle", "без подписи - имя");
   assert.equal(innerLabel(nodes, new Set(["Main", "Heat"])), "Нагрев", "подпись автора сильнее имени");
   assert.equal(innerLabel(nodes, new Set(["Main", "Heat", "Cool"])), "Нагрев, Cool", "у параллели - все активные");
   assert.equal(innerLabel(nodes, new Set(["Done"])), "", "внутри не идёт ничего");
+});
+
+test("прогон: два экземпляра Heater у pid_heater горят по очереди", async () => {
+  const run = await import("../static/scheme-run.js");
+  const bridge = await loadBridge();
+  const source = await readFile(new URL("../../examples/pid_heater.takt", import.meta.url), "utf8");
+  const library = await readFile(new URL("../../examples/pid_law.takt", import.meta.url), "utf8");
+  const graph = bridge.graph(source);
+  assert.equal(graph.ok, true, JSON.stringify(graph));
+  const node = graph.sheets.find((s) => s.path === "/").nodes.find((n) => n.name === "PidHeater");
+  const composed = geo.composeSheet(node.implements);
+  const sheet = {
+    path: null,
+    owner: "PidHeater",
+    ownerPath: "/",
+    nodes: composed.nodes,
+    edges: composed.edges.map((e) => ({ ...e, key: layout.edgeKey(e) })),
+  };
+  const place = run.placeOf(sheet, graph);
+  const opened = bridge.simOpen(source, "", 0, { "pid_law.takt": library });
+  assert.equal(opened.ok, true, JSON.stringify(opened));
+  const ticked = bridge.simTick(opened.id, 200);
+  assert.equal(ticked.ok, true, JSON.stringify(ticked));
+  const seen = [];
+  let handoff = false;
+  for (const active of ticked.active) {
+    const lit = run.sheetRun(sheet, { active, next: [] }, place);
+    const now = [...lit.running].join();
+    if (now && seen[seen.length - 1] !== now) seen.push(now);
+    if (lit.expected.has("Heater#2")) handoff = true;
+  }
+  assert.deepEqual(seen, ["Heater#1", "Heater#2"], "шаги горят по очереди, а не оба разом");
+  assert.ok(handoff, "завершённый первый шаг подсвечивает второй");
 });
 
 test("раскладка: форма рёбер «кривые Безье» переживает круговой рейс", () => {
