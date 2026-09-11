@@ -8,6 +8,7 @@
 # W2 - расхождение трассы прогона (подменённая строка шага);
 # W3 - расхождение кода отказа (инструмент отверг, "модуль" принял);
 # W4 - согласованный вход принимается (иначе проверка красен всегда и бесполезен);
+# W6 - расхождение байтов экспорта (картинка модуля не равна картинке `takt-sim`);
 # W5 - отсутствие `node` даёт мягкий пропуск, а под `PRECHECK_STRICT=1` -
 # ошибку (политика внешних инструментов).
 #
@@ -50,9 +51,25 @@ printf 'ОБРАЗЕЦ\n' > "$out/probe.c"
 EOF
 chmod +x "$WORK/taktc"
 
-# `takt-sim`: печатает одну строку трассы.
+# `takt-sim`: печатает одну строку трассы; `project --owner` называет первую
+# модель, `export` кладёт в каталог вывода один файл с известными байтами.
 cat > "$WORK/takt-sim" <<'EOF'
 #!/usr/bin/env bash
+if [[ "${1:-}" == "project" ]]; then
+  echo "$4"
+  exit 0
+fi
+if [[ "${1:-}" == "export" ]]; then
+  out=""
+  prev=""
+  for arg in "$@"; do
+    if [[ "$prev" == "-o" ]]; then out="$arg"; fi
+    prev="$arg"
+  done
+  mkdir -p "$out"
+  printf 'ОБРАЗ' > "$out/p.draft.svg"
+  exit 0
+fi
 printf 'Шаг   1:  [S]  vars:n=1\n'
 EOF
 chmod +x "$WORK/takt-sim"
@@ -96,6 +113,11 @@ const exports = {
     return reply(JSON.stringify({ ok: true, lines: [line], done: true, info: [], errors: [] }));
   },
   takt_sim_close: () => reply(JSON.stringify({ ok: true, closed: true })),
+  takt_export: (len) => {
+    request(len);
+    const data = Buffer.from(MODE === "export" ? "ИНОЕ" : "ОБРАЗ").toString("base64");
+    return reply(JSON.stringify({ ok: true, files: [{ name: "p.draft.svg", data }], names: ["p.draft.svg"], notes: [] }));
+  },
 };
 for (const name of ["takt_diagnostics", "takt_tokens", "takt_symbols", "takt_completion",
                     "takt_hover", "takt_goto", "takt_references", "takt_format"]) {
@@ -112,6 +134,11 @@ setup_tree() {  # $1 = корень
   printf 'var n: u8 := 0;\n\nstart S {\n    always {\n        n := n + 1;\n    }\n}\n' \
     > "$1/examples/probe.takt"
   printf '[{}]\n' > "$1/examples/simulations/probe_run.json"
+  # Проект-фикстура экспорта: проверка читает его манифест и файлы.
+  mkdir -p "$1/takt-sim/tests/data/export/project"
+  printf '{"format": 5, "name": "p", "files": [{"name": "p.takt", "kind": "takt"}]}\n' \
+    > "$1/takt-sim/tests/data/export/project/takt-project.json"
+  printf 'start S;\n' > "$1/takt-sim/tests/data/export/project/p.takt"
   cp "$ROOT/scripts/check-wasm-identity.mjs" "$ROOT/scripts/gatelib.mjs" "$1/scripts/"
 }
 
@@ -156,6 +183,19 @@ if grep -q "шаг 1" <<< "$out"; then
   echo "  OK: W2 расхождение трассы ловится и названо"
 else
   echo "  ПРОВАЛ: W2 отказ не называет шаг:"
+  echo "$out" | sed 's/^/    /'
+  exit 1
+fi
+
+# -- W6: расхождение байтов экспорта ловится ----------------------------------
+if out="$(run_gate "$TREE" "export")"; then
+  echo "  ПРОВАЛ: W6 подменённые байты экспорта не пойманы"
+  exit 1
+fi
+if grep -q "разошёлся байтами" <<< "$out"; then
+  echo "  OK: W6 расхождение байтов экспорта ловится и названо"
+else
+  echo "  ПРОВАЛ: W6 отказ не называет расхождение экспорта:"
   echo "$out" | sed 's/^/    /'
   exit 1
 fi
@@ -205,4 +245,4 @@ if out="$(PRECHECK_STRICT=1 TAKT_NODE="$WORK/нет-такого-node" bash "$RO
 fi
 echo "  OK: W5 под PRECHECK_STRICT=1 отсутствие node — ошибка"
 
-echo "  Сторож гейта модуля: все проверки пройдены (W1…W5)."
+echo "  Сторож гейта модуля: все проверки пройдены (W1…W6)."

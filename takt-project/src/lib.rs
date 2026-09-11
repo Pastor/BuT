@@ -27,7 +27,7 @@ mod kind;
 mod load;
 mod manifest;
 
-pub use archive::{Export, Import, Limits, SourceFile, pack, unpack};
+pub use archive::{Export, Import, Limits, SourceFile, pack, pack_files, unpack};
 pub use belongs::{owner_of, scenarios_of};
 pub use error::Error;
 pub use kind::{Kind, check_file_name, stem_of};

@@ -31,6 +31,7 @@
 
 pub mod compile;
 pub mod editor;
+pub mod export;
 pub mod graph;
 pub mod highlight;
 pub mod reply;
@@ -350,6 +351,19 @@ pub extern "C" fn takt_sim_close(len: u32) -> u32 {
     call(len, |r: SimCloseRequest| sim::close(r.id))
 }
 
+/// Экспорт проекта: картинки листов и видео прогона тем же носителем, что у
+/// `takt-sim export`; ответ несёт файлы строкой base64.
+#[unsafe(no_mangle)]
+pub extern "C" fn takt_export(len: u32) -> u32 {
+    call(len, |r: export::ExportRequest| export::run(&r))
+}
+
+/// Сценарии каждой модели проекта по правилу принадлежности крейта проекта.
+#[unsafe(no_mangle)]
+pub extern "C" fn takt_scenarios(len: u32) -> u32 {
+    call(len, |r: export::ScenariosRequest| export::scenarios(&r))
+}
+
 /// Разбирает запрос из буфера, зовёт операцию и кладёт ответ обратно.
 ///
 /// Ошибка разбора запроса - отказ **вызова** с текстом, а не паника: паника в модуле
@@ -458,6 +472,72 @@ mod tests {
         let answer = IO.with(|io| String::from_utf8(io.borrow()[..len].to_vec()).unwrap());
         let reply: Value = serde_json::from_str(&answer).unwrap();
         assert_eq!(reply["ok"], Value::Bool(false), "{reply}");
+    }
+
+    /// Экспорт отдаёт байты тех же картинок, что носитель, и архив по просьбе;
+    /// без раскладки - отказ словами.
+    #[test]
+    fn export_returns_pictures_and_refuses_without_a_layout() {
+        use base64::Engine as _;
+        let files = serde_json::json!({
+            "m.takt": "start A {\n    ref B;\n}\nstate B;\n",
+            "m.takt-ui": "{\"format\":1,\"sheets\":{\"/\":{\"nodes\":{\"A\":{\"x\":72,\"y\":72},\"B\":{\"x\":72,\"y\":240}}}}}",
+        });
+        let reply = round_trip(
+            serde_json::json!({ "files": files, "formats": ["svg", "png"] }),
+            takt_export,
+        );
+        assert_eq!(reply["ok"], Value::Bool(true), "{reply}");
+        assert_eq!(
+            reply["names"],
+            serde_json::json!(["m.draft.svg", "m.draft.png"])
+        );
+        let svg = base64::engine::general_purpose::STANDARD
+            .decode(reply["files"][0]["data"].as_str().unwrap())
+            .unwrap();
+        assert!(String::from_utf8(svg).unwrap().starts_with("<svg"), "SVG");
+
+        let zipped = round_trip(
+            serde_json::json!({ "files": files, "formats": ["svg", "png"], "archive": "m.zip" }),
+            takt_export,
+        );
+        assert_eq!(zipped["files"][0]["name"], Value::String("m.zip".into()));
+        let single = round_trip(
+            serde_json::json!({ "files": files, "formats": ["svg"], "archive": "m.zip" }),
+            takt_export,
+        );
+        assert_eq!(
+            single["files"][0]["name"],
+            Value::String("m.draft.svg".into()),
+            "один файл - без архива"
+        );
+
+        let bare = round_trip(
+            serde_json::json!({ "files": { "m.takt": "start A;\n" }, "formats": ["svg"] }),
+            takt_export,
+        );
+        assert_eq!(bare["ok"], Value::Bool(false), "{bare}");
+        assert!(bare.to_string().contains("раскладки нет"), "{bare}");
+    }
+
+    /// Пары "модель - сценарии": самая длинная основа забирает свои сценарии.
+    #[test]
+    fn scenarios_follow_the_longest_stem() {
+        let reply = round_trip(
+            serde_json::json!({ "names": [
+                "elevator.takt", "elevator_mini.takt", "elevator_rush.json",
+                "elevator_mini_floor2.json", "notes.md"
+            ] }),
+            takt_scenarios,
+        );
+        assert_eq!(
+            reply["scenarios"]["elevator.takt"],
+            serde_json::json!(["elevator_rush.json"])
+        );
+        assert_eq!(
+            reply["scenarios"]["elevator_mini.takt"],
+            serde_json::json!(["elevator_mini_floor2.json"])
+        );
     }
 
     /// Версия называет язык, крейт и список целей.

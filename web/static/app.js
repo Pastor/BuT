@@ -13,6 +13,7 @@ import { t } from "./i18n.js";
 import { enhance } from "./pick.js";
 import { attachBuildSettings } from "./build-settings.js";
 import { attachHelp } from "./help.js";
+import { attachExport } from "./export.js";
 import * as build from "./build.js";
 import * as shell from "./shell.js";
 import * as tip from "./tip.js";
@@ -58,6 +59,9 @@ const state = {
   bridge: null,
   /** Ручка справки (`help.js`): страница без входа держит её несъёмной. */
   help: null,
+  /** Ждущие ответа экспорты по номеру запроса к потоку. */
+  exports: new Map(),
+  exportSeq: 0,
   editor: null,
   worker: null,
   target: "c",
@@ -304,6 +308,14 @@ export async function main() {
       },
     },
   );
+  // Экспорт схемы: окно на панели листа, рисует модуль в потоке прогона.
+  attachExport(dom, {
+    keep: keepForExport,
+    context: exportContext,
+    export: exportInWorker,
+    download,
+    say,
+  });
   // Курсор в объявлении состояния подсвечивает узел: обратная половина синхронизации.
   document.addEventListener("selectionchange", syncCursor);
 
@@ -373,6 +385,12 @@ export async function main() {
     showTrace: () => showSource("scenario"),
     showScheme: () => showSource("scheme"),
     signedIn: showSignedIn,
+    // Сценарии модели называет модуль - правилом крейта проекта, тем же, что у
+    // командной строки.
+    scenariosOf: (model, names) => {
+      const reply = state.bridge.scenarios(names);
+      return reply.ok ? (reply.scenarios?.[model] ?? []) : [];
+    },
     say,
   });
   // Структура проекта рисуется сразу: без входа она говорит, что проекта нет, -
@@ -643,6 +661,8 @@ function cache() {
     "scenario", "budget", "tickdelay", "share", "format", "say", "modes",
     "gentitle", "gensummary", "gentools", "buildsettings", "copyout", "saveout", "genfiles",
     "build-modal", "build-tabs", "build-target", "build-flags", "build-line", "build-save", "build-cancel",
+    "scheme-export", "export-modal", "export-format", "export-scope", "export-view", "export-background",
+    "export-legend", "export-pause", "export-cancel", "export-go",
     "lang", "tools-lang", "tools-lang-trace", "update", "showgen", "showdiag", "grip", "split", "hsplit", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
     "session", "icon-enter", "icon-leave",
     "save", "openfile", "panel", "signedout", "signedin", "whoami",
@@ -1582,6 +1602,74 @@ function projectFiles() {
   return files;
 }
 
+/** Имя модели без проекта: то же, под которым модуль компилирует буфер. */
+const PLAYGROUND = "playground.takt";
+
+/**
+ * Перед экспортом раскладка записывается в черновик и в проект: экспорт читает
+ * файл, а не холст. Отказ записи в проект не отменяет экспорт - файл уходит в
+ * модуль текстом холста, и об отказе сказано словами.
+ */
+async function keepForExport() {
+  saveDraft.now();
+  try {
+    await account.storeLayout();
+  } catch (error) {
+    say(t("scheme.layoutNotSaved", { error: String(error?.message ?? error) }), "warning");
+  }
+}
+
+/**
+ * Состав и открытое для экспорта: файлы проекта (либо буфер без проекта), поверх
+ * них - набранный текст модели, раскладка холста и сценарий; открытая модель,
+ * лист, предел тактов прогона.
+ */
+async function exportContext() {
+  const snap = await account.snapshot();
+  const model = snap?.model ?? (state.kind === "takt" && state.file ? state.file : PLAYGROUND);
+  const stem = model.replace(/\.takt$/, "");
+  const files = { ...(snap?.files ?? {}) };
+  if (state.kind === "takt" || !snap) files[model] = state.editor.value();
+  files[`${stem}.takt-ui`] = state.scheme.text();
+  let scenario = snap?.scenario ?? null;
+  if (state.scenario.trim()) {
+    scenario ??= `${stem}.json`;
+    files[scenario] = state.scenario;
+  }
+  return {
+    files,
+    main_file: snap?.main_file ?? model,
+    main_scenario: snap?.main_scenario ?? null,
+    name: snap?.name || stem,
+    model,
+    sheet: state.scheme.current().key || null,
+    scenario,
+    steps: Number(dom.budget.value) || null,
+  };
+}
+
+/** Экспорт в потоке прогона: ответ приходит сообщением `exported` со своим номером. */
+function exportInWorker(request) {
+  return new Promise((resolve) => {
+    state.exportSeq += 1;
+    state.exports.set(state.exportSeq, resolve);
+    worker().postMessage({ type: "export", id: state.exportSeq, wasmUrl: session().wasmUrl, request });
+  });
+}
+
+/** Отдаёт файл читателю загрузкой. */
+function download(name, bytes, type) {
+  const url = URL.createObjectURL(new Blob([bytes], { type }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  // Ссылка живёт до конца загрузки: снятая сразу, она отменила бы её.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 /** Запускает прогон в отдельном потоке: до конца модели либо до бюджета. */
 function run() {
   if (state.running) return;
@@ -1629,6 +1717,10 @@ function resetRun() {
 
 function onWorker(message) {
   switch (message.type) {
+    case "exported":
+      state.exports.get(message.id)?.(message.reply);
+      state.exports.delete(message.id);
+      break;
     case "opened":
       // Новая сессия - новая трасса: прежние строки принадлежали другому тексту либо
       // законченному прогону.

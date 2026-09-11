@@ -277,6 +277,9 @@
             <button class="icon-btn" type="button" data-act="legend-float" aria-pressed="false" data-i18n-attr="aria-label:scheme.legend.float;data-tip:scheme.legend.float" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 3.5h17v17h-17z"/><path d="M8.5 8.5h9v6h-9z"/></svg></button>
             <button class="icon-btn" type="button" data-act="pin-add" data-i18n-attr="aria-label:scheme.pinAdd;data-tip:scheme.pinAdd" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20v-8h8"/><circle cx="12" cy="12" r="2.5"/><path d="M16.5 6.5h5M19 4v5"/></svg></button>
             <button class="icon-btn" type="button" data-act="nav" aria-pressed="false" data-i18n-attr="aria-label:scheme.navigator;data-tip:scheme.navigatorHint" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3.5 4.5h17v15h-17z"/><path d="M9 4.5v15"/><path d="M12 9h6M12 12h6M12 15h4"/></svg></button>
+            <!-- Экспорт: картинка листа, модели или проекта и видео прогона. Рисует
+                 модуль по файлу раскладки - тем же носителем, что командная строка. -->
+            <button id="scheme-export" class="icon-btn" type="button" data-i18n-attr="aria-label:scheme.export;data-tip:scheme.export" aria-label="" data-tip=""><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 13.5v6h15v-6"/><path d="M12 15V4"/><path d="M7.5 8.5 12 4l4.5 4.5"/></svg></button>
           </div>
           </div>
           <div id="nav" class="scheme-nav" hidden></div>
@@ -516,6 +519,50 @@
       <span id="build-line" class="build-line"></span>
       <button id="build-cancel" type="button" data-i18n="scheme.settingsCancel">Отменить</button>
       <button id="build-save" type="button" class="primary" data-i18n="scheme.settingsSave">Сохранить</button>
+    </div>
+  </div>
+</div>
+<!-- Экспорт схемы: формат, объём, вид, фон, легенда и пауза видео. Обоймы
+     показывают выбор; неприменимое гаснет, а не пропадает (вид у видео, фон не у
+     PNG, пауза у картинки). -->
+<div id="export-modal" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true"
+       data-i18n-attr="aria-label:export.title" aria-label="Экспорт схемы">
+    <div class="modal-head" data-i18n="export.title">Экспорт схемы</div>
+    <div class="modal-body">
+      <span class="muted" data-i18n="export.format">Формат</span>
+      <div id="export-format" class="seg" role="radiogroup" data-i18n-attr="aria-label:export.format" aria-label="Формат">
+        <button type="button" data-value="svg" aria-pressed="true">SVG</button>
+        <button type="button" data-value="png" aria-pressed="false">PNG</button>
+        <button type="button" data-value="gif" aria-pressed="false">GIF</button>
+        <button type="button" data-value="mp4" aria-pressed="false">MP4</button>
+      </div>
+      <span class="muted" data-i18n="export.scope">Объём</span>
+      <div id="export-scope" class="seg" role="radiogroup" data-i18n-attr="aria-label:export.scope" aria-label="Объём">
+        <button type="button" data-value="sheet" aria-pressed="true" data-i18n="export.scope.sheet">Лист</button>
+        <button type="button" data-value="model" aria-pressed="false" data-i18n="export.scope.model">Модель</button>
+        <button type="button" data-value="project" aria-pressed="false" data-i18n="export.scope.project">Проект</button>
+      </div>
+      <span class="muted" data-i18n="export.view">Вид</span>
+      <div id="export-view" class="seg" role="radiogroup" data-i18n-attr="aria-label:export.view" aria-label="Вид">
+        <button type="button" data-value="draft" aria-pressed="true" data-i18n="export.view.draft">Чертёжный</button>
+        <button type="button" data-value="run" aria-pressed="false" data-i18n="export.view.run">Цветной</button>
+      </div>
+      <span class="muted" data-i18n="export.background">Фон PNG</span>
+      <div id="export-background" class="seg" role="radiogroup" data-i18n-attr="aria-label:export.background" aria-label="Фон PNG">
+        <button type="button" data-value="fill" aria-pressed="true" data-i18n="export.background.fill">Заливка</button>
+        <button type="button" data-value="none" aria-pressed="false" data-i18n="export.background.none">Прозрачный</button>
+      </div>
+      <label class="check" for="export-legend">
+        <input id="export-legend" type="checkbox" checked>
+        <span data-i18n="export.legend">Легенда</span>
+      </label>
+      <label class="muted" for="export-pause" data-i18n="export.pause">Пауза видео, мс</label>
+      <input id="export-pause" type="number" min="10" max="60000" step="10" value="500">
+      <div class="modal-actions">
+        <button id="export-cancel" type="button" data-i18n="account.cancel">Отмена</button>
+        <button id="export-go" class="primary" type="button" data-i18n="export.go">Выгрузить</button>
+      </div>
     </div>
   </div>
 </div>

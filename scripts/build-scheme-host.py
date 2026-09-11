@@ -71,6 +71,14 @@ def build(static: Path) -> str:
     modal = block(html, '<div id="scheme-modal"')
     # Область схемы на странице скрыта до выбора вкладки; в панели она одна.
     scheme = scheme.replace('class="panel panel-scheme" hidden', 'class="panel panel-scheme"', 1)
+    # Кнопки экспорта у панели нет: модуля в панели нет, рисует экспорт модуль
+    # страницы, а панель выгружает командной строкой `takt-sim export`. Кнопка без
+    # обработчика молчала бы на щелчок.
+    scheme, cut = re.subn(
+        r'\s*<!-- Экспорт:[^>]*?-->\s*<button id="scheme-export".*?</button>', "", scheme, count=1, flags=re.S
+    )
+    if cut != 1 or 'id="scheme-export"' in scheme:
+        raise SystemExit("кнопка экспорта не вырезана из холста панели")
     body = f"<main class=\"work\">\n{scheme}\n</main>\n{modal}\n"
     missing = [node for node in REQUIRED if node not in body]
     if missing:

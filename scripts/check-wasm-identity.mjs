@@ -8,7 +8,9 @@
 //      а отказ равен по коду и по позиции;
 // 2. прогон - трасса равна выводу `takt-sim` строка в строку;
 // 3. редакторский слой - на корпусе матрицы операция отвечает,
-//      в том числе на недописанном файле.
+//      в том числе на недописанном файле;
+// 4. экспорт - картинки и видео проекта байт в байт равны выводу
+//      `takt-sim export`.
 //
 // Проверка сверяет вывод, а не устройство. Модуль зовёт те же функции
 // библиотек, но одного этого мало: между библиотекой и страницей лежит мост
@@ -237,6 +239,58 @@ async function checkTrace(modelFile, scenarioFile, source) {
   }
 }
 
+/**
+ * Сверяет экспорт проекта: файлы модуля байт в байт равны файлам `takt-sim export`.
+ *
+ * @returns {Promise<number>} сколько файлов сверено
+ */
+async function checkExport(projectDir, workDir) {
+  const manifest = JSON.parse(await readFile(join(projectDir, "takt-project.json"), "utf8"));
+  const files = {};
+  for (const file of manifest.files) files[file.name] = await readFile(join(projectDir, file.name), "utf8");
+  const sets = [
+    { args: ["--format", "svg", "--format", "png"], request: { formats: ["svg", "png"] } },
+    {
+      args: ["--view", "run", "--format", "svg", "--format", "png", "--background", "none", "--legend", "off"],
+      request: { view: "run", formats: ["svg", "png"], background: "none", legend: false },
+    },
+    { args: ["--format", "gif", "--format", "mp4"], request: { formats: ["gif", "mp4"] } },
+  ];
+  let compared = 0;
+  for (const [i, set] of sets.entries()) {
+    const what = `экспорт / ${set.args.join(" ")}`;
+    const out = join(workDir, `export-${i}`);
+    try {
+      await run(taktSimPath, ["export", projectDir, "-o", out, ...set.args]);
+    } catch (error) {
+      fail(what, `takt-sim отказал: ${(error.stderr ?? "").split("\n")[0]}`);
+      continue;
+    }
+    const reply = call(wasm.takt_export, {
+      files,
+      main_file: manifest.main_file ?? null,
+      main_scenario: manifest.main_scenario ?? null,
+      ...set.request,
+    });
+    if (!reply.ok) {
+      fail(what, `модуль отказал: ${reply.error?.message}`);
+      continue;
+    }
+    const written = (await readdir(out)).sort();
+    const produced = reply.files.map((file) => file.name).sort();
+    if (JSON.stringify(written) !== JSON.stringify(produced)) {
+      fail(what, `файлы: takt-sim ${written.join(", ")}; модуль ${produced.join(", ")}`);
+      continue;
+    }
+    for (const file of reply.files) {
+      const expected = await readFile(join(out, file.name));
+      if (!expected.equals(Buffer.from(file.data, "base64"))) fail(what, `${file.name} разошёлся байтами`);
+      compared += 1;
+    }
+  }
+  return compared;
+}
+
 /** Проверяет, что редакторская операция отвечает на любом входе корпуса. */
 function checkEditorAnswers(name, source) {
   const operations = [
@@ -289,20 +343,15 @@ async function main() {
   requireInput("сценарии корпуса", scenarios.length, 1, "examples/simulations/");
   let traced = 0;
   for (const name of scenarios) {
-    // Имя модели - самый длинный префикс сценария, для которого есть `.takt`
-    // (то же правило, что у `scripts/run_simulations.sh`).
-    let candidate = basename(name, ".json");
+    // Модель сценария называет правило принадлежности крейта проекта - через
+    // `takt-sim project --owner`: своей копии правила у проверки нет.
+    const models = examples.map((model) => join("examples", model));
     let modelFile = null;
-    for (;;) {
-      const guess = join("examples", `${candidate}.takt`);
-      try {
-        await readFile(guess, "utf8");
-        modelFile = guess;
-        break;
-      } catch {
-        if (!candidate.includes("_")) break;
-        candidate = candidate.slice(0, candidate.lastIndexOf("_"));
-      }
+    try {
+      const { stdout } = await run(taktSimPath, ["project", "--owner", name, ...models]);
+      modelFile = stdout.trim() || null;
+    } catch {
+      // Ничей сценарий: код 1 и пустая строка.
     }
     if (!modelFile) continue;
     const source = await readFile(modelFile, "utf8");
@@ -332,12 +381,15 @@ async function main() {
     // Корпуса нет - набор матрицы не выгружался; это не отказ проверки.
   }
 
+  // 4. Экспорт: проект-фикстура экспорта в трёх наборах форматов.
+  const exported = await checkExport("takt-sim/tests/data/export/project", workDir);
+
   await rm(workDir, { recursive: true, force: true });
 
   const note = requireInput("компиляции корпуса под целями", compiled, 1, "examples/");
   console.log(
     `  Тождественность модуля: ${note}, трасс ${traced}, ` +
-      `редакторских входов ${answered}.`
+      `редакторских входов ${answered}, файлов экспорта ${exported}.`
   );
   if (failures.length > 0) {
     console.error(`  РАСХОЖДЕНИЙ: ${failures.length}`);

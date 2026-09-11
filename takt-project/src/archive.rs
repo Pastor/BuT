@@ -100,6 +100,33 @@ pub fn pack(export: &Export) -> Result<Vec<u8>, Error> {
     Ok(buffer.into_inner())
 }
 
+/// Складывает файлы вывода в архив `.zip` как есть: без манифеста и без
+/// `src/` - это не проект, а выгрузка для человека (картинки и видео экспорта).
+/// Время файлов постоянное - тот же вывод даёт тот же архив байт в байт.
+///
+/// # Ошибки
+/// Имя файла дважды либо отказ записи.
+pub fn pack_files(files: &[(String, Vec<u8>)]) -> Result<Vec<u8>, Error> {
+    let fail = |error: &dyn std::fmt::Display| Error::Invalid(format!("архив не собран: {error}"));
+    let mut seen = BTreeSet::new();
+    let mut buffer = Cursor::new(Vec::new());
+    {
+        let mut zip = zip::ZipWriter::new(&mut buffer);
+        let options: zip::write::FileOptions<'_, ()> =
+            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+        for (name, bytes) in files {
+            if !seen.insert(name.as_str()) {
+                return Err(Error::Invalid(format!("в выгрузке дважды файл '{name}'")));
+            }
+            zip.start_file(name.as_str(), options)
+                .map_err(|e| fail(&e))?;
+            zip.write_all(bytes).map_err(|e| fail(&e))?;
+        }
+        zip.finish().map_err(|e| fail(&e))?;
+    }
+    Ok(buffer.into_inner())
+}
+
 /// Разбирает архив и судит его пределами.
 ///
 /// # Ошибки

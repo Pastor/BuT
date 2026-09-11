@@ -246,6 +246,41 @@ export async function adopt(project) {
   refresh();
 }
 
+/**
+ * Записывает раскладку схемы в проект, если он открыт и его можно править:
+ * экспорт читает файл, и файл обязан быть тем, что на холсте.
+ *
+ * @returns {Promise<boolean>} записана ли раскладка в проект
+ */
+export async function storeLayout() {
+  if (!editing() || (state.level !== "edit" && state.level !== "owner")) return false;
+  await keepLayout();
+  return true;
+}
+
+/**
+ * Состав открытого проекта для экспорта: все файлы текстом, активные файлы, имя и
+ * открытая модель; без проекта - `null`.
+ */
+export async function snapshot() {
+  const project = state.project;
+  if (!project) return null;
+  const files = {};
+  await Promise.all(
+    (project.files ?? []).map(async (file) => {
+      files[file.name] = (await api.file(project.id, file.name)).text ?? "";
+    })
+  );
+  return {
+    files,
+    main_file: project.main_file ?? null,
+    main_scenario: project.main_scenario ?? null,
+    name: project.name ?? "",
+    model: modelOf() || null,
+    scenario: state.scenarioFile ?? null,
+  };
+}
+
 /** Открыт ли файл проекта (а не безымянный буфер). */
 export function editing() {
   return state.project !== null && state.file !== null;
@@ -992,9 +1027,10 @@ async function makeFile() {
 /**
  * Открывает выбор сценария прогона для открытой модели.
  *
- * Сценарии названы по модели: файл `.json`, чьё имя начинается с её имени, - её
- * сценарий. Правило одно на страницу и на автора: `heater.json`,
- * `heater-cold.json` принадлежат `heater.takt`, а `probe.json` - нет.
+ * Сценарии названы по модели: `heater.json` и `heater_cold.json` принадлежат
+ * `heater.takt`, `probe.json` - нет; из подходящих моделей сценарий достаётся
+ * самой длинной основе (`heater_mini_x.json` - модели `heater_mini`). Правило
+ * отвечает модуль, тем же носителем, что командная строка.
  */
 function openScenarioPick() {
   const model = modelOf();
@@ -1035,13 +1071,12 @@ function modelOf() {
   return state.file && state.file.endsWith(".takt") ? state.file : "";
 }
 
-/** Сценарии модели: файлы рода "сценарий", названные по её имени. */
+/**
+ * Сценарии модели по правилу принадлежности - у модуля, а не у страницы: вторая
+ * копия правила разошлась бы с командной строкой молча.
+ */
 function scenariosOf(model) {
-  const stem = model.slice(0, -".takt".length);
-  return (state.project?.files ?? [])
-    .filter((file) => file.kind === "scenario" && file.name.startsWith(stem))
-    .map((file) => file.name)
-    .sort((a, b) => a.localeCompare(b));
+  return host.scenariosOf?.(model, (state.project?.files ?? []).map((file) => file.name)) ?? [];
 }
 
 /** Назначает выбранный сценарий прогоном модели. */

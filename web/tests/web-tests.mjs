@@ -547,7 +547,7 @@ test("язык: порядок выбора — сохранённый, брау
  */
 const PAGE_SCRIPTS = [
   "account.js", "alerts.js", "api.js", "app.js", "boot.js", "bridge.js", "build.js", "build-settings.js",
-  "draft.js", "editor.js", "help.js", "i18n.js", "layout.js", "legend.js", "pick.js",
+  "draft.js", "editor.js", "export.js", "help.js", "i18n.js", "layout.js", "legend.js", "pick.js",
   "panels.js", "project.js", "sample.js", "scheme.js", "scheme-geometry.js",
   "scheme-host.js", "scheme-run.js",
   "scheme-settings.js",
@@ -2396,4 +2396,59 @@ test("справка: поле поиска стоит у кнопок пере�
   }
   const css = await readFile(new URL("../static/app.css", import.meta.url), "utf8");
   assert.match(css, /\.help-find \{[^}]*margin-inline-start: auto;/, "группа поиска не прижата к правому краю");
+});
+
+test("экспорт: запрос из выбора окна и порядок «запись раскладки, затем экспорт»", async () => {
+  const { exportRequest, runExport, DEFAULTS, mimeOf, bytesOf } = await import("../static/export.js");
+  const context = {
+    files: { "m.takt": "start A;", "m.takt-ui": "{}" },
+    main_file: "m.takt",
+    main_scenario: null,
+    model: "m.takt",
+    sheet: "/#Line",
+    scenario: "m_run.json",
+    steps: 40,
+    name: "Бак",
+  };
+  // Лист: модель и лист открытые; видео - всегда цветное; проект - без модели и листа.
+  const sheet = exportRequest({ ...DEFAULTS }, context);
+  assert.deepEqual(
+    [sheet.formats, sheet.view, sheet.model, sheet.sheet, sheet.legend, sheet.archive],
+    [["svg"], "draft", "m.takt", "/#Line", true, "Бак.export.zip"]
+  );
+  const video = exportRequest({ ...DEFAULTS, format: "mp4", view: "draft", scope: "model", pause: 250 }, context);
+  assert.deepEqual([video.view, video.sheet, video.pause, video.steps], ["run", null, 250, 40]);
+  const project = exportRequest({ ...DEFAULTS, scope: "project", format: "png", background: "none" }, context);
+  assert.deepEqual([project.model, project.sheet, project.background], [null, null, "none"]);
+  assert.equal(mimeOf("a.export.zip"), "application/zip");
+  assert.deepEqual([...bytesOf("AAEC")], [0, 1, 2]);
+
+  // Порядок: раскладка пишется до того, как собирается состав, а состав - до запроса.
+  const order = [];
+  const saved = [];
+  const host = {
+    keep: async () => order.push("keep"),
+    context: async () => (order.push("context"), context),
+    export: async (request) => {
+      order.push("export");
+      assert.equal(request.files["m.takt-ui"], "{}", "модуль получает текст файла раскладки");
+      return { ok: true, files: [{ name: "m.draft.svg", data: "PHN2Zy8+" }], names: ["m.draft.svg"], notes: [] };
+    },
+    download: (name, bytes, type) => saved.push([name, new TextDecoder().decode(bytes), type]),
+    say: () => {},
+  };
+  assert.equal(await runExport({ ...DEFAULTS }, host), true);
+  assert.deepEqual(order, ["keep", "context", "export"], "запись раскладки - до экспорта");
+  assert.deepEqual(saved, [["m.draft.svg", "<svg/>", "image/svg+xml"]]);
+
+  // Отказ модуля сказан словами, и загрузки нет.
+  const said = [];
+  const refused = await runExport({ ...DEFAULTS }, {
+    ...host,
+    export: async () => ({ ok: false, error: { message: "раскладки нет" } }),
+    download: () => assert.fail("отказ не загружается"),
+    say: (text, kind) => said.push(kind),
+  });
+  assert.equal(refused, false);
+  assert.equal(said.at(-1), "error");
 });

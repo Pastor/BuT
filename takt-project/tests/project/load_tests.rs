@@ -151,3 +151,35 @@ fn refusals_name_the_reason() {
     let error = load(&data("model/notes.txt")).expect_err("чужой род");
     assert!(matches!(error, Error::Invalid(_)), "{error}");
 }
+
+/// Выгрузка файлов - архив как есть: имена и байты те же, повтор имени - отказ,
+/// та же выгрузка - тот же архив.
+#[test]
+fn plain_files_pack_into_a_deterministic_archive() {
+    let files = vec![
+        ("plant.draft.svg".to_string(), b"<svg/>".to_vec()),
+        (
+            "plant.run.png".to_string(),
+            vec![0x89, b'P', b'N', b'G', 0, 1, 2],
+        ),
+    ];
+    let bytes = takt_project::pack_files(&files).expect("архив");
+    assert_eq!(
+        bytes,
+        takt_project::pack_files(&files).expect("архив"),
+        "детерминизм"
+    );
+    let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes)).expect("zip читается");
+    assert_eq!(zip.len(), 2);
+    for (name, body) in &files {
+        let mut read = Vec::new();
+        std::io::Read::read_to_end(&mut zip.by_name(name).expect("файл"), &mut read)
+            .expect("байты");
+        assert_eq!(&read, body, "{name}");
+    }
+    let twice = [files[0].clone(), files[0].clone()];
+    assert!(
+        takt_project::pack_files(&twice).is_err(),
+        "повтор имени - отказ"
+    );
+}

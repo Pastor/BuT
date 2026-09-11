@@ -29,6 +29,11 @@ self.onmessage = async (event) => {
         close_();
         post({ type: "reset" });
         break;
+      case "export":
+        // Экспорт идёт здесь, а не в главном потоке: кодирование видео занимает
+        // секунды, и страница всё это время оставалась бы мёртвой.
+        post({ type: "exported", id: message.id, reply: await exportProject(message) });
+        break;
       case "stop":
         // Останов - не ошибка прогона: автор попросил, и прогон обязан прекратиться на
         // ближайшей границе порции.
@@ -130,6 +135,16 @@ async function step(message) {
   if (!(await ensure(message))) return;
   const outcome = advance(1);
   if (outcome.ok && !outcome.finished) post({ type: "stepped", steps: done });
+}
+
+/** Экспорт: отказ среды исполнения становится отказом ответа - страница его ждёт. */
+async function exportProject(message) {
+  try {
+    if (!bridge) bridge = await Bridge.load(message.wasmUrl);
+    return bridge.exportProject(message.request);
+  } catch (error) {
+    return { ok: false, error: { message: String(error?.message ?? error) } };
+  }
 }
 
 function close_() {

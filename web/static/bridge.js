@@ -129,6 +129,24 @@ export class Bridge {
     return this.call("takt_scheme_geometry", { source, layout, tick });
   }
 
+  /**
+   * Экспорт проекта: картинки листов и видео прогона тем же носителем, что у
+   * `takt-sim export`. Байты файлов - строкой base64 в поле `data`.
+   */
+  exportProject(request) {
+    return this.call("takt_export", request);
+  }
+
+  /**
+   * Сценарии каждой модели проекта по правилу принадлежности - у модуля, а не у
+   * страницы: второе правило разошлось бы с командной строкой молча.
+   *
+   * @param {string[]} names имена файлов проекта
+   */
+  scenarios(names) {
+    return this.call("takt_scenarios", { names });
+  }
+
   simOpen(source, scenario, tickMs, files = {}, steps = null) {
     return this.call("takt_sim_open", { source, scenario, tick_ms: tickMs ?? 0, files, steps });
   }
