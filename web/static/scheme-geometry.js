@@ -730,8 +730,11 @@ export function centerOn(view, box, x, y) {
 
 /**
  * Лист композиции по дереву реализации: цепочка слева направо, ветви параллели друг
- * под другом в рамке, скобки - вложенной рамкой. Лист не хранится - его задаёт
- * выражение; ответ - узлы (все композиции), рёбра между шагами и рамки.
+ * под другом в рамке, скобки - вложенной рамкой. Это форма выражения и автораскладка
+ * листа; ответ - узлы (все композиции), рёбра между шагами и рамки.
+ *
+ * У ребра есть номер среди рёбер той же пары - тот же, что у рёбер листа модели:
+ * по нему ключуется запись ребра в файле раскладки.
  *
  * @param {object} implement дерево `{model}|{chain}|{parallel}|{group}` из ответа модуля
  */
@@ -739,6 +742,13 @@ export function composeSheet(implement) {
   const nodes = [];
   const seen = new Map();
   const edges = [];
+  const pairs = new Map();
+  const link = (from, to) => {
+    const pair = `${from}>${to}`;
+    const ordinal = pairs.get(pair) ?? 0;
+    pairs.set(pair, ordinal + 1);
+    edges.push({ from, to, ordinal, kind: "next" });
+  };
   const frames = [];
   const gap = SNAP * 6;
   const pad = SNAP * 3;
@@ -792,7 +802,7 @@ export function composeSheet(implement) {
       for (const child of item.chain) {
         const childSize = measure(child);
         const placed = lay(child, at, y + (size.h - childSize.h) / 2, childSize);
-        if (prev) for (const a of prev.last) for (const b of placed.first) edges.push({ from: a, to: b, kind: "next" });
+        if (prev) for (const a of prev.last) for (const b of placed.first) link(a, b);
         if (!first) first = placed.first;
         prev = placed;
         at += childSize.w + gap;

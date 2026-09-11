@@ -594,6 +594,109 @@ test("геометрия: лист композиции - цепочка сле�
   assert.deepEqual(geo.composeSheet({ chain: [heater, pump, heater] }).nodes.map((n) => n.name), ["Heater#1", "Pump#1", "Heater#2"]);
 });
 
+/** Составное состояние `Main = Heater + (Pump | Pump) + Heater` и конец. */
+const COMPOSED = {
+  sheets: [{
+    path: "/",
+    nodes: [
+      {
+        name: "Main",
+        kind: "composition",
+        implements: {
+          chain: [
+            { model: { name: "Heater", path: "Heater" } },
+            { group: { parallel: [{ model: { name: "Pump", path: "Pump" } }, { model: { name: "Pump", path: "Pump" } }] } },
+            { model: { name: "Heater", path: "Heater" } },
+          ],
+        },
+      },
+      { name: "Done", kind: "end" },
+    ],
+    edges: [{ from: "Main", to: "Done", ordinal: 0, kind: "next" }],
+  }],
+};
+
+test("раскладка: ключ ребра листа композиции - номер в паре, как у листа модели", () => {
+  const composed = geo.composeSheet(COMPOSED.sheets[0].nodes[0].implements);
+  const keys = composed.edges.map(layout.edgeKey);
+  assert.deepEqual(keys, ["Heater#1>Pump#1:0", "Heater#1>Pump#2:0", "Pump#1>Heater#2:0", "Pump#2>Heater#2:0"]);
+  assert.equal(new Set(keys).size, keys.length, "ключи различны");
+  const again = geo.composeSheet(COMPOSED.sheets[0].nodes[0].implements).edges.map(layout.edgeKey);
+  assert.deepEqual(again, keys, "ключи стабильны");
+  // Номер - в паре, а не среди всех рёбер листа: вставка ветви в параллель не
+  // сдвигает ключей соседних рёбер.
+  const wider = geo.composeSheet({
+    chain: [
+      { model: { name: "Heater" } },
+      { parallel: [{ model: { name: "Pump" } }, { model: { name: "Pump" } }, { model: { name: "Fan" } }] },
+      { model: { name: "Heater" } },
+    ],
+  }).edges.map(layout.edgeKey);
+  for (const key of keys) assert.ok(wider.includes(key), `ключ ${key} пережил вставку ветви`);
+});
+
+test("раскладка: сверка листа композиции - по шагам и рёбрам выражения", () => {
+  const key = layout.compositionKey("/", "Main");
+  const fresh = layout.reconcile(layout.empty(), COMPOSED);
+  assert.deepEqual(fresh.sheets[key].unplaced, ["Heater#1", "Pump#1", "Pump#2", "Heater#2"], "свежий файл: шаги не размещены");
+  assert.equal(fresh.extras, 0, "свежий файл - не расхождение");
+
+  const stored = layout.empty();
+  for (const [i, name] of ["Heater#1", "Pump#1", "Pump#2", "Heater#2"].entries()) layout.place(stored, key, name, i * 200, 72);
+  layout.bend(stored, key, "Pump#1>Heater#2:0", [[400, 40]]);
+  const placed = layout.reconcile(stored, COMPOSED);
+  assert.deepEqual(placed.sheets[key], { unplaced: [], extraNodes: [], extraEdges: [] }, "все шаги на месте");
+
+  // Выражение потеряло шаг: запись третьего насоса и его ребро - лишние.
+  layout.place(stored, key, "Pump#3", 0, 0);
+  layout.nameNode(stored, key, "Ghost#1", "призрак");
+  layout.bend(stored, key, "Pump#3>Heater#2:0", [[1, 2]]);
+  layout.bend(stored, key, "Heater#1>Heater#2:0", [[1, 2]]);
+  const stale = layout.reconcile(stored, COMPOSED);
+  assert.deepEqual(stale.sheets[key].extraNodes, ["Ghost#1", "Pump#3"]);
+  assert.deepEqual(stale.sheets[key].extraEdges, ["Heater#1>Heater#2:0", "Pump#3>Heater#2:0"]);
+  assert.equal(stale.extras, 4);
+  assert.deepEqual(stale.extraSheets, [], "лист композиции - не лишний лист");
+
+  const cleaned = layout.prune(stored, COMPOSED);
+  assert.deepEqual(layout.reconcile(cleaned, COMPOSED).sheets[key], { unplaced: [], extraNodes: [], extraEdges: [] });
+  assert.deepEqual(cleaned.sheets[key].edges["Pump#1>Heater#2:0"].points, [[400, 40]], "своё чистка не трогает");
+
+  // Состояния больше нет - лист композиции лишний целиком.
+  const gone = { sheets: [{ path: "/", nodes: [{ name: "Done", kind: "end" }], edges: [] }] };
+  assert.deepEqual(layout.reconcile(stored, gone).extraSheets, [key]);
+});
+
+test("раскладка: реализация одной моделью своего листа не имеет", () => {
+  assert.equal(layout.hasCompositionSheet({ model: { name: "Heater" } }), false);
+  assert.equal(layout.hasCompositionSheet({ group: { model: { name: "Heater" } } }), true, "скобки - уже лист");
+  assert.equal(layout.hasCompositionSheet(COMPOSED.sheets[0].nodes[0].implements), true);
+  const graph = { sheets: [{ path: "/", nodes: [{ name: "Main", implements: { model: { name: "Heater" } } }], edges: [] }] };
+  const report = layout.reconcile(layout.empty(), graph);
+  assert.equal(report.sheets["/#Main"], undefined, "сверять по шагам нечего");
+});
+
+test("раскладка: переименование модели переносит записи шагов композиции", () => {
+  const key = layout.compositionKey("/", "Main");
+  const stored = layout.empty();
+  layout.place(stored, key, "Heater#1", 72, 72);
+  layout.place(stored, key, "Pump#2", 272, 172);
+  layout.nameNode(stored, key, "Heater#2", "Догрев");
+  layout.bend(stored, key, "Pump#2>Heater#2:0", [[300, 200]]);
+  // На листе модели имя без номера - не шаг, и переименование модели его не трогает.
+  layout.place(stored, "/", "Heater", 8, 8);
+  const renamed = layout.renameModel(stored, "Heater", "Boiler");
+  const sheet = renamed.sheets[key];
+  assert.deepEqual(Object.keys(sheet.nodes), ["Boiler#1", "Pump#2"]);
+  assert.deepEqual(sheet.names, { "Boiler#2": "Догрев" });
+  assert.deepEqual(Object.keys(sheet.edges), ["Pump#2>Boiler#2:0"]);
+  assert.deepEqual(renamed.sheets["/"].nodes, { Heater: { x: 8, y: 8 } }, "лист модели не тронут");
+  // Модели с общим началом имени не задеты: переносится только точное имя.
+  const prefixed = layout.renameModel(layout.place(layout.empty(), key, "HeaterPro#1", 0, 0), "Heater", "Boiler");
+  assert.deepEqual(Object.keys(prefixed.sheets[key].nodes), ["HeaterPro#1"]);
+  assert.equal(layout.canonical(layout.renameModel(stored, "Heater", "Heater")), layout.canonical(stored), "то же имя - без правки");
+});
+
 test("ссылка и черновик: раскладка переживает оба рейса", async () => {
   const text = layout.canonical(layout.place(layout.empty(), "/", "A", 8, 16));
   const restored = await decodeState("#" + (await encodeState({ version: "1", source: "start A;", layout: text })));

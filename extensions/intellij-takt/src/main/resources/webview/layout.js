@@ -40,6 +40,16 @@
 // строки в конце, умолчания и пустые листы не пишутся - дифф файла в git несёт только
 // смысл.
 //
+// # Лист композиции
+//
+// Лист составного состояния хранится в тех же полях под ключом
+// `<путь листа-владельца>#<состояние>` (`compositionKey`). Узел листа - шаг выражения
+// под именем `Модель#номер`, где номер - порядок среди шагов той же модели; рёбра -
+// переходы `next` между соседними шагами. Что в какой скобке и что параллельно,
+// говорит выражение, а не файл: рамок в записи нет. Вставка шага в середину
+// выражения сдвигает номера, и координаты достаются соседнему шагу той же модели -
+// сверка покажет лишнее, автор переставит.
+//
 // # Кто и когда
 //
 // Файл называет создателя и время создания, а правки ведёт журналом: строка на
@@ -59,7 +69,7 @@
 //
 // Знания о языке здесь нет: что есть на листе, говорит граф модуля (`takt_graph`).
 
-import { ENTRY_PORT, PORTS } from "./scheme-geometry.js";
+import { ENTRY_PORT, PORTS, composeSheet } from "./scheme-geometry.js";
 
 /** Версия формата файла. */
 export const FORMAT = 1;
@@ -481,12 +491,24 @@ export function compositionKey(path, name) {
 }
 
 /**
+ * Есть ли у реализации свой лист композиции.
+ *
+ * Состояние, реализованное одной моделью, своего листа не имеет: вход в него ведёт
+ * прямо на лист модели. Лист есть у цепочки, параллели и скобок.
+ */
+export function hasCompositionSheet(implement) {
+  return isObject(implement) && !implement.model;
+}
+
+/**
  * Сверяет раскладку с графом модуля.
  *
- * Для каждого листа графа: `unplaced` - состояния без записи; `extraNodes` и
- * `extraEdges` - записи, которых в модели нет (подписи считаются наравне с
- * координатами); листы, которых нет в графе, - в `extraSheets`. Числа сведены в
- * `extras`: ноль - уведомление не нужно.
+ * Для каждого листа графа и каждого листа композиции: `unplaced` - узлы без записи;
+ * `extraNodes` и `extraEdges` - записи, которых в модели нет (подписи считаются
+ * наравне с координатами); листы, которых нет в графе, - в `extraSheets`. Числа
+ * сведены в `extras`: ноль - уведомление не нужно. Полнота раскладки считается
+ * одним правилом на оба рода листов: у листа композиции состав шагов и рёбер
+ * задаёт выражение (`composeSheet`).
  *
  * @param {object} layout раскладка
  * @param {{sheets: object[]}} graph ответ `takt_graph`
@@ -495,30 +517,45 @@ export function reconcile(layout, graph) {
   const known = new Set();
   const sheets = {};
   let extras = 0;
+  const compare = (key, names, keys) => {
+    known.add(key);
+    const found = compareSheet(layout?.sheets?.[key], names, keys);
+    extras += found.extraNodes.length + found.extraEdges.length;
+    sheets[key] = found;
+  };
   for (const sheetOfGraph of graph?.sheets ?? []) {
-    known.add(sheetOfGraph.path);
-    // Лист композиции не хранится, но подписи его квадратов - хранятся, под ключом
-    // "путь листа#составное состояние": пока состояние есть, запись его.
+    compare(sheetOfGraph.path, sheetOfGraph.nodes.map((n) => n.name), sheetOfGraph.edges.map(edgeKey));
     for (const node of sheetOfGraph.nodes) {
-      if (node.implements) known.add(compositionKey(sheetOfGraph.path, node.name));
+      if (!node.implements) continue;
+      const key = compositionKey(sheetOfGraph.path, node.name);
+      // Запись реализации одной моделью - только подписи её квадрата: листа у неё
+      // нет, и сверять по шагам нечего, но пока состояние есть, запись его.
+      if (!hasCompositionSheet(node.implements)) {
+        known.add(key);
+        continue;
+      }
+      const composed = composeSheet(node.implements);
+      compare(key, composed.nodes.map((n) => n.name), composed.edges.map(edgeKey));
     }
-    const stored = layout?.sheets?.[sheetOfGraph.path];
-    const nodes = isObject(stored?.nodes) ? stored.nodes : {};
-    const names = isObject(stored?.names) ? stored.names : {};
-    const edges = isObject(stored?.edges) ? stored.edges : {};
-    const present = new Set(sheetOfGraph.nodes.map((n) => n.name));
-    const keys = new Set(sheetOfGraph.edges.map(edgeKey));
-    const unplaced = sheetOfGraph.nodes.map((n) => n.name).filter((n) => !isPoint(nodes[n]));
-    const extraNodes = [...new Set([...Object.keys(nodes), ...Object.keys(names)])]
-      .filter((n) => !present.has(n))
-      .sort();
-    const extraEdges = Object.keys(edges).filter((k) => !keys.has(k)).sort();
-    extras += extraNodes.length + extraEdges.length;
-    sheets[sheetOfGraph.path] = { unplaced, extraNodes, extraEdges };
   }
   const extraSheets = Object.keys(layout?.sheets ?? {}).filter((p) => !known.has(p)).sort();
   extras += extraSheets.length;
   return { sheets, extraSheets, extras };
+}
+
+/** Сверка одного листа: узлы без записи, лишние узлы и лишние рёбра. */
+function compareSheet(stored, names, keys) {
+  const nodes = isObject(stored?.nodes) ? stored.nodes : {};
+  const aliases = isObject(stored?.names) ? stored.names : {};
+  const edges = isObject(stored?.edges) ? stored.edges : {};
+  const present = new Set(names);
+  const edgeKeys = new Set(keys);
+  const unplaced = names.filter((n) => !isPoint(nodes[n]));
+  const extraNodes = [...new Set([...Object.keys(nodes), ...Object.keys(aliases)])]
+    .filter((n) => !present.has(n))
+    .sort();
+  const extraEdges = Object.keys(edges).filter((k) => !edgeKeys.has(k)).sort();
+  return { unplaced, extraNodes, extraEdges };
 }
 
 /**
@@ -582,6 +619,39 @@ export function rename(layout, path, from, to) {
     moved.push([edgeKey(renamed), value]);
   }
   stored.edges = Object.fromEntries(moved);
+  return normalize(out);
+}
+
+/**
+ * Переименовывает модель в записях листов композиций: шаги `Прежнее#номер`
+ * становятся `Новое#номер` - в узлах, подписях и ключах рёбер.
+ *
+ * Номер шага - порядок среди шагов той же модели, и переименование его не меняет.
+ * Листы моделей не трогаются: имя шага с `#` бывает только на листе композиции.
+ *
+ * @param {object} layout раскладка
+ * @param {string} from прежнее имя модели
+ * @param {string} to новое имя модели
+ * @returns {object} новая раскладка
+ */
+export function renameModel(layout, from, to) {
+  const out = normalize(layout);
+  if (from === to) return out;
+  const step = (name) => {
+    const at = name.lastIndexOf("#");
+    return at > 0 && name.slice(0, at) === from ? `${to}${name.slice(at)}` : name;
+  };
+  for (const [key, stored] of Object.entries(out.sheets)) {
+    if (!key.includes("#")) continue;
+    for (const field of ["nodes", "names"]) {
+      stored[field] = Object.fromEntries(Object.entries(stored[field]).map(([name, value]) => [step(name), value]));
+    }
+    stored.edges = Object.fromEntries(Object.entries(stored.edges).map(([edge, value]) => {
+      const parsed = parseEdgeKey(edge);
+      if (!parsed) return [edge, value];
+      return [edgeKey({ from: step(parsed.from), to: step(parsed.to), ordinal: parsed.ordinal }), value];
+    }));
+  }
   return normalize(out);
 }
 
