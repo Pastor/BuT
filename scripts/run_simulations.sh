@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Запускает все симуляции из examples/simulations/ по очереди.
-# Для каждого файла вида <модель>_<сценарий>.json ищет examples/<модель>.takt.
+# Для каждого файла вида <модель>_<сценарий>.json модель в examples/ называет
+# `takt-sim project --owner`.
 # Запускать из любого каталога.
 
 set -euo pipefail
@@ -30,25 +31,13 @@ for sim_file in "$SIM_DIR"/*.json; do
   # Имя файла без пути и расширения: stacker_loading
   base="$(basename "$sim_file" .json)"
 
-  # Имя модели - самый длинный префикс `base` (по `_`), для которого есть.takt.
-  # Часть до первого `_` (`${base%%_*}`) здесь не годится: она ломается на именах
-  # моделей с подчёркиванием: `elevator_mini_floor2` -> `elevator` вместо
-  # `elevator_mini`. Отсекаем суффикс справа, пока не найдём.takt.
-  candidate="$base"
-  takt_file=""
-  model="$candidate"
-  while :; do
-    if [[ -f "$ROOT/examples/${candidate}.takt" ]]; then
-      model="$candidate"
-      takt_file="$ROOT/examples/${candidate}.takt"
-      break
-    fi
-    [[ "$candidate" == *_* ]] || break
-    candidate="${candidate%_*}"
-  done
-
+  # Модель сценария называет правило принадлежности крейта проекта: из моделей,
+  # чья основа совпадает с именем сценария либо начинает его с `_`, побеждает
+  # самая длинная (`elevator_mini_floor2` -> `elevator_mini`, а не `elevator`).
+  # Своей копии правила у скрипта нет - она разошлась бы с правилом страницы.
+  takt_file="$("$BINARY" project --owner "$sim_file" "$ROOT"/examples/*.takt)" || takt_file=""
   if [[ -z "$takt_file" ]]; then
-    echo "[ ПРОПУСК ] $base  (не найден ${model}.takt)"
+    echo "[ ПРОПУСК ] $base  (ни одна модель examples/ сценарию не хозяин)"
     ((skip++)) || true
     continue
   fi
@@ -59,7 +48,8 @@ for sim_file in "$SIM_DIR"/*.json; do
   [[ -n "$n_steps" ]] && step_arg="-n $n_steps"
 
   # Запуск симуляции. Кадров скрипт не пишет: GIF прогона рисуется по файлу
-  # раскладки `.takt-ui`, а у примеров его в дереве нет.
+  # раскладки `.takt-ui`, а у примеров его в дереве нет (`takt-sim export`
+  # откажет без него).
   # shellcheck disable=SC2086
   if output="$("$BINARY" "$takt_file" -s "$sim_file" $step_arg 2>&1)"; then
     echo "[  OK  ] $base"

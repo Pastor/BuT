@@ -1801,6 +1801,7 @@ dependencies = [
  "serde",
  "serde_json",
  "takt-lang",
+ "takt-project",
  "takt-scheme",
  "tempfile",
 ]

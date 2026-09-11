@@ -53,21 +53,47 @@ impl Face {
         format!("'{}'", self.family())
     }
 
-    /// Ширина строки в пикселях при кегле `size`.
+    /// Запасная гарнитура - вторая вшитая: ею набираются знаки, которых в этой нет.
+    pub fn fallback(self) -> Self {
+        match self {
+            Self::Gost => Self::Mono,
+            Self::Mono => Self::Gost,
+        }
+    }
+
+    /// Есть ли знак в начертании.
+    pub fn covers(self, c: char) -> bool {
+        ttf_parser::Face::parse(self.bytes(), 0)
+            .ok()
+            .and_then(|face| face.glyph_index(c))
+            .is_some()
+    }
+
+    /// Ширина строки в пикселях при кегле `size`; знак, которого в начертании нет,
+    /// меряется запасной гарнитурой - ею он и набирается.
     pub fn width(self, text: &str, size: f64) -> f64 {
+        text.chars()
+            .map(|c| {
+                let face = if self.covers(c) || !self.fallback().covers(c) {
+                    self
+                } else {
+                    self.fallback()
+                };
+                face.advance(c) * size
+            })
+            .sum()
+    }
+
+    /// Ширина знака в долях кегля; знака нет - половина кегля.
+    fn advance(self, c: char) -> f64 {
         let Ok(face) = ttf_parser::Face::parse(self.bytes(), 0) else {
             return 0.0;
         };
         let per_em = f64::from(face.units_per_em());
-        let units: f64 = text
-            .chars()
-            .map(|c| {
-                face.glyph_index(c)
-                    .and_then(|g| face.glyph_hor_advance(g))
-                    .map_or(per_em / 2.0, f64::from)
-            })
-            .sum();
-        units * size / per_em
+        face.glyph_index(c)
+            .and_then(|g| face.glyph_hor_advance(g))
+            .map_or(per_em / 2.0, f64::from)
+            / per_em
     }
 
     /// Строка, обрезанная по ширине `limit` с многоточием; укладывается - как есть.

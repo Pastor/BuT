@@ -42,6 +42,19 @@ impl Film {
         let graph = takt_lang::layout::graph_of(source).map_err(|d| d.message.clone())?;
         let layout = takt_scheme::layout::parse(layout).map_err(|e| e.0)?;
         let sheets = takt_scheme::sheet::sheets(&graph, &layout).map_err(|e| e.to_string())?;
+        Self::of_sheets(sheets, layout, sheet, legend)
+    }
+
+    /// Лента листа `sheet` из уже построенных листов и файла раскладки.
+    ///
+    /// # Ошибки
+    /// Листа с таким ключом нет.
+    pub fn of_sheets(
+        sheets: Vec<DrawSheet>,
+        layout: Layout,
+        sheet: &str,
+        legend: bool,
+    ) -> Result<Self, String> {
         if !sheets.iter().any(|s| s.key == sheet) {
             return Err(format!("листа `{sheet}` в модели нет"));
         }
@@ -73,12 +86,31 @@ impl Film {
     /// Кадра с таким номером нет.
     pub fn frame(&self, i: usize) -> Result<String, String> {
         let (tick, line) = self.ticks.get(i).ok_or_else(|| format!("кадра {i} нет"))?;
+        self.draw(Some(tick), Some(line), false)
+    }
+
+    /// Лист в последнем такте ленты, без строки трассы: цветной вид картинки.
+    /// Лента пуста - лист без подсветки. `fonts` - вшивать ли шрифты: SVG для
+    /// читателя их несёт, растеризатору они не нужны.
+    ///
+    /// # Ошибки
+    /// Листа ленты нет в модели.
+    pub fn last(&self, fonts: bool) -> Result<String, String> {
+        self.draw(self.ticks.last().map(|(tick, _)| tick), None, fonts)
+    }
+
+    fn draw(
+        &self,
+        tick: Option<&Tick>,
+        line: Option<&String>,
+        fonts: bool,
+    ) -> Result<String, String> {
         let options = Options {
             view: View::Run,
             legend: self.legend,
-            tick: Some(tick.clone()),
-            trace: Some(line.clone()),
-            fonts: false,
+            tick: Some(tick.cloned().unwrap_or_default()),
+            trace: line.cloned(),
+            fonts,
         };
         svg(&self.key, &self.sheets, &self.layout, &options)
             .ok_or_else(|| format!("листа `{}` в модели нет", self.key))

@@ -46,10 +46,6 @@ pub fn svg(key: &str, sheets: &[DrawSheet], layout: &Layout, options: &Options) 
     let inks = Inks::of(options.view);
     let tick = options.tick.as_ref().filter(|_| options.view == View::Run);
     let lit = tick.map(|t| sheet_run(sheet, t)).unwrap_or_default();
-    let mut faces: BTreeSet<Face> = BTreeSet::from([levels.state_face]);
-    if sheet.edges.iter().any(|e| e.cond.is_some()) {
-        faces.insert(levels.cond_face);
-    }
 
     let mut body = String::new();
     frames(&mut body, sheet);
@@ -98,11 +94,9 @@ pub fn svg(key: &str, sheets: &[DrawSheet], layout: &Layout, options: &Options) 
                     h += table.height + MARGIN_LEGEND;
                 }
             }
-            faces.insert(levels.cond_face);
         }
     }
     if let Some(line) = &options.trace {
-        faces.insert(Face::Mono);
         h += trace(
             &mut body,
             line,
@@ -125,7 +119,12 @@ pub fn svg(key: &str, sheets: &[DrawSheet], layout: &Layout, options: &Options) 
     );
     if options.fonts {
         out.push_str("<style>");
-        for face in &faces {
+        // Шрифты - те, которыми лист набран на деле: запасная гарнитура появляется
+        // и у знака, которого в основной нет.
+        for face in [Face::Gost, Face::Mono]
+            .iter()
+            .filter(|face| body.contains(&face.css()))
+        {
             out.push_str(&face.font_face());
         }
         out.push_str("</style>");
@@ -191,6 +190,43 @@ fn mark_text(mark: &str) -> String {
         num(INDEX_EM),
         escape(tail)
     )
+}
+
+/// Текст гарнитурой `face`: знаки, которых в ней нет, - отрезками запасной
+/// вшитой гарнитуры. Растеризатор, не найдя знака, набирает запасной гарнитурой
+/// весь кусок текста, а браузер - только недостающий знак; отрезок делает картинку
+/// одной у обоих.
+fn runs(face: Face, text: &str) -> String {
+    let fallback = face.fallback();
+    let mut out = String::new();
+    let mut run = String::new();
+    let mut foreign = false;
+    let flush = |run: &mut String, foreign: bool, out: &mut String| {
+        if run.is_empty() {
+            return;
+        }
+        if foreign {
+            let _ = write!(
+                out,
+                r#"<tspan font-family="{}">{}</tspan>"#,
+                fallback.css(),
+                escape(run)
+            );
+        } else {
+            out.push_str(&escape(run));
+        }
+        run.clear();
+    };
+    for c in text.chars() {
+        let missing = !face.covers(c) && fallback.covers(c);
+        if missing != foreign {
+            flush(&mut run, foreign, &mut out);
+            foreign = missing;
+        }
+        run.push(c);
+    }
+    flush(&mut run, foreign, &mut out);
+    out
 }
 
 fn escape(text: &str) -> String {
@@ -403,7 +439,7 @@ fn node_svg(
                 levels.state_face.css(),
                 num(px),
                 Palette::YES_INK,
-                escape(&plate)
+                runs(levels.state_face, &plate)
             );
         }
     } else {
@@ -669,7 +705,7 @@ impl Table {
                     let content = if *is_mark {
                         mark_text(text)
                     } else {
-                        escape(text)
+                        runs(*face, text)
                     };
                     let _ = write!(
                         out,

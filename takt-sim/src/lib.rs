@@ -24,6 +24,9 @@
 pub(crate) mod anon_cell;
 mod context;
 pub(crate) mod eval;
+/// Экспорт проекта: картинки листов и видео прогона.
+#[cfg(feature = "graphics")]
+pub mod export;
 pub(crate) mod expression;
 /// Кадры прогона: такт эталона - цветной вид листа по файлу раскладки.
 #[cfg(feature = "graphics")]

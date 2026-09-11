@@ -35,6 +35,9 @@ log = "0.4.29"
 # Кадры прогона - чертёж листа по файлу раскладки: рисунок, растр и видео у
 # эталона те же, что у страницы.
 takt-scheme = { path = "../takt-scheme", features = ["video"], optional = true }
+# Проект на диске: состав, роды файлов, активные файлы - то, что экспорт
+# выгружает и что печатает `takt-sim project`.
+takt-project = { path = "../takt-project", optional = true }
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -59,4 +62,4 @@ default = ["graphics"]
 # Выключается не ради веса, а ради переносимости: модуль WebAssembly исполняет
 # модель без неё и рисует кадры, зовя крейт рисунка сам. Умолчание оставлено
 # включённым: прежние потребители не замечают фичи вовсе.
-graphics = ["dep:takt-scheme"]
+graphics = ["dep:takt-scheme", "dep:takt-project"]

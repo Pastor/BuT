@@ -284,3 +284,33 @@ fn snapshots_hold_the_drawing() {
     }
     assert!(checked >= 9, "снимков сверено {checked}");
 }
+
+#[test]
+fn a_glyph_missing_in_the_face_is_set_by_the_fallback_face() {
+    // В ГОСТе нет стрелки перехода легенды. Растеризатор, не найдя знака, набрал
+    // бы запасной гарнитурой всю строку, браузер - только знак; отрезок делает
+    // картинку одной у обоих, и шрифт отрезка едет в `@font-face`.
+    assert!(!takt_scheme::fonts::Face::Gost.covers('→'));
+    let with = render("elevator", &draft(true));
+    let engine = &with.iter().find(|(k, _)| k == "Engine").expect("лист").1;
+    assert!(
+        engine.contains(r#"<tspan font-family="'Fira Code'">→</tspan>"#),
+        "стрелка - отрезком запасной гарнитуры"
+    );
+    let (source, layout) = model("elevator");
+    let fonted = render_all(
+        &source,
+        &layout,
+        &Options {
+            fonts: true,
+            ..draft(true)
+        },
+    )
+    .expect("чертёж");
+    let engine = &fonted.iter().find(|(k, _)| k == "Engine").expect("лист").1;
+    assert_eq!(
+        engine.matches("@font-face").count(),
+        2,
+        "обе гарнитуры вшиты"
+    );
+}

@@ -1,0 +1,15 @@
+import "helper.takt";
+
+in go: bit;
+var level: u8 := 0;
+
+start Idle {
+    ref Filling: go = 1;
+}
+state Filling {
+    always {
+        level := twice(level) + 1;
+    }
+    ref Full: level > 6;
+}
+state Full;

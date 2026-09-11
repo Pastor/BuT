@@ -1,0 +1,15 @@
+{
+  "format": 5,
+  "name": "Бак",
+  "main_file": "plant.takt",
+  "main_scenario": "plant_start.json",
+  "files": [
+    { "name": "plant.takt", "kind": "takt" },
+    { "name": "helper.takt", "kind": "takt" },
+    { "name": "plant.takt-ui", "kind": "layout" },
+    { "name": "plant_start.json", "kind": "scenario" },
+    { "name": "notes.md", "kind": "markdown" }
+  ],
+  "build_target": "st",
+  "build_args": ""
+}

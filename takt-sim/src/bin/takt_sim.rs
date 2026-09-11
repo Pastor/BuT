@@ -2,6 +2,12 @@
 //!
 //! Запускает пошаговую симуляцию модели, переданной в аргументах командной строки.
 //! Поддерживает: JSON-файл входных данных, проверку guard, GIF прогона.
+//! Подкоманды `export` (картинки и видео проекта) и `project` (состав проекта) -
+//! в модуле `subcommands`.
+
+// Путь назван явно: файл прямо в `src/bin/` cargo принял бы за отдельный бинарник.
+#[path = "takt_sim/subcommands.rs"]
+mod subcommands;
 
 use clap::Parser;
 use std::path::PathBuf;
@@ -17,7 +23,12 @@ use takt_sim::state_io;
 // -- Аргументы командной строки ------------------------------------------------
 
 #[derive(Parser)]
-#[command(name = "takt-sim", about = "Симуляция Takt-моделей", version)]
+#[command(
+    name = "takt-sim",
+    about = "Симуляция Takt-моделей",
+    version,
+    after_help = "Подкоманды:\n  takt-sim export <проект> [ключи]   картинки листов и видео прогона\n  takt-sim project <проект>          состав проекта\nСправка подкоманды: takt-sim export --help"
+)]
 struct Args {
     /// Путь к.takt файлу (обязательный)
     model_file: PathBuf,
@@ -86,7 +97,11 @@ struct Args {
 
 fn main() -> ExitCode {
     env_logger::init();
-    let args = Args::parse();
+    let argv: Vec<std::ffi::OsString> = std::env::args_os().collect();
+    if let Some(code) = subcommands::dispatch(&argv) {
+        return code;
+    }
+    let args = Args::parse_from(argv);
 
     // Язык - до первого сообщения: диагностика прогона обязана прийти уже на выбранном
     // языке. Разбор общий с `taktc`.
