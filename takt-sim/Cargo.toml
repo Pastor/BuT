@@ -1,6 +1,6 @@
 [package]
 name = "takt-sim"
-version = "0.14.0"
+version = "0.15.0"
 authors = ["Pastor <viruszold@gmail.com>"]
 description = "Takt — учебный DSL конечных автоматов: симулятор моделей. Язык сделан в учебных целях и показывает принципы автоматного подхода к разработке"
 homepage = "https://but.ru"

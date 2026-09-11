@@ -93,6 +93,10 @@ pub struct Step {
     /// списком: потребитель без консоли подсвечивает их на схеме, а разбирать строку
     /// обратно значило бы завести второй разбор трассы.
     pub states: Vec<String>,
+    /// Те же активные состояния с адресом экземпляра, который их несёт, - в том же
+    /// порядке. Имя состояния не различает экземпляры одной модели на листе
+    /// композиции, адрес различает; строка трассы и `states` от него не зависят.
+    pub active: Vec<crate::ActiveState>,
     /// Переходы, которые сработали бы на следующем такте при нынешних значениях,
     /// парами "из, в". Взгляд вперёд для схемы: следующий такт вправе изменить
     /// значения телами и входами, и ответ - ожидание, а не обещание.
@@ -272,6 +276,7 @@ impl SimulationRunner {
                 warnings: self.take_warnings(),
                 output: self.unit.take_output(),
                 states: Vec::new(),
+                active: Vec::new(),
                 next: Vec::new(),
             });
         }
@@ -322,6 +327,7 @@ impl SimulationRunner {
                 warnings: self.take_warnings(),
                 output: self.unit.take_output(),
                 states: Vec::new(),
+                active: Vec::new(),
                 next: Vec::new(),
             });
         }
@@ -365,6 +371,7 @@ impl SimulationRunner {
             warnings: self.take_warnings(),
             output: self.unit.take_output(),
             states: self.unit.active_states(),
+            active: self.unit.active_instances(),
             next,
         })
     }

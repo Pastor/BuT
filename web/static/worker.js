@@ -87,7 +87,7 @@ function advance(count) {
   // порции: место сообщения в потоке совпадает с тем, что даёт эталон в консоли.
   if (ticked.warnings?.length) post({ type: "warnings", items: ticked.warnings });
   if (ticked.output?.length) post({ type: "output", lines: ticked.output });
-  post({ type: "lines", lines: ticked.lines, states: ticked.states ?? [], next: ticked.next ?? [], done });
+  post({ type: "lines", lines: ticked.lines, states: ticked.states ?? [], next: ticked.next ?? [], active: ticked.active ?? [], done });
   if (ticked.done) {
     post({ type: "finished", info: ticked.info, errors: ticked.errors, steps: done });
     close_();

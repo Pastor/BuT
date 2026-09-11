@@ -49,6 +49,7 @@ pub use trace::format_duration;
 /// Реэкспорт: сам модуль `unit` внутренний, но его типы возвращаются публичным
 /// [`build_unit`] и обязаны быть именуемыми снаружи (иначе `private_interfaces` и
 /// невозможность написать интеграционный тест - пункт бэклога, закрыт ).
+pub use unit::instance::{ActiveState, Segment};
 pub use unit::{TickResult, Unit};
 
 /// Строит дерево симуляции из семантической модели.

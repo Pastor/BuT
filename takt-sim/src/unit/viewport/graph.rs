@@ -646,6 +646,7 @@ mod tests {
             model_name: None,
             entered_initial: false,
             exited_terminal: false,
+            path: Vec::new(),
             context: None,
             executions: HashMap::new(),
             state: None,

@@ -1,6 +1,6 @@
 [package]
 name = "takt-wasm"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Pastor <viruszold@gmail.com>"]
 description = "Takt — учебный DSL конечных автоматов: привязки компилятора, слоя LSP и эталона для WebAssembly"
 homepage = "https://but.ru"

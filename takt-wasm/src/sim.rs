@@ -52,6 +52,45 @@ impl From<&takt_sim::runner::RunWarning> for RunWarningJson {
     }
 }
 
+/// Активное состояние с адресом экземпляра - форма страницы.
+///
+/// Путь - сегменты от корня: владелец реализации, номер листа её выражения слева
+/// направо и модель листа. По нему схема различает экземпляры одной модели на листе
+/// композиции; `model` - модель узла (`null` у анонимной), `done` - шаг завершён.
+#[derive(Serialize)]
+struct ActiveJson {
+    path: Vec<SegmentJson>,
+    model: Option<String>,
+    state: String,
+    done: bool,
+}
+
+#[derive(Serialize)]
+struct SegmentJson {
+    owner: String,
+    step: usize,
+    model: String,
+}
+
+impl From<takt_sim::ActiveState> for ActiveJson {
+    fn from(active: takt_sim::ActiveState) -> Self {
+        Self {
+            path: active
+                .path
+                .into_iter()
+                .map(|segment| SegmentJson {
+                    owner: segment.owner,
+                    step: segment.step,
+                    model: segment.model,
+                })
+                .collect(),
+            model: active.model,
+            state: active.state,
+            done: active.done,
+        }
+    }
+}
+
 pub fn open(
     source: &str,
     scenario: &str,
@@ -169,6 +208,9 @@ pub fn tick(id: u32, budget: u32) -> String {
         /// Ожидаемые переходы после каждого такта порции парами "из, в": схема
         /// показывает, куда автомат уйдёт при нынешних значениях.
         next: Vec<Vec<(String, String)>>,
+        /// Те же активные состояния с адресом экземпляра, по списку на строку: имя не
+        /// различает экземпляры одной модели на листе композиции, адрес различает.
+        active: Vec<Vec<ActiveJson>>,
     }
 
     SESSIONS.with(|sessions| {
@@ -181,6 +223,7 @@ pub fn tick(id: u32, budget: u32) -> String {
         let mut output = Vec::new();
         let mut states = Vec::new();
         let mut next = Vec::new();
+        let mut active = Vec::new();
         for _ in 0..budget {
             match runner.step() {
                 Ok(step) => {
@@ -190,6 +233,7 @@ pub fn tick(id: u32, budget: u32) -> String {
                         lines.push(line);
                         states.push(step.states);
                         next.push(step.next);
+                        active.push(step.active.into_iter().map(ActiveJson::from).collect());
                     }
                     if let Some(result) = step.result {
                         let report = takt_sim::trace::result_report(&result);
@@ -202,6 +246,7 @@ pub fn tick(id: u32, budget: u32) -> String {
                             output,
                             states,
                             next,
+                            active,
                         });
                     }
                 }
@@ -220,6 +265,7 @@ pub fn tick(id: u32, budget: u32) -> String {
             output,
             states,
             next,
+            active,
         })
     })
 }
@@ -304,6 +350,43 @@ mod tests {
             "по списку ожиданий на строку: {reply}"
         );
 
+        assert_eq!(json(&close(id))["closed"], Value::Bool(true));
+    }
+
+    /// Адрес экземпляра доезжает до страницы: по списку на строку, имена - те же, что
+    /// `states`, а два экземпляра одной модели различимы номером листа.
+    #[test]
+    fn ticks_yield_instance_addresses() {
+        const CHAIN: &str = "model E { start A { ref B; } state B; }\n\
+                             start Main = E + E { next Done; }\nstate Done;\n";
+        let opened = json(&open(CHAIN, "", 0, Default::default(), None));
+        assert_eq!(opened["ok"], Value::Bool(true), "{opened}");
+        let id = opened["id"].as_u64().unwrap() as u32;
+        let reply = json(&tick(id, 20));
+        let states = reply["states"].as_array().unwrap();
+        let active = reply["active"].as_array().unwrap();
+        assert_eq!(active.len(), states.len(), "по списку на строку: {reply}");
+        let mut steps = Vec::new();
+        for (names, tick) in states.iter().zip(active) {
+            let tick = tick.as_array().unwrap();
+            let own: Vec<&Value> = tick.iter().map(|a| &a["state"]).collect();
+            assert_eq!(own, names.as_array().unwrap().iter().collect::<Vec<_>>());
+            for address in tick {
+                if let [segment] = address["path"].as_array().unwrap().as_slice() {
+                    assert_eq!(segment["owner"], "Main");
+                    assert_eq!(segment["model"], "E");
+                    let step = segment["step"].as_u64().unwrap();
+                    if steps.last() != Some(&step) {
+                        steps.push(step);
+                    }
+                }
+            }
+        }
+        assert_eq!(
+            steps,
+            vec![1, 2],
+            "экземпляры различимы номером листа: {reply}"
+        );
         assert_eq!(json(&close(id))["closed"], Value::Bool(true));
     }
 

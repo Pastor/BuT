@@ -6,6 +6,7 @@ mod clock;
 mod context_model;
 mod every;
 mod initial;
+pub(crate) mod instance;
 pub(crate) mod statement;
 mod tick;
 #[cfg(feature = "graphics")]
@@ -205,6 +206,9 @@ pub(crate) enum UnitKind {
         /// = 1` против `11` у всех четырёх. Флаг держит "ровно один раз": терминальный
         /// узел тикается и дальше, а выходят из состояния однажды.
         exited_terminal: bool,
+        /// Адрес экземпляра: путь по владельцам реализаций от корня
+        /// (`instance::Segment`). Ставится построителем и не меняется прогоном.
+        path: Vec<instance::Segment>,
     },
     Parallel {
         units: Vec<Rc<RefCell<Unit>>>,
@@ -673,14 +677,15 @@ impl Unit {
         }
     }
 
-    /// Рекурсивно собирает имена всех активных состояний по дереву Unit.
+    /// Имена активных состояний по дереву юнитов - те, что печатает строка трассы.
     ///
-    /// Для Sequential возвращает состояние текущего активного дочернего Unit. Для
-    /// Parallel - состояния всех дочерних Units.
+    /// Для цепочки - состояние идущего шага, для параллели - всех ветвей. Проекция
+    /// [`Unit::active_instances`]: обход один.
     pub fn active_states(&self) -> Vec<String> {
-        let mut out = Vec::new();
-        collect_active_states(self, &mut out);
-        out
+        self.active_instances()
+            .into_iter()
+            .map(|a| a.state)
+            .collect()
     }
 
     /// Есть ли у состояния тело: именованный блок либо периодическое действие.
@@ -872,37 +877,6 @@ fn split_qualified(name: &str) -> Option<(&str, &str)> {
         return None;
     }
     Some((model, port))
-}
-
-fn collect_active_states(unit: &Unit, out: &mut Vec<String>) {
-    match &unit.0 {
-        UnitKind::None => {}
-        UnitKind::Node {
-            state, state_impls, ..
-        } => {
-            if let Some(s) = state {
-                out.push(s.clone());
-                // Состояния внутри реализации - часть активной конфигурации автомата, а
-                // не деталь: без них трасса `state P = A + B` показывала бы одно
-                // неподвижное `P`, тогда как у формы `start P = A | B` (та же
-                // композиция без переходов) сообщаются состояния ветвей. Две записи
-                // одной конструкции обязаны наблюдаться одинаково.
-                if let Some(inner) = state_impls.get(s) {
-                    collect_active_states(&inner.borrow(), out);
-                }
-            }
-        }
-        UnitKind::Parallel { units, .. } => {
-            for u in units {
-                collect_active_states(&u.borrow(), out);
-            }
-        }
-        UnitKind::Sequential { units, index, .. } => {
-            if let Some(u) = units.get(*index) {
-                collect_active_states(&u.borrow(), out);
-            }
-        }
-    }
 }
 
 #[cfg(test)]

@@ -24,6 +24,7 @@ mod implemented_model_sim_tests;
 mod import_enum_match_tests;
 mod inference_chain_tests;
 mod inferred_width_tests;
+mod instance_tests;
 mod library_entry_tests;
 mod named_port_scenario_tests;
 mod run_warnings_tests;

@@ -891,6 +891,10 @@ test("граф: модуль отдаёт листы лифта, а страни
   assert.equal(opened.ok, true, JSON.stringify(opened));
   const ticked = bridge.simTick(opened.id, 3);
   assert.equal(ticked.ok, true, JSON.stringify(ticked));
+  // Адрес экземпляра идёт рядом со списком имён: по списку на строку, имена те же.
+  assert.equal(ticked.active.length, ticked.lines.length, "адреса - по списку на строку");
+  ticked.active.forEach((tick, i) => assert.deepEqual(tick.map((a) => a.state), ticked.states[i], "имена адресов - это states"));
+  assert.ok(ticked.active.every((tick) => tick.every((a) => Array.isArray(a.path) && typeof a.done === "boolean")), "форма адреса");
   assert.equal(ticked.states.length, ticked.lines.length, "по списку состояний на строку");
   // Взгляд вперёд: по списку ожидаемых переходов на строку, каждая пара - имена узлов.
   assert.equal(ticked.next.length, ticked.lines.length, "по списку ожиданий на строку");

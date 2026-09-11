@@ -2,6 +2,7 @@ use crate::context::Context;
 use crate::eval::value::Value;
 use crate::predicate::create_predicate;
 use crate::unit::blocks::model_level_executions;
+use crate::unit::instance::{Owner, Segment};
 use crate::unit::statement::compile_block_body;
 use crate::unit::{Execution, Predicate, Unit, UnitKind};
 use std::cell::RefCell;
@@ -140,7 +141,7 @@ impl crate::eval::StructRegistry for ModelStructs<'_> {
 
 /// Строит дерево [`Unit`] из семантической модели.
 pub fn build(model: Rc<RefCell<ModelNode>>) -> Result<Unit, Diagnostic> {
-    build_impl(model, None, &[], Location::Builtin)
+    build_impl(model, None, &[], Location::Builtin, Vec::new())
 }
 
 fn build_impl(
@@ -148,6 +149,7 @@ fn build_impl(
     shared_parent: Option<Rc<RefCell<dyn Context>>>,
     args: &[ParameterArgument],
     call_loc: Location,
+    path: Vec<Segment>,
 ) -> Result<Unit, Diagnostic> {
     let has_states = model.borrow().has_states();
     if has_states {
@@ -156,7 +158,7 @@ fn build_impl(
         let single_compound = {
             let borrowed = model.borrow();
             if borrowed.states.len() == 1 {
-                borrowed.states.values().next().and_then(|state| {
+                borrowed.states.iter().next().and_then(|(name, state)| {
                     if let StateNode::Implement {
                         implements,
                         references,
@@ -174,7 +176,7 @@ fn build_impl(
                             && next.is_none()
                             && state.named_blocks().is_empty()
                         {
-                            Some(implements.clone())
+                            Some((name.clone(), implements.clone()))
                         } else {
                             None
                         }
@@ -186,18 +188,29 @@ fn build_impl(
                 None
             }
         };
-        if let Some(implements) = single_compound {
+        if let Some((owner, implements)) = single_compound {
             reject_unsupported_arguments(&model, args, call_loc)?;
-            build_composition(model, &implements, shared_parent)
+            // Свёрнутая модель узла не имеет, и листы её выражения принадлежат её
+            // единственному состоянию - тому, что схема рисует квадратом.
+            let owner = Owner {
+                prefix: &path,
+                name: &owner,
+            };
+            build_composition(model, &implements, shared_parent, &owner)
         } else {
-            build_node(model, shared_parent, args)
+            build_node(model, shared_parent, args, path)
         }
     } else {
         // Модель без своих состояний (`model M = A | B`): своего контекста у неё не
         // возникает - значения записывать некуда. Отказ вместо молчания.
         reject_unsupported_arguments(&model, args, call_loc)?;
         let extends = model.borrow().implements.clone();
-        build_composition(model, &extends, shared_parent)
+        let name = model.borrow().name.clone().unwrap_or_default();
+        let owner = Owner {
+            prefix: &path,
+            name: &name,
+        };
+        build_composition(model, &extends, shared_parent, &owner)
     }
 }
 
@@ -206,6 +219,7 @@ fn build_composition(
     model: Rc<RefCell<ModelNode>>,
     extends: &Extend,
     shared_parent: Option<Rc<RefCell<dyn Context>>>,
+    owner: &Owner,
 ) -> Result<Unit, Diagnostic> {
     let ctx: Rc<RefCell<dyn Context>> =
         Rc::new(RefCell::new(if let Some(shared) = shared_parent {
@@ -213,7 +227,7 @@ fn build_composition(
         } else {
             ModelNodeContext::new(model.clone())
         }));
-    let mut unit = build_extend(extends, Some(ctx.clone()))?;
+    let mut unit = build_extend(extends, Some(ctx.clone()), owner, &mut 0)?;
     let owner = model_level_executions(&model, ctx);
     if owner.is_empty() {
         return Ok(unit);
@@ -265,6 +279,7 @@ fn build_node(
     model: Rc<RefCell<ModelNode>>,
     shared_parent: Option<Rc<RefCell<dyn Context>>>,
     args: &[ParameterArgument],
+    path: Vec<Segment>,
 ) -> Result<Unit, Diagnostic> {
     let start_name = {
         let borrowed = model.borrow();
@@ -346,7 +361,11 @@ fn build_node(
         // `+` не видят переменных друг друга, и значение, записанное шагом A,
         // проваливается в 0 при переходе к B.
         if let StateNode::Implement { implements, .. } = state_node {
-            let inner = build_extend(implements, Some(ctx_rc.clone()))?;
+            let owner = Owner {
+                prefix: &path,
+                name,
+            };
+            let inner = build_extend(implements, Some(ctx_rc.clone()), &owner, &mut 0)?;
             if !matches!(inner.kind(), UnitKind::None) {
                 state_impls.insert(name.clone(), Rc::new(RefCell::new(inner)));
             }
@@ -417,6 +436,7 @@ fn build_node(
         guards,
         invariant_violations: Vec::new(),
         last_transition: None,
+        path,
     }))
 }
 
@@ -461,31 +481,46 @@ fn build_transitions(state: &StateNode) -> Result<Vec<(String, Predicate)>, Diag
 
 // -- Unit из Extend ------------------------------------------------------------
 
+/// Строит юнит по выражению реализации.
+///
+/// `step` - счётчик листов выражения этого владельца: лист получает следующий номер
+/// при обходе слева направо, и тот же порядок у листа композиции на схеме.
 fn build_extend(
     extend: &Extend,
     shared_parent: Option<Rc<RefCell<dyn Context>>>,
+    owner: &Owner,
+    step: &mut usize,
 ) -> Result<Unit, Diagnostic> {
     match extend {
         Extend::None | Extend::Unresolved(_) => Ok(Unit::default()),
         // Аргументы инстанцирования: значения параметров этого экземпляра. Пустой
         // список - вызов без аргументов, поведение прежнее.
-        Extend::Model(rc, loc, args) => build_impl(Rc::clone(rc), shared_parent, args, *loc),
-        Extend::Parentless(inner) => build_extend(inner, shared_parent),
+        Extend::Model(rc, loc, args) => {
+            *step += 1;
+            let model = rc.borrow().name.clone().unwrap_or_default();
+            let path = owner.leaf(*step, &model);
+            build_impl(Rc::clone(rc), shared_parent, args, *loc, path)
+        }
+        Extend::Parentless(inner) => build_extend(inner, shared_parent, owner, step),
         Extend::Concatenation(items) => {
             // Шаги `+` делят общий родительский контекст ровно так же, как ветви `|`.
             let shared = shared_context(shared_parent, items);
-            items.iter().try_fold(Unit::default(), |acc, item| {
-                Ok(acc.add(&build_extend(item, shared.clone())?))
-            })
+            let mut acc = Unit::default();
+            for item in items {
+                acc = acc.add(&build_extend(item, shared.clone(), owner, step)?);
+            }
+            Ok(acc)
         }
         Extend::Parallel(items) => {
             // Все параллельные подмодели разделяют один общий родительский контекст -
             // это позволяет передавать shared-переменные (busy, tgt_*, lift_*) между
             // ними.
             let shared = shared_context(shared_parent, items);
-            items.iter().try_fold(Unit::default(), |acc, item| {
-                Ok(acc.union(&build_extend(item, shared.clone())?))
-            })
+            let mut acc = Unit::default();
+            for item in items {
+                acc = acc.union(&build_extend(item, shared.clone(), owner, step)?);
+            }
+            Ok(acc)
         }
     }
 }
@@ -719,7 +754,11 @@ mod tests {
         let StateNode::Implement { implements, .. } = &*entry_ref else {
             panic!("Entry должен быть Implement");
         };
-        let result = build_extend(implements, None).unwrap();
+        let owner = Owner {
+            prefix: &[],
+            name: "Entry",
+        };
+        let result = build_extend(implements, None, &owner, &mut 0).unwrap();
         let UnitKind::Sequential { units, .. } = result.kind() else {
             panic!("ожидался Unit::Sequential");
         };
@@ -736,7 +775,11 @@ mod tests {
         let StateNode::Implement { implements, .. } = &*entry_ref else {
             panic!("Entry должен быть Implement");
         };
-        let result = build_extend(implements, None).unwrap();
+        let owner = Owner {
+            prefix: &[],
+            name: "Entry",
+        };
+        let result = build_extend(implements, None, &owner, &mut 0).unwrap();
         let UnitKind::Parallel { units, .. } = result.kind() else {
             panic!("ожидался Unit::Parallel");
         };
