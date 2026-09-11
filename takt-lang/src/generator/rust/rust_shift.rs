@@ -27,8 +27,10 @@
 //! которую целевой язык выражает не тем оператором, каким её записал автор.
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::rust::rust_expr::{Scope, print_expression};
 use crate::generator::shift_width::{self, Saturation};
+use crate::msg;
 use crate::semantic::ExpressionNode;
 use crate::semantic::type_node::TypeNode;
 
@@ -132,10 +134,9 @@ pub(crate) fn power(
     if let Some(value) = shift_width::literal(exp)
         && value < 0
     {
-        return Err(crate::generator::rust::rust_expr::unsupported(
-            "возведение в ОТРИЦАТЕЛЬНУЮ степень: результат дробный, а целая \
-             степень в Rust принимает беззнаковый показатель",
-        ));
+        return Err(crate::generator::rust::rust_expr::unsupported(&msg!(
+            keys::RS_WHAT_NEGATIVE_POWER
+        )));
     }
     Ok(format!(
         "({}).wrapping_pow({})",
@@ -166,14 +167,15 @@ fn power_base(
     };
     match target {
         Some(ty @ TypeNode::Integer { .. }) => {
-            let name = crate::generator::rust::rust_type::rust_type(ty, "приёмник степени")?;
+            let name = crate::generator::rust::rust_type::rust_type(
+                ty,
+                &msg!(keys::RS_WHAT_POWER_RECEIVER),
+            )?;
             Ok(format!("{literal}{name}"))
         }
-        _ => Err(crate::generator::rust::rust_expr::unsupported(
-            "степень с ЛИТЕРАЛЬНОЙ базой в позиции, где тип приёмника \
-             неизвестен: в Rust вывод типа не проходит сквозь вызов метода, и \
-             такая запись не компилируется (E0689)",
-        )),
+        _ => Err(crate::generator::rust::rust_expr::unsupported(&msg!(
+            keys::RS_WHAT_POWER_LITERAL_BASE
+        ))),
     }
 }
 

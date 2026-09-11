@@ -13,7 +13,9 @@ use super::rust_expr::{
     write_port,
 };
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::rust::rust_fixed;
+use crate::msg;
 use crate::parser::ast::Member;
 use crate::semantic::ExpressionNode;
 use crate::semantic::VariableNode;
@@ -58,11 +60,10 @@ pub(crate) fn assign(
             return write_port(name, ty, *direction, unwrap_outer(&printed), scope, *loc);
         }
         if let VariableNode::Const { name, loc, .. } = &*borrowed {
-            return Err(Diagnostic::error(
-                *loc,
-                format!("Присваивание в константу '{}' недопустимо", name),
-            )
-            .with_code("RS-019"));
+            return Err(
+                Diagnostic::error(*loc, msg!(keys::RS_019_ASSIGN_TO_CONST, name = name))
+                    .with_code("RS-019"),
+            );
         }
     }
     // Запись одного разряда.

@@ -33,6 +33,10 @@ from gatelib import require_input  # noqa: E402  (путь к помощнику
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REGISTRY = os.path.join(ROOT, "scripts", "stub-branches.txt")
+# Базовый каталог сообщений: текст диагностики живёт в нём, а место эмиссии
+# называет ключ константой (`keys::ST_016_...`).
+CATALOG = os.path.join(ROOT, "takt-lang", "messages", "ru.txt")
+KEY_REFERENCE = re.compile(r"keys::([A-Z0-9_]+)")
 FEATURES_REGISTRY = os.path.join(ROOT, "docs", "features", "README.md")
 SOURCE_DIRS = (
     os.path.join("takt-lang", "src"),
@@ -96,8 +100,27 @@ def parse_registry(text):
     return entries
 
 
-def scan_sources(files):
+def parse_catalog(text):
+    """Строки каталога → словарь «имя константы ключа → текст».
+
+    Имя константы строится как у `build.rs`: всё, кроме букв и цифр, — `_`, буквы
+    заглавные (`st-016.computed-after-clock` → `ST_016_COMPUTED_AFTER_CLOCK`).
+    """
+    catalog = {}
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        catalog[re.sub(r"[^A-Za-z0-9]", "_", key.strip()).upper()] = value.strip()
+    return catalog
+
+
+def scan_sources(files, catalog=None):
     """files: путь → текст. Возвращает множество пар (код, файл) для заглушек.
+
+    Строка, называющая ключ каталога, читается вместе с его текстом: формулировка
+    заглушки живёт в каталоге, и без этого проверка её бы не видела.
 
     Код берётся у ближайшего `with_code("…")` ПОСЛЕ маркера: диагностика
     строится сверху вниз (текст, затем код), и в проекте это единственная форма.
@@ -112,6 +135,10 @@ def scan_sources(files):
         text = re.sub(r"\\\n\s*", "", text)
         lines = text.splitlines()
         for index, line in enumerate(lines):
+            if catalog:
+                named = [catalog.get(key, "") for key in KEY_REFERENCE.findall(line)]
+                if named:
+                    line = line + ' "' + " ".join(named) + '"'
             promises_task = '"' in line and TASK_REFERENCE.search(line) is not None
             if MARKER not in line and not promises_task:
                 continue
@@ -134,7 +161,7 @@ def scan_sources(files):
     return found
 
 
-def run_checks(registry_text, statuses, files):
+def run_checks(registry_text, statuses, files, catalog=None):
     problems = []
     entries = parse_registry(registry_text)
     declared = set()
@@ -172,7 +199,7 @@ def run_checks(registry_text, statuses, files):
                 )
             )
 
-    found = scan_sources(files)
+    found = scan_sources(files, catalog)
     for code, path in sorted(found - declared):
         problems.append(
             (path, f"заглушка {code} не объявлена в scripts/stub-branches.txt")
@@ -236,6 +263,14 @@ def self_test():
     if run_checks("", statuses, prose):
         sys.exit("САМОПРОВЕРКА ПРОВАЛЕНА: упоминание фичи в прозе объявлено заглушкой")
 
+    # Текст заглушки в каталоге: место эмиссии называет ключ.
+    keyed = {"e.rs": "msg!(keys::XX_001_STUB)\n.with_code(\"XX-001\")"}
+    catalog = parse_catalog("xx-001.stub = отказ пока не поддерживается\n")
+    if not run_checks("", statuses, keyed, catalog):
+        sys.exit("САМОПРОВЕРКА ПРОВАЛЕНА: заглушка из каталога не поймана")
+    if run_checks("XX-001 e.rs ПОСТОЯННЫЙ\n", statuses, keyed, catalog):
+        sys.exit("САМОПРОВЕРКА ПРОВАЛЕНА: объявленная заглушка из каталога даёт находку")
+
     printed = {"d.rs": 'p.ident("// регистровый интерфейс (фича 0062)");'}
     if run_checks("", statuses, printed):
         sys.exit("САМОПРОВЕРКА ПРОВАЛЕНА: печатаемый комментарий объявлен заглушкой")
@@ -254,7 +289,9 @@ def main():
     note = require_input("просмотренные исходники", len(sources), source="takt-lang, takt-sim")
     statuses = feature_statuses(read_text(FEATURES_REGISTRY))
     require_input("записи реестра фич", len(statuses), source="docs/features/README.md")
-    problems = run_checks(read_text(REGISTRY), statuses, sources)
+    catalog = parse_catalog(read_text(CATALOG))
+    require_input("ключи каталога сообщений", len(catalog), source="takt-lang/messages/ru.txt")
+    problems = run_checks(read_text(REGISTRY), statuses, sources, catalog)
     if problems:
         print("Ветви-заглушки разошлись с реестром (фича 0217):", file=sys.stderr)
         for place, message in problems:

@@ -6,8 +6,10 @@
 //! считается по диапазону вариантов, а не берётся `USINT`, как предполагал "); здесь он
 //! учтён **до** написания кода.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::rust::rust_name::rust_type_name;
+use crate::msg;
 use crate::semantic::enum_facts;
 use crate::semantic::type_node::TypeNode;
 
@@ -15,7 +17,7 @@ use crate::semantic::type_node::TypeNode;
 fn rs014(what: &str, ty: &TypeNode) -> Diagnostic {
     Diagnostic::error(
         Location::Codegen,
-        format!("{}: тип '{}' не представим в Rust", what, ty),
+        msg!(keys::RS_014_TYPE_UNREPRESENTABLE, what = what, ty = ty),
     )
     .with_code("RS-014")
 }
@@ -131,14 +133,10 @@ pub(crate) fn enum_repr(variants: &[(String, i128)]) -> &'static str {
 /// симулятором. Лучше отказать, чем соврать.
 pub(crate) fn reject_float_width(width: crate::generator::FloatWidth) -> Result<(), Diagnostic> {
     if width == crate::generator::FloatWidth::W32 {
-        return Err(Diagnostic::error(
-            Location::Codegen,
-            "--float-width=32 несовместим с целью 'rust': вещественный тип Takt \
-             отображается в f64 — так же, как считает симулятор (решение ADR 0050). \
-             Уберите флаг либо используйте --float-width=64"
-                .to_string(),
-        )
-        .with_code("RS-015"));
+        return Err(
+            Diagnostic::error(Location::Codegen, msg!(keys::RS_015_FLOAT_WIDTH_32))
+                .with_code("RS-015"),
+        );
     }
     Ok(())
 }
@@ -157,8 +155,8 @@ pub(crate) fn same_printed_type(inner: &crate::semantic::ExpressionNode, ty: &Ty
         return false;
     };
     match (
-        rust_type(&from, "приведение типа"),
-        rust_type(ty, "приведение типа"),
+        rust_type(&from, &msg!(keys::GEN_WHAT_CAST)),
+        rust_type(ty, &msg!(keys::GEN_WHAT_CAST)),
     ) {
         (Ok(from), Ok(to)) => from == to,
         // Неотобразимый тип судит печать самого приведения - здесь молчим.

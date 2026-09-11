@@ -18,6 +18,7 @@
 //! нельзя (снимки `examples/generated/` сверяются побайтно), а отказ обязан нести
 //! координату **объявления** - у служебного поля позиции нет.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::rust::rust_chain::Chain;
 use crate::generator::rust::rust_chain::seq_field_name;
@@ -25,6 +26,7 @@ use crate::generator::rust::rust_map::RustMap;
 use crate::generator::rust::rust_model::Instance;
 use crate::generator::rust::rust_name::name_collision;
 use crate::generator::rust::{rust_every, rust_time};
+use crate::msg;
 use crate::semantic::ModelNode;
 
 /// Занятое имя поля: чем занято и под каким исходным именем.
@@ -109,7 +111,7 @@ impl Fields {
                 &clash.original,
                 original,
                 produced,
-                "поля структуры модели",
+                &msg!(keys::RS_KIND_MODEL_STRUCT_FIELDS),
                 loc,
             ));
         }

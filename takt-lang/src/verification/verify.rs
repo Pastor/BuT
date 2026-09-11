@@ -233,9 +233,8 @@ fn run(model: &ModelNode, phi: &Ltl, trace: &mut Option<String>) -> Verdict {
     let automaton = build_buchi(&Ltl::Not(Rc::new(phi.clone())));
     if let Some(t) = trace.as_mut() {
         t.push_str(&format!(
-            "=== Формула {} ; автомат строится по отрицанию !({}) — его язык суть \
-             нарушающие прогоны ===\n",
-            phi, phi
+            "{}\n",
+            msg!(keys::VERIFY_TRACE_FORMULA_HEADER, phi = phi)
         ));
         t.push_str(&automaton.dump());
     }

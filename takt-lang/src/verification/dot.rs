@@ -16,6 +16,8 @@
 //! Порядок вывода детерминирован (обход по возрастанию индекса, множества -
 //! `BTreeSet`), поэтому DOT воспроизводим побайтно.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::semantic::ModelNode;
 use crate::verification::buchi::BuchiAutomaton;
 use crate::verification::kripke::Kripke;
@@ -260,10 +262,7 @@ pub fn parse_graph_kind(value: &str) -> Result<GraphKind, String> {
         "kripke" => Ok(GraphKind::Kripke),
         "buchi" => Ok(GraphKind::Buchi),
         "product" => Ok(GraphKind::Product),
-        other => Err(format!(
-            "неизвестный граф '{other}'; допустимо: kripke (структура Крипке), \
-             buchi (автомат ¬φ), product (произведение)"
-        )),
+        other => Err(msg!(keys::VERIFY_UNKNOWN_GRAPH, name = other)),
     }
 }
 
@@ -271,18 +270,18 @@ pub fn parse_graph_kind(value: &str) -> Result<GraphKind, String> {
 fn refusal_message(verdict: &Verdict) -> String {
     match verdict {
         Verdict::NoStartState => {
-            "Экспорт графа невозможен: у модели нет стартового состояния.".to_string()
+            msg!(keys::VERIFY_GRAPH_NO_START_STATE)
         }
         // Причина берётся у вердикта, а не пересказывается здесь: прежний текст
         // утверждал "не имя состояния и не отслеживаемый предикат" и на входе за
         // потолком был прямо ложным - атомы там как раз отслеживаемые.
-        Verdict::Unsupported { atoms, reason } => format!(
-            "Экспорт графа невозможен: атом(ы) {} — {}.",
-            atoms.join(", "),
-            reason.text()
+        Verdict::Unsupported { atoms, reason } => msg!(
+            keys::VERIFY_GRAPH_UNSUPPORTED_ATOMS,
+            atoms = atoms.join(", "),
+            reason = reason.text()
         ),
         // Holds/Violated здесь не возникают: build_graphs не проверяет пустоту.
-        _ => "Экспорт графа невозможен.".to_string(),
+        _ => msg!(keys::VERIFY_GRAPH_IMPOSSIBLE),
     }
 }
 
@@ -303,13 +302,10 @@ pub fn emit_graph_dot(
     }
 
     let Some(text) = property else {
-        return Err(format!(
-            "граф '{}' строится по свойству — задайте его флагом --property \"φ\".",
-            kind.name()
-        ));
+        return Err(msg!(keys::VERIFY_GRAPH_NEEDS_PROPERTY, name = kind.name()));
     };
     let phi = crate::parse_ltl_property(text)
-        .map_err(|d| format!("Ошибка разбора свойства: {}", d.message))?;
+        .map_err(|d| msg!(keys::VERIFY_PROPERTY_PARSE_ERROR, message = d.message))?;
     let graphs = verify::build_graphs(model, &phi).map_err(|v| refusal_message(&v))?;
     Ok(match kind {
         GraphKind::Kripke => kripke_to_dot(&graphs.kripke),

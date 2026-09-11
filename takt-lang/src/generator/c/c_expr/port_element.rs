@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::diagnostics::lang::keys;
+use crate::msg;
 
 /// Печатает запись в элемент порта; `false` - приёмник не элемент порта.
 ///
@@ -118,7 +119,7 @@ pub(in crate::generator::c) fn emit_bit_write(
     if cls == PortClass::Rational {
         return Err(Diagnostic::error(
             crate::diagnostics::Location::Codegen,
-            "BitAccess на float-порт не поддерживается при записи".to_string(),
+            msg!(keys::CC_001_BIT_ACCESS_ON_FLOAT_PORT_WRITE),
         )
         .with_code("CC-001"));
     }

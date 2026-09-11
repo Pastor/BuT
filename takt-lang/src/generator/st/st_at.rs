@@ -25,7 +25,9 @@
 //! всего по смыслу.
 
 use crate::address_map::{AddressSource, ResolvedAddress};
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::PortDirection;
 use crate::semantic::type_node::TypeNode;
 
@@ -46,10 +48,10 @@ pub(crate) fn location_of(
     let mut warnings = Vec::new();
 
     if resolved.addr < 0 {
-        return Err(no_location(&format!(
-            "порт '{}' имеет отрицательный адрес {}: номер локации IEC 61131-3 \
-             неотрицателен",
-            name, resolved.addr
+        return Err(no_location(&msg!(
+            keys::ST_WHAT_NEGATIVE_ADDRESS,
+            name = name,
+            addr = resolved.addr
         )));
     }
 
@@ -61,13 +63,8 @@ pub(crate) fn location_of(
     };
 
     let is_bool = matches!(ty, TypeNode::Bit | TypeNode::Bool);
-    let size = size_of(ty, model).ok_or_else(|| {
-        no_location(&format!(
-            "порт '{}' типа '{}' не имеет локации: размещаются только скаляры \
-             (BOOL, целые, LREAL), а не массивы и структуры",
-            name, ty
-        ))
-    })?;
+    let size = size_of(ty, model)
+        .ok_or_else(|| no_location(&msg!(keys::ST_WHAT_NO_LOCATION, name = name, ty = ty)))?;
 
     let location = if is_bool {
         // Бит обязателен для `%IX`: без него адресуется не тот объект.
@@ -81,9 +78,10 @@ pub(crate) fn location_of(
         let bit = match resolved.bit {
             Some(b) if b >= 0 => b,
             Some(b) => {
-                return Err(no_location(&format!(
-                    "порт '{}': отрицательный номер бита {}",
-                    name, b
+                return Err(no_location(&msg!(
+                    keys::ST_WHAT_NEGATIVE_BIT,
+                    name = name,
+                    bit = b
                 )));
             }
             None => 0,
@@ -96,10 +94,11 @@ pub(crate) fn location_of(
             warnings.push(
                 Diagnostic::warning(
                     crate::generator::site::at(Location::Codegen),
-                    format!(
-                        "Порт '{}' не булев, а в адресе задан бит: у локации %{}{} \
-                         бита нет — он ПРОИГНОРИРОВАН",
-                        name, class, size
+                    msg!(
+                        keys::ST_006_BIT_IGNORED,
+                        name = name,
+                        class = class,
+                        size = size
                     ),
                 )
                 .with_code("ST-006"),
@@ -160,7 +159,7 @@ fn no_location(what: &str) -> Diagnostic {
     // Позицию даёт общий носитель: своей у отказа размещения нет.
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
-        format!("Размещение порта: {}", what),
+        msg!(keys::ST_004_PLACEMENT, what = what),
     )
     .with_code("ST-004")
 }

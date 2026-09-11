@@ -12,9 +12,11 @@ use crate::generator::st::st_time;
 use crate::semantic::minimap::Name;
 use crate::semantic::{ConditionNode, ModelNode, ReferenceNode, StateNode};
 
+use crate::diagnostics::lang::keys;
 use crate::generator::st::st_compose::Instance;
 use crate::generator::st::st_cond::print_condition;
 use crate::generator::st::st_model::{BodyOutput, StateTable, emit_transition, unknown_state};
+use crate::msg;
 
 /// Печатает цепочку `IF ... ELSIF ...` по рёбрам состояния.
 ///
@@ -88,10 +90,7 @@ pub(crate) fn emit_edges(
     let mut printed_if = false;
     for (i, reference) in references.iter().enumerate() {
         let target = table.number_of_local(&reference.name).ok_or_else(|| {
-            unknown_state(&format!(
-                "переход ведёт в состояние '{}', которого нет в модели",
-                reference.name
-            ))
+            unknown_state(&msg!(keys::ST_EDGE_TO_MISSING_STATE, name = reference.name))
         })?;
         // Переход объявляет своё место: условие ребра - не оператор, и отказ печатника
         // выражений приходил без координаты.
@@ -155,7 +154,7 @@ pub(crate) fn edge_guard(
                     *nanos,
                     map.time_profile(),
                     Location::Codegen,
-                    "выдержка 'after'",
+                    &msg!(keys::GEN_WHAT_AFTER),
                 )?;
                 format!("{} >= {}", st_time::DWELL_FIELD, units)
             }
@@ -168,13 +167,7 @@ pub(crate) fn edge_guard(
             if clock {
                 return Err(Diagnostic::error(
                     Location::Codegen,
-                    concat!(
-                        "вычисляемая выдержка 'after' в профиле «часы» целью 'st' ",
-                        "пока не поддерживается: переменный `PT` таймера требует ",
-                        "своей обвязки. Передайте --tick-hz (профиль «такты») ",
-                        "либо оставьте выдержку константной"
-                    )
-                    .to_string(),
+                    msg!(keys::ST_016_COMPUTED_AFTER_CLOCK),
                 )
                 .with_code("ST-016"));
             }

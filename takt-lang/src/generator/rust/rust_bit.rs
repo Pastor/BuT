@@ -1,9 +1,11 @@
 //! Битовый доступ цели `rust`: чтение `x.N` и запись `x.N := v`.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::rust::rust_expr::{
     Scope, coerce_to, print_as_bool, print_expression, unsupported, unwrap_outer, write_port,
 };
+use crate::msg;
 use crate::parser::ast::Member;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ExpressionNode, PortDirection, VariableNode};
@@ -134,13 +136,13 @@ pub(crate) fn field_access(base: &str, field: &str) -> String {
 pub(crate) fn member_index(member: &Member) -> Result<u64, Diagnostic> {
     match member {
         Member::Number(index) if *index >= 0 => Ok(*index as u64),
-        Member::Number(index) => Err(unsupported(&format!(
-            "битовый доступ с отрицательным индексом '{}'",
-            index
+        Member::Number(index) => Err(unsupported(&msg!(
+            keys::RS_WHAT_NEGATIVE_BIT_INDEX,
+            index = index
         ))),
-        Member::Identifier(name) => Err(unsupported(&format!(
-            "доступ к члену '.{}': поля структур в цели rust пока не транслируются",
-            name.name
+        Member::Identifier(name) => Err(unsupported(&msg!(
+            keys::RS_WHAT_MEMBER_ACCESS,
+            name = name.name
         ))),
     }
 }
@@ -183,9 +185,9 @@ pub(crate) fn assign_bit(
     let words = words_of(inner);
     let bit_u64 = u64::try_from(bit).unwrap_or(u64::MAX);
     let Some(carrier) = carrier_word(&base, words, bit_u64) else {
-        return Err(unsupported(&format!(
-            "разряд {bit} за пределом бит-вектора: разрядов за объявленной шириной \
-             нет, а доступ за границу массива слов — паника в прошивке"
+        return Err(unsupported(&msg!(
+            keys::RS_WHAT_BIT_BEYOND_VECTOR,
+            bit = bit
         )));
     };
     let (bare, grouped) = bit_masks(i128::from(carrier_offset(words, bit_u64)));
@@ -239,10 +241,7 @@ fn assign_port_bit(
         if bit != 0 {
             return Err(Diagnostic::error(
                 loc,
-                format!(
-                    "разряд {bit} у однобитного порта '{name}': у значения шириной в бит \
-                     иных разрядов нет"
-                ),
+                msg!(keys::RS_025_SINGLE_BIT_PORT, bit = bit, name = name),
             )
             .with_code("RS-025"));
         }
@@ -251,12 +250,7 @@ fn assign_port_bit(
     }
     Err(Diagnostic::error(
         loc,
-        format!(
-            "запись разряда {bit} порта '{name}' не транслируется в Rust: установка \
-             одного разряда требует прочитать остальные, а HAL-трейт даёт выходному \
-             порту только запись. Держите значение в переменной модели и пишите порт \
-             целиком ('var shadow: …; shadow.{bit} := …; {name} := shadow;')"
-        ),
+        msg!(keys::RS_025_PORT_BIT_WRITE, bit = bit, name = name),
     )
     .with_code("RS-025"))
 }

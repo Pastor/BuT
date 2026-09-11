@@ -35,10 +35,12 @@
 //! срез `reg_*[bit +: width]`; выход за 64 - отказ `SV-013`, а не догадка.
 
 use crate::address_map::ResolvedAddress;
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::indent::Printer;
 use crate::generator::sv::sv_fsm::Block;
 use crate::generator::sv::sv_type::{SvType, enum_width, sv_type};
+use crate::msg;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ExpressionNode, PortDirection, VariableNode};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -65,16 +67,12 @@ const REG_IFACE_NAMES: &[&str] = &["reg_addr", "reg_wdata", "reg_wen", "reg_rdat
 fn sv013(name: &str, bit: i64, width: u32) -> Diagnostic {
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
-        format!(
-            "порт '{}' занимает биты [{}..{}] адреса, но регистр цели 'sv-mmio' \
-             шириной 64 бита (слово дефолтного HAL): срез bit+width={} выходит за \
-             границу. Ширину адресуемого слова язык Takt не выражает, поэтому \
-             угадать её нельзя — сузьте тип порта или сместите бит так, чтобы \
-             bit+width не превышало 64",
-            name,
-            bit,
-            bit + i64::from(width) - 1,
-            bit + i64::from(width)
+        msg!(
+            keys::SV_013_BITS_BEYOND_REGISTER,
+            name = name,
+            bit = bit,
+            last = bit + i64::from(width) - 1,
+            end = bit + i64::from(width)
         ),
     )
     .with_code("SV-013")
@@ -84,14 +82,7 @@ fn sv013(name: &str, bit: i64, width: u32) -> Diagnostic {
 fn sv014(name: &str) -> Diagnostic {
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
-        format!(
-            "имя '{}' зарезервировано регистровым интерфейсом цели 'sv-mmio' \
-             (reg_addr/reg_wdata/reg_wen/reg_rdata — сигналы шины, которых в .takt \
-             нет). Это НЕ ключевое слово языка Takt: модель остаётся валидной для \
-             целей 'c', 'c-hal', 'st', 'rust' и 'sv'. Переименуйте \
-             элемент в исходнике .takt, если модель нужна как регистровый файл",
-            name
-        ),
+        msg!(keys::SV_014_RESERVED_MMIO_NAME, name = name),
     )
     .with_code("SV-014")
 }
@@ -101,11 +92,10 @@ fn sv014(name: &str) -> Diagnostic {
 /// Шаблон общий (`sv_expr::sv002`): своя копия дала бы одному коду два разных вида
 /// сообщения.
 fn sv002_width(name: &str, ty: &TypeNode) -> Diagnostic {
-    crate::generator::sv::sv_expr::sv002(&format!(
-        "порт '{name}' с адресом имеет тип '{ty}', ширина которого в битах не \
-         определена (регистровый файл цели 'sv-mmio' раскладывает порт по битам \
-         слова). Адресуйте порт скалярного типа (bit/целое/q) либо используйте \
-         цель 'sv' без адресов"
+    crate::generator::sv::sv_expr::sv002(&msg!(
+        keys::SV_WHAT_PORT_WIDTH_UNKNOWN,
+        name = name,
+        ty = ty
     ))
 }
 
@@ -233,7 +223,7 @@ impl Mmio {
             // ключ карты квалифицирован моделью; имя регистра (пользовательское) -
             // голое `resolved.name`, не ключ.
             let name = &resolved.name;
-            let what = format!("порт '{}'", name);
+            let what = msg!(keys::SV_WHAT_PORT, name = name);
             let width = bit_width(&resolved.ty, &enums, &what)
                 .ok_or_else(|| sv002_width(name, &resolved.ty))?;
             let bit = resolved.bit.unwrap_or(0);
@@ -244,14 +234,7 @@ impl Mmio {
             if matches!(resolved.direction, PortDirection::InOut) {
                 return Err(Diagnostic::error(
                     crate::generator::site::at(Location::Codegen),
-                    format!(
-                        "порт '{}': направление 'inout' целью 'sv-mmio' не \
-                         поддерживается — направление принадлежит биту регистра \
-                         (бит либо пишется шиной, либо читается ею), а inout не \
-                         выражает, когда бит ведёт линию. Разделите порт на \
-                         входной и выходной",
-                        name
-                    ),
+                    msg!(keys::SV_006_MMIO_INOUT, name = name),
                 )
                 .with_code("SV-006"));
             }
@@ -423,7 +406,7 @@ impl Mmio {
 
 /// Тип `out`-порта в объявлении регистра автомата (для `sv_fsm::Fsm::build`).
 pub(crate) fn port_sv_type(port: &MmioPort) -> Result<SvType, Diagnostic> {
-    sv_type(&port.ty, &format!("порт '{}'", port.name))
+    sv_type(&port.ty, &msg!(keys::SV_WHAT_PORT, name = port.name))
 }
 
 /// Имя сигнала `out`-порта - совпадает с именем в `.takt` (как у портов модуля).

@@ -4,8 +4,10 @@
 //! операция", а этот модуль - "как выглядит смена типа".
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::sv::sv_expr::sv002;
 use crate::generator::sv::sv_expr::{Scope, print_expression};
+use crate::msg;
 use crate::semantic::ExpressionNode;
 use crate::semantic::type_node::TypeNode;
 
@@ -32,10 +34,7 @@ pub(in crate::generator::sv) fn integer_cast(
     scope: &Scope,
 ) -> Result<String, Diagnostic> {
     let Some(width) = crate::generator::sv::sv_type::scalar_width(ty) else {
-        return Err(sv002(
-            "приведение типа (`as`) к нескалярному типу: у массива и структуры \
-             нет одной ширины",
-        ));
+        return Err(sv002(&msg!(keys::SV_WHAT_CAST_NON_SCALAR)));
     };
     let value = print_expression(inner, scope)?;
     let sized = format!("{width}'({value})");
@@ -91,17 +90,10 @@ pub(in crate::generator::sv) fn power(
     scope: &Scope,
 ) -> Result<String, Diagnostic> {
     let Some(value) = literal(exp) else {
-        return Err(sv002(
-            "возведение в степень с ПЕРЕМЕННЫМ показателем: в синтезируемом RTL \
-             степень обязана разворачиваться в схему, то есть иметь показатель, \
-             известный при синтезе",
-        ));
+        return Err(sv002(&msg!(keys::SV_WHAT_POWER_VARIABLE)));
     };
     if !(0..=64).contains(&value) {
-        return Err(sv002(
-            "возведение в такую степень: показатель обязан быть неотрицательным \
-             и не больше 64 — разворот в умножения иначе не выразим",
-        ));
+        return Err(sv002(&msg!(keys::SV_WHAT_POWER_RANGE)));
     }
     if value == 0 {
         return Ok(String::from("1"));

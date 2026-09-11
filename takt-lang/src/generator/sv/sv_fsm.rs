@@ -37,6 +37,7 @@
 //! такта, то есть сдвиг на такт.
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::indent::Printer;
 use crate::generator::sv::sv_blocks::{emit_model_prelude, emit_named_blocks, emit_state_prelude};
 use crate::generator::sv::sv_const;
@@ -47,6 +48,7 @@ use crate::generator::sv::sv_module::{SvPorts, check_sv_name};
 use crate::generator::sv::sv_names::{step_enum_name, step_reg_name, step_variant};
 use crate::generator::sv::sv_time;
 use crate::generator::sv::sv_type::sv_type;
+use crate::msg;
 use crate::semantic::minimap::{Element, Name, StateExtend};
 use crate::semantic::{ModelNode, StateNode, VariableNode};
 use std::cell::RefCell;
@@ -181,14 +183,7 @@ fn collect_from_extend(
                         .unwrap_or(crate::diagnostics::Location::Codegen);
                     return Err(Diagnostic::error(
                         loc,
-                        format!(
-                            "Модель '{}' инстанцирована с РАЗНЫМИ наборами аргументов: \
-                             цель sv уплощает композицию, и экземпляры одной модели \
-                             делят одни регистры — разные настройки невыразимы. \
-                             Дайте копиям разные имена моделей либо используйте \
-                             другую цель",
-                            name.local()
-                        ),
+                        msg!(keys::SV_016_DIFFERENT_ARGUMENTS, name = name.local()),
                     )
                     .with_code("SV-016"));
                 }
@@ -253,7 +248,7 @@ pub(crate) fn state_width(model: &Name, variants: &[String]) -> Result<usize, Di
         .map(|(i, v)| (v.clone(), i as i128))
         .collect();
     let (width, _) =
-        super::sv_type::enum_width(&numbered, &format!("состояния модели '{}'", model))?;
+        super::sv_type::enum_width(&numbered, &msg!(keys::SV_WHAT_MODEL_STATES, name = model))?;
     Ok(width as usize)
 }
 
@@ -357,7 +352,7 @@ impl Fsm {
                 // Объявление объявляет своё место.
                 crate::generator::site::enter_declaration(*loc);
                 let signal = var_signal_name(name, var_name);
-                let decl = sv_type(ty, &format!("переменная '{}'", var_name))?;
+                let decl = sv_type(ty, &msg!(keys::GEN_WHAT_VARIABLE, name = var_name))?;
                 // Параметр, заданный при инстанцировании: значение места
                 // инстанцирования перекрывает инициализатор объявления - тот же
                 // приоритет, что у цели `c` (присваивание после `_init`).
@@ -370,7 +365,7 @@ impl Fsm {
                     expr,
                     ty,
                     &fsm.enums,
-                    &format!("переменной '{var_name}'"),
+                    &msg!(keys::WHAT_VARIABLE, name = var_name),
                     *loc,
                     map.root_model_node().as_ref(),
                 )?;
@@ -384,7 +379,7 @@ impl Fsm {
                     &fsm.enums,
                     &fsm.structs,
                     *loc,
-                    &format!("переменной '{var_name}'"),
+                    &msg!(keys::WHAT_VARIABLE, name = var_name),
                 )?;
                 fsm.registered.insert(signal.clone());
                 fsm.regs.push(Reg {
@@ -461,7 +456,7 @@ impl Fsm {
                     &port.init,
                     &port.ty_node,
                     &fsm.enums,
-                    &format!("порта '{}'", port.name),
+                    &msg!(keys::SV_WHAT_OF_PORT, name = port.name),
                     port.loc,
                     map.root_model_node().as_ref(),
                 )?,
@@ -487,7 +482,7 @@ impl Fsm {
                     &port.init,
                     &port.ty_node,
                     &fsm.enums,
-                    &format!("порта '{}'", port.name),
+                    &msg!(keys::SV_WHAT_OF_PORT, name = port.name),
                     port.loc,
                     map.root_model_node().as_ref(),
                 )?,
@@ -525,7 +520,7 @@ impl Fsm {
                     &port.init,
                     &port.ty,
                     &fsm.enums,
-                    &format!("порта '{}'", port.name),
+                    &msg!(keys::SV_WHAT_OF_PORT, name = port.name),
                     port.loc,
                     map.root_model_node().as_ref(),
                 )?;
@@ -644,15 +639,12 @@ pub(crate) fn emit_model_body(
     model: &Name,
 ) -> Result<(), Diagnostic> {
     let Some(Element::Model { states, .. }) = map.model_element_of(model) else {
-        return Err(sv002(&format!(
-            "модель '{}' отсутствует в снимке карты",
-            model
-        )));
+        return Err(sv002(&msg!(keys::SV_WHAT_MODEL_NOT_IN_MAP, name = model)));
     };
     let reg = fsm
         .state_reg
         .get(model.unique())
-        .ok_or_else(|| sv002(&format!("регистр состояния модели '{}'", model)))?;
+        .ok_or_else(|| sv002(&msg!(keys::SV_WHAT_MODEL_STATE_REGISTER, name = model)))?;
 
     // model-level `always` (вне состояния) - каждый такт до `unique case`, безусловно
     // по состоянию (эталон - шаг 2 `execution("always")` симулятора). В `always_comb`
@@ -721,7 +713,7 @@ pub(crate) fn emit_model_body(
                 }
             }
             Element::Model { .. } => {
-                return Err(sv002("модель в позиции состояния"));
+                return Err(sv002(&msg!(keys::SV_WHAT_MODEL_IN_STATE_POSITION)));
             }
         }
         p.down();
@@ -796,7 +788,7 @@ pub(crate) fn emit_transitions(
         let reg = fsm
             .state_reg
             .get(model.unique())
-            .ok_or_else(|| sv002(&format!("регистр состояния модели '{}'", model)))?;
+            .ok_or_else(|| sv002(&msg!(keys::SV_WHAT_MODEL_STATE_REGISTER, name = model)))?;
         p.ident(&format!(
             "{}_next = {};",
             reg,
@@ -818,7 +810,7 @@ pub(crate) fn emit_transitions(
         let reg = fsm
             .state_reg
             .get(model.unique())
-            .ok_or_else(|| sv002(&format!("регистр состояния модели '{}'", model)))?;
+            .ok_or_else(|| sv002(&msg!(keys::SV_WHAT_MODEL_STATE_REGISTER, name = model)))?;
         p.ident(&format!("{}_next = {};", reg, end_variant(model)))
             .nl();
         return Ok(true);

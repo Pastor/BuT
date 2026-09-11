@@ -16,8 +16,10 @@
 //! Знаковость восстанавливается на каждом уровне `$signed(...)`: операнды - `logic
 //! signed`, но подвыражения-строки теряют её при вложении.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::sv::sv_expr::{Scope, print_expression, sv002};
+use crate::msg;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ExpressionNode, VariableNode};
 
@@ -253,7 +255,7 @@ pub(crate) fn cast(
             Ok(format!("({w}'({} <<< {tn}))", signed(&printed)))
         }
         // Ни источник, ни цель не q - вызывающий не должен был звать сюда.
-        (None, _) => Err(sv002("приведение типа (`as`)")),
+        (None, _) => Err(sv002(&msg!(keys::SV_WHAT_CAST_AS))),
     }
 }
 
@@ -262,7 +264,7 @@ fn int_bits(target: &TypeNode) -> Result<u32, Diagnostic> {
     match target {
         TypeNode::Integer { bits, .. } => Ok(*bits as u32),
         TypeNode::Bit | TypeNode::Bool => Ok(1),
-        _ => Err(sv002("приведение q → нецелого типа")),
+        _ => Err(sv002(&msg!(keys::SV_WHAT_Q_TO_NON_INTEGER))),
     }
 }
 
@@ -278,13 +280,7 @@ fn is_rational(expr: &ExpressionNode) -> bool {
 
 /// `SV-003` - приведение между `q` и `float`: плавающей точки в RTL нет.
 fn sv003_cast() -> Diagnostic {
-    Diagnostic::error(
-        Location::Codegen,
-        "приведение между q(m, n) и float в цели 'sv': в синтезируемом RTL \
-         плавающей точки нет (SV-003 для float в силе)"
-            .to_string(),
-    )
-    .with_code("SV-003")
+    Diagnostic::error(Location::Codegen, msg!(keys::SV_003_Q_FLOAT_CAST)).with_code("SV-003")
 }
 
 /// Знаковый литерал представления шириной `w` - форма, принятая обоими инструментами

@@ -28,8 +28,10 @@
 //!
 //! Карта адресов здесь не потребляется: это аналог режима `c`, а не `c-hal`.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::rust::rust_type::rust_type;
+use crate::msg;
 use crate::semantic::bit_vector::{self, BitVectorLayout};
 use crate::semantic::type_node::TypeNode;
 
@@ -128,7 +130,7 @@ pub(crate) fn port_class(
             value_type: "f64".to_string(),
         }),
         TypeNode::Integer { bits, signed } => {
-            let value_type = rust_type(ty, &format!("порт '{}'", port))?;
+            let value_type = rust_type(ty, &msg!(keys::RS_WHAT_PORT, name = port))?;
             Ok(PortClass {
                 tag: format!("{}{}", if *signed { "I" } else { "U" }, bits),
                 value_type,
@@ -136,12 +138,7 @@ pub(crate) fn port_class(
         }
         other => Err(Diagnostic::error(
             loc,
-            format!(
-                "Порт '{}' имеет тип '{}', непредставимый в HAL-трейте: \
-                 порт обязан быть битом или числом. Замените тип порта либо \
-                 перенесите значение в переменную модели",
-                port, other
-            ),
+            msg!(keys::RS_016_PORT_TYPE_NOT_HAL, name = port, ty = other),
         )
         .with_code("RS-016")),
     }

@@ -62,11 +62,13 @@ mod rust_time;
 mod rust_type;
 mod rust_unused;
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::Generator as AsGenerator;
 use crate::generator::header::{CommentStyle, file_header};
 use crate::generator::indent::Printer;
 use crate::generator::{GenerateOptions, GeneratedFile, Output};
+use crate::msg;
 use crate::semantic::ModelNode;
 use crate::semantic::minimap::{Element, Name};
 use crate::semantic::naming::normalize_lowercase_snakecase;
@@ -124,11 +126,10 @@ impl AsGenerator for Generator {
 /// вправе - доставку ведёт вызывающий.
 fn generate_program(map: &RustMap) -> Result<(String, Vec<Diagnostic>), Diagnostic> {
     let Element::Model { .. } = map.model() else {
-        return Err(Diagnostic::error(
-            Location::Codegen,
-            "Корневой элемент карты не является моделью".to_string(),
-        )
-        .with_code("RS-012"));
+        return Err(
+            Diagnostic::error(Location::Codegen, msg!(keys::RS_012_ROOT_NOT_A_MODEL))
+                .with_code("RS-012"),
+        );
     };
 
     // Порядок объявлений в Rust не значим, поэтому топологической сортировки - в
@@ -152,7 +153,7 @@ fn generate_program(map: &RustMap) -> Result<(String, Vec<Diagnostic>), Diagnost
     let root = map.root_model_node().ok_or_else(|| {
         Diagnostic::error(
             Location::Codegen,
-            format!("Корневая модель '{}' отсутствует в снимке карты", root_name),
+            msg!(keys::RS_012_ROOT_MISSING, name = root_name),
         )
         .with_code("RS-012")
     })?;

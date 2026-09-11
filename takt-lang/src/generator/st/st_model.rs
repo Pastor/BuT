@@ -27,12 +27,14 @@
 //! - Перечислимых типов состояний нет, поэтому номера состояний -
 //!   числовые литералы, а не имена; читаемость держится на комментариях.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::indent::Printer;
 use crate::generator::st::st_compose::{Instance, emit_composition};
 use crate::generator::st::st_map::StMap;
 use crate::generator::st::st_stmt::{Hoisted, StmtOutput, print_statement};
 use crate::generator::st::st_time;
+use crate::msg;
 use crate::semantic::minimap::{Element, Name, StateExtend};
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ExpressionNode, VariableNode};
@@ -109,7 +111,7 @@ pub(crate) fn emit_body(
     let Element::Model { start, .. } = element else {
         return Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            "Тело автомата строится только для модели".to_string(),
+            msg!(keys::ST_012_BODY_FOR_MODEL_ONLY),
         )
         .with_code("ST-012"));
     };
@@ -125,12 +127,9 @@ pub(crate) fn emit_body(
     //
     // Ветвью `CASE` это выразить нельзя: `CASE` в IEC не проваливается в следующую
     // ветвь, поэтому `0: state := 1;` заканчивал скан, ничего не исполнив.
-    let start_no = table.number_of(start.unique()).ok_or_else(|| {
-        unknown_state(&format!(
-            "стартовое состояние '{}' отсутствует в таблице номеров",
-            start
-        ))
-    })?;
+    let start_no = table
+        .number_of(start.unique())
+        .ok_or_else(|| unknown_state(&msg!(keys::ST_MISSING_START_STATE, name = start)))?;
     p.ident(&format!("IF state = {} THEN (* первый скан *)", INIT_STATE))
         .nl();
     p.up();
@@ -272,7 +271,7 @@ fn emit_state(
                 e.period_nanos,
                 map.time_profile(),
                 Location::Codegen,
-                "период 'every'",
+                &msg!(keys::GEN_WHAT_EVERY_PERIOD),
             )?;
             p.ident(&format!(
                 "IF {dwell} - {acc} >= {units} THEN",
@@ -420,7 +419,7 @@ impl StateTable {
 
 /// Строит диагностику `ST-013` - переход в неизвестное состояние.
 pub(crate) fn unknown_state(what: &str) -> Diagnostic {
-    Diagnostic::error(Location::Codegen, format!("Автомат ST: {}", what)).with_code("ST-013")
+    Diagnostic::error(Location::Codegen, msg!(keys::ST_013_PREFIX, what = what)).with_code("ST-013")
 }
 
 /// Печатает инициализаторы, которые объявление IEC выразить не может.

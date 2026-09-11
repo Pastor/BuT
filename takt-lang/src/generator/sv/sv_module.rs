@@ -35,11 +35,13 @@
 //! адресу, - спрашивать адрес порта так же бессмысленно, как адрес ножки микросхемы.
 //! Парной цели `sv-at` нет.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::indent::Printer;
 use crate::generator::keywords;
 use crate::generator::sv::sv_map::SvMap;
 use crate::generator::sv::sv_type::{SvType, sv_type};
+use crate::msg;
 use crate::semantic::minimap::Name;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ExpressionNode, ModelNode, PortDirection, VariableNode};
@@ -85,54 +87,17 @@ pub(crate) fn inout_we(name: &str) -> String {
 
 /// Строит диагностику `SV-007` - коллизия с именем, которое порождает цель.
 fn sv007(name: &str, loc: Location) -> Diagnostic {
-    Diagnostic::error(
-        loc,
-        format!(
-            "имя '{}' зарезервировано целью 'sv': генератор объявляет его сам \
-             (clk/rst_n — служебные порты такта и сброса, en — clock enable, \
-             is_done — выход терминальности, state/state_next — регистр \
-             автомата). Это НЕ \
-             ключевое слово языка Takt: модель остаётся полностью валидной для \
-             целей 'c', 'c-hal', 'st' и 'rust'. Переименуйте элемент \
-             в исходнике .takt, если модель нужна в аппаратуре",
-            name
-        ),
-    )
-    .with_code("SV-007")
+    Diagnostic::error(loc, msg!(keys::SV_007_RESERVED_NAME, name = name)).with_code("SV-007")
 }
 
 /// Строит диагностику `SV-012` - имя совпало с ключевым словом SystemVerilog.
 fn sv012(name: &str, loc: Location) -> Diagnostic {
-    Diagnostic::error(
-        loc,
-        format!(
-            "имя '{}' является ключевым словом SystemVerilog и идентификатором \
-             быть не может. Это НЕ ключевое слово языка Takt: модель остаётся \
-             валидной для целей 'c', 'c-hal', 'st' и 'rust'. \
-             Переименуйте элемент в исходнике .takt, если модель нужна в \
-             аппаратуре",
-            name
-        ),
-    )
-    .with_code("SV-012")
+    Diagnostic::error(loc, msg!(keys::SV_012_KEYWORD, name = name)).with_code("SV-012")
 }
 
 /// Строит диагностику `SV-020` - имя порта совпало с именем модуля.
 fn sv020(name: &str, loc: Location) -> Diagnostic {
-    Diagnostic::error(
-        loc,
-        format!(
-            "имя порта '{name}' совпадает с именем модуля: `verilator` под \
-             `-Wall` отвечает `VARHIDDEN` («Declaration of signal hides \
-             declaration in upper scope»), а гейт цели считает предупреждение \
-             ошибкой. Имя модуля цель строит из имени модели, а у корневой — из \
-             имени файла, поэтому совпадение возникает само собой. Это НЕ \
-             ключевое слово языка Takt: модель остаётся валидной для целей 'c', \
-             'c-hal', 'st' и 'rust'. Переименуйте порт либо файл, \
-             если модель нужна в аппаратуре"
-        ),
-    )
-    .with_code("SV-020")
+    Diagnostic::error(loc, msg!(keys::SV_020_PORT_MODULE_CLASH, name = name)).with_code("SV-020")
 }
 
 /// Имя порта не должно совпадать с именем модуля - `SV-020`.
@@ -203,13 +168,7 @@ pub(crate) fn non_ascii_char(name: &str) -> Option<char> {
 /// Отказ принадлежит **цели**, а не языку: `c` и `rust` такие имена переводят, и их
 /// проверки (`cc -Wall -Werror`, `clippy -D warnings`) вывод принимают.
 fn sv018(name: &str, ch: char, loc: Location) -> Diagnostic {
-    Diagnostic::error(
-        loc,
-        format!(
-            "имя '{name}' содержит символ '{ch}', недопустимый в идентификаторе              SystemVerilog: алфавит цели — латиница, цифры, '_' и '$'. Это НЕ              ограничение языка Takt — модель остаётся валидной для целей 'c',              'c-hal' и 'rust'. Переименуйте элемент, если модель              нужна в аппаратуре"
-        ),
-    )
-    .with_code("SV-018")
+    Diagnostic::error(loc, msg!(keys::SV_018_BAD_CHAR, name = name, ch = ch)).with_code("SV-018")
 }
 
 /// Порт модуля, подготовленный к эмиссии.
@@ -335,16 +294,14 @@ pub(crate) fn collect_ports(
             if matches!(ty, TypeNode::Array(_, _))
                 && crate::semantic::bit_vector::is_bit_vector(ty).is_none()
             {
-                return Err(crate::generator::sv::sv_expr::sv002(&format!(
-                    "порт '{name}' типа массива: список портов модуля не \
-                     принимает распакованный массив — синтезатор yosys \
-                     отвергает такую шапку. Разложите порт на скалярные либо \
-                     работайте с переменной модели"
+                return Err(crate::generator::sv::sv_expr::sv002(&msg!(
+                    keys::SV_WHAT_ARRAY_PORT,
+                    name = name
                 )));
             }
             let port = SvPort {
                 name: name.clone(),
-                ty: sv_type(ty, &format!("порт '{}'", name))?,
+                ty: sv_type(ty, &msg!(keys::SV_WHAT_PORT, name = name))?,
                 ty_node: ty.clone(),
                 init: init.clone(),
                 loc: *loc,

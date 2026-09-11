@@ -12,6 +12,7 @@
 //! Проверки цели этого не видят: номер бита - значение времени выполнения, и `cc` о нём
 //! молчит.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::c;
 use crate::generator::c::c_map::CMap;
@@ -21,6 +22,7 @@ use crate::generator::c::{
     FUNCTION_PORT_WRITE_BIT, FUNCTION_PORT_WRITE_FLOAT, FUNCTION_PORT_WRITE_NUMERIC, PortClass,
 };
 use crate::generator::indent::Printer;
+use crate::msg;
 use crate::semantic::minimap::Name;
 use crate::semantic::{PortDirection, VariableNode};
 
@@ -150,10 +152,10 @@ pub(super) fn generate_hal(
                 let ct = port_ctype(map, model_name, port_name).ok_or_else(|| {
                     Diagnostic::error(
                         Location::Codegen,
-                        format!(
-                            "порт '{}' модели '{}': тип не представим в C — \
-                             ширина доступа к регистру неизвестна",
-                            port_name, model_name
+                        msg!(
+                            keys::CC_015_HAL_PORT_TYPE_UNREPRESENTABLE,
+                            port = port_name,
+                            model = model_name
                         ),
                     )
                     .with_code("CC-015")
@@ -161,10 +163,11 @@ pub(super) fn generate_hal(
                 let mut width = width_from_ctype(&ct).ok_or_else(|| {
                     Diagnostic::error(
                         Location::Codegen,
-                        format!(
-                            "порт '{}' модели '{}': ширина доступа к регистру \
-                             неизвестна для типа C '{}'",
-                            port_name, model_name, ct
+                        msg!(
+                            keys::CC_016_HAL_PORT_WIDTH_UNKNOWN,
+                            port = port_name,
+                            model = model_name,
+                            ty = ct
                         ),
                     )
                     .with_code("CC-016")

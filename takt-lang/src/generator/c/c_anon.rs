@@ -13,7 +13,9 @@
 //! разряды регистра. Когда поле занимает слово целиком, RMW не нужен - и не печатается:
 //! лишнее чтение MMIO имеет побочный эффект (регистры, очищаемые чтением).
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::AnonPortAccess;
 use crate::semantic::type_node::TypeNode;
 
@@ -117,10 +119,7 @@ pub(super) fn write(access: &AnonPortAccess, rhs: &str) -> String {
 pub(super) fn refuse_plain_c() -> Diagnostic {
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
-        "обращение к ячейке по адресу ('#0x…') целью 'c' не транслируется: \
-         порты этой цели идут через колбэки HAL, адресов она не знает. \
-         Соберите целью 'c-hal' (либо 'st-at'/'sv-mmio')"
-            .to_string(),
+        msg!(keys::CC_021_ADDRESS_CELL),
     )
     .with_code("CC-021")
 }

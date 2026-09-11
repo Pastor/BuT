@@ -197,7 +197,7 @@ pub(in crate::generator::c) fn generate_condition_expr(
         ConditionNode::Duration(nanos) => Ok(crate::semantic::duration::value_millis(
             *nanos,
             Location::Codegen,
-            &msg!(keys::CC_WHAT_DURATION_IN_CONDITION),
+            &msg!(keys::GEN_WHAT_DURATION_IN_CONDITION),
         )?
         .to_string()),
         ConditionNode::Number(n) => Ok(crate::generator::c::c_literal::c_int_literal(*n)),
@@ -476,7 +476,7 @@ fn after_condition(nanos: i64, map: &CMap, owner: &Element) -> Result<String, Di
         nanos,
         profile,
         Location::Codegen,
-        &msg!(keys::CC_WHAT_AFTER),
+        &msg!(keys::GEN_WHAT_AFTER),
     )?;
     match profile {
         crate::semantic::duration::TimeProfile::Ticks { .. } => {

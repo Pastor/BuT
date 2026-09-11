@@ -9,12 +9,14 @@
 //! `-D warnings`: поле `takt_every<N>` эмитится **только** при наличии `every` и всегда
 //! читается в теле - иначе неиспользуемое приватное поле завалит сборку.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::indent::Printer;
 use crate::generator::rust::rust_expr::Scope;
 use crate::generator::rust::rust_map::RustMap;
 use crate::generator::rust::rust_stmt::{StmtOutput, print_statement};
 use crate::generator::rust::rust_time::{DWELL_FIELD, ENTRY_MS_FIELD, NOW_MS_METHOD, dwell_bits};
+use crate::msg;
 use crate::semantic::duration::{TimeProfile, units_or_diagnostic};
 use crate::semantic::{ModelNode, StatementNode};
 
@@ -118,8 +120,12 @@ pub(super) fn emit_state_body(
         .iter()
         .filter(|e| e.state == state_local)
     {
-        let units =
-            units_or_diagnostic(e.period_nanos, profile, Location::Codegen, "период 'every'")?;
+        let units = units_or_diagnostic(
+            e.period_nanos,
+            profile,
+            Location::Codegen,
+            &msg!(keys::GEN_WHAT_EVERY_PERIOD),
+        )?;
         let f = field(e.idx);
         let elapsed = match profile {
             TimeProfile::Ticks { .. } => format!("self.{DWELL_FIELD}"),

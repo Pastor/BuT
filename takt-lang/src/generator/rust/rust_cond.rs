@@ -3,12 +3,14 @@
 //! Печатник условий отделён от печатника выражений намеренно: у `=` разная семантика -
 //! равенство в условии, присваивание в выражении. Здесь - только ветвь условий.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::rust::rust_expr::{
     Scope, bit_mask, call_arguments, member_index, rational, unsupported, variable,
 };
 use crate::generator::rust::rust_fixed::function_return;
 use crate::generator::rust::rust_name::{rust_type_name, rust_value_name};
+use crate::msg;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ConditionNode, ExpressionNode, FunctionDefinitionNode};
 
@@ -23,7 +25,7 @@ pub(crate) fn print_condition(cond: &ConditionNode, scope: &Scope) -> Result<Str
         ConditionNode::Duration(nanos) => Ok(crate::semantic::duration::value_millis(
             *nanos,
             Location::Codegen,
-            "литерал длительности в условии",
+            &msg!(keys::GEN_WHAT_DURATION_IN_CONDITION),
         )?
         .to_string()),
         // Выдержка `after`: профиль "такты" -> счётчик `takt_dwell`; профиль "часы" ->
@@ -33,14 +35,14 @@ pub(crate) fn print_condition(cond: &ConditionNode, scope: &Scope) -> Result<Str
                 *nanos,
                 scope.time_profile,
                 Location::Codegen,
-                "выдержка 'after'",
+                &msg!(keys::GEN_WHAT_AFTER),
             )?;
             match scope.time_profile {
                 crate::semantic::duration::TimeProfile::Ticks { .. } => {
                     Ok(crate::generator::rust::rust_time::dwell_after_expr(units))
                 }
                 crate::semantic::duration::TimeProfile::Clock => {
-                    let hal = scope.hal_receiver("выдержка 'after'")?;
+                    let hal = scope.hal_receiver(&msg!(keys::GEN_WHAT_AFTER))?;
                     Ok(crate::generator::rust::rust_time::clock_after_expr(
                         hal, units,
                     ))
@@ -60,7 +62,7 @@ pub(crate) fn print_condition(cond: &ConditionNode, scope: &Scope) -> Result<Str
                     &format!("({expr}) * {multiplier}"),
                 )),
                 None => {
-                    let hal = scope.hal_receiver("вычисляемая выдержка 'after'")?;
+                    let hal = scope.hal_receiver(&msg!(keys::GEN_WHAT_COMPUTED_AFTER))?;
                     Ok(crate::generator::rust::rust_time::clock_after_dynamic(
                         hal, &expr,
                     ))
@@ -161,11 +163,7 @@ pub(crate) fn print_condition(cond: &ConditionNode, scope: &Scope) -> Result<Str
             match &*borrowed {
                 FunctionDefinitionNode::Builtin(name, _, _) => Err(Diagnostic::error(
                     *loc,
-                    format!(
-                        "Встроенная функция '{}' в условии перехода не транслируется \
-                         в Rust: поддержано только 'S(Модель) = Состояние'",
-                        name
-                    ),
+                    msg!(keys::RS_011_BUILTIN_IN_CONDITION, name = name),
                 )
                 .with_code("RS-011")),
                 local @ FunctionDefinitionNode::Local { name, .. } => Ok(format!(
@@ -175,30 +173,23 @@ pub(crate) fn print_condition(cond: &ConditionNode, scope: &Scope) -> Result<Str
                 )),
                 FunctionDefinitionNode::External { name, .. } => Ok(format!(
                     "{}.{}({})",
-                    scope.hal_receiver(&format!("вызов внешней функции '{}'", name))?,
+                    scope.hal_receiver(&msg!(keys::GEN_WHAT_EXTERNAL_CALL, name = name))?,
                     rust_value_name(name, *loc)?,
                     printed.join(", ")
                 )),
-                FunctionDefinitionNode::None | FunctionDefinitionNode::Unresolved(_) => {
-                    Err(unsupported("неразрешённая функция в условии"))
-                }
+                FunctionDefinitionNode::None | FunctionDefinitionNode::Unresolved(_) => Err(
+                    unsupported(&msg!(keys::RS_WHAT_UNRESOLVED_FUNCTION_IN_CONDITION)),
+                ),
             }
         }
 
-        ConditionNode::None => Err(unsupported("пустое условие")),
-        ConditionNode::Unresolved(_) => Err(unsupported("неразрешённое условие")),
-        ConditionNode::String(_) => Err(unsupported("строковый литерал в условии")),
-        ConditionNode::Model(_, _) => Err(unsupported(
-            "модель в позиции условия вне формы 'S(Модель) = Состояние'",
-        )),
-        ConditionNode::State(..) => Err(unsupported(
-            "состояние в позиции условия вне формы 'S(Модель) = Состояние'",
-        )),
+        ConditionNode::None => Err(unsupported(&msg!(keys::GEN_WHAT_EMPTY_CONDITION))),
+        ConditionNode::Unresolved(_) => Err(unsupported(&msg!(keys::RS_WHAT_UNRESOLVED_CONDITION))),
+        ConditionNode::String(_) => Err(unsupported(&msg!(keys::RS_WHAT_STRING_IN_CONDITION))),
+        ConditionNode::Model(_, _) => Err(unsupported(&msg!(keys::RS_WHAT_MODEL_IN_CONDITION))),
+        ConditionNode::State(..) => Err(unsupported(&msg!(keys::RS_WHAT_STATE_IN_CONDITION))),
         // Анонимное обращение - см. оговорку у печатника выражений.
-        ConditionNode::AnonPort(_) => Err(unsupported(
-            "обращение к ячейке по адресу ('#0x…'): цель rust адресов не знает — \
-             доступ по адресу дают цели 'c-hal', 'st-at' и 'sv-mmio'",
-        )),
+        ConditionNode::AnonPort(_) => Err(unsupported(&msg!(keys::RS_WHAT_ANON_PORT))),
     }
 }
 
@@ -237,15 +228,7 @@ fn state_comparison(
             // под-модель получает `&mut self` и общую структуру `<Root>Shared`,
             // указателя на корень у неё нет. Цель `c` ту же запись переводит через
             // `main`.
-            unsupported(&format!(
-                "условие по состоянию модели '{}': наблюдать состояние СОСЕДНЕЙ \
-                 модели цель 'rust' не умеет — под-модель получает только своё \
-                 состояние и общие переменные корня, но не соседей. Проверяйте \
-                 состояние из модели-родителя композиции (там экземпляр доступен) \
-                 либо свяжите модели общей переменной корня; ту же запись \
-                 переводят цели 'c' и 'sv'",
-                unique.local()
-            ))
+            unsupported(&msg!(keys::RS_WHAT_NEIGHBOUR_STATE, name = unique.local()))
         })?;
 
     // Поле `state` и перечисление состояний приватны, но лежат в этом же модуле -
@@ -524,9 +507,9 @@ pub(crate) fn condition_as_bool(cond: &ConditionNode, scope: &Scope) -> Result<S
         Some(TypeNode::Bool) | Some(TypeNode::Bit) => Ok(printed),
         Some(TypeNode::Rational) => Ok(format!("({} != 0.0)", printed)),
         Some(TypeNode::Integer { .. }) => Ok(format!("({} != 0)", printed)),
-        _ => Err(crate::generator::rust::rust_expr::unsupported(&format!(
-            "условие '{}': тип не выводится, приведение к bool построить нельзя",
-            printed
+        _ => Err(crate::generator::rust::rust_expr::unsupported(&msg!(
+            keys::RS_WHAT_CONDITION_TYPE_UNKNOWN,
+            text = printed
         ))),
     }
 }
@@ -540,9 +523,9 @@ pub(crate) fn print_as_bool(expr: &ExpressionNode, scope: &Scope) -> Result<Stri
         Some(TypeNode::Integer { .. }) => Ok(format!("({} != 0)", printed)),
         // Тип не выведен - угадывать нельзя. Молчаливое `!= 0` при `bool` дало бы
         // ошибку сборки в порождённом коде, то есть у пользователя, а не здесь.
-        _ => Err(unsupported(&format!(
-            "условие '{}': тип не выводится, приведение к bool построить нельзя",
-            printed
+        _ => Err(unsupported(&msg!(
+            keys::RS_WHAT_CONDITION_TYPE_UNKNOWN,
+            text = printed
         ))),
     }
 }

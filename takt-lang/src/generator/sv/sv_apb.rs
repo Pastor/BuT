@@ -11,10 +11,12 @@
 //! этом не меняется: на нём стоят потактовые сверки регистров и проверка двух инструментов
 //! SV.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::header::{CommentStyle, file_header};
 use crate::generator::indent::Printer;
 use crate::generator::sv::sv_mmio::Mmio;
+use crate::msg;
 
 /// Отказ цели `sv` (без `-mmio`) на флаге `--bus` - `SV-019`.
 ///
@@ -25,11 +27,7 @@ use crate::generator::sv::sv_mmio::Mmio;
 /// с адресом" было бы ложью - у `stacker` их семнадцать. Один код на два повода, но
 /// повод назван словами (образец `CC-023`).
 pub(crate) fn refuse_wrong_target() -> Diagnostic {
-    sv019(
-        "адаптер шины запрошен (--bus), но цель 'sv' регистрового файла не строит: \
-         MMIO-адрес для чистого RTL бессмыслен — сигнал приходит на вывод кристалла, \
-         а не по адресу. Возьмите цель 'sv-mmio' либо снимите флаг",
-    )
+    sv019(&msg!(keys::SV_019_BUS_WRONG_TARGET))
 }
 
 /// Отказ на модели без адресованных портов - `SV-019`.
@@ -37,11 +35,7 @@ pub(crate) fn refuse_wrong_target() -> Diagnostic {
 /// Молчание здесь недопустимо: пользователь просил адаптер и остался бы с ожиданием
 /// файла, которого нет.
 fn refuse_without_registers() -> Diagnostic {
-    sv019(
-        "адаптер шины запрошен (--bus), но у модели нет ни одного порта с адресом: \
-         транслировать в шину нечего. Задайте адреса портам ('at 0x…', оператор \
-         'address' либо внешняя карта) либо снимите флаг",
-    )
+    sv019(&msg!(keys::SV_019_BUS_WITHOUT_REGISTERS))
 }
 
 fn sv019(message: &str) -> Diagnostic {

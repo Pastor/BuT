@@ -394,6 +394,22 @@ pub fn write_files(
     write_output(files, output_path, generator_of(&l).as_ref())
 }
 
+/// Текст заметки о причине отказа: код исходной диагностики остаётся виден, а не
+/// схлопывается в строку сообщения.
+pub(crate) fn cause_note(cause: &Diagnostic) -> String {
+    match &cause.code {
+        Some(code) => crate::msg!(
+            crate::diagnostics::lang::keys::GEN_CAUSE_WITH_CODE,
+            code = code,
+            message = cause.message
+        ),
+        None => crate::msg!(
+            crate::diagnostics::lang::keys::GEN_CAUSE,
+            message = cause.message
+        ),
+    }
+}
+
 /// Кладёт файлы вывода в каталог `output_path`.
 ///
 /// Каталог создаётся молча: отсутствие права на создание увидит сама запись, а

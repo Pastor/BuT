@@ -15,19 +15,20 @@
 //! Rust этой ловушки **нет**: `Box`/`Option`/`String` как имена принимаются - прелюдия
 //! лишь затеняется, а не занимает имя.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::keywords;
+use crate::msg;
 use crate::semantic::naming::{normalize_camelcase_name, normalize_lowercase_snakecase};
 
 /// Строит диагностику `RS-004` - имя непредставимо в Rust.
 fn rs004(original: &str, produced: &str, loc: Location) -> Diagnostic {
     Diagnostic::error(
         loc,
-        format!(
-            "Имя '{}' даёт идентификатор '{}', непредставимый в Rust: \
-             это ключевое слово, и raw-идентификатор 'r#{}' запрещён отдельным \
-             правилом языка. Переименуйте элемент в исходнике .takt",
-            original, produced, produced
+        msg!(
+            keys::RS_004_KEYWORD_IDENTIFIER,
+            original = original,
+            produced = produced
         ),
     )
     .with_code("RS-004")
@@ -52,10 +53,12 @@ pub(super) fn name_collision(
 fn rs005(first: &str, second: &str, produced: &str, kind: &str, loc: Location) -> Diagnostic {
     Diagnostic::error(
         loc,
-        format!(
-            "{}: имена '{}' и '{}' после приведения регистра дают один \
-             идентификатор '{}'. Переименуйте одно из них в исходнике .takt",
-            kind, first, second, produced
+        msg!(
+            keys::RS_005_CASE_COLLISION,
+            kind = kind,
+            first = first,
+            second = second,
+            produced = produced
         ),
     )
     .with_code("RS-005")

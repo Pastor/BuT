@@ -39,6 +39,8 @@ use super::sv_expr::sv002;
 use super::sv_fsm::{Fsm, end_variant, state_enum_name, state_variants, state_width};
 use super::sv_map::SvMap;
 use super::sv_time;
+use crate::diagnostics::lang::keys;
+use crate::msg;
 
 /// Признак "строка сработала" у модели.
 pub(crate) fn fired_signal(model: &Name) -> String {
@@ -166,7 +168,7 @@ pub(crate) fn emit_dispatcher(
     let reg = fsm
         .state_reg
         .get(model.unique())
-        .ok_or_else(|| sv002(&format!("регистр состояния модели '{}'", model)))?;
+        .ok_or_else(|| sv002(&msg!(keys::SV_WHAT_MODEL_STATE_REGISTER, name = model)))?;
     let enum_name = state_enum_name(model);
     let fired = fired_signal(model);
     let ok = ok_signal(model);

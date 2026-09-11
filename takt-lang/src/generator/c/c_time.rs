@@ -9,10 +9,12 @@
 //! Вынесено отдельным модулем не по вкусу: `c_header.rs` вместе с этим кодом давал 1004
 //! строки при лимите 1000, и проверка размера отказал.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::c::c_expr::condition::{DWELL_FIELD, ENTRY_MS_FIELD, PREV_STATE_FIELD};
 use crate::generator::c::c_map::CMap;
 use crate::generator::indent::Printer;
+use crate::msg;
 use crate::semantic::ModelNode;
 use crate::semantic::time_ast::{
     model_uses_duration_after, model_uses_every, model_uses_tick_after,
@@ -210,7 +212,7 @@ pub(super) fn counter_ticks(
                     nanos,
                     profile,
                     Location::Codegen,
-                    "выдержка 'after'",
+                    &msg!(keys::GEN_WHAT_AFTER),
                 )?;
                 max = max.max(units);
             }
@@ -224,7 +226,7 @@ pub(super) fn counter_ticks(
                     period_nanos,
                     profile,
                     Location::Codegen,
-                    "период 'every'",
+                    &msg!(keys::GEN_WHAT_EVERY_PERIOD),
                 )?;
                 max = max.max(units);
             }

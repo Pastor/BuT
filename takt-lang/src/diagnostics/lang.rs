@@ -196,21 +196,36 @@ fn lookup(lang: Lang, key: Key) -> Option<&'static str> {
 /// Оставить неизвестное имя - намеренно: проверка паритета сверяет наборы имён и ловит
 /// расхождение списком, а сообщение с видимым `{name}` читается как дефект каталога,
 /// тогда как пустота выглядела бы дефектом модели.
+///
+/// Удвоенная скобка - одна скобка, как у `format!`: сообщению бывают нужны фигурные
+/// скобки (`always { x := f(); }`), и шаблон пишет их `{{` и `}}`, а имя внутри
+/// подставляется как обычно.
 fn substitute(template: &str, params: &[(&str, &dyn Display)]) -> String {
-    if params.is_empty() || !template.contains('{') {
+    if !template.contains(['{', '}']) {
         return template.to_string();
     }
     let mut out = String::with_capacity(template.len());
     let mut rest = template;
-    while let Some(open) = rest.find('{') {
-        out.push_str(&rest[..open]);
-        let tail = &rest[open + 1..];
-        let Some(close) = tail.find('}') else {
+    while let Some(at) = rest.find(['{', '}']) {
+        out.push_str(&rest[..at]);
+        let tail = &rest[at..];
+        if tail.starts_with("{{") || tail.starts_with("}}") {
+            out.push_str(&tail[..1]);
+            rest = &tail[2..];
+            continue;
+        }
+        if let Some(after) = tail.strip_prefix('}') {
+            out.push('}');
+            rest = after;
+            continue;
+        }
+        let inner = &tail[1..];
+        let Some(close) = inner.find('}') else {
             out.push('{');
-            rest = tail;
+            rest = inner;
             continue;
         };
-        let name = &tail[..close];
+        let name = &inner[..close];
         match params.iter().find(|(n, _)| *n == name) {
             Some((_, value)) => out.push_str(&value.to_string()),
             None => {
@@ -219,7 +234,7 @@ fn substitute(template: &str, params: &[(&str, &dyn Display)]) -> String {
                 out.push('}');
             }
         }
-        rest = &tail[close + 1..];
+        rest = &inner[close + 1..];
     }
     out.push_str(rest);
     out
@@ -250,6 +265,24 @@ mod tests {
         let codes: Vec<&str> = all().iter().map(|l| l.code()).collect();
         assert!(codes.contains(&"ru"), "{codes:?}");
         assert!(codes.contains(&"en"), "{codes:?}");
+    }
+
+    /// Удвоенная скобка - одна скобка, и подстановка внутри неё работает: так
+    /// печатались сообщения с примером кода, пока текст жил в `format!`.
+    #[test]
+    fn doubled_braces_are_literal_braces() {
+        let name = "x";
+        let func = "now";
+        let out = substitute(
+            "'always {{ {name} := {func}(); }}'",
+            &[("name", &name as &dyn Display), ("func", &func)],
+        );
+        assert_eq!(out, "'always { x := now(); }'");
+        assert_eq!(
+            substitute("('start Имя {{ … }}')", &[]),
+            "('start Имя { … }')"
+        );
+        assert_eq!(substitute("{unknown} и {{", &[]), "{unknown} и {");
     }
 
     /// Неизвестный язык - отказ, и он перечисляет известные.

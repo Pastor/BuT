@@ -3,6 +3,7 @@
 //! Здесь - тело `tick`: диспетчеризация состояний, вход в стартовое, охранные формулы и
 //! все виды переходов (простые и составные `= Модель`, `|`, `+`).
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::indent::Printer;
 use crate::generator::rust::rust_blocks::{emit_model_named_blocks, emit_named_blocks};
@@ -16,6 +17,7 @@ use crate::generator::rust::rust_model::{Instance, StateTable, needs_hal, submod
 use crate::generator::rust::rust_name::rust_value_name;
 use crate::generator::rust::rust_shared::{shared_type_name, shared_variables};
 use crate::generator::rust::rust_stmt::StmtOutput;
+use crate::msg;
 use crate::semantic::minimap::{Element, Name, StateExtend};
 use crate::semantic::{Formula, StateNode};
 use std::collections::BTreeSet;
@@ -218,7 +220,7 @@ pub(crate) fn emit_tick(
             Element::Model { .. } => {
                 return Err(Diagnostic::error(
                     Location::Codegen,
-                    "Модель в позиции состояния".to_string(),
+                    msg!(keys::RS_012_MODEL_IN_STATE_POSITION),
                 )
                 .with_code("RS-012"));
             }
@@ -368,16 +370,13 @@ fn emit_transitions(
             parts.push(condition_as_bool(&r.cond, scope).map_err(|di| {
                 Diagnostic::error_with_note(
                     r.location,
-                    format!(
-                        "условный переход в состояние '{}' не переводится в Rust: {}",
-                        target.local(),
-                        di.message
+                    msg!(
+                        keys::RS_020_CONDITIONAL_EDGE,
+                        target = target.local(),
+                        message = di.message
                     ),
                     di.loc,
-                    match &di.code {
-                        Some(code) => format!("причина [{}]: {}", code, di.message),
-                        None => format!("причина: {}", di.message),
-                    },
+                    crate::generator::cause_note(&di),
                 )
                 .with_code("RS-020")
             })?);
@@ -390,16 +389,13 @@ fn emit_transitions(
         let _unused = |di: Diagnostic| -> Diagnostic {
             Diagnostic::error_with_note(
                 reference.location,
-                format!(
-                    "условный переход в состояние '{}' не переводится в Rust: {}",
-                    target.local(),
-                    di.message
+                msg!(
+                    keys::RS_020_CONDITIONAL_EDGE,
+                    target = target.local(),
+                    message = di.message
                 ),
                 di.loc,
-                match &di.code {
-                    Some(code) => format!("причина [{}]: {}", code, di.message),
-                    None => format!("причина: {}", di.message),
-                },
+                crate::generator::cause_note(&di),
             )
             .with_code("RS-020")
         };
@@ -611,10 +607,10 @@ fn instance_at<'a>(
         .ok_or_else(|| {
             Diagnostic::error(
                 Location::Codegen,
-                format!(
-                    "Экземпляр '{}' состояния '{}' не найден",
-                    field,
-                    state.local()
+                msg!(
+                    keys::RS_012_INSTANCE_NOT_FOUND,
+                    field = field,
+                    state = state.local()
                 ),
             )
             .with_code("RS-012")
@@ -674,7 +670,7 @@ fn call_args(
     let sub_name = submodel_name(map, &instance.unique).ok_or_else(|| {
         Diagnostic::error(
             Location::Codegen,
-            format!("Под-модель '{}' не найдена в карте", instance.unique),
+            msg!(keys::RS_012_SUBMODEL_NOT_FOUND, name = instance.unique),
         )
         .with_code("RS-012")
     })?;
@@ -702,7 +698,7 @@ fn call_args(
             &mut BTreeSet::new(),
         )
     {
-        args.push(scope.hal_argument("вызов такта под-модели")?);
+        args.push(scope.hal_argument(&msg!(keys::RS_WHAT_SUBMODEL_TICK))?);
     }
     Ok(args.join(", "))
 }

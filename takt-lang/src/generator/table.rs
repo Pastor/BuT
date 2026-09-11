@@ -11,7 +11,9 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::minimap::{Element, Name, StateExtend};
 use crate::semantic::{ConditionNode, StateNode};
 
@@ -76,11 +78,10 @@ impl Row {
 /// `switch`, где они печатаются внутри `if (реализация завершена)`.
 pub(crate) fn rows(model: &Element, src: &dyn StateSource) -> Result<Vec<Row>, Diagnostic> {
     let Element::Model { states, .. } = model else {
-        return Err(Diagnostic::error(
-            Location::Codegen,
-            "Элемент не является моделью".to_string(),
-        )
-        .with_code("CC-006"));
+        return Err(
+            Diagnostic::error(Location::Codegen, msg!(keys::CC_006_NOT_A_MODEL))
+                .with_code("CC-006"),
+        );
     };
     let mut collected = Vec::new();
     for state_name in states.iter() {

@@ -25,6 +25,8 @@ use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ConditionNode, ExpressionNode};
 
 use super::sv_type::scalar_width;
+use crate::diagnostics::lang::keys;
+use crate::msg;
 
 /// Значение сброса распакованного массива - агрегат нулей.
 ///
@@ -357,7 +359,7 @@ fn packed_width(
     match ty {
         TypeNode::Enum(name) => {
             let variants = enums.get(name)?;
-            super::sv_type::enum_width(variants, "параметр-массив")
+            super::sv_type::enum_width(variants, &msg!(keys::SV_WHAT_ARRAY_PARAMETER))
                 .ok()
                 .map(|(width, _)| width)
         }
@@ -389,7 +391,14 @@ pub(crate) fn emit_unpack_prologue(
     flat: &FlatParam,
     function: &str,
 ) -> Result<(), Diagnostic> {
-    let decl = super::sv_type::sv_type(ty, &format!("параметр '{param}' функции '{function}'"))?;
+    let decl = super::sv_type::sv_type(
+        ty,
+        &msg!(
+            keys::GEN_WHAT_FUNCTION_PARAM,
+            name = param,
+            function = function
+        ),
+    )?;
     p.ident(&format!("{};", decl.declare(param))).nl();
     let flat_name = flat_param_name(param);
     let mut low = 0;

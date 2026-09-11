@@ -11,11 +11,13 @@
 //! ловит `dead_code`. Порядок полей задают `BTreeMap` и сортировка, то есть он
 //! детерминирован.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::indent::Printer;
 use crate::generator::rust::rust_map::RustMap;
 use crate::generator::rust::rust_name::rust_value_name;
 use crate::generator::rust::rust_type::rust_type;
+use crate::msg;
 use crate::semantic::VariableNode;
 use crate::semantic::minimap::{Element, Name};
 use crate::semantic::type_node::TypeNode;
@@ -121,7 +123,7 @@ pub(crate) fn emit_shared_struct(
         p.ident(&format!(
             "{}: {},",
             rust_value_name(vname, Location::Codegen)?,
-            rust_type(ty, &format!("общая переменная '{}'", vname))?
+            rust_type(ty, &msg!(keys::RS_WHAT_SHARED_VARIABLE, name = vname))?
         ))
         .nl();
     }

@@ -31,6 +31,8 @@ use crate::semantic::type_node::TypeNode;
 
 use super::sv_expr::sv002;
 use super::sv_type::sv_type;
+use crate::diagnostics::lang::keys;
+use crate::msg;
 
 /// Накопитель поднятых локальных: заполняется печатником, читается эмиссией.
 pub(crate) type HoistedLocals = RefCell<Vec<HoistedLocal>>;
@@ -64,18 +66,18 @@ pub(crate) fn hoist(
     name: &str,
     ty: &TypeNode,
 ) -> Result<(), Diagnostic> {
-    let decl = sv_type(ty, &format!("локальная переменная '{}'", name))?
+    let decl = sv_type(ty, &msg!(keys::GEN_WHAT_LOCAL, name = name))?
         .declare(name)
         .to_string();
     if let Some(seen) = hoisted.borrow().iter().find(|l| l.name == name) {
         if seen.decl == decl {
             return Ok(());
         }
-        return Err(sv002(&format!(
-            "локальная переменная '{name}' объявлена с разными типами ('{}' и \
-             '{}'): переменная со структурой поднимается в начало always_comb, \
-             и одно имя не может нести два типа. Переименуйте одну из них",
-            seen.decl, decl
+        return Err(sv002(&msg!(
+            keys::SV_WHAT_LOCAL_TYPE_CONFLICT,
+            name = name,
+            first = seen.decl,
+            second = decl
         )));
     }
     let fields_of = |sname: &str| structs.get(sname).cloned();

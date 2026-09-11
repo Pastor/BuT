@@ -1,7 +1,9 @@
 //! Умолчание переменной у цели `c`.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::indent::Printer;
+use crate::msg;
 use crate::semantic::ModelNode;
 use crate::semantic::type_node::TypeNode;
 
@@ -46,9 +48,7 @@ pub(super) fn emit_zero_init(
             let def = model.search_struct(name).ok_or_else(|| {
                 Diagnostic::error(
                     Location::Codegen,
-                    format!(
-                        "структура '{name}' не объявлена: умолчание поля '{field}' не строится"
-                    ),
+                    msg!(keys::CC_023_STRUCT_NOT_DECLARED, name = name, field = field),
                 )
                 .with_code("CC-023")
             })?;

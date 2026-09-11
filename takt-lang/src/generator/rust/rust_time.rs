@@ -10,9 +10,11 @@
 //! init ↔ обновление ↔ трейт): в Rust неиспользуемое приватное поле - ошибка `-D
 //! warnings`, а не молчаливая трата, как в C.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::indent::Printer;
 use crate::generator::rust::rust_map::RustMap;
+use crate::msg;
 use crate::semantic::ModelNode;
 use crate::semantic::duration::{TimeProfile, counter_bits, units_or_diagnostic};
 use crate::semantic::time_ast::{
@@ -79,8 +81,12 @@ fn max_units(map: &RustMap, model: &ModelNode) -> Result<u64, Diagnostic> {
                 max = max.max(u64::from(u32::MAX));
             }
             if let crate::semantic::ConditionNode::After(nanos) = reference.cond {
-                let units =
-                    units_or_diagnostic(nanos, profile, Location::Codegen, "выдержка 'after'")?;
+                let units = units_or_diagnostic(
+                    nanos,
+                    profile,
+                    Location::Codegen,
+                    &msg!(keys::GEN_WHAT_AFTER),
+                )?;
                 max = max.max(units);
             }
         }
@@ -91,7 +97,7 @@ fn max_units(map: &RustMap, model: &ModelNode) -> Result<u64, Diagnostic> {
                     period_nanos,
                     profile,
                     Location::Codegen,
-                    "период 'every'",
+                    &msg!(keys::GEN_WHAT_EVERY_PERIOD),
                 )?;
                 max = max.max(units);
             }

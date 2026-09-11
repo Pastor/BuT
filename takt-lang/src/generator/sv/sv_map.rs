@@ -3,7 +3,9 @@
 //! Обёртка над [`Map`] из [`crate::semantic::minimap`] по образцу `RustMap` и `StMap` -
 //! снимок дерева плюс множество используемых имён ([`UsageSet`]).
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::minimap::{Element, Map, Name};
 use crate::semantic::unused::UsageSet;
 use crate::semantic::{ModelNode, StateNode};
@@ -150,8 +152,11 @@ impl SvMap {
         self.map
             .model_at(Some(name.unique().to_string()))
             .ok_or_else(|| {
-                Diagnostic::error(Location::Codegen, format!("Модель '{}' не найдена", name))
-                    .with_code("SV-010")
+                Diagnostic::error(
+                    Location::Codegen,
+                    msg!(keys::SV_010_MODEL_NOT_FOUND, name = name),
+                )
+                .with_code("SV-010")
             })
     }
 
@@ -177,7 +182,7 @@ impl SvMap {
             .ok_or_else(|| {
                 Diagnostic::error(
                     crate::generator::site::at(Location::Codegen),
-                    format!("Состояние '{}' не найдено", name),
+                    msg!(keys::SV_011_STATE_NOT_FOUND, name = name),
                 )
                 .with_code("SV-011")
             })

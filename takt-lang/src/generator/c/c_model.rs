@@ -15,6 +15,8 @@ use crate::semantic::minimap::{Element, Name, StateExtend};
 /// Генерирует именованные блоки состояния (enter/exit/always).
 use super::c_blocks::{generate_model_named_blocks, generate_named_blocks};
 use super::c_model_init::{generate_concat_item_init, generate_model_init};
+use crate::diagnostics::lang::keys;
+use crate::msg;
 
 /// Генерирует прототипы функций для всех используемых моделей.
 pub(super) fn generate_function_prototypes(
@@ -141,18 +143,15 @@ fn generate_state_transitions(
                         // Позиция `ref` в исходнике, а не `Location::Codegen`: иначе
                         // автору негде искать причину.
                         reference.location,
-                        format!(
-                            "условный переход в состояние '{}' не переводится в C: {}",
-                            target.local(),
-                            di.message
+                        msg!(
+                            keys::CC_018_CONDITIONAL_EDGE,
+                            target = target.local(),
+                            message = di.message
                         ),
                         di.loc,
                         // Исходная причина приложена заметкой, а не схлопнута в строку:
                         // иначе теряется код исходной диагностики.
-                        match &di.code {
-                            Some(code) => format!("причина [{}]: {}", code, di.message),
-                            None => format!("причина: {}", di.message),
-                        },
+                        crate::generator::cause_note(&di),
                     )
                     .with_code("CC-018"));
                 }
@@ -421,11 +420,10 @@ fn generate_model_tick(
         name,
     } = model
     else {
-        return Err(Diagnostic::error(
-            Location::Codegen,
-            "Элемент не является моделью".to_string(),
-        )
-        .with_code("CC-006"));
+        return Err(
+            Diagnostic::error(Location::Codegen, msg!(keys::CC_006_NOT_A_MODEL))
+                .with_code("CC-006"),
+        );
     };
 
     // Проверки Guard-формул модели
@@ -461,11 +459,10 @@ fn generate_model_tick(
         Some(Element::State { name, .. }) => name.unique_uppercase_snakecase(),
         Some(Element::StateExtend { name, .. }) => name.unique_uppercase_snakecase(),
         _ => {
-            return Err(Diagnostic::error(
-                Location::Codegen,
-                "Начальное состояние модели не определено".to_string(),
-            )
-            .with_code("CC-008"));
+            return Err(
+                Diagnostic::error(Location::Codegen, msg!(keys::CC_008_NO_START_STATE))
+                    .with_code("CC-008"),
+            );
         }
     };
     generate_named_blocks(printer, raw_state, map, model, "enter")?;

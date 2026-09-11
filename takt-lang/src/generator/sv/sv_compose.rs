@@ -26,12 +26,14 @@
 //! `<step>_next`).
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::indent::Printer;
 use crate::generator::sv::sv_blocks::emit_named_blocks;
 use crate::generator::sv::sv_expr::sv002;
 use crate::generator::sv::sv_fsm::{Fsm, emit_model_body, end_variant};
 use crate::generator::sv::sv_map::SvMap;
 use crate::generator::sv::sv_names::{step_done_variant, step_reg_name, step_variant};
+use crate::msg;
 use crate::semantic::StateNode;
 use crate::semantic::minimap::{Name, StateExtend};
 
@@ -217,7 +219,7 @@ fn inline_composed(
             let sub_reg = fsm
                 .state_reg
                 .get(sub.unique())
-                .ok_or_else(|| sv002(&format!("регистр состояния под-модели '{}'", sub)))?;
+                .ok_or_else(|| sv002(&msg!(keys::SV_WHAT_SUBMODEL_STATE_REGISTER, name = sub)))?;
             // `_next`, а не регистр: в C `_is_done` читает значение, только что
             // записанное тиком. Регистр дал бы значение предыдущего такта.
             Ok(vec![format!("({}_next == {})", sub_reg, end_variant(sub))])
@@ -280,7 +282,7 @@ fn emit_parent_transition(
     let reg = fsm
         .state_reg
         .get(model.unique())
-        .ok_or_else(|| sv002(&format!("регистр состояния модели '{}'", model)))?;
+        .ok_or_else(|| sv002(&msg!(keys::SV_WHAT_MODEL_STATE_REGISTER, name = model)))?;
     if next.local().is_empty() {
         p.ident(&format!("{}_next = {};", reg, end_variant(model)))
             .nl();

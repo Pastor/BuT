@@ -500,7 +500,7 @@ pub(crate) fn print_expression(expr: &ExpressionNode, scope: &Scope) -> Result<S
         ExpressionNode::Duration(nanos) => Ok(crate::semantic::duration::value_millis(
             *nanos,
             Location::Codegen,
-            &msg!(keys::RS_WHAT_DURATION),
+            &msg!(keys::GEN_WHAT_DURATION_LITERAL),
         )?
         .to_string()),
         ExpressionNode::Number(n) => Ok(n.to_string()),
@@ -603,7 +603,7 @@ pub(crate) fn print_expression(expr: &ExpressionNode, scope: &Scope) -> Result<S
                 print_expression(inner, scope)
             } else {
                 let target =
-                    crate::generator::rust::rust_type::rust_type(ty, &msg!(keys::RS_WHAT_CAST))?;
+                    crate::generator::rust::rust_type::rust_type(ty, &msg!(keys::GEN_WHAT_CAST))?;
                 Ok(format!(
                     "({} as {})",
                     print_expression(inner, scope)?,
@@ -648,7 +648,7 @@ pub(crate) fn print_expression(expr: &ExpressionNode, scope: &Scope) -> Result<S
         ExpressionNode::Condition(cond) => {
             crate::generator::rust::rust_cond::print_condition(&cond.borrow().value, scope)
         }
-        ExpressionNode::List(_) => Err(unsupported("список параметров в позиции выражения")),
+        ExpressionNode::List(_) => Err(unsupported(&msg!(keys::RS_WHAT_PARAM_LIST_IN_EXPRESSION))),
     }
 }
 
@@ -701,7 +701,10 @@ fn wrapping_receiver(
     }
     match rust_fixed::expression_type(b) {
         Some(ty @ TypeNode::Integer { .. }) => {
-            let name = crate::generator::rust::rust_type::rust_type(&ty, "операнд арифметики")?;
+            let name = crate::generator::rust::rust_type::rust_type(
+                &ty,
+                &msg!(keys::RS_WHAT_ARITH_OPERAND),
+            )?;
             Ok(format!("{literal}{name}"))
         }
         _ => Ok(printed),
@@ -794,7 +797,7 @@ fn call(
         // цели `rust` нет по построению.
         FunctionDefinitionNode::External { name, loc, .. } => Ok(format!(
             "{}.{}({})",
-            scope.hal_receiver(&format!("вызов внешней функции '{}'", name))?,
+            scope.hal_receiver(&msg!(keys::GEN_WHAT_EXTERNAL_CALL, name = name))?,
             rust_value_name(name, *loc)?,
             printed.join(", ")
         )),

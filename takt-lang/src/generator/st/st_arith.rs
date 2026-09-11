@@ -11,7 +11,9 @@
 //! а этот модуль - "чем заменить операцию, которой в целевом языке нет".
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::st::st_expr::{print_expression, unsupported};
+use crate::msg;
 use crate::semantic::{ExpressionNode, ModelNode};
 
 /// Арифметический сдвиг вправо знакового: **floor**-деление на `2ⁿ`.
@@ -27,14 +29,10 @@ pub(in crate::generator::st) fn arithmetic_shift_right(
     model: &ModelNode,
 ) -> Result<String, Diagnostic> {
     let ExpressionNode::Number(bits) = unwrap_parens(b) else {
-        return Err(unsupported(
-            "арифметический сдвиг вправо знакового на ПЕРЕМЕННУЮ величину: в IEC              61131-3 он выражается делением на 2ⁿ, и степень обязана быть              известна при компиляции",
-        ));
+        return Err(unsupported(&msg!(keys::ST_WHAT_ASR_VARIABLE)));
     };
     if *bits < 0 || *bits > 62 {
-        return Err(unsupported(
-            "арифметический сдвиг вправо знакового на такую величину: делитель              2ⁿ не представим",
-        ));
+        return Err(unsupported(&msg!(keys::ST_WHAT_ASR_RANGE)));
     }
     let divisor = 1_i128 << bits;
     let value = print_expression(a, model)?;
@@ -71,17 +69,10 @@ pub(in crate::generator::st) fn power(
     model: &ModelNode,
 ) -> Result<String, Diagnostic> {
     let ExpressionNode::Number(exp) = strip_parens(b) else {
-        return Err(unsupported(
-            "возведение в степень с ПЕРЕМЕННЫМ показателем: в IEC 61131-3 \
-             оператор '**' определён над вещественным, а разворот в умножения \
-             требует показателя, известного при компиляции",
-        ));
+        return Err(unsupported(&msg!(keys::ST_WHAT_POWER_VARIABLE)));
     };
     if *exp < 0 || *exp > 64 {
-        return Err(unsupported(
-            "возведение в такую степень: показатель обязан быть неотрицательным \
-             и не больше 64 — разворот в умножения иначе не выразим",
-        ));
+        return Err(unsupported(&msg!(keys::ST_WHAT_POWER_RANGE)));
     }
     if *exp == 0 {
         return Ok(String::from("1"));

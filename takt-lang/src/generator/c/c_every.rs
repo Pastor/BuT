@@ -8,12 +8,14 @@
 //! "часы") или счётчик `takt_dwell` (профиль "такты"), поэтому `c_time` уже завёл её
 //! поля.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::c::c_expr::condition::{DWELL_FIELD, ENTRY_MS_FIELD};
 use crate::generator::c::c_expr::generate_code_block;
 use crate::generator::c::c_map::CMap;
 use crate::generator::c::c_time;
 use crate::generator::indent::Printer;
+use crate::msg;
 use crate::semantic::duration::{TimeProfile, units_or_diagnostic};
 use crate::semantic::minimap::Element;
 use crate::semantic::{ModelNode, StatementNode};
@@ -117,8 +119,12 @@ pub(super) fn emit_state_body(
     let b = bits(map, model)?;
     let profile = map.time_profile();
     for e in blocks.iter().filter(|e| e.state == state_local) {
-        let units =
-            units_or_diagnostic(e.period_nanos, profile, Location::Codegen, "период 'every'")?;
+        let units = units_or_diagnostic(
+            e.period_nanos,
+            profile,
+            Location::Codegen,
+            &msg!(keys::GEN_WHAT_EVERY_PERIOD),
+        )?;
         let elapsed = elapsed_expr(map, owner, b)?;
         let f = field(e.idx);
         printer.ident("{").up().nl();

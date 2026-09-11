@@ -35,6 +35,8 @@ use crate::semantic::type_node::TypeNode;
 use super::st_edges::edge_guard;
 use super::st_map::StMap;
 use super::st_model::{BodyOutput, StateTable, emit_block, unknown_state};
+use crate::diagnostics::lang::keys;
+use crate::msg;
 
 /// Имя массива состояний-источников.
 const FROM: &str = "TAKT_TRANS_FROM";
@@ -238,11 +240,7 @@ fn edge_condition(map: &StMap, model: &ModelNode, row: &Row) -> Result<String, D
     let position = references
         .iter()
         .position(|r| r.name == target)
-        .ok_or_else(|| {
-            unknown_state(&format!(
-                "ребро в состояние '{target}' не найдено среди переходов состояния"
-            ))
-        })?;
+        .ok_or_else(|| unknown_state(&msg!(keys::ST_EDGE_NOT_IN_TRANSITIONS, target = target)))?;
     let timer = if crate::generator::st::st_time::is_clock(map) {
         Some(crate::generator::st::st_time::timer_name(
             &row.from, position,

@@ -1,3 +1,5 @@
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::verification::ltl::Ltl;
 use std::collections::{BTreeMap, BTreeSet};
 use std::hash::Hash;
@@ -101,11 +103,17 @@ impl BuchiAutomaton {
     /// Печатаются только литералы состояния - ограничения на букву; прочие формулы
     /// `states[i]` суть темпоральные обязательства (см.
     pub fn dump(&self) -> String {
-        let mut out = String::from("=== Автомат Бюхи (GPVW) ===\n");
-        out.push_str(&format!(
-            "Начальные состояния: {:?}\nПринимающие состояния: {:?}\n",
-            self.initial_states, self.accepting
+        let mut out = msg!(keys::VERIFY_TRACE_BUCHI_HEADER) + "\n";
+        out.push_str(&msg!(
+            keys::VERIFY_TRACE_BUCHI_STATES,
+            initial = format!("{:?}", self.initial_states)
         ));
+        out.push('\n');
+        out.push_str(&msg!(
+            keys::VERIFY_TRACE_BUCHI_ACCEPTING,
+            accepting = format!("{:?}", self.accepting)
+        ));
+        out.push('\n');
         for i in 0..self.states.len() {
             let literals: Vec<String> = self.states[i]
                 .iter()
@@ -115,7 +123,12 @@ impl BuchiAutomaton {
             out.push_str(&format!("s{} : {{ {} }}\n", i, literals.join(" ")));
             if let Some(tos) = self.transitions.get(&i) {
                 let targets: Vec<String> = tos.iter().map(|&to| format!("s{}", to)).collect();
-                out.push_str(&format!("  переходы -> {}\n", targets.join(" ")));
+                out.push_str("  ");
+                out.push_str(&msg!(
+                    keys::VERIFY_TRACE_BUCHI_TRANSITIONS,
+                    targets = targets.join(" ")
+                ));
+                out.push('\n');
             }
         }
         out

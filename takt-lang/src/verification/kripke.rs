@@ -27,6 +27,8 @@
 //!   месте вечно. Оба прогона реальны, и пропуск второго делал бы Крипке
 //!   **недо**-аппроксимацией - то есть ломал бы надёжность `Holds`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::semantic::{ModelNode, ReferenceNode, StateNode, StateNodeKind};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -105,7 +107,7 @@ impl Kripke {
 
     /// Текстовый дамп графа для отладки (`taktc verify --trace`).
     pub fn trace(&self) -> String {
-        let mut out = String::from("=== Структура Крипке (абстракция управления) ===\n");
+        let mut out = msg!(keys::VERIFY_TRACE_KRIPKE_HEADER) + "\n";
         for (k, name) in self.states.iter().enumerate() {
             let mark = if k == self.initial { " (start)" } else { "" };
             let succ: Vec<&str> = self

@@ -494,8 +494,8 @@ fn same_printed_type(inner: &ExpressionNode, ty: &crate::semantic::type_node::Ty
         return false;
     };
     match (
-        super::sv_type::sv_type(&from, "приведение типа"),
-        super::sv_type::sv_type(ty, "приведение типа"),
+        super::sv_type::sv_type(&from, &msg!(keys::GEN_WHAT_CAST)),
+        super::sv_type::sv_type(ty, &msg!(keys::GEN_WHAT_CAST)),
     ) {
         // Сравнение по объявлению одного и того же имени: так в одну строку сходятся и
         // ширина, и знаковость, и упакованность.

@@ -7,8 +7,10 @@
 use super::st_expr::{
     binary_cond, bit_access, bool_literal, unsupported, variable_name, wrap_cond,
 };
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::st::st_operand_type::inner_cond_type;
+use crate::msg;
 use crate::semantic::{ConditionNode, ModelNode};
 
 /// Печатает условие Takt в текст ST.
@@ -29,18 +31,17 @@ pub(crate) fn print_condition(
         ConditionNode::Duration(nanos) => Ok(crate::semantic::duration::value_millis(
             *nanos,
             Location::Codegen,
-            "литерал длительности в условии",
+            &msg!(keys::GEN_WHAT_DURATION_IN_CONDITION),
         )?
         .to_string()),
         // Выдержка (константная и вычисляемая) печатается `st_model`: только у него
         // есть поле времени и профиль. Попадание сюда означает разбор в обход того
         // пути.
         ConditionNode::After(_) | ConditionNode::AfterTicks(_) | ConditionNode::AfterExpr(_) => {
-            Err(Diagnostic::error(
-                Location::Codegen,
-                "выдержка 'after' обязана печататься через st_model, а не как условие".to_string(),
+            Err(
+                Diagnostic::error(Location::Codegen, msg!(keys::ST_015_AFTER_AS_CONDITION))
+                    .with_code("ST-015"),
             )
-            .with_code("ST-015"))
         }
         ConditionNode::Number(n) => Ok(n.to_string()),
         ConditionNode::Bool(b) => Ok(bool_literal(*b)),
@@ -85,10 +86,8 @@ pub(crate) fn print_condition(
             Ok(format!("{}_{}", enum_node.borrow().name, variant))
         }
         // Узлы без представления в ST - поимённо, без ветки `_`.
-        ConditionNode::None => Err(unsupported("пустое условие")),
-        ConditionNode::Unresolved(_) => Err(unsupported(
-            "условие не прошло семантическое понижение (Unresolved)",
-        )),
+        ConditionNode::None => Err(unsupported(&msg!(keys::GEN_WHAT_EMPTY_CONDITION))),
+        ConditionNode::Unresolved(_) => Err(unsupported(&msg!(keys::ST_WHAT_UNRESOLVED_CONDITION))),
         // Вызов функции в условии - тот же печатник, что и в выражении: аргументы
         // приходят условиями, поэтому печатаются печатником условий.
         ConditionNode::Function(def, args, _) => {
@@ -98,28 +97,18 @@ pub(crate) fn print_condition(
             }
             super::st_func::print_call_texts(def, &printed, model)
         }
-        ConditionNode::String(_) => Err(unsupported(
-            "строковый литерал: цель ST строк не поддерживает",
-        )),
+        ConditionNode::String(_) => Err(unsupported(&msg!(keys::ST_WHAT_STRING))),
         // Форма `S(Модель) = Состояние`. Причина отказа названа: прежний текст "модель
         // как условие" объяснял неверно - цель отвергает запись не потому, что не
         // понимает модель в условии, а потому, что экземпляры под-моделей суть поля
         // Родительского `FUNCTION_BLOCK`, и из соседнего блока доступа к ним нет. Дать
         // его значило бы завести параметр-указатель на корень, которого в цели нет (у
         // `c` это `main`).
-        ConditionNode::Model(_, _) => Err(unsupported(
-            "проверка состояния модели: экземпляры под-моделей — поля родительского \
-FUNCTION_BLOCK, и соседний блок их не видит. Проверяйте состояние из \
-модели-родителя композиции либо свяжите модели общей переменной корня; ту же \
-запись переводят цели 'c' и 'sv'",
-        )),
+        ConditionNode::Model(_, _) => Err(unsupported(&msg!(keys::ST_WHAT_STATE_OF_MODEL))),
         // Ветвь недостижима из корректной программы: форму `S(Модель) = Состояние`
         // перехватывает ветвь выше - с текстом, называющим обход. Отказ оставлен
         // страховкой; прежний текст обещал "", давно закрытую.
-        ConditionNode::State(..) => Err(unsupported(
-            "состояние в позиции условия: сравнивать состояние можно формой \
-             'S(Модель) = Состояние' — она разбирается отдельно",
-        )),
+        ConditionNode::State(..) => Err(unsupported(&msg!(keys::ST_WHAT_STATE_IN_CONDITION))),
         // Анонимное обращение - см. оговорку у печатника выражений.
         ConditionNode::AnonPort(access) => Ok(access.synthetic_name()),
     }

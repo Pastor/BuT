@@ -13,9 +13,11 @@
 //!   `CASE` - форма снята зондом цели `c`, где у конкатенации свой `enum` шагов.
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::indent::Printer;
 use crate::generator::st::st_map::StMap;
 use crate::generator::st::st_model::{BodyOutput, StateTable};
+use crate::msg;
 use crate::semantic::minimap::{Name, StateExtend};
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ModelNode, StateNode};
@@ -67,10 +69,10 @@ fn instance_initializer(
             .ok_or_else(|| {
                 Diagnostic::error(
                     arg.loc,
-                    format!(
-                        "Параметр '{}' модели '{}' не найден при печати инициализатора",
-                        arg.name,
-                        model_name.local()
+                    msg!(
+                        keys::ST_017_PARAMETER_NOT_FOUND,
+                        name = arg.name,
+                        model = model_name.local()
                     ),
                 )
                 .with_code("ST-017")
@@ -82,13 +84,7 @@ fn instance_initializer(
         if matches!(ty, crate::semantic::type_node::TypeNode::Array(_, _)) {
             return Err(Diagnostic::error(
                 arg.loc,
-                format!(
-                    "Значение параметра '{}' — агрегат массива: инициализатор \
-                     экземпляра FUNCTION_BLOCK такой формы в IEC 61131-3 не \
-                     принимает (проверено iec2c). Передайте значения \
-                     присваиванием в теле либо объявите массив у владельца",
-                    arg.name
-                ),
+                msg!(keys::ST_017_ARRAY_AGGREGATE_ARGUMENT, name = arg.name),
             )
             .with_code("ST-017"));
         }
@@ -96,10 +92,7 @@ fn instance_initializer(
             || {
                 Diagnostic::error(
                     arg.loc,
-                    format!(
-                        "Значение параметра '{}' не печатается инициализатором ST",
-                        arg.name
-                    ),
+                    msg!(keys::ST_017_ARGUMENT_NOT_PRINTABLE, name = arg.name),
                 )
                 .with_code("ST-017")
             },

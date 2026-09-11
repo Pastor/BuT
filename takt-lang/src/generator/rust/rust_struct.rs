@@ -3,9 +3,11 @@
 //! Знание "как выглядит агрегат структуры" самостоятельно: оно повторяет правило
 //! именования полей из `rust_decl` и обязано меняться вместе с ним.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::rust::rust_expr::{Scope, coerce_to, unsupported};
 use crate::generator::rust::rust_name::rust_type_name;
+use crate::msg;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ExpressionNode, ModelNode};
 
@@ -25,12 +27,13 @@ pub(crate) fn struct_literal(
     let def = scope
         .model
         .search_struct(name)
-        .ok_or_else(|| unsupported(&format!("структура '{name}' не объявлена")))?;
+        .ok_or_else(|| unsupported(&msg!(keys::RS_WHAT_STRUCT_NOT_DECLARED, name = name)))?;
     if def.fields.len() != items.len() {
-        return Err(unsupported(&format!(
-            "инициализатор структуры '{name}': объявлено полей {}, значений {}",
-            def.fields.len(),
-            items.len()
+        return Err(unsupported(&msg!(
+            keys::RS_WHAT_STRUCT_INITIALIZER_LENGTH,
+            name = name,
+            fields = def.fields.len(),
+            values = items.len()
         )));
     }
     let mut parts = Vec::with_capacity(items.len());

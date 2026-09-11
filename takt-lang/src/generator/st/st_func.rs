@@ -42,9 +42,11 @@ use crate::generator::st::st_reserved::check_st_name;
 
 // Списки параметров POU живут рядом: контракт держит реэкспорт - пути потребителей
 // (`st_func::state_params`) не меняются.
+use crate::diagnostics::lang::keys;
 pub(crate) use crate::generator::st::st_params::{const_params, params_of, state_params};
 use crate::generator::st::st_stmt::{Hoisted, StmtOutput, print_statement};
 use crate::generator::st::st_type::get_st_type;
+use crate::msg;
 use crate::semantic::minimap::Name;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ExpressionNode, FunctionDefinitionNode, ModelNode, VariableNode};
@@ -162,8 +164,7 @@ fn print_call_in(
     // Имя вызова строит `pou_name` - та же функция, что и объявление: локальная функция
     // получает префикс модели-владельца, поэтому вызов и `FUNCTION` совпадут даже если
     // вызов идёт из другой модели.
-    let name = pou_name(&def)
-        .ok_or_else(|| unsupported("вызов неразрешённой функции (определение отсутствует)"))?;
+    let name = pou_name(&def).ok_or_else(|| unsupported(&msg!(keys::ST_WHAT_UNRESOLVED_CALL)))?;
     // Порядок аргументов повторяет порядок объявления: параметры массивов печатаются в
     // `VAR_IN_OUT`, то есть после скалярных, - и вызов обязан следовать той же
     // раскладке, иначе `iec2c` отвечает "Data type incompatibility ... position N".
@@ -324,7 +325,7 @@ fn emit_function(
         for (pname, pty) in &array_params {
             check_st_name(pname, def.loc())?;
             let ty = crate::generator::st::st_type::array_form_name(pty, model)
-                .ok_or_else(|| unsupported("параметр-массив без именованной формы"))?;
+                .ok_or_else(|| unsupported(&msg!(keys::ST_WHAT_ARRAY_PARAM_UNNAMED)))?;
             p.ident(&format!("{} : {};", pname, ty)).nl();
         }
         for (vname, vty) in &state {
@@ -384,9 +385,9 @@ fn emit_function(
             match init {
                 Some(v) => p.ident(&format!("{} : {} := {};", cname, ty_name, v)).nl(),
                 None => {
-                    return Err(unsupported(&format!(
-                        "константа '{}' с невычислимым инициализатором внутри функции",
-                        cname
+                    return Err(unsupported(&msg!(
+                        keys::ST_WHAT_CONST_UNFOLDABLE_IN_FUNCTION,
+                        name = cname
                     )));
                 }
             };
@@ -400,12 +401,10 @@ fn emit_function(
             warnings.push(
                 Diagnostic::warning(
                     crate::generator::site::at(Location::Codegen),
-                    format!(
-                        "Внешняя функция '{}': тело неизвестно, а IEC 61131-3 требует \
-                         его от FUNCTION. Эмитирована заглушка, возвращающая {} — в \
-                         ПЛК она НИЧЕГО НЕ СДЕЛАЕТ. Замените её реализацией вручную",
-                        name,
-                        neutral_value(&return_type_of(def), model)?
+                    msg!(
+                        keys::ST_009_EXTERNAL_STUB,
+                        name = name,
+                        value = neutral_value(&return_type_of(def), model)?
                     ),
                 )
                 .with_code("ST-009"),
@@ -512,9 +511,9 @@ fn neutral_value(ty: &TypeNode, model: &ModelNode) -> Result<String, Diagnostic>
         // Для прочих типов нейтральное значение не очевидно - лучше отказ, чем выдумка:
         // заглушка и так подменяет поведение, молча угадывать нельзя.
         _ => {
-            return Err(unsupported(&format!(
-                "нейтральное значение для типа '{}' (заглушка внешней функции)",
-                get_st_type(ty, model).unwrap_or_else(|_| ty.to_string())
+            return Err(unsupported(&msg!(
+                keys::ST_WHAT_NEUTRAL_VALUE,
+                ty = get_st_type(ty, model).unwrap_or_else(|_| ty.to_string())
             )));
         }
     })

@@ -358,7 +358,7 @@ pub(crate) fn emit_hoisted_locals(
     unread: &[String],
 ) -> Result<(), Diagnostic> {
     for (name, ty) in locals {
-        let decl = super::sv_type::sv_type(ty, &msg!(keys::SV_WHAT_VARIABLE, name = name))?;
+        let decl = super::sv_type::sv_type(ty, &msg!(keys::GEN_WHAT_VARIABLE, name = name))?;
         p.ident(&format!("{};", decl.declare(name))).nl();
         emit_sink_declaration(p, name, unread);
     }
@@ -522,7 +522,7 @@ pub(crate) fn emit_hoisted_locals_auto(
     unread: &[String],
 ) -> Result<(), Diagnostic> {
     for (name, ty) in locals {
-        let decl = super::sv_type::sv_type(ty, &msg!(keys::SV_WHAT_VARIABLE, name = name))?;
+        let decl = super::sv_type::sv_type(ty, &msg!(keys::GEN_WHAT_VARIABLE, name = name))?;
         p.ident(&format!("automatic {};", decl.declare(name))).nl();
         emit_sink_declaration(p, name, unread);
     }

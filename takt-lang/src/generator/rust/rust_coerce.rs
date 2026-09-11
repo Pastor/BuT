@@ -11,8 +11,10 @@
 //! там, где известен приёмник.
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::rust::rust_expr::{Scope, print_expression, unsupported, unwrap_outer};
 use crate::generator::rust::rust_name::rust_type_name;
+use crate::msg;
 use crate::parser::ast::Member;
 use crate::semantic::ExpressionNode;
 use crate::semantic::type_node::TypeNode;
@@ -46,10 +48,7 @@ pub(crate) fn coerce_to(
         (TypeNode::Bit | TypeNode::Bool, ExpressionNode::Number(n)) => match n {
             0 => Ok("false".to_string()),
             1 => Ok("true".to_string()),
-            other => Err(unsupported(&format!(
-                "значение {} не представимо в bool (допустимо 0 или 1)",
-                other
-            ))),
+            other => Err(unsupported(&msg!(keys::RS_WHAT_BOOL_VALUE, value = other))),
         },
         // Вещественному полю целый литерал не подходит: `1` не является литералом f64.
         (TypeNode::Rational, ExpressionNode::Number(n)) => Ok(format!("{}.0", n)),
@@ -82,10 +81,16 @@ pub(crate) fn coerce_to(
         // числу, при нулевом коде возврата `taktc`. Эталон такую запись исполняет:
         // разряд даёт 0 либо 1.
         (_, ExpressionNode::BitAccess(_, Member::Number(_)))
-            if crate::generator::rust::rust_type::rust_type(target, "приёмник разряда")
-                .is_ok_and(|name| INTEGER_TYPES.contains(&name.as_str())) =>
+            if crate::generator::rust::rust_type::rust_type(
+                target,
+                &msg!(keys::RS_WHAT_BIT_RECEIVER),
+            )
+            .is_ok_and(|name| INTEGER_TYPES.contains(&name.as_str())) =>
         {
-            let name = crate::generator::rust::rust_type::rust_type(target, "приёмник разряда")?;
+            let name = crate::generator::rust::rust_type::rust_type(
+                target,
+                &msg!(keys::RS_WHAT_BIT_RECEIVER),
+            )?;
             // Внешние скобки снимаются: `u8::from((...))` - это `unused_parens`, то
             // есть отказ сборки порождённого кода под `-D warnings`.
             Ok(format!(
@@ -121,7 +126,10 @@ pub(crate) fn coerce_to(
             if crate::generator::mixed_sign::operand_type_expr(value)
                 .is_some_and(|ty| matches!(ty, TypeNode::Integer { .. }) && ty != *target) =>
         {
-            let name = crate::generator::rust::rust_type::rust_type(target, "приёмник значения")?;
+            let name = crate::generator::rust::rust_type::rust_type(
+                target,
+                &msg!(keys::RS_WHAT_VALUE_RECEIVER),
+            )?;
             Ok(format!("({} as {name})", print_expression(value, scope)?))
         }
         // Явное приведение не отменяет приведения к приёмнику: `probe := wide as u32;`
@@ -133,7 +141,10 @@ pub(crate) fn coerce_to(
         (TypeNode::Integer { .. }, ExpressionNode::Cast(_, cast_ty))
             if matches!(cast_ty, TypeNode::Integer { .. }) && cast_ty != target =>
         {
-            let name = crate::generator::rust::rust_type::rust_type(target, "приёмник значения")?;
+            let name = crate::generator::rust::rust_type::rust_type(
+                target,
+                &msg!(keys::RS_WHAT_VALUE_RECEIVER),
+            )?;
             Ok(format!("({} as {name})", print_expression(value, scope)?))
         }
         // Целая степень печатается С оглядкой на приёмник: тип кладётся в контекст, а
@@ -218,15 +229,16 @@ pub(crate) fn enum_variant_literal(
     let def = scope
         .model
         .search_enum(enum_name)
-        .ok_or_else(|| unsupported(&format!("перечисление '{}' не найдено", enum_name)))?;
+        .ok_or_else(|| unsupported(&msg!(keys::RS_WHAT_ENUM_NOT_FOUND, name = enum_name)))?;
     let variant = def
         .variants
         .iter()
         .find(|(_, v)| *v == value)
         .ok_or_else(|| {
-            unsupported(&format!(
-                "значение {} не соответствует ни одному варианту перечисления '{}'",
-                value, enum_name
+            unsupported(&msg!(
+                keys::RS_WHAT_NO_ENUM_VARIANT,
+                value = value,
+                name = enum_name
             ))
         })?;
     Ok(format!(

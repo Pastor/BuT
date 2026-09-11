@@ -19,6 +19,7 @@
 //! `guard` в строке нет вовсе, и метода `guard` - тоже.
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::indent::Printer;
 use crate::generator::rust::rust_blocks::emit_named_blocks;
 use crate::generator::rust::rust_chain::{concat_steps, node_done, seq_enum_name, seq_field_name};
@@ -26,6 +27,7 @@ use crate::generator::rust::rust_ctx::ModelEmit;
 use crate::generator::rust::rust_expr::{Scope, condition_as_bool, unwrap_outer};
 use crate::generator::rust::rust_stmt::StmtOutput;
 use crate::generator::table::{self, Row, RowTarget};
+use crate::msg;
 use crate::semantic::minimap::{Name, StateExtend};
 
 /// Печатает методы табличной формы: стражи, действия и диспетчер.
@@ -279,15 +281,13 @@ fn guard_texts(
                     .unwrap_or_else(|| "END".to_string());
                 Diagnostic::error_with_note(
                     *loc,
-                    format!(
-                        "условный переход в состояние '{target}' не переводится в Rust: {}",
-                        di.message
+                    msg!(
+                        keys::RS_020_CONDITIONAL_EDGE,
+                        target = target,
+                        message = di.message
                     ),
                     di.loc,
-                    match &di.code {
-                        Some(code) => format!("причина [{}]: {}", code, di.message),
-                        None => format!("причина: {}", di.message),
-                    },
+                    crate::generator::cause_note(&di),
                 )
                 .with_code("RS-020")
             })?),

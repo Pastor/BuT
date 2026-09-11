@@ -26,7 +26,9 @@
 //! ровно `⌈log₂(n)⌉`, а у пользовательского перечисления с явными значениями - верную
 //! ширину. Отдельного правила для состояний заводить не требуется.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::enum_facts;
 use crate::semantic::naming::normalize_lowercase_snakecase;
 use crate::semantic::type_node::TypeNode;
@@ -36,24 +38,14 @@ use crate::semantic::type_node::TypeNode;
 /// Шаблон общий (`sv_expr::sv002`): своя копия дала бы одному коду два разных вида
 /// сообщения.
 fn sv002_type(what: &str, ty: &TypeNode) -> Diagnostic {
-    crate::generator::sv::sv_expr::sv002(&format!(
-        "{what}: тип '{ty}' — внутренний либо неразрешённый, представления в \
-         порождаемом RTL он не имеет"
-    ))
+    crate::generator::sv::sv_expr::sv002(&msg!(keys::SV_WHAT_INTERNAL_TYPE, what = what, ty = ty))
 }
 
 /// Строит диагностику `SV-003` - вещественного типа в синтезируемом RTL нет.
 fn sv003(what: &str) -> Diagnostic {
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
-        format!(
-            "{}: вещественный тип (float) не существует в синтезируемом RTL и \
-             целью 'sv' не поддерживается. Тип 'real' языка SystemVerilog \
-             пригоден только для симуляции — синтезатор его отвергает. \
-             Используйте целочисленный тип либо цель 'c'/'rust', где float \
-             отображается",
-            what
-        ),
+        msg!(keys::SV_003_FLOAT, what = what),
     )
     .with_code("SV-003")
 }
@@ -168,7 +160,10 @@ pub(crate) fn emit_structs(
                     p.ident(&decl).nl();
                     continue;
                 }
-                let sv = sv_type(ty, &format!("поле '{}' структуры '{}'", field, def.name))?;
+                let sv = sv_type(
+                    ty,
+                    &msg!(keys::GEN_WHAT_STRUCT_FIELD, field = field, name = def.name),
+                )?;
                 let decl = format!("{} {}{};", sv.prefix.trim(), name, sv.suffix);
                 p.ident(decl.trim_start()).nl();
             }
@@ -199,7 +194,11 @@ fn packed_array_field(
     }
     let inner = sv_type(
         elem,
-        &format!("элемент поля '{field}' структуры '{struct_name}'"),
+        &msg!(
+            keys::SV_WHAT_STRUCT_FIELD_ELEMENT,
+            field = field,
+            name = struct_name
+        ),
     )?;
     // Размерность массива идёт перед размерностью элемента: `logic [N-1:0][W-1:0]` даёт
     // `data[i]` шириной элемента, а обратный порядок (`logic [W-1:0][N-1:0]`) - шириной
@@ -247,11 +246,7 @@ pub(crate) fn sv_type(ty: &TypeNode, what: &str) -> Result<SvType, Diagnostic> {
         }
         TypeNode::Integer { bits, signed } => {
             if *bits == 0 {
-                return Err(sv004(
-                    what,
-                    "нулевая разрядность целого: `logic [-1:0]` не является \
-                     допустимым диапазоном",
-                ));
+                return Err(sv004(what, &msg!(keys::SV_004_ZERO_WIDTH_INTEGER)));
             }
             // Разрядность буквальна и произвольна: в RTL машинного слова нет, `logic
             // [11:0]` так же нормален, как `logic [7:0]`. Округления до 8/16/32/64, как
@@ -268,22 +263,14 @@ pub(crate) fn sv_type(ty: &TypeNode, what: &str) -> Result<SvType, Diagnostic> {
         TypeNode::Array(n, elem) if crate::semantic::bit_vector::is_bit_vector(ty).is_some() => {
             let _ = elem;
             if *n == 0 {
-                return Err(sv004(
-                    what,
-                    "бит-вектор нулевой ширины: `logic [-1:0]` не является \
-                     допустимым диапазоном",
-                ));
+                return Err(sv004(what, &msg!(keys::SV_004_ZERO_WIDTH_BIT_VECTOR)));
             }
             Ok(SvType::scalar(format!("logic [{}:0]", n - 1)))
         }
         // Настоящий (распакованный) массив скаляров.
         TypeNode::Array(n, elem) => {
             if *n == 0 {
-                return Err(sv004(
-                    what,
-                    "массив нулевого размера: `[0:-1]` не является допустимым \
-                     диапазоном",
-                ));
+                return Err(sv004(what, &msg!(keys::SV_004_ZERO_SIZE_ARRAY)));
             }
             let inner = sv_type(elem, what)?;
             // Размерности накапливаются слева направо: `[u8; 2]` элементов `[u8; 4]`
@@ -342,10 +329,7 @@ pub(crate) fn enum_width(
     // (сегодняшнее поведение цели).
     match enum_facts(variants) {
         Some(f) => Ok((f.min_bits, f.signed)),
-        None => Err(sv004(
-            what,
-            "перечисление без вариантов: ширина типа не определена",
-        )),
+        None => Err(sv004(what, &msg!(keys::SV_004_ENUM_WITHOUT_VARIANTS))),
     }
 }
 

@@ -13,8 +13,10 @@ use crate::semantic::naming::normalize_lowercase_snakecase;
 use crate::semantic::{PortDirection, VariableNode};
 use log::warn;
 
+use crate::diagnostics::lang::keys;
 /// Словарь портов: `(класс порта, направление)` -> список `(имя модели, имя порта)`.
 use crate::generator::c::c_port_enums::{collect_ports_by_class, generate_port_enums};
+use crate::msg;
 
 /// Генерирует поля структуры C для extend состояния. Единичный Model -> `{state}`,
 /// составной -> делегирует в build_concat_item.
@@ -298,7 +300,7 @@ fn generate_model_header(
                     &name,
                     &*model.borrow(),
                     map.float_width(),
-                    &format!("переменная '{}'", name),
+                    &msg!(keys::GEN_WHAT_VARIABLE, name = name),
                 )?;
                 printer.ident(&tv).print(";").nl();
             }
@@ -560,7 +562,11 @@ pub fn generate_header(
                         field_name,
                         &*model,
                         map.float_width(),
-                        &format!("поле '{}' структуры '{}'", field_name, s.name),
+                        &msg!(
+                            keys::GEN_WHAT_STRUCT_FIELD,
+                            field = field_name,
+                            name = s.name
+                        ),
                     )?;
                     printer.ident(&format!("{};", c_decl)).nl();
                 }

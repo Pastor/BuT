@@ -26,6 +26,7 @@
 //! прямого соответствия нет: си-образный `for` разворачивается в `WHILE` с шагом в
 //! конце тела.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::indent::Printer;
 use crate::generator::st::st_expr::unsupported;
@@ -33,6 +34,7 @@ use crate::generator::st::st_expr::{
     assign_target_type, bit_string_of_type, coerce_to, inner_expr_type, print_expression,
     variable_ident,
 };
+use crate::msg;
 use crate::parser::ast::Member;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ExpressionNode, MatchPatternNode, ModelNode, StatementNode};
@@ -342,12 +344,8 @@ pub(crate) fn print_statement(
         // В ST нет `return <значение>`: результат возвращается присваиванием имени
         // функции, а `RETURN;` лишь досрочно выходит.
         StatementNode::Return(Some(value), _) => {
-            let (name, ret) = fn_name.ok_or_else(|| {
-                unsupported(
-                    "return со значением вне функции: присваивать нечему — имя \
-                     функции неизвестно",
-                )
-            })?;
+            let (name, ret) =
+                fn_name.ok_or_else(|| unsupported(&msg!(keys::ST_WHAT_RETURN_OUTSIDE_FUNCTION)))?;
             let text = crate::generator::st::st_expr::coerce_to(value, ret, model)?;
             p.ident(&format!("{} := {};", name, text)).nl();
             p.ident("RETURN;").nl();
@@ -379,20 +377,14 @@ pub(crate) fn print_statement(
                         // Позиция самой формулы.
                         crate::semantic::formula::first_location(formulas)
                             .unwrap_or(Location::Codegen),
-                        format!(
-                            "LTL-формул ({}) в блоке кода: в Structured Text они не \
-                             транслируются и в порождённый ПЛК-код не попадут",
-                            formulas.len()
-                        ),
+                        msg!(keys::ST_010_LTL_IN_BLOCK, count = formulas.len()),
                     )
                     .with_code("ST-010"),
                 );
             }
             Ok(())
         }
-        StatementNode::Unresolved(_) => Err(unsupported(
-            "оператор не прошёл семантическое понижение (Unresolved)",
-        )),
+        StatementNode::Unresolved(_) => Err(unsupported(&msg!(keys::ST_WHAT_UNRESOLVED_STATEMENT))),
     }
 }
 
@@ -417,10 +409,7 @@ fn print_for(
     fn_name: FnContext<'_>,
 ) -> Result<(), Diagnostic> {
     if step.is_some() && contains_continue(body) {
-        return Err(unsupported(
-            "continue внутри for с шагом: в Takt шаг выполняется и после continue, \
-             а в WHILE-развёртке ST — нет; тождественной развёртки не существует",
-        ));
+        return Err(unsupported(&msg!(keys::ST_WHAT_CONTINUE_IN_STEPPED_FOR)));
     }
     if let Some(init) = init {
         print_statement(init, model, p, out, fn_name)?;
@@ -585,18 +574,14 @@ fn print_bit_write(
     model: &ModelNode,
 ) -> Result<String, Diagnostic> {
     let base = print_expression(inner, model)?;
-    let ty = inner_expr_type(inner).ok_or_else(|| {
-        unsupported(&format!(
-            "запись разряда {bit}: тип носителя не определяется статически, \
-             а разрядность нужна, чтобы построить маску"
-        ))
-    })?;
+    let ty = inner_expr_type(inner)
+        .ok_or_else(|| unsupported(&msg!(keys::ST_WHAT_BIT_WRITE_UNKNOWN_TYPE, bit = bit)))?;
     // У однобитного значения разряд ровно один, и он - само значение.
     if matches!(ty, TypeNode::Bit | TypeNode::Bool) {
         if bit != 0 {
-            return Err(unsupported(&format!(
-                "разряд {bit} у однобитного значения: в IEC 61131-3 у BOOL нет \
-                 разрядов, кроме нулевого"
+            return Err(unsupported(&msg!(
+                keys::ST_WHAT_BIT_WRITE_OF_BOOL,
+                bit = bit
             )));
         }
         return Ok(format!(
@@ -604,16 +589,14 @@ fn print_bit_write(
             coerce_to(rhs, &TypeNode::Bool, model)?
         ));
     }
-    let bs = bit_string_of_type(&ty).ok_or_else(|| {
-        unsupported(&format!(
-            "запись разряда в тип '{ty}': маска строится только для целых типов \
-             IEC (8/16/32/64 бита)"
-        ))
-    })?;
+    let bs = bit_string_of_type(&ty)
+        .ok_or_else(|| unsupported(&msg!(keys::ST_WHAT_BIT_WRITE_TYPE, ty = ty)))?;
     if bit < 0 || bit >= i128::from(bs.bits) {
-        return Err(unsupported(&format!(
-            "разряд {bit} вне разрядности типа '{ty}' ({} бит)",
-            bs.bits
+        return Err(unsupported(&msg!(
+            keys::ST_WHAT_BIT_WRITE_OUT_OF_WIDTH,
+            bit = bit,
+            ty = ty,
+            bits = bs.bits
         )));
     }
     let width = bs.hex_digits;
@@ -649,9 +632,9 @@ fn low_bit_as_bool(rhs: &ExpressionNode, model: &ModelNode) -> Result<String, Di
     match inner_expr_type(rhs) {
         Some(TypeNode::Bit | TypeNode::Bool) => Ok(printed),
         Some(TypeNode::Integer { .. }) => Ok(format!("({printed} MOD 2) <> 0")),
-        _ => Err(unsupported(&format!(
-            "значение '{printed}' в записи разряда: тип не определяется статически, \
-             и привести его к BOOL нечем"
+        _ => Err(unsupported(&msg!(
+            keys::ST_WHAT_BIT_WRITE_VALUE_TYPE,
+            text = printed
         ))),
     }
 }

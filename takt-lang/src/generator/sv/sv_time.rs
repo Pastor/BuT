@@ -15,9 +15,11 @@
 //! Задержек `#` и обращений к `$time` в выводе нет никогда.
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::indent::Printer;
 use crate::generator::sv::sv_fsm::Reg;
 use crate::generator::sv::sv_map::SvMap;
+use crate::msg;
 use crate::semantic::ModelNode;
 use crate::semantic::duration::{TimeProfile, counter_bits, units_or_diagnostic};
 use crate::semantic::minimap::Name;
@@ -82,7 +84,7 @@ fn max_units_in_tree(map: &SvMap, model: &ModelNode) -> Result<u64, Diagnostic> 
                     nanos,
                     map.time_profile(),
                     crate::diagnostics::Location::Codegen,
-                    "выдержка 'after'",
+                    &msg!(keys::GEN_WHAT_AFTER),
                 )?);
             }
         }
@@ -93,7 +95,7 @@ fn max_units_in_tree(map: &SvMap, model: &ModelNode) -> Result<u64, Diagnostic> 
                     period_nanos,
                     map.time_profile(),
                     crate::diagnostics::Location::Codegen,
-                    "период 'every'",
+                    &msg!(keys::GEN_WHAT_EVERY_PERIOD),
                 )?);
             }
         }
@@ -313,7 +315,7 @@ pub(crate) fn emit_every_gate(
         period_nanos,
         map.time_profile(),
         crate::diagnostics::Location::Codegen,
-        "период 'every'",
+        &msg!(keys::GEN_WHAT_EVERY_PERIOD),
     )?;
     let reg = every_reg(model, idx);
     p.ident(&format!("if (({elapsed} - {reg}_next) >= {units}) begin"))
@@ -348,7 +350,7 @@ pub(crate) fn after_guard(
                 *nanos,
                 map.time_profile(),
                 crate::diagnostics::Location::Codegen,
-                "выдержка 'after'",
+                &msg!(keys::GEN_WHAT_AFTER),
             ) {
                 Ok(u) => u,
                 Err(e) => return Some(Err(e)),

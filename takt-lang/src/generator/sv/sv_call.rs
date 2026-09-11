@@ -3,9 +3,11 @@
 //! Граница по ответственности: печать выражения отвечает "как выглядит операция", этот
 //! модуль - "как выглядит вызов". Поводом был проверка размера модуля, границей - смысл.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::sv::sv_expr::sv002;
 use crate::generator::sv::sv_expr::sv005;
+use crate::msg;
 use crate::semantic::FunctionDefinitionNode;
 
 /// Возвращает имя вызываемой функции, отвергая невыразимые случаи.
@@ -23,12 +25,11 @@ pub(in crate::generator::sv) fn local_function_name(
         FunctionDefinitionNode::External { name, .. } => Err(sv005(name, loc)),
         // Встроенные (`min`/`max`/`abs`/`debug`) требуют каждая своего разворачивания и
         // разбираются отдельно (`print_builtin`); сюда попасть не должны.
-        FunctionDefinitionNode::Builtin(name, _, _) => Err(sv002(&format!(
-            "встроенная функция '{}' в этой позиции",
-            name
-        ))),
+        FunctionDefinitionNode::Builtin(name, _, _) => {
+            Err(sv002(&msg!(keys::SV_WHAT_BUILTIN_HERE, name = name)))
+        }
         FunctionDefinitionNode::None | FunctionDefinitionNode::Unresolved(_) => {
-            Err(sv002("неразрешённый вызов функции"))
+            Err(sv002(&msg!(keys::SV_WHAT_UNRESOLVED_CALL)))
         }
     }
 }
@@ -71,15 +72,7 @@ fn print_builtin(name: &str, args: &[String], _loc: Location) -> Result<String, 
         ("max", [a, b]) => Ok(format!("(({} > {}) ? {} : {})", a, b, a, b)),
         ("abs", [a]) => Ok(format!("(({} < 0) ? -{} : {})", a, a, a)),
         // Молчаливо отбросить нельзя: ровно эту тихую потерю закрыла.
-        ("debug", _) => Err(sv002(
-            "встроенная функция 'debug': в синтезируемом RTL вывода текста не \
-             существует — печатать некуда и нечем. Отладка RTL ведётся \
-             осциллограммой сигналов, а не печатью; используйте цель \
-             'c'/'rust', если нужен вывод",
-        )),
-        (other, _) => Err(sv002(&format!(
-            "встроенная функция '{}' с таким числом аргументов",
-            other
-        ))),
+        ("debug", _) => Err(sv002(&msg!(keys::SV_WHAT_DEBUG))),
+        (other, _) => Err(sv002(&msg!(keys::SV_WHAT_BUILTIN_ARITY, name = other))),
     }
 }

@@ -3,6 +3,8 @@
 //! Часть модуля `c_expr`.
 
 use super::*;
+use crate::diagnostics::lang::keys;
+use crate::msg;
 
 /// Генерирует C-выражение из семантического узла выражения.
 ///
@@ -54,16 +56,10 @@ pub(in crate::generator::c) fn generate_formula_check(
 /// Имя функции берётся из узла: сообщение без него заставило бы автора искать
 /// выброшенный вызов самому. Позиция - у оператора.
 fn builtin_dropped(expr: &ExpressionNode, loc: crate::diagnostics::Location) -> Diagnostic {
-    let name = builtin_name(expr).unwrap_or("встроенная функция");
-    Diagnostic::warning(
-        loc,
-        format!(
-            "вызов '{name}' в порождённый C не попадает: печать из прошивки не \
-             подразумевается, и кода у этой функции нет. Прежде цель выбрасывала \
-             его молча, тогда как 'st' и 'rust' на том же входе отказывают"
-        ),
-    )
-    .with_code("CC-024")
+    let name = builtin_name(expr)
+        .map(str::to_string)
+        .unwrap_or_else(|| msg!(keys::GEN_WHAT_BUILTIN));
+    Diagnostic::warning(loc, msg!(keys::CC_024_BUILTIN_DROPPED, name = name)).with_code("CC-024")
 }
 
 /// Имя встроенной функции, если выражение - её вызов.
@@ -382,7 +378,7 @@ pub(in crate::generator::c) fn generate_code_block(
                 &snake_name,
                 &*model_ref,
                 map.float_width(),
-                &format!("локальная переменная '{}'", name),
+                &msg!(keys::GEN_WHAT_LOCAL, name = name),
             )?;
             // Локальный массив с инициализатором-выражением объявляется и копируется
             // Поэлементно: в C массив не инициализируется другим массивом (`uint8_t

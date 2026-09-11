@@ -6,6 +6,7 @@ use super::*;
 use crate::diagnostics::lang::keys;
 use crate::generator::c::c_unsupported::{self, UnsupportedNode};
 use crate::generator::shift_width::{self, Direction};
+use crate::msg;
 
 /// Отказ на конструкции, которую цель `c` не переводит.
 ///
@@ -146,7 +147,7 @@ pub(in crate::generator::c) fn generate_expr(
             let millis = crate::semantic::duration::value_millis(
                 *nanos,
                 crate::diagnostics::Location::Codegen,
-                "литерал длительности",
+                &msg!(keys::GEN_WHAT_DURATION_LITERAL),
             )?;
             printer.print(&millis.to_string());
         }
@@ -721,7 +722,8 @@ pub(in crate::generator::c) fn generate_expr(
             // было `unwrap_or_else(|| "int")` - невыразимый тип приведения молча
             // превращался в `(int)`, то есть приведение к другому типу, принятое
             // C-компилятором без замечаний.
-            let type_c = c_type_or_diagnostic(typ, model, map.float_width(), "приведение типа")?;
+            let what = msg!(keys::GEN_WHAT_CAST);
+            let type_c = c_type_or_diagnostic(typ, model, map.float_width(), &what)?;
             // Fixed-point: масштабирующее приведение, когда источник либо цель - q(m,
             // n). Сдвиги не используются (ловушка C11, UB `<<`).
             if matches!(typ, TypeNode::Fixed { .. })
@@ -733,7 +735,7 @@ pub(in crate::generator::c) fn generate_expr(
                 // отображается в `uint32_t`, и по типам Takt такая пара различна. В C
                 // лишнее приведение безвредно, но правило у трёх целей одно: у `rust`
                 // та же печать есть `clippy::unnecessary_cast`, то есть отказ проверки.
-                c_type_or_diagnostic(&from, model, map.float_width(), "приведение типа")
+                c_type_or_diagnostic(&from, model, map.float_width(), &what)
                     .is_ok_and(|from_c| from_c == type_c)
             }) {
                 // Приведение к тому же типу опускается.
@@ -814,7 +816,7 @@ pub(in crate::generator::c) fn generate_expr(
                                 PortClass::Rational => {
                                     return Err(Diagnostic::error(
                                         Location::Codegen,
-                                        "BitAccess на float-порт не поддерживается".to_string(),
+                                        msg!(keys::CC_001_BIT_ACCESS_ON_FLOAT_PORT_EXPR),
                                     )
                                     .with_code("CC-001"));
                                 }

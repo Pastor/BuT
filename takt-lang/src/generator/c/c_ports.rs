@@ -4,7 +4,9 @@
 //! на вопрос "ложится ли порт на протокол HAL".
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::c::PortClass;
+use crate::msg;
 use crate::semantic::minimap::Name;
 use crate::semantic::{ModelNode, VariableNode};
 
@@ -23,14 +25,11 @@ pub(in crate::generator::c) fn check_port_types(
         if !PortClass::fits_hal(ty) {
             return Err(Diagnostic::error(
                 crate::diagnostics::Location::Codegen,
-                format!(
-                    "порт '{}' модели '{}' имеет составной тип '{}': колбэки \
-                     HAL принимают скаляр (bit/целое/вещественное), и \
-                     структуру либо массив в них не передать. Разложите \
-                     порт на скалярные либо работайте с переменной модели",
-                    name,
-                    model_name.local(),
-                    ty
+                msg!(
+                    keys::CC_015_COMPOSITE_HAL_PORT,
+                    name = name,
+                    model = model_name.local(),
+                    ty = ty
                 ),
             )
             .with_code("CC-015"));

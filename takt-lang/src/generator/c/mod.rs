@@ -60,12 +60,14 @@ mod c_unresolved;
 mod c_unsupported;
 mod c_zero_init;
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::Generator as AsGenerator;
 use crate::generator::c::c_header::generate_header;
 use crate::generator::c::c_map::CMap;
 use crate::generator::c::c_source::generate_source;
 use crate::generator::{FloatWidth, GenerateOptions, GeneratedFile, Output};
+use crate::msg;
 use crate::semantic::ModelNode;
 use crate::semantic::PortDirection;
 use crate::semantic::bit_vector::{self, BitVectorLayout};
@@ -240,7 +242,7 @@ impl CTypeError {
         match self {
             Self::Unrepresentable => Diagnostic::error(
                 Location::Codegen,
-                format!("{}: тип не представим в C", what),
+                msg!(keys::CC_015_TYPE_UNREPRESENTABLE, what = what),
             )
             .with_code("CC-015"),
         }

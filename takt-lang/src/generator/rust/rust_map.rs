@@ -8,7 +8,9 @@
 //! `Ord` по паре `(unique, local)`. Собственных сортировок здесь заводить не нужно -
 //! порядок задан типом контейнера.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::duration::TimeProfile;
 use crate::semantic::minimap::{Element, Map, Name};
 use crate::semantic::unused::UsageSet;
@@ -142,8 +144,11 @@ impl RustMap {
         self.map
             .model_at(Some(name.unique().to_string()))
             .ok_or_else(|| {
-                Diagnostic::error(Location::Codegen, format!("Модель '{}' не найдена", name))
-                    .with_code("RS-012")
+                Diagnostic::error(
+                    Location::Codegen,
+                    msg!(keys::RS_012_MODEL_NOT_FOUND, name = name),
+                )
+                .with_code("RS-012")
             })
     }
 
@@ -170,7 +175,7 @@ impl RustMap {
             .ok_or_else(|| {
                 Diagnostic::error(
                     crate::generator::site::at(Location::Codegen),
-                    format!("Состояние '{}' не найдено", name),
+                    msg!(keys::RS_013_STATE_NOT_FOUND, name = name),
                 )
                 .with_code("RS-013")
             })

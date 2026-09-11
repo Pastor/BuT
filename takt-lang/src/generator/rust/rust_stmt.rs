@@ -14,6 +14,7 @@
 //! другой причине: там не было конструкции, здесь она есть, но с другой семантикой.
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::indent::Printer;
 use crate::generator::rust::rust_expr::{
     Scope, print_as_bool, print_expression, unsupported, unwrap_outer,
@@ -23,6 +24,7 @@ use crate::generator::rust::rust_live::{
 };
 use crate::generator::rust::rust_name::rust_value_name;
 use crate::generator::rust::rust_type::rust_type;
+use crate::msg;
 use crate::semantic::{ExpressionNode, StatementNode};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -123,14 +125,10 @@ fn emit_folded_declaration(
     scope: &mut Scope,
     p: &mut Printer,
 ) -> Result<(), Diagnostic> {
-    let folded = fold_assignment(name, stmt).ok_or_else(|| {
-        unsupported(&format!(
-            "объявление '{}': форма присваивания не сворачивается",
-            name
-        ))
-    })?;
+    let folded = fold_assignment(name, stmt)
+        .ok_or_else(|| unsupported(&msg!(keys::RS_WHAT_UNFOLDABLE_DECLARATION, name = name)))?;
     let ident = rust_value_name(name, crate::diagnostics::Location::Codegen)?;
-    let ty_name = rust_type(ty, &format!("переменная '{}'", name))?;
+    let ty_name = rust_type(ty, &msg!(keys::GEN_WHAT_VARIABLE, name = name))?;
     let value = print_folded(&folded, ty, scope)?;
     // `mut` считается по остатку после точки инициализации: присваивание на каждом пути
     // здесь - инициализация, а не изменение.
@@ -475,7 +473,7 @@ pub(crate) fn print_statement_ctx(
             // инициализатора приходит без координаты.
             crate::generator::site::enter(*loc);
             let ident = rust_value_name(name, crate::diagnostics::Location::Codegen)?;
-            let ty_name = rust_type(ty, &format!("переменная '{}'", name))?;
+            let ty_name = rust_type(ty, &msg!(keys::GEN_WHAT_VARIABLE, name = name))?;
             // `mut` ставится по факту присваивания, а не по объявлению: в Takt `var`
             // изменяем всегда, в Rust лишний `mut` - это `unused_mut`.
             let mutable = if scope.assigned.contains(name) {
@@ -776,11 +774,7 @@ pub(crate) fn print_statement_ctx(
                         out.warnings.push(
                             Diagnostic::warning(
                                 why.loc,
-                                format!(
-                                    "охранная формула в теле не транслируется в Rust: {}. \
-                                     Порождённый код проверки не содержит",
-                                    why.message
-                                ),
+                                msg!(keys::RS_010_GUARD_IN_BODY, message = why.message),
                             )
                             .with_code("RS-010"),
                         );
@@ -794,17 +788,14 @@ pub(crate) fn print_statement_ctx(
                     Diagnostic::warning(
                         crate::semantic::formula::first_location(formulas)
                             .unwrap_or(crate::diagnostics::Location::Codegen),
-                        "LTL-формула в теле блока не транслируется в Rust: \
-                         проверяйте её через 'taktc verify'. Порождённый код \
-                         формулу не содержит"
-                            .to_string(),
+                        msg!(keys::RS_010_LTL_IN_BODY),
                     )
                     .with_code("RS-010"),
                 );
             }
             Ok(0)
         }
-        StatementNode::Unresolved(_) => Err(unsupported("неразрешённый оператор")),
+        StatementNode::Unresolved(_) => Err(unsupported(&msg!(keys::RS_WHAT_UNRESOLVED_STATEMENT))),
     }
 }
 

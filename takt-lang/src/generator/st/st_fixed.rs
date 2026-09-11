@@ -14,8 +14,10 @@
 //! Нормативные правила совпадают с эталоном симулятора (`eval::fixed`) и целями
 //! `c`/`rust` - сверка идёт побитово через вещественный порт (`... as float`).
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::st::st_expr::{inner_expr_type_in, print_expression};
+use crate::msg;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::type_node::type_fixed::fixed_storage_bits;
 use crate::semantic::{ExpressionNode, ModelNode};
@@ -126,11 +128,7 @@ fn wrap_lint(expr: String, m: u8, n: u8, sat: bool) -> Result<String, Diagnostic
     if w >= 63 {
         return Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            format!(
-                "перенос к {w} битам в цели st требует модуля 2^{w}, непредставимого \
-                 в LINT (знаковое 64 бита); выберите q(m, n) с m + n ≤ 62 либо \
-                 ширину, кратную 8"
-            ),
+            msg!(keys::ST_021_WRAP_WIDTH, w = w),
         )
         .with_code("ST-021"));
     }
@@ -287,9 +285,7 @@ pub(crate) fn cast(
         {
             Err(Diagnostic::error(
                 crate::generator::site::at(Location::Codegen),
-                "приведение float → q в цели st: LREAL_TO_INT округляет к ближайшему, \
-                 а q требует floor; литеральный float понижается на этапе компиляции"
-                    .to_string(),
+                msg!(keys::ST_014_FLOAT_TO_Q),
             )
             .with_code("ST-014"))
         }
@@ -347,7 +343,7 @@ fn int_name_of_target(target: &TypeNode) -> Result<&'static str, Diagnostic> {
         TypeNode::Bit | TypeNode::Bool => Ok("BOOL"),
         _ => Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            "приведение q → нецелого типа не поддержано".to_string(),
+            msg!(keys::ST_011_Q_TO_NON_INTEGER),
         )
         .with_code("ST-011")),
     }
@@ -357,10 +353,7 @@ fn int_name_of_target(target: &TypeNode) -> Result<&'static str, Diagnostic> {
 fn too_wide(m: u8, n: u8) -> Diagnostic {
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
-        format!(
-            "q({m}, {n}): W = {} > 32 — точное произведение шириной 2W не влезает в LINT",
-            m + n
-        ),
+        msg!(keys::ST_013_Q_PRODUCT_WIDTH, m = m, n = n, w = m + n),
     )
     .with_code("ST-013")
 }
@@ -369,7 +362,7 @@ fn too_wide(m: u8, n: u8) -> Diagnostic {
 fn untyped_source() -> Diagnostic {
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
-        "приведение в q: тип источника не выводится статически".to_string(),
+        msg!(keys::ST_011_Q_SOURCE_TYPE_UNKNOWN),
     )
     .with_code("ST-011")
 }

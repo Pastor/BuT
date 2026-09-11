@@ -4,11 +4,13 @@
 //! композиции: она от сборки автомата не зависит.
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::indent::Printer;
 use crate::generator::sv::sv_fsm::{Block, Fsm, state_enum_name, state_variants};
 use crate::generator::sv::sv_map::SvMap;
 use crate::generator::sv::sv_names::{self, step_enum_name, step_variant};
 use crate::generator::sv::sv_type::enum_width;
+use crate::msg;
 use crate::semantic::minimap::Element;
 use std::collections::BTreeSet;
 
@@ -35,7 +37,7 @@ pub(crate) fn emit_state_enums(
             .enumerate()
             .map(|(i, v)| (v.clone(), i as i128))
             .collect();
-        let (width, _) = enum_width(&numbered, &format!("состояния модели '{}'", name))?;
+        let (width, _) = enum_width(&numbered, &msg!(keys::SV_WHAT_MODEL_STATES, name = name))?;
         p.ident(&format!("typedef enum logic [{}:0] {{", width - 1))
             .nl();
         p.up();
@@ -69,7 +71,7 @@ pub(crate) fn emit_step_enums(p: &mut Printer, fsm: &Fsm) -> Result<(), Diagnost
                 chain.count as i128,
             ));
         }
-        let (width, _) = enum_width(&numbered, &format!("шаг цепочки '{}'", state))?;
+        let (width, _) = enum_width(&numbered, &msg!(keys::SV_WHAT_CHAIN_STEP, name = state))?;
         p.ident(&format!("typedef enum logic [{}:0] {{", width - 1))
             .nl();
         p.up();
@@ -101,7 +103,7 @@ pub(crate) fn emit_enums(p: &mut Printer, blocks: &[Block]) -> Result<(), Diagno
             // Ширина - по диапазону значений. Формула (по числу вариантов) на `Idle =
             // 670` дала бы `logic [0:0]` и `%Error-ENUMITEMWIDTH`.
             let (width, signed) =
-                enum_width(&def.variants, &format!("перечисление '{}'", def.name))?;
+                enum_width(&def.variants, &msg!(keys::SV_WHAT_ENUM, name = def.name))?;
             let sign = if signed { "signed " } else { "" };
             p.ident(&format!("typedef enum logic {}[{}:0] {{", sign, width - 1))
                 .nl();

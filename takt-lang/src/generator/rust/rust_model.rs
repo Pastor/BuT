@@ -20,6 +20,7 @@
 //! | `_TICK`, `_END` у составных состояний | не эмитятся | в C они мертвы и молча (поле пишется, но не читается); в Rust `dead_code` это ловит., вариант (а) |
 //! | под-модель получает указатель `main` | корневые переменные - параметры `&mut` | `self.cabin.tick(&mut self)` заимствовал бы `self` дважды. Заимствования непересекающихся **полей** законны, поэтому `self.cabin.tick(&mut self.hal, &mut self.command)` собирается |
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::indent::Printer;
 use crate::generator::rust::rust_chain::{Chain, model_concats, seq_enum_name, seq_field_name};
@@ -33,6 +34,7 @@ use crate::generator::rust::rust_port_init;
 use crate::generator::rust::rust_tick::emit_tick;
 use crate::generator::rust::rust_time;
 use crate::generator::rust::rust_type::rust_type;
+use crate::msg;
 use crate::semantic::minimap::{Element, Name, StateExtend};
 use crate::semantic::{ModelNode, VariableNode};
 use std::collections::{BTreeMap, BTreeSet};
@@ -86,7 +88,7 @@ impl StateTable {
             .iter()
             .map(|(n, v)| (n.local().to_string(), v.clone()))
             .collect();
-        check_name_collisions(&named, "состояния модели", Location::Codegen)?;
+        check_name_collisions(&named, &msg!(keys::RS_KIND_MODEL_STATES), Location::Codegen)?;
 
         let emit_end = !variants.iter().any(|(_, v)| v == "End");
         Ok(Self {
@@ -105,7 +107,7 @@ impl StateTable {
             .ok_or_else(|| {
                 Diagnostic::error(
                     Location::Codegen,
-                    format!("Состояние '{}' недостижимо и варианта не имеет", state),
+                    msg!(keys::RS_013_STATE_UNREACHABLE, name = state),
                 )
                 .with_code("RS-013")
             })
@@ -256,7 +258,7 @@ pub(crate) fn emit_model(
         map.element_of(name).ok_or_else(|| {
             Diagnostic::error(
                 Location::Codegen,
-                format!("Модель '{}' отсутствует в снимке карты", name),
+                msg!(keys::RS_012_MODEL_MISSING, name = name),
             )
             .with_code("RS-012")
         })?
@@ -264,7 +266,7 @@ pub(crate) fn emit_model(
     let Element::Model { states, start, .. } = &element else {
         return Err(Diagnostic::error(
             Location::Codegen,
-            format!("Элемент '{}' не является моделью", name),
+            msg!(keys::RS_012_NOT_A_MODEL, name = name),
         )
         .with_code("RS-012"));
     };
@@ -352,7 +354,7 @@ pub(crate) fn emit_model(
         p.ident(&format!(
             "{}: {},",
             field,
-            rust_type(ty, &format!("переменная '{}'", vname))?
+            rust_type(ty, &msg!(keys::GEN_WHAT_VARIABLE, name = vname))?
         ))
         .nl();
     }
@@ -677,7 +679,7 @@ fn emit_new(p: &mut Printer, ctx: &ModelEmit) -> Result<(), Diagnostic> {
         let first = chain.steps.first().ok_or_else(|| {
             Diagnostic::error(
                 Location::Codegen,
-                format!("Состояние '{}': композиция без шагов", chain.state.local()),
+                msg!(keys::RS_021_CHAIN_WITHOUT_STEPS, name = chain.state.local()),
             )
             .with_code("RS-021")
         })?;
@@ -827,7 +829,7 @@ fn emit_init(p: &mut Printer, ctx: &ModelEmit) -> Result<(), Diagnostic> {
         let first = chain.steps.first().ok_or_else(|| {
             Diagnostic::error(
                 Location::Codegen,
-                format!("Состояние '{}': композиция без шагов", chain.state.local()),
+                msg!(keys::RS_021_CHAIN_WITHOUT_STEPS, name = chain.state.local()),
             )
             .with_code("RS-021")
         })?;
@@ -893,9 +895,10 @@ fn argument_assignments(
             .ok_or_else(|| {
                 Diagnostic::error(
                     arg.loc,
-                    format!(
-                        "Параметр '{}' модели '{}' не найден при печати аргумента",
-                        arg.name, instance.unique
+                    msg!(
+                        keys::RS_024_PARAMETER_NOT_FOUND,
+                        name = arg.name,
+                        model = instance.unique
                     ),
                 )
                 .with_code("RS-024")

@@ -28,6 +28,8 @@ use crate::generator::table::{self, Row, RowTarget};
 use super::c_blocks::generate_named_blocks;
 use super::c_expr::generate_condition_expr;
 use super::c_map::CMap;
+use crate::diagnostics::lang::keys;
+use crate::msg;
 
 /// Печатает таблицу переходов модели, стражи, действия и диспетчер.
 ///
@@ -364,15 +366,13 @@ fn condition_text(
             .unwrap_or_else(|| "END".to_string());
         Diagnostic::error_with_note(
             loc,
-            format!(
-                "условный переход в состояние '{target}' не переводится в C: {}",
-                di.message
+            msg!(
+                keys::CC_018_CONDITIONAL_EDGE,
+                target = target,
+                message = di.message
             ),
             di.loc,
-            match &di.code {
-                Some(code) => format!("причина [{}]: {}", code, di.message),
-                None => format!("причина: {}", di.message),
-            },
+            crate::generator::cause_note(&di),
         )
         .with_code("CC-018")
     })

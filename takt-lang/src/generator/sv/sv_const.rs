@@ -3,6 +3,7 @@
 //! Ответственность узкая: константы модуля в форме `localparam` и печать значений,
 //! пригодных для цепи сброса (`enter` стартового состояния, диагностика `SV-008`).
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::indent::Printer;
 use crate::generator::sv::sv_expr::Scope;
@@ -12,26 +13,15 @@ use crate::generator::sv::sv_map::SvMap;
 use crate::generator::sv::sv_module::check_sv_name;
 use crate::generator::sv::sv_names::sv_enum_variant_name;
 use crate::generator::sv::sv_type::sv_type;
+use crate::msg;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ExpressionNode, StatementNode, VariableNode};
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Строит диагностику `SV-008` - `enter` стартового состояния неконстантен.
 fn sv008(state: &str, loc: Location) -> Diagnostic {
-    Diagnostic::error(
-        loc,
-        format!(
-            "блок 'enter' стартового состояния '{}' вычисляет значение, а не \
-             присваивает константу. Целью 'sv' стартовое состояние помещается в \
-             ветвь сброса (синтетического INIT-состояния в RTL нет), а ветвь \
-             сброса синтезируется в цепь сброса триггеров и выражений не \
-             вычисляет — вычислять там нечем. Перенесите вычисление в блок \
-             'always' того же состояния: вход в стартовое состояние такта не \
-             расходует (контракт ADR 0033), поэтому поведение не изменится",
-            state
-        ),
-    )
-    .with_code("SV-008")
+    Diagnostic::error(loc, msg!(keys::SV_008_START_ENTER_COMPUTES, name = state))
+        .with_code("SV-008")
 }
 
 /// Возвращает тип переменной, которой присваивают.
@@ -90,10 +80,12 @@ fn constant_value(
         // Литерал длительности - такая же константа, как число: печатается
         // миллисекундами, потому что тип `duration` в целях есть беззнаковый вектор
         // миллисекунд.
-        ExpressionNode::Duration(nanos) => {
-            crate::semantic::duration::value_millis(*nanos, loc, "инициализатор длительности")
-                .map(|millis| millis.to_string())
-        }
+        ExpressionNode::Duration(nanos) => crate::semantic::duration::value_millis(
+            *nanos,
+            loc,
+            &msg!(keys::SV_WHAT_DURATION_INITIALIZER),
+        )
+        .map(|millis| millis.to_string()),
         // Константа модели - `localparam`. Переменная и порт сюда не проходят: их
         // значение к моменту сброса не определено.
         ExpressionNode::Variable(var) => match &*var.borrow() {
@@ -210,7 +202,7 @@ pub(crate) fn emit_constants(
                 continue;
             }
             check_sv_name(&signal, *loc)?;
-            let decl = sv_type(ty, &format!("константа '{}'", name))?;
+            let decl = sv_type(ty, &msg!(keys::GEN_WHAT_CONST, name = name))?;
             // Значение печатается тем же носителем, что и цепь сброса: он знает
             // агрегаты - структуру печатает именованным литералом, массив шаблоном
             // присваивания.
@@ -218,18 +210,11 @@ pub(crate) fn emit_constants(
                 expr,
                 ty,
                 &enums_of(blocks),
-                &format!("константы '{name}'"),
+                &msg!(keys::SV_WHAT_OF_CONST, name = name),
                 *loc,
                 Some(model_rc),
             )
-            .map_err(|_| {
-                sv002(&format!(
-                    "инициализатор константы '{}': значение обязано быть известно \
-                     на этапе компиляции — localparam вычисляется синтезатором, \
-                     а не схемой",
-                    name
-                ))
-            })?;
+            .map_err(|_| sv002(&msg!(keys::SV_WHAT_CONST_INITIALIZER, name = name)))?;
             // Массив - сигналом (см. шапку функции): `localparam` такого вида не
             // синтезируется. Значение уходит в цепь сброса.
             //
@@ -259,12 +244,7 @@ pub(crate) fn emit_constants(
 
 /// Отказ `SV-002`: инициализатор в цепи сброса невычислим.
 pub(in crate::generator::sv) fn unresolvable_reset(what: &str) -> Diagnostic {
-    sv002(&format!(
-        "инициализатор {}: ветвь сброса синтезируется в цепь сброса триггеров и \
-         выражений не вычисляет — допустима константа либо выражение, значение \
-         которого известно при компиляции",
-        what
-    ))
+    sv002(&msg!(keys::SV_WHAT_UNRESOLVABLE_RESET, what = what))
 }
 
 /// Значение сигнала в ветви сброса по инициализирующему выражению.
@@ -301,10 +281,12 @@ pub(in crate::generator::sv) fn reset_value(
         ExpressionNode::Bool(b) => if *b { "1'b1" } else { "1'b0" }.to_string(),
         // Литерал длительности - константа в **миллисекундах**: тип `duration` в целях
         // есть беззнаковый вектор миллисекунд, поэтому и значение сброса такое же.
-        ExpressionNode::Duration(nanos) => {
-            crate::semantic::duration::value_millis(*nanos, loc, &format!("инициализатор {what}"))?
-                .to_string()
-        }
+        ExpressionNode::Duration(nanos) => crate::semantic::duration::value_millis(
+            *nanos,
+            loc,
+            &msg!(keys::SV_WHAT_INITIALIZER_OF, what = what),
+        )?
+        .to_string(),
         // Умолчание без инициализатора: регистр обязан иметь значение сброса -
         // "неинициализированного" триггера не бывает.
         //
@@ -407,7 +389,11 @@ fn packed_field_array(
             item,
             elem,
             enums,
-            &format!("элемента поля '{field}' структуры '{struct_name}'"),
+            &msg!(
+                keys::SV_WHAT_OF_STRUCT_FIELD_ELEMENT,
+                field = field,
+                name = struct_name
+            ),
             loc,
             scope,
         )?;
@@ -448,9 +434,11 @@ fn array_reset(
         return Err(unresolvable_reset(what));
     };
     if usize::from(*size) != items.len() {
-        return Err(sv002(&format!(
-            "инициализатор {what}: массив объявлен на {size} элементов, а значений {}",
-            items.len()
+        return Err(sv002(&msg!(
+            keys::SV_WHAT_ARRAY_INITIALIZER_LENGTH,
+            what = what,
+            size = size,
+            count = items.len()
         )));
     }
     let mut parts = Vec::with_capacity(items.len());
@@ -459,7 +447,7 @@ fn array_reset(
             value,
             elem,
             enums,
-            &format!("элемента {index} массива в {what}"),
+            &msg!(keys::SV_WHAT_OF_ARRAY_ELEMENT, index = index, what = what),
             loc,
             scope,
         )?;
@@ -492,10 +480,12 @@ fn struct_reset(
         .search_struct(name)
         .ok_or_else(|| unresolvable_reset(what))?;
     if def.fields.len() != items.len() {
-        return Err(sv002(&format!(
-            "инициализатор {what}: структура '{name}' объявляет {} полей, а значений {}",
-            def.fields.len(),
-            items.len()
+        return Err(sv002(&msg!(
+            keys::SV_WHAT_STRUCT_INITIALIZER_LENGTH,
+            what = what,
+            name = name,
+            fields = def.fields.len(),
+            count = items.len()
         )));
     }
     let mut parts = Vec::with_capacity(items.len());
@@ -514,7 +504,7 @@ fn struct_reset(
             value,
             field_ty,
             enums,
-            &format!("поля '{field}' структуры '{name}'"),
+            &msg!(keys::SV_WHAT_OF_STRUCT_FIELD, field = field, name = name),
             loc,
             scope,
         )?;

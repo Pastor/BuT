@@ -46,11 +46,13 @@ mod sv_type;
 mod sv_unroll;
 mod sv_unused;
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::Generator as AsGenerator;
 use crate::generator::header::{CommentStyle, file_header};
 use crate::generator::indent::Printer;
 use crate::generator::{GenerateOptions, GeneratedFile, Output};
+use crate::msg;
 use crate::semantic::ModelNode;
 use crate::semantic::minimap::{Element, Name};
 use crate::semantic::naming::normalize_lowercase_snakecase;
@@ -136,7 +138,7 @@ fn generate_program(
     let Element::Model { .. } = map.model() else {
         return Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            "Корневой элемент карты не является моделью".to_string(),
+            msg!(keys::SV_010_ROOT_NOT_A_MODEL),
         )
         .with_code("SV-010"));
     };
@@ -144,7 +146,7 @@ fn generate_program(
     let root = map.root_model_node().ok_or_else(|| {
         Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            format!("Корневая модель '{}' отсутствует в снимке карты", root_name),
+            msg!(keys::SV_010_ROOT_MISSING, name = root_name),
         )
         .with_code("SV-010")
     })?;
@@ -188,11 +190,9 @@ fn generate_program(
             // Место обращения к ячейке: отказ приходит до первой строки вывода, когда
             // носитель позиции ещё пуст.
             crate::generator::site::at(cell.loc),
-            format!(
-                "обращение к ячейке по адресу ('#0x{:X}') требует адресного \
-                 пространства, которого у RTL нет: сигнал приходит на вывод \
-                 кристалла. Соберите целью 'sv-mmio'",
-                cell.addr as u64
+            msg!(
+                keys::SV_017_ADDRESS_CELL,
+                addr = format!("{:X}", cell.addr as u64)
             ),
         )
         .with_code("SV-017"));

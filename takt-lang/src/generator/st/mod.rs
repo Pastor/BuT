@@ -52,11 +52,13 @@ mod st_time;
 mod st_type;
 
 use crate::address_map::{AddressSource, ResolvedAddress};
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::Generator as AsGenerator;
 use crate::generator::header::{CommentStyle, file_header};
 use crate::generator::indent::Printer;
 use crate::generator::{GenerateOptions, GeneratedFile, Output};
+use crate::msg;
 use crate::semantic::minimap::{Element, Name};
 use crate::semantic::naming::normalize_lowercase_snakecase;
 use crate::semantic::{ModelNode, PortDirection, VariableNode};
@@ -117,7 +119,7 @@ fn generate_program(map: &StMap) -> Result<(String, Vec<Diagnostic>), Diagnostic
     let Element::Model { .. } = map.model() else {
         return Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            "Корневой элемент карты не является моделью".to_string(),
+            msg!(keys::ST_012_ROOT_NOT_A_MODEL),
         )
         .with_code("ST-012"));
     };
@@ -138,11 +140,9 @@ fn generate_program(map: &StMap) -> Result<(String, Vec<Diagnostic>), Diagnostic
             // Место обращения к ячейке: отказ приходит до первой строки вывода, когда
             // носитель позиции ещё пуст, - координату несёт сама ячейка.
             crate::generator::site::at(cell.loc),
-            format!(
-                "обращение к ячейке по адресу ('#0x{:X}') требует размещения, \
-                 которого цель 'st' не знает: она порождает библиотеку блоков. \
-                 Соберите целью 'st-at'",
-                cell.addr as u64
+            msg!(
+                keys::ST_018_ADDRESS_CELL,
+                addr = format!("{:X}", cell.addr as u64)
             ),
         )
         .with_code("ST-018"));
@@ -257,16 +257,8 @@ fn generate_program(map: &StMap) -> Result<(String, Vec<Diagnostic>), Diagnostic
         for site in crate::semantic::formula::sites::model_formula_sites(&model.borrow()) {
             if let crate::semantic::formula::sites::FormulaLeaf::Guard(_) = site.formula {
                 warnings.push(
-                    Diagnostic::warning(
-                        site.loc,
-                        "охранная формула не транслируется целью 'st': в IEC 61131-3 \
-                         конструкции assert не существует, а выразить проверку иначе \
-                         значило бы добавить в вывод переменную, которой нет в модели. \
-                         Охрана остаётся действующей в симуляторе (SIM-025) и в целях \
-                         'c', 'rust', 'sv'"
-                            .to_string(),
-                    )
-                    .with_code("ST-022"),
+                    Diagnostic::warning(site.loc, msg!(keys::ST_022_GUARD_FORMULA))
+                        .with_code("ST-022"),
                 );
             }
         }
@@ -293,11 +285,11 @@ fn anon_global(cell: &crate::semantic::AnonPortAccess) -> Result<String, Diagnos
     if !is_bit && cell.bit != 0 {
         return Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            format!(
-                "обращение '#0x{:X}:{} as {}' задаёт поле со смещением, а локация \
-                 IEC 61131-3 такого не выражает: допустимы либо один бит \
-                 ('#0x{:X}.N'), либо целое слово ('#0x{:X} as ТИП')",
-                cell.addr as u64, cell.bit, cell.ty, cell.addr as u64, cell.addr as u64
+            msg!(
+                keys::ST_019_FIELD_WITH_OFFSET,
+                addr = format!("{:X}", cell.addr as u64),
+                bit = cell.bit,
+                ty = cell.ty
             ),
         )
         .with_code("ST-019"));
@@ -504,7 +496,7 @@ fn topological_order(map: &StMap, models: Vec<Name>) -> Vec<Name> {
 fn root_missing(name: Name) -> Diagnostic {
     Diagnostic::error(
         crate::generator::site::at(Location::Codegen),
-        format!("Корневая модель '{}' отсутствует в снимке карты", name),
+        msg!(keys::ST_012_ROOT_MISSING, name = name),
     )
     .with_code("ST-012")
 }

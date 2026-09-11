@@ -1,5 +1,7 @@
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::FloatWidth;
+use crate::msg;
 use crate::semantic::minimap::{Element, Map, Name};
 use crate::semantic::naming::normalize_camelcase_name;
 use crate::semantic::unused::UsageSet;
@@ -80,7 +82,7 @@ impl CMap {
                     // Язык сообщений - свойство инструмента, а не автора строки: две
                     // диагностики цели `c` оставались английскими, тогда как парные им
                     // `RS-013` и `SV-011` давно по-русски.
-                    format!("Модель '{}' не найдена", name),
+                    msg!(keys::CC_004_MODEL_NOT_FOUND, name = name),
                 )
                 .with_code("CC-004")
             })
@@ -95,7 +97,7 @@ impl CMap {
                 // переходов.
                 Diagnostic::error(
                     crate::generator::site::at(Location::Codegen),
-                    format!("Состояние '{}' не найдено", name),
+                    msg!(keys::CC_005_STATE_NOT_FOUND, name = name),
                 )
                 .with_code("CC-005")
             })

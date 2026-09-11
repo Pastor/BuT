@@ -10,11 +10,13 @@
 //! Вывод при этом валиден и `clippy -D warnings` его принимает - расхождение
 //! молчаливое.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::chain_site;
 use crate::generator::rust::rust_map::RustMap;
 use crate::generator::rust::rust_model::{Instance, collect_instances};
 use crate::generator::rust::rust_name::{rust_type_name, rust_value_name};
+use crate::msg;
 use crate::semantic::minimap::{Element, Name, StateExtend};
 
 /// Один шаг последовательной композиции (`A + B + (C | D) + E`).
@@ -82,12 +84,7 @@ pub(crate) fn concat_steps(
         if matches!(step, StateExtend::Concatenation(_)) {
             return Err(Diagnostic::error(
                 Location::Codegen,
-                format!(
-                    "Состояние '{}': последовательная композиция вложена в шаг \
-                     другой последовательной композиции — это не транслируется \
-                     в Rust. Разнесите шаги по отдельным состояниям",
-                    state.local()
-                ),
+                msg!(keys::RS_021_NESTED_CHAIN, name = state.local()),
             )
             .with_code("RS-021"));
         }

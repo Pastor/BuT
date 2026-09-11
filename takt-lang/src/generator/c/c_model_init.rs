@@ -7,10 +7,12 @@
 
 use super::c_blocks::generate_scalar_init;
 use super::c_expr::generate_expr;
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::c::PortClass;
 use crate::generator::c::c_map::CMap;
 use crate::generator::indent::Printer;
+use crate::msg;
 use crate::semantic::extend::ParameterArgument;
 use crate::semantic::minimap::{Element, Name, StateExtend};
 use crate::semantic::type_node::TypeNode;
@@ -29,7 +31,7 @@ pub(super) fn generate_model_init(
     else {
         return Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            "Элемент не является моделью".to_string(),
+            msg!(keys::CC_006_NOT_A_MODEL),
         )
         .with_code("CC-006"));
     };
@@ -336,7 +338,7 @@ fn generate_array_init(
     let TypeNode::Array(size, _) = ty else {
         return Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            format!("переменная '{}': ожидался массив", field),
+            msg!(keys::CC_017_EXPECTED_ARRAY, name = field),
         )
         .with_code("CC-017"));
     };
@@ -346,22 +348,18 @@ fn generate_array_init(
     let (ExpressionNode::Initializer(elems) | ExpressionNode::Array(elems)) = expr else {
         return Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            format!(
-                "переменная '{}': скалярный инициализатор массива не выразим в C — \
-                 массив в C не присваивается; используйте агрегат вида ':= {{0, 0, …}}'",
-                field
-            ),
+            msg!(keys::CC_017_SCALAR_ARRAY_INITIALIZER, name = field),
         )
         .with_code("CC-017"));
     };
     if elems.len() != usize::from(*size) {
         return Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            format!(
-                "переменная '{}': инициализатор из {} элементов не соответствует массиву [{}]",
-                field,
-                elems.len(),
-                size
+            msg!(
+                keys::CC_017_INITIALIZER_LENGTH,
+                name = field,
+                count = elems.len(),
+                size = size
             ),
         )
         .with_code("CC-017"));
@@ -403,7 +401,7 @@ fn generate_wide_bits_init(
 ) -> Result<(), Diagnostic> {
     let ExpressionNode::Number(_) = expr else {
         return Err(crate::generator::c::c_unsupported::refuse(
-            crate::generator::c::c_unsupported::UnsupportedNode::WideBitVector("инициализатор"),
+            crate::generator::c::c_unsupported::UnsupportedNode::WideBitVectorInitializer,
             expr.loc(),
         ));
     };
@@ -541,7 +539,7 @@ fn variant_of(
     crate::generator::c::c_chain::step_variant(state_unique_upper, item, idx).ok_or_else(|| {
         Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            "Неподдерживаемый тип элемента конкатенации".to_string(),
+            msg!(keys::CC_007_UNSUPPORTED_CONCAT_ELEMENT),
         )
         .with_code("CC-007")
     })
@@ -603,7 +601,7 @@ pub(super) fn generate_concat_item_init(
         }
         _ => Err(Diagnostic::error(
             crate::generator::site::at(Location::Codegen),
-            "Неподдерживаемый тип элемента конкатенации".to_string(),
+            msg!(keys::CC_007_UNSUPPORTED_CONCAT_ELEMENT),
         )
         .with_code("CC-007")),
     }

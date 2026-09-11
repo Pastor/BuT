@@ -17,8 +17,10 @@
 //! детектором формата [`fixed_format`].
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::rust::rust_expr::{Scope, print_expression, unsupported};
 use crate::generator::rust::rust_type::rust_type;
+use crate::msg;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::type_node::type_fixed::fixed_storage_bits;
 use crate::semantic::{ExpressionNode, FunctionDefinitionNode};
@@ -308,7 +310,7 @@ pub(crate) fn cast(
         }
         // q -> целое/бит: floor(repr / 2^n) = целая часть (арифметический `>>`).
         (Some((_, from_n, _)), _) => {
-            let t = rust_type(target, "приведение q → целое")?;
+            let t = rust_type(target, &msg!(keys::RS_WHAT_Q_TO_INT))?;
             Ok(format!("((({printed} as i64) >> {from_n}) as {t})"))
         }
         // Литерал -> q: значение известно при компиляции.
@@ -327,10 +329,7 @@ pub(crate) fn cast(
         (None, TypeNode::Fixed { .. })
             if matches!(expression_type(inner), Some(TypeNode::Rational)) =>
         {
-            Err(unsupported(
-                "приведение float → q в рантайме: нужен floor, которого нет в \
-                 no_std без libm (литеральный float понижается на этапе компиляции)",
-            ))
+            Err(unsupported(&msg!(keys::RS_WHAT_FLOAT_TO_Q)))
         }
         // целое/бит -> q: repr = v · 2^n с wraparound к W.
         (None, TypeNode::Fixed { m: tm, n: tn, sat }) => Ok(wrap_to(
@@ -342,7 +341,7 @@ pub(crate) fn cast(
         )),
         // Ни источник, ни цель не q - вызывающий не должен был звать сюда.
         (None, _) => {
-            let t = rust_type(target, "приведение типа")?;
+            let t = rust_type(target, &msg!(keys::GEN_WHAT_CAST))?;
             Ok(format!("({printed} as {t})"))
         }
     }

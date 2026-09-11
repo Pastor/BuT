@@ -19,9 +19,11 @@
 //! эмитит.
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::indent::Printer;
 use crate::generator::st::st_reserved::{check_st_declaration, check_st_local_clash};
 use crate::generator::st::st_type::{self, get_st_type};
+use crate::msg;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::unused::UsageSet;
 use crate::semantic::{ExpressionNode, ModelNode, PortDirection, VariableNode};
@@ -642,7 +644,7 @@ pub(crate) fn literal_init(
         ExpressionNode::Duration(nanos) => crate::semantic::duration::value_millis(
             *nanos,
             crate::diagnostics::Location::Codegen,
-            "инициализатор длительности",
+            &msg!(keys::ST_WHAT_DURATION_INITIALIZER),
         )
         .ok()
         .map(|millis| millis.to_string()),

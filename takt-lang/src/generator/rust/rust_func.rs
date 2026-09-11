@@ -10,6 +10,7 @@
 //! дельту фичи к цели `c`.
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::rust::Printer;
 use crate::generator::rust::rust_expr::Scope;
 use crate::generator::rust::rust_map::RustMap;
@@ -17,6 +18,7 @@ use crate::generator::rust::rust_name::rust_value_name;
 use crate::generator::rust::rust_needs::function_needs;
 use crate::generator::rust::rust_stmt::{StmtOutput, print_block, print_statement, print_tail};
 use crate::generator::rust::rust_type::rust_type;
+use crate::msg;
 use crate::semantic::minimap::Name;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{FunctionDefinitionNode, ModelNode, StatementNode};
@@ -89,7 +91,10 @@ pub(crate) fn emit_functions(
                 // Массив передаётся по ссылке: по значению это копия на каждый вызов,
                 // тогда как цель `c` передаёт указатель, а `st` - `VAR_IN_OUT`. Признак -
                 // общий с печатью аргумента: разъехавшись, они дают `E0308`.
-                let printed = rust_type(pty, &format!("параметр '{}' функции '{}'", pname, name))?;
+                let printed = rust_type(
+                    pty,
+                    &msg!(keys::GEN_WHAT_FUNCTION_PARAM, name = pname, function = name),
+                )?;
                 let printed = if crate::generator::rust::rust_byref::is_array_by_reference(pty) {
                     format!("&{printed}")
                 } else {
@@ -103,8 +108,14 @@ pub(crate) fn emit_functions(
                 // Массив передаётся по ссылке: по значению это копия на каждый вызов,
                 // тогда как цель `c` передаёт указатель, а `st` - `VAR_IN_OUT`. Признак -
                 // общий с печатью аргумента.
-                let printed_ty =
-                    rust_type(vty, &format!("переменная '{}' в функции '{}'", vname, name))?;
+                let printed_ty = rust_type(
+                    vty,
+                    &msg!(
+                        keys::RS_WHAT_FUNCTION_VARIABLE,
+                        name = vname,
+                        function = name
+                    ),
+                )?;
                 let printed_ty = if crate::generator::rust::rust_byref::is_array_by_reference(vty) {
                     format!("&{printed_ty}")
                 } else {
@@ -125,7 +136,7 @@ pub(crate) fn emit_functions(
                 TypeNode::Unit | TypeNode::Inference => String::new(),
                 other => format!(
                     " -> {}",
-                    rust_type(other, &format!("возврат функции '{}'", name))?
+                    rust_type(other, &msg!(keys::RS_WHAT_FUNCTION_RETURN, function = name))?
                 ),
             };
 

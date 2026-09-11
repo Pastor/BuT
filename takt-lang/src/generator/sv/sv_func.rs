@@ -6,6 +6,7 @@
 //! размера модуля (`scripts/check-module-size.sh`).
 
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::indent::Printer;
 use crate::generator::sv::sv_expr::{Scope, sv002};
 use crate::generator::sv::sv_fsm::{Block, Fsm};
@@ -15,6 +16,7 @@ use crate::generator::sv::sv_stmt::{
     emit_hoisted_locals, has_early_return, hoist_locals, print_statement,
 };
 use crate::generator::sv::sv_type::sv_type;
+use crate::msg;
 use crate::semantic::FunctionDefinitionNode;
 use std::collections::BTreeSet;
 
@@ -62,7 +64,10 @@ pub(crate) fn emit_functions(
             // рождается вне операторов и печатался без координаты - автор не знал,
             // какую функцию переписывать.
             crate::generator::site::enter_declaration(*loc);
-            let ret_ty = sv_type(ret, &format!("возвращаемый тип функции '{}'", name))?;
+            let ret_ty = sv_type(
+                ret,
+                &msg!(keys::SV_WHAT_FUNCTION_RETURN_TYPE, function = name),
+            )?;
             let mut sig: Vec<String> = Vec::new();
             // Массив в параметре передаётся плоским вектором: распакованную размерность
             // у порта функции yosys не принимает вовсе ("input/output/inout ports
@@ -87,7 +92,10 @@ pub(crate) fn emit_functions(
                     unpack.push((param.clone(), ty.clone(), flat_param));
                     continue;
                 }
-                let decl = sv_type(ty, &format!("параметр '{}' функции '{}'", param, name))?;
+                let decl = sv_type(
+                    ty,
+                    &msg!(keys::GEN_WHAT_FUNCTION_PARAM, name = param, function = name),
+                )?;
                 sig.push(format!("input {}", decl.declare(param)));
             }
             // Возврат-массив объявляется через `typedef`. Напечатай цель один `prefix`,
@@ -176,15 +184,7 @@ pub(crate) fn emit_functions(
             // Возврат печатается присваиванием имени функции и исполнения не прерывает,
             // поэтому досрочный возврат сменил бы смысл молча.
             if has_early_return(body) {
-                return Err(sv002(&format!(
-                    "досрочный возврат из функции '{}': возврат в цели 'sv' \
-                     печатается присваиванием имени функции и исполнение не \
-                     прерывает, поэтому допустим только последним оператором \
-                     тела. Ключевое слово 'return' эту задачу решило бы, но его \
-                     не принимает синтезатор yosys. Перепишите функцию так, \
-                     чтобы возврат был один и стоял в конце",
-                    name
-                )));
+                return Err(sv002(&msg!(keys::SV_WHAT_EARLY_RETURN, name = name)));
             }
             // Локальные имена функции - параметры и её `var`: без них локальная
             // переменная, чьё имя совпало с переменной модели, печаталась бы сигналом

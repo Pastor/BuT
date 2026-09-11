@@ -16,6 +16,8 @@
 //! Соответственно пара `(k, q)` **согласована**, если разметка вершины Крипке `k` (её
 //! имя - единственный истинный атом) удовлетворяет литералам `q`.
 
+use crate::diagnostics::lang::keys;
+use crate::msg;
 use crate::verification::buchi::BuchiAutomaton;
 use crate::verification::kripke::Kripke;
 use crate::verification::ltl::Ltl;
@@ -55,17 +57,17 @@ impl Product {
 
     /// Текстовый дамп произведения для отладки (`taktc verify --trace`).
     pub fn trace(&self, kripke: &Kripke) -> String {
-        let mut out = format!(
-            "=== Произведение K x A_!phi ({} состояний, {} принимающих) ===\n",
-            self.states.len(),
-            self.accepting.len()
-        );
+        let mut out = msg!(
+            keys::VERIFY_TRACE_PRODUCT_HEADER,
+            states = self.states.len(),
+            accepting = self.accepting.len()
+        ) + "\n";
         for (s, &(k, q)) in self.states.iter().enumerate() {
             let marks = match (self.initial.contains(&s), self.accepting.contains(&s)) {
-                (true, true) => " (нач., принимающее)",
-                (true, false) => " (нач.)",
-                (false, true) => " (принимающее)",
-                (false, false) => "",
+                (true, true) => format!(" {}", msg!(keys::VERIFY_TRACE_MARK_INITIAL_ACCEPTING)),
+                (true, false) => format!(" {}", msg!(keys::VERIFY_TRACE_MARK_INITIAL)),
+                (false, true) => format!(" {}", msg!(keys::VERIFY_TRACE_MARK_ACCEPTING)),
+                (false, false) => String::new(),
             };
             let succ: Vec<String> = self
                 .successors(s)

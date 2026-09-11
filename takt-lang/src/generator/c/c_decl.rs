@@ -6,8 +6,10 @@
 use super::c_expr::{generate_code_block, get_function_name};
 use super::{c_type_or_diagnostic, typed_variable_or_diagnostic};
 use crate::diagnostics::Diagnostic;
+use crate::diagnostics::lang::keys;
 use crate::generator::c::c_map::CMap;
 use crate::generator::indent::Printer;
+use crate::msg;
 use crate::semantic::minimap::Element;
 use crate::semantic::naming::normalize_lowercase_snakecase;
 use crate::semantic::type_node::TypeNode;
@@ -35,7 +37,7 @@ fn const_expr_string(expr: &ExpressionNode, name: &str) -> Result<String, Diagno
         crate::semantic::duration::value_millis(
             *nanos,
             crate::diagnostics::Location::Codegen,
-            &format!("значение константы '{name}'"),
+            &msg!(keys::GEN_WHAT_CONST_VALUE, name = name),
         )?
         .to_string()
     } else if let ExpressionNode::Initializer(value) = expr {
@@ -133,7 +135,7 @@ pub(super) fn generate_constants_and_ports_and_enums(
                             elem,
                             model,
                             map.float_width(),
-                            &format!("константа '{name}'"),
+                            &msg!(keys::GEN_WHAT_CONST, name = name),
                         )?;
                         lines.push(format!(
                             "static const {elem_ty} CONST_{name}[{len}] = {value};"
@@ -215,7 +217,11 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
                                 name,
                                 model,
                                 map.float_width(),
-                                &format!("параметр '{}' функции '{}'", name, fun.name()),
+                                &msg!(
+                                    keys::GEN_WHAT_FUNCTION_PARAM,
+                                    name = name,
+                                    function = fun.name()
+                                ),
                             )
                         })
                         .collect::<Result<Vec<String>, Diagnostic>>()?;
@@ -235,7 +241,7 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
                         ret,
                         model,
                         map.float_width(),
-                        &format!("возвращаемое значение функции '{}'", fun.name()),
+                        &msg!(keys::GEN_WHAT_FUNCTION_RETURN, function = fun.name()),
                     )?;
                     // Пустой список параметров печатается `void`, а не пустотой: `f()`
                     // в C означает "список неизвестен" (K&R), и `cc
@@ -321,7 +327,11 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
                                 name,
                                 model,
                                 map.float_width(),
-                                &format!("параметр '{}' функции '{}'", name, fun.name()),
+                                &msg!(
+                                    keys::GEN_WHAT_FUNCTION_PARAM,
+                                    name = name,
+                                    function = fun.name()
+                                ),
                             )
                         })
                         .collect::<Result<Vec<String>, Diagnostic>>()?;
@@ -329,7 +339,7 @@ pub(super) fn generate_functions(printer: &mut Printer, map: &CMap) -> Result<()
                         ret,
                         model,
                         map.float_width(),
-                        &format!("возвращаемое значение функции '{}'", fun.name()),
+                        &msg!(keys::GEN_WHAT_FUNCTION_RETURN, function = fun.name()),
                     )?;
                     external_funcs.push(format!(
                         "extern {} {}({});",

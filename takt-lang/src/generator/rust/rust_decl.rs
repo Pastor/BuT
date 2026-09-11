@@ -1,6 +1,7 @@
 //! Объявления порождаемого модуля: перечисления, константы, порты, HAL-трейт, `struct`
 //! моделей.
 
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
 use crate::generator::indent::Printer;
 use crate::generator::rust::rust_expr::{Scope, const_ident};
@@ -8,6 +9,7 @@ use crate::generator::rust::rust_map::RustMap;
 use crate::generator::rust::rust_name::{check_name_collisions, rust_type_name, rust_value_name};
 use crate::generator::rust::rust_port::{PortClass, port_class};
 use crate::generator::rust::rust_type::{enum_repr, rust_type};
+use crate::msg;
 use crate::semantic::minimap::Name;
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::{ModelNode, PortDirection, VariableNode};
@@ -129,7 +131,7 @@ pub(crate) fn collect_ports(
                         rust_value_name(pname, *loc)?,
                         rust_type(
                             pty,
-                            &format!("параметр '{}' внешней функции '{}'", pname, name)
+                            &msg!(keys::RS_WHAT_EXTERNAL_PARAM, name = pname, function = name)
                         )?
                     ));
                 }
@@ -137,7 +139,7 @@ pub(crate) fn collect_ports(
                     TypeNode::Unit => String::new(),
                     other => format!(
                         " -> {}",
-                        rust_type(other, &format!("возврат внешней функции '{}'", name))?
+                        rust_type(other, &msg!(keys::RS_WHAT_EXTERNAL_RETURN, function = name))?
                     ),
                 };
                 set.externals.insert(
@@ -165,7 +167,7 @@ pub(crate) fn emit_hal(p: &mut Printer, set: &PortSet) -> Result<(), Diagnostic>
             .collect();
         check_name_collisions(
             &names,
-            &format!("порты перечисления {}", enum_name),
+            &msg!(keys::RS_KIND_ENUM_PORTS, name = enum_name),
             Location::Codegen,
         )?;
 
@@ -199,7 +201,7 @@ pub(crate) fn emit_hal(p: &mut Printer, set: &PortSet) -> Result<(), Diagnostic>
             .ok_or_else(|| {
                 Diagnostic::error(
                     Location::Codegen,
-                    format!("Категория порта для '{}' не найдена", enum_name),
+                    msg!(keys::RS_012_PORT_CATEGORY_NOT_FOUND, name = enum_name),
                 )
                 .with_code("RS-012")
             })?;
@@ -289,7 +291,7 @@ pub(crate) fn emit_enums(
                 .collect::<Result<Vec<_>, Diagnostic>>()?;
             check_name_collisions(
                 &variants,
-                &format!("варианты перечисления '{}'", def.name),
+                &msg!(keys::RS_KIND_ENUM_VARIANTS, name = def.name),
                 def.loc,
             )?;
 
@@ -327,7 +329,7 @@ fn emit_from_repr(
 ) -> Result<(), Diagnostic> {
     let repr = enum_repr(&def.variants);
     let default = variants.first().map(|(_, v)| v.clone()).ok_or_else(|| {
-        Diagnostic::error(def.loc, "перечисление без вариантов".to_string()).with_code("RS-016")
+        Diagnostic::error(def.loc, msg!(keys::RS_016_ENUM_WITHOUT_VARIANTS)).with_code("RS-016")
     })?;
     p.ident(&format!("impl {name} {{")).nl();
     p.up();
@@ -400,7 +402,7 @@ pub(crate) fn emit_structs(
             for (field, ty) in &def.fields {
                 let rust_ty = crate::generator::rust::rust_type::rust_type(
                     ty,
-                    &format!("поле '{}' структуры '{}'", field, def.name),
+                    &msg!(keys::GEN_WHAT_STRUCT_FIELD, field = field, name = def.name),
                 )?;
                 p.ident(&format!(
                     "pub {}: {},",
@@ -490,7 +492,7 @@ pub(crate) fn emit_constants(
             if !seen.insert(ident.clone()) {
                 continue;
             }
-            let ty_name = rust_type(ty, &format!("константа '{}'", name))?;
+            let ty_name = rust_type(ty, &msg!(keys::GEN_WHAT_CONST, name = name))?;
             // Значение печатается по типу приёмника: у константы структурного типа
             // агрегат `{3, 4}` обязан стать литералом структуры.
             let value = crate::generator::rust::rust_expr::coerce_to(expr, ty, &scope)?;
@@ -540,14 +542,14 @@ pub(crate) fn default_value(ty: &TypeNode, model: &ModelNode) -> Result<String, 
             let def = model.search_enum(name).ok_or_else(|| {
                 Diagnostic::error(
                     Location::Codegen,
-                    format!("Перечисление '{}' не найдено", name),
+                    msg!(keys::RS_012_ENUM_NOT_FOUND, name = name),
                 )
                 .with_code("RS-012")
             })?;
             let first = def.variants.first().ok_or_else(|| {
                 Diagnostic::error(
                     def.loc,
-                    format!("Перечисление '{}' не имеет вариантов", name),
+                    msg!(keys::RS_014_ENUM_WITHOUT_VARIANTS, name = name),
                 )
                 .with_code("RS-014")
             })?;
@@ -559,7 +561,7 @@ pub(crate) fn default_value(ty: &TypeNode, model: &ModelNode) -> Result<String, 
         }
         other => Err(Diagnostic::error(
             Location::Codegen,
-            format!("Значение по умолчанию для типа '{}' не строится", other),
+            msg!(keys::RS_014_DEFAULT_NOT_BUILT, ty = other),
         )
         .with_code("RS-014")),
     }

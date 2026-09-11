@@ -6,7 +6,9 @@
 //! использует.
 
 use crate::address_map::ResolvedAddress;
+use crate::diagnostics::lang::keys;
 use crate::diagnostics::{Diagnostic, Location};
+use crate::msg;
 use crate::semantic::minimap::{Element, Map, Name, StateExtend};
 use crate::semantic::type_node::TypeNode;
 use crate::semantic::unused::UsageSet;
@@ -102,7 +104,7 @@ impl StMap {
             .ok_or_else(|| {
                 Diagnostic::error(
                     Location::Codegen,
-                    format!("Состояние '{name}' не найдено в карте"),
+                    msg!(keys::ST_012_STATE_NOT_IN_MAP, name = name),
                 )
                 .with_code("ST-012")
             })
@@ -248,8 +250,11 @@ impl StMap {
         self.map
             .model_at(Some(name.unique().to_string()))
             .ok_or_else(|| {
-                Diagnostic::error(Location::Codegen, format!("Модель '{}' не найдена", name))
-                    .with_code("ST-012")
+                Diagnostic::error(
+                    Location::Codegen,
+                    msg!(keys::ST_012_MODEL_NOT_FOUND, name = name),
+                )
+                .with_code("ST-012")
             })
     }
 

@@ -48,6 +48,8 @@ pub(in crate::generator::c) enum UnsupportedNode {
     BitBeyondVector,
     /// Операция над широким бит-вектором, не выразимая по словам.
     WideBitVector(&'static str),
+    /// Инициализатор широкого бит-вектора, не выразимый по словам.
+    WideBitVectorInitializer,
 }
 
 impl UnsupportedNode {
@@ -65,6 +67,10 @@ impl UnsupportedNode {
             UnsupportedNode::UnknownBuiltin => msg!(keys::CC_022_NODE_UNKNOWN_BUILTIN),
             UnsupportedNode::BitBeyondVector => msg!(keys::CC_022_NODE_BIT_BEYOND_VECTOR),
             UnsupportedNode::WideBitVector(op) => msg!(keys::CC_022_NODE_WIDE_BIT_VECTOR, op = op),
+            UnsupportedNode::WideBitVectorInitializer => msg!(
+                keys::CC_022_NODE_WIDE_BIT_VECTOR,
+                op = msg!(keys::GEN_WHAT_INITIALIZER)
+            ),
         }
     }
 
@@ -78,14 +84,16 @@ impl UnsupportedNode {
             UnsupportedNode::ArraySlice => msg!(keys::CC_022_WHY_ARRAY_SLICE),
             UnsupportedNode::Builtin(_) => msg!(keys::CC_022_WHY_BUILTIN),
             UnsupportedNode::BitBeyondVector => msg!(keys::CC_022_WHY_BIT_BEYOND_VECTOR),
-            UnsupportedNode::WideBitVector(_) => msg!(keys::CC_022_WHY_WIDE_BIT_VECTOR),
+            UnsupportedNode::WideBitVector(_) | UnsupportedNode::WideBitVectorInitializer => {
+                msg!(keys::CC_022_WHY_WIDE_BIT_VECTOR)
+            }
             _ => String::new(),
         }
     }
 
     /// Все виды - для теста (перечисление обязано быть полным).
     #[cfg(test)]
-    pub(in crate::generator::c) const ALL: [UnsupportedNode; 11] = [
+    pub(in crate::generator::c) const ALL: [UnsupportedNode; 12] = [
         UnsupportedNode::Model,
         UnsupportedNode::ArraySlice,
         UnsupportedNode::CodeBlock,
@@ -97,6 +105,7 @@ impl UnsupportedNode {
         UnsupportedNode::UnknownBuiltin,
         UnsupportedNode::BitBeyondVector,
         UnsupportedNode::WideBitVector("+"),
+        UnsupportedNode::WideBitVectorInitializer,
     ];
 }
 
