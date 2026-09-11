@@ -56,6 +56,8 @@ const picks = {};
 
 const state = {
   bridge: null,
+  /** Ручка справки (`help.js`): страница без входа держит её несъёмной. */
+  help: null,
   editor: null,
   worker: null,
   target: "c",
@@ -169,6 +171,15 @@ export async function main() {
   fillLanguages();
   picks.lang = enhance(dom.lang);
 
+  // Вход решает, что видно, и решает до загрузки модуля: иначе читатель без входа
+  // секунды смотрел бы на рабочее поле, которое ему не покажут. Сессия читается из
+  // памяти браузера, а справке модуль не нужен. Корень API берётся от пути страницы:
+  // за прокси она стоит под префиксом, а на `/p/<id>` относительный адрес увёл бы
+  // запрос под неё саму.
+  api.configure({ root: project.apiRoot(location.pathname), storage: localStorage });
+  state.help = attachHelp(dom);
+  showSignedIn(api.who() !== null);
+
   // Опись сборки читается до модуля: в ней адрес модуля с версией в пути.
   state.build = await build.describe();
   state.bridge = await Bridge.load(state.build.wasm ?? WASM_DEFAULT);
@@ -182,7 +193,6 @@ export async function main() {
   fillTargets(version.targets ?? []);
   // Цель и ключи выбираются окном настроек сборки; носители величин прежние - список
   // `#target` и строка `#args`, - и окно правит их тем же путём, что и смена цели в списке.
-  attachHelp(dom);
   state.buildSettings = attachBuildSettings(
     {
       modal: dom["build-modal"],
@@ -297,9 +307,7 @@ export async function main() {
   // Курсор в объявлении состояния подсвечивает узел: обратная половина синхронизации.
   document.addEventListener("selectionchange", syncCursor);
 
-  // Учётная запись и проекты. Корень API берётся от пути страницы: за прокси она стоит
-  // под префиксом, а на `/p/<id>` относительный адрес увёл бы запрос под неё саму.
-  api.configure({ root: project.apiRoot(location.pathname), storage: localStorage });
+  // Учётная запись и проекты; клиент API настроен в начале запуска.
   account.attach(dom, {
     source: () => state.editor.value(),
     scenario: () => state.scenario,
@@ -364,6 +372,7 @@ export async function main() {
     },
     showTrace: () => showSource("scenario"),
     showScheme: () => showSource("scheme"),
+    signedIn: showSignedIn,
     say,
   });
   // Структура проекта рисуется сразу: без входа она говорит, что проекта нет, -
@@ -389,6 +398,21 @@ export async function main() {
   // на месте своей.
   if (!last) applyState(restored ?? { source: "" });
   refresh();
+}
+
+/**
+ * Показывает страницу по входу: вошедшему - целиком, без входа - верхнюю шапку и
+ * справку. Признак стоит на `body`, и прячут области правила стилей: рабочее поле
+ * живёт и без входа - черновик, ссылка и проект открываются обычным путём и
+ * показываются, как только читатель войдёт.
+ *
+ * @param {boolean} on вошёл ли читатель
+ */
+function showSignedIn(on) {
+  const auth = on ? "in" : "out";
+  if (document.body.dataset.auth === auth) return;
+  document.body.dataset.auth = auth;
+  state.help?.pin(!on);
 }
 
 /**

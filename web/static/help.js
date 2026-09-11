@@ -80,6 +80,8 @@ export function attachHelp(nodes, { storage = globalThis.localStorage } = {}) {
   const owner = new Map();
   let hits = [];
   let current = -1;
+  /** Несъёмна ли справка ([`pin`]). */
+  let pinned = false;
 
   function load() {
     loading ??= fetch(new URL("help.html", import.meta.url))
@@ -246,10 +248,29 @@ export function attachHelp(nodes, { storage = globalThis.localStorage } = {}) {
     if (!go(shell.setting(storage, shell.UI_KEYS.helpAt, ""))) dom.doc.scrollTop = 0;
   }
 
-  function close() {
+  function hide() {
     dom.help.hidden = true;
     dom.button.setAttribute("aria-pressed", "false");
+  }
+
+  function close() {
+    if (pinned) return;
+    hide();
     dom.button.focus();
+  }
+
+  /**
+   * Справка несъёмна: без входа она - всё, что показывает страница, и закрыть её
+   * значило бы оставить читателя перед пустым полем. Крестика у несъёмной нет,
+   * Escape её не закрывает. Снятие прячет справку без переноса фокуса: её сняли
+   * вход, а не читатель, и фокус остаётся там, где его оставило окно входа.
+   */
+  function pin(on) {
+    if (on === pinned) return;
+    pinned = on;
+    dom.close.hidden = on;
+    if (on) open();
+    else hide();
   }
 
   let pending = 0;
@@ -286,5 +307,5 @@ export function attachHelp(nodes, { storage = globalThis.localStorage } = {}) {
       dom.search.select();
     }
   });
-  return { open, close };
+  return { open, close, pin };
 }

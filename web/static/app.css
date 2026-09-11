@@ -2832,6 +2832,16 @@ body[data-crumbs="off"] #project { display: none; }
   color: var(--on-surface);
 }
 .help[hidden] { display: none; }
+/* Без входа страница - верхняя шапка и справка: полоса
+ * управления, области, полка режимов и ручка ширины скрыты. Строка сообщений
+ * видна, только когда ей есть что сказать: через неё приходит ответ входа.
+ * Признак ставит страница по сессии (`body[data-auth]`); справка в это время
+ * несъёмна и стоит на месте рабочего поля. */
+body[data-auth="out"] .bar-tools,
+body[data-auth="out"] .modes,
+body[data-auth="out"] .grip,
+body[data-auth="out"] .say:empty,
+body[data-auth="out"] .work > :not(.help) { display: none; }
 .help-head {
   display: flex;
   align-items: center;

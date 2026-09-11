@@ -2312,3 +2312,67 @@ function memoryStorage() {
     removeItem: (key) => map.delete(key),
   };
 }
+
+test("вход: без входа видны верхняя шапка и справка, и справка несъёмна", async () => {
+  // Предмет - две половины одного решения: правила стилей прячут всё, кроме верхней
+  // полосы и справки, а справка без входа не закрывается - иначе читатель остался бы
+  // перед пустым полем. Вёрстку смотрит прогон страницы; здесь - то, что ломается молча.
+  const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
+  const css = await readFile(new URL("../static/app.css", import.meta.url), "utf8");
+  const rule = css.match(/((?:body\[data-auth="out"\][^,{]*,\s*)*body\[data-auth="out"\][^,{]*)\{\s*display:\s*none;?\s*\}/);
+  assert.ok(rule, "правила 'без входа' нет");
+  const hidden = rule[1].split(",").map((part) => part.replace('body[data-auth="out"]', "").trim());
+  assert.deepEqual(hidden, [".bar-tools", ".modes", ".grip", ".say:empty", ".work > :not(.help)"], "без входа прячется не то");
+  const work = html.slice(html.indexOf('<main class="work">'));
+  assert.match(work, /^<main class="work">\s*(?:<!--[\s\S]*?-->\s*)*<div id="help" class="help"/, "справка - не прямой потомок рабочего поля");
+  const brand = html.slice(html.indexOf('<header class="bar bar-brand">'), html.indexOf("</header>"));
+  for (const id of ["session", "lang"]) assert.ok(brand.includes(`id="${id}"`), `вход без '${id}' в верхней полосе`);
+  const accountSource = await readFile(new URL("../static/account.js", import.meta.url), "utf8");
+  assert.match(accountSource, /function refresh\(\) \{\s*const me = api\.who\(\);\s*host\.signedIn\?\.\(me !== null\);/, "панель не говорит странице о входе");
+
+  // Справка на заглушках узлов: страница без DOM.
+  const node = () => {
+    const listeners = {};
+    return {
+      hidden: true,
+      focused: 0,
+      textContent: "",
+      attrs: {},
+      listeners,
+      setAttribute(name, value) { this.attrs[name] = value; },
+      focus() { this.focused += 1; },
+      addEventListener(type, fn) { listeners[type] = fn; },
+    };
+  };
+  const nodes = {};
+  for (const id of ["showhelp", "help", "help-search", "help-count", "help-prev", "help-next", "help-close", "help-toc", "help-doc"]) {
+    nodes[id] = node();
+  }
+  nodes["help-close"].hidden = false;
+  const documentBefore = globalThis.document;
+  const fetchBefore = globalThis.fetch;
+  const doc = node();
+  globalThis.document = doc;
+  globalThis.fetch = async () => ({ ok: false, status: 404 });
+  try {
+    const { attachHelp } = await import("../static/help.js");
+    const help = attachHelp(nodes, { storage: null });
+    help.pin(true);
+    assert.equal(nodes.help.hidden, false, "без входа справка открыта");
+    assert.equal(nodes["help-close"].hidden, true, "у несъёмной справки нет крестика");
+    help.close();
+    doc.listeners.keydown({ key: "Escape", preventDefault() {} });
+    assert.equal(nodes.help.hidden, false, "несъёмная справка закрылась");
+    const focused = nodes.showhelp.focused;
+    help.pin(false);
+    assert.equal(nodes.help.hidden, true, "после входа справка снята");
+    assert.equal(nodes["help-close"].hidden, false, "после входа крестик вернулся");
+    assert.equal(nodes.showhelp.focused, focused, "снятие справки входом увело фокус");
+    help.open();
+    help.close();
+    assert.equal(nodes.help.hidden, true, "вошедший закрывает справку, как прежде");
+  } finally {
+    globalThis.document = documentBefore;
+    globalThis.fetch = fetchBefore;
+  }
+});

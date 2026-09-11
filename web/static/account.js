@@ -1731,6 +1731,7 @@ function hideConflict() {
 /** Приводит панель и шапку в согласие с тем, что открыто. */
 function refresh() {
   const me = api.who();
+  host.signedIn?.(me !== null);
   dom.signedout.hidden = me !== null;
   dom.signedin.hidden = me === null;
   dom.whoami.textContent = me ? me.login : "";
