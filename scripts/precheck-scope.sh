@@ -77,6 +77,8 @@ if has '^extensions/' || has '^web/static/' ; then
   run "$ROOT/scripts/check-zed-extension.sh"
   run "$ROOT/scripts/test-check-plugin-webview.sh"
   run python3 "$ROOT/scripts/check-plugin-webview.py"
+  run "$ROOT/scripts/test-check-plugin-icons.sh"
+  run python3 "$ROOT/scripts/build-plugin-icons.py" --check
 fi
 
 if has '^book/'; then
