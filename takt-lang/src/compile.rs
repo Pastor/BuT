@@ -8,6 +8,16 @@ use crate::semantic::condition::port_split::PortSplit;
 use crate::semantic::lower_float::apply_float_lowering;
 use std::path::Path;
 
+/// Пути поиска `import` у проекта: каталог проекта.
+///
+/// Проект собирается по составу, а не по диску (`semantic::import::memory`), и
+/// путь поиска у него один - на сборку, диагностики и прогон, у страницы и у
+/// командной строки: разойдись он, модель, которую редактор подчёркивает как
+/// верную, не собиралась бы - или наоборот.
+pub fn project_search_paths() -> Vec<String> {
+    vec![".".to_string()]
+}
+
 /// Цель компиляции - то, что CLI принимает ключом `-t`.
 ///
 /// Не то же, что [`Language`]: `c` и `c-hal` печатает один генератор, но готовятся они

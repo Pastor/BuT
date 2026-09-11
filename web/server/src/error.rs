@@ -92,6 +92,18 @@ impl ApiError {
     }
 }
 
+/// Отказ крейта проекта: нарушение формы - запрос негоден, превышение - предел,
+/// файловая система - сбой сервиса.
+impl From<takt_project::Error> for ApiError {
+    fn from(error: takt_project::Error) -> Self {
+        match error {
+            takt_project::Error::Invalid(message) => Self::BadRequest(message),
+            takt_project::Error::Limit(message) => Self::LimitExceeded { message },
+            takt_project::Error::Io(message) => Self::Internal(anyhow::anyhow!(message)),
+        }
+    }
+}
+
 impl From<tokio_postgres::Error> for ApiError {
     fn from(error: tokio_postgres::Error) -> Self {
         Self::Internal(anyhow::Error::new(error))

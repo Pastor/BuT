@@ -1973,6 +1973,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "takt-project"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "zip",
+]
+
+[[package]]
 name = "takt-web-server"
 version = "0.1.0"
 dependencies = [
@@ -1989,6 +1998,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "takt-project",
  "thiserror 2.0.20",
  "tokio",
  "tokio-postgres",

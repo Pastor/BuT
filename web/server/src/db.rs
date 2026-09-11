@@ -251,7 +251,7 @@ CREATE INDEX projects_touched ON projects(archived_at, touched_at);
 CREATE TABLE project_files (
     project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     name       TEXT NOT NULL,
-    -- ⚠️ Список видов повторяет `limits::Kind` намеренно: база — последний
+    -- ⚠️ Список видов повторяет `takt_project::Kind` намеренно: база — последний
     -- рубеж, и запись мимо `check_file_name` (миграция, чужой скрипт) обязана
     -- отказать здесь. Расхождение видно сразу — вставка падает, а не молча
     -- заводит файл, о роде которого страница ничего не знает. Сторож —

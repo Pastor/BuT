@@ -24,247 +24,42 @@
 //! проверяет их **сервер**: архив приходит извне, и доверять ему нельзя. Имя файла
 //! судится тем же правилом, что при записи.
 
-use std::collections::BTreeMap;
-use std::io::{Cursor, Read as _, Write as _};
-
-use serde::{Deserialize, Serialize};
-
 use crate::db;
 use crate::error::ApiError;
 use crate::limits;
 use crate::projects::ProjectJson;
 
-/// Имя файла метаданных внутри архива.
-pub const MANIFEST: &str = "takt-project.json";
+/// Форма архива - манифест, укладка и разбор - живёт в крейте проекта: её же
+/// читает командная строка, и второй носитель разошёлся бы с первым молча.
+pub use takt_project::{
+    Export, FORMAT, Import, MANIFEST, Manifest, ManifestFile, SOURCES, SourceFile,
+};
 
-/// Каталог исходников внутри архива.
-pub const SOURCES: &str = "src/";
-
-/// Каталог порождённого вывода внутри архива.
-pub const GENERATED: &str = "generated/";
-
-/// Версия формата архива.
-///
-/// Растёт вместе с формой записи. Читатель, встретивший бо́льшую версию,
-/// **отказывает**: разобрать наполовину значит отдать автору проект, про
-/// который он думает, что тот целый.
-/// p подняла версию с `1` до `2`: манифест несёт цель и ключи
-/// сборки. n подняла до `3`: появился активный сценарий и **новый род
-/// файла** (`markdown`). Архив прежней версии по-прежнему читается - новые
-/// поля приходят пустыми (`serde(default)`), и проект получает умолчания.
-/// Отвергается только версия старше известной: там могут быть поля и роды, без
-/// которых проект восстановится наполовину. Род поднимает версию наравне с
-/// полем: прежний сервис отверг бы `.md` как негодное имя файла, и причина
-/// ("расширение '.takt' либо '.json'") не назвала бы настоящую - устаревший
-/// сервис. Версия `4` принесла задержки прогона по сценариям: прежний сервис
-/// потерял бы их молча, приняв архив за целый. Версия `5` - род `address_map`
-/// (карта адресов `.takt-map`): прежний сервис отверг бы её имя.
-pub const FORMAT: u32 = 5;
-
-/// Метаданные проекта в архиве.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Manifest {
-    /// Версия формата архива.
-    pub format: u32,
-    pub name: String,
-    #[serde(default)]
-    pub description: String,
-    /// Версия модуля, которой открывается проект.
-    pub takt_lang: String,
-    #[serde(default)]
-    pub language_version: String,
-    /// Активный файл; `null` - не назначен.
-    #[serde(default)]
-    pub main_file: Option<String>,
-    /// Активный сценарий прогона; `null` - не назначен.
-    #[serde(default)]
-    pub main_scenario: Option<String>,
-    /// Состав исходников: имя и вид.
-    #[serde(default)]
-    pub files: Vec<ManifestFile>,
-    /// Когда выгружен, Unix-секунды.
-    #[serde(default)]
-    pub exported_at: i64,
-    /// Какой целью собран `generated/`; `null` - вывода в архиве нет.
-    ///
-    /// Это не выбор автора: поле отвечает на вопрос "чем собран каталог `generated/`",
-    /// а выбор живёт в [`Manifest::build_target`]. Поля стоят рядом и легко путаются -
-    /// оттого смысл каждого назван здесь.
-    #[serde(default)]
-    pub generated_target: Option<String>,
-    /// Цель сборки, выбранная автором; пусто - архив прежней версии формата.
-    #[serde(default)]
-    pub build_target: String,
-    /// Ключи сборки, выбранные автором; пусто - умолчания либо архив прежней версии
-    /// формата.
-    #[serde(default)]
-    pub build_args: String,
-    /// Задержки прогона по сценариям, секунд; пусто - без задержек либо архив
-    /// прежней версии формата.
-    #[serde(default)]
-    pub run_delays: BTreeMap<String, f64>,
-}
-
-/// Запись состава.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ManifestFile {
-    pub name: String,
-    pub kind: String,
-}
-
-/// Один файл проекта для укладки в архив.
-#[derive(Debug)]
-pub struct SourceFile {
-    pub name: String,
-    pub kind: String,
-    pub text: String,
-}
-
-/// Что положить в архив.
-pub struct Export {
-    pub manifest: Manifest,
-    pub sources: Vec<SourceFile>,
-    /// Вывод цели: пары "имя, текст". Пусто - выгрузка без генерации.
-    pub generated: Vec<(String, String)>,
-    /// Отказ цели с причиной; `None` - цель не звали либо она не отказала.
-    ///
-    /// Отказ цели - **нормальный ответ**, а не ошибка сервиса (вопрос задачи закрыт
-    /// так): он записывается в архив словами, потому что молча пропущенный вывод
-    /// неотличим от "цель ничего не печатает".
-    pub refusal: Option<String>,
-}
+/// Пределы хранилища для архива, пришедшего извне.
+const LIMITS: takt_project::Limits = takt_project::Limits {
+    file_bytes: limits::FILE_BYTES,
+    files: limits::FILES_PER_PROJECT as usize,
+    project_bytes: limits::PROJECT_BYTES as usize,
+};
 
 /// Складывает архив.
 ///
 /// # Ошибки
-/// Отказ записи в память (практически недостижим) либо неразбираемые
-/// метаданные.
+/// Имя файла дважды либо отказ записи в память.
 pub fn pack(export: &Export) -> anyhow::Result<Vec<u8>> {
-    let mut buffer = Cursor::new(Vec::new());
-    {
-        let mut zip = zip::ZipWriter::new(&mut buffer);
-        let options: zip::write::FileOptions<'_, ()> =
-            zip::write::FileOptions::default().compression_method(zip::CompressionMethod::Deflated);
-        zip.start_file(MANIFEST, options)?;
-        zip.write_all(serde_json::to_string_pretty(&export.manifest)?.as_bytes())?;
-        for file in &export.sources {
-            zip.start_file(format!("{SOURCES}{}", file.name), options)?;
-            zip.write_all(file.text.as_bytes())?;
-        }
-        for (name, text) in &export.generated {
-            zip.start_file(format!("{GENERATED}{name}"), options)?;
-            zip.write_all(text.as_bytes())?;
-        }
-        if let Some(reason) = &export.refusal {
-            zip.start_file(format!("{GENERATED}REFUSAL.txt"), options)?;
-            zip.write_all(reason.as_bytes())?;
-        }
-        zip.finish()?;
-    }
-    Ok(buffer.into_inner())
-}
-
-/// Что прочитано из архива.
-#[derive(Debug)]
-pub struct Import {
-    pub manifest: Manifest,
-    pub sources: Vec<SourceFile>,
+    takt_project::pack(export).map_err(|error| anyhow::anyhow!(error))
 }
 
 /// Разбирает архив и судит его пределами хранилища.
 ///
 /// # Ошибки
 /// Не архив, нет метаданных, чужая версия формата, нарушен предел, негодное имя
-/// файла.
+/// файла либо проекта.
 pub fn unpack(bytes: &[u8]) -> Result<Import, ApiError> {
-    let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
-        .map_err(|error| ApiError::BadRequest(format!("это не архив: {error}")))?;
-
-    let manifest: Manifest = {
-        let mut entry = zip.by_name(MANIFEST).map_err(|_| {
-            ApiError::BadRequest(format!(
-                "в архиве нет '{MANIFEST}': без метаданных проект не восстановить"
-            ))
-        })?;
-        let mut text = String::new();
-        entry
-            .read_to_string(&mut text)
-            .map_err(|error| ApiError::BadRequest(format!("'{MANIFEST}' не читается: {error}")))?;
-        serde_json::from_str(&text).map_err(|error| {
-            ApiError::BadRequest(format!("'{MANIFEST}' не разбирается: {error}"))
-        })?
-    };
-    if manifest.format > FORMAT {
-        // Отказ, а не "прочитаем что сможем": половина восстановленного проекта хуже
-        // отказа - автор будет думать, что он целый.
-        return Err(ApiError::BadRequest(format!(
-            "архив версии формата {}, а сервис знает {FORMAT}",
-            manifest.format
-        )));
-    }
-    limits::check_project_name(&manifest.name)?;
-    limits::check_description(&manifest.description)?;
-
-    let mut sources = Vec::new();
-    let mut total: i64 = 0;
-    for index in 0..zip.len() {
-        let mut entry = zip
-            .by_index(index)
-            .map_err(|error| ApiError::BadRequest(format!("архив повреждён: {error}")))?;
-        let path = entry.name().to_string();
-        // Вывод целей игнорируется: он воспроизводим и в проекте не хранится. Прими его
-        // загрузка за исходник - в проекте появились бы файлы, которых компилятор не
-        // писал.
-        let Some(name) = path.strip_prefix(SOURCES) else {
-            continue;
-        };
-        if name.is_empty() || name.ends_with('/') {
-            continue;
-        }
-        let kind = limits::check_file_name(name)?;
-        let mut text = String::new();
-        entry.read_to_string(&mut text).map_err(|error| {
-            ApiError::BadRequest(format!("файл '{name}' не читается как текст: {error}"))
-        })?;
-        limits::check_file(&text)?;
-        total += text.len() as i64;
-        if sources.len() as i64 >= limits::FILES_PER_PROJECT {
-            return Err(limits::exceeded(
-                "число файлов в проекте",
-                limits::FILES_PER_PROJECT,
-                sources.len() as i64 + 1,
-            ));
-        }
-        if total > limits::PROJECT_BYTES {
-            return Err(limits::exceeded(
-                "размер проекта в байтах",
-                limits::PROJECT_BYTES,
-                total,
-            ));
-        }
-        sources.push(SourceFile {
-            name: name.to_string(),
-            kind: kind.as_str().to_string(),
-            text,
-        });
-    }
-    if sources.is_empty() {
-        return Err(ApiError::BadRequest(format!(
-            "в архиве нет исходников: их место — каталог '{SOURCES}'"
-        )));
-    }
-    // Имена внутри архива могут повторяться - форма это допускает, а проект нет:
-    // `PRIMARY KEY (project_id, name)` принял бы последний молча.
-    let mut seen = std::collections::BTreeSet::new();
-    for file in &sources {
-        if !seen.insert(file.name.clone()) {
-            return Err(ApiError::BadRequest(format!(
-                "файл '{}' в архиве дважды",
-                file.name
-            )));
-        }
-    }
-    Ok(Import { manifest, sources })
+    let import = takt_project::unpack(bytes, LIMITS)?;
+    limits::check_project_name(&import.manifest.name)?;
+    limits::check_description(&import.manifest.description)?;
+    Ok(import)
 }
 
 /// Собирает метаданные выгрузки.
@@ -324,6 +119,8 @@ pub fn file_name(project: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
+    use std::io::{Cursor, Write as _};
 
     /// Проект для проб: те же поля, что отдаёт ручка чтения.
     fn project() -> ProjectJson {

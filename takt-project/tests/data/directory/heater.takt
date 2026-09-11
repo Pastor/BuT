@@ -1,0 +1,3 @@
+import "lib.takt";
+
+start Idle;

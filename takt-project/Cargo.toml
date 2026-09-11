@@ -1,0 +1,24 @@
+[package]
+name = "takt-project"
+version = "0.1.0"
+authors = ["Pastor <viruszold@gmail.com>"]
+description = "Takt — учебный DSL конечных автоматов: проект на диске и в архиве — роды файлов, манифест, состав. Язык сделан в учебных целях и показывает принципы автоматного подхода к разработке"
+homepage = "https://but.ru"
+repository = "https://github.com/Pastor/Takt"
+readme = "../README.md"
+keywords = ["Takt", "project", "archive"]
+license = "BSD"
+edition = "2024"
+# MSRV: проверено на пине толчейна (rust-toolchain.toml).
+rust-version = "1.97"
+include = ["Cargo.toml", "src/**/*", "README.md", "LICENSE*"]
+
+# Компилятора крейт не содержит и не зовёт: его берёт и сервер проектов, который с
+# `takt-lang` не линкуется, - модель у сервера исполняет модуль через `wasmtime`.
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+tempfile = "3"

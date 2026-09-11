@@ -31,13 +31,7 @@ use crate::reply::{self, DiagnosticJson};
 /// как в командной строке.
 pub const DEFAULT_FILENAME: &str = "playground.takt";
 
-/// Пути поиска `import` в браузере: каталог проекта.
-///
-/// Носитель один на сборку, диагностики и прогон: разойдись они, модель, которую
-/// страница подчёркивает как верную, не собиралась бы - или наоборот.
-pub fn project_search_paths() -> Vec<String> {
-    vec![".".to_string()]
-}
+pub use takt_lang::compile::project_search_paths;
 
 /// Один файл вывода.
 #[derive(Debug, Serialize)]

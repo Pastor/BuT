@@ -28,6 +28,9 @@ trap 'rm -rf "$WORK"' EXIT
 TREE="$WORK/tree"
 mkdir -p "$TREE/scripts"
 cp -R "$ROOT/web" "$TREE/"
+# Крейт проекта - зависимость сервера по пути (`../../takt-project`): без него
+# в копии не разбирается даже манифест сервера.
+cp -R "$ROOT/takt-project" "$TREE/"
 cp "$ROOT/scripts/check-web-server.sh" "$TREE/scripts/"
 # Сборка мутанта идёт в общий каталог: пересобирать полторы сотни крейтов на
 # каждый случай - минуты, а мутации трогают только свой крейт.

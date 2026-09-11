@@ -156,97 +156,17 @@ pub fn check_run_delays(delays: &BTreeMap<String, f64>) -> Result<BTreeMap<Strin
     Ok(kept)
 }
 
-/// Вид файла по расширению.
-///
-/// Вид выводится из расширения при записи и хранится колонкой: правило одно, и второго
-/// носителя у него нет. Переименования файла в сервисе не бывает вовсе (имя - это и
-/// есть личность файла), поэтому вид не может разойтись с расширением молча (замер
-/// 2026-09-05 - он опровергает опасение проработки).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Kind {
-    /// Модель на Takt.
-    Takt,
-    /// Сценарий входов И проверок - та же форма, что у файла `-s` эталона (шаги с
-    /// `in_ports`, `time_ms`, `extern` и `guard`). Своего формата сервис не заводит:
-    /// проверки в нём уже есть.
-    Scenario,
-    /// Пояснение к проекту на Markdown.
-    Markdown,
-    /// Раскладка схемы модели (`.takt-ui`): координаты состояний и изломы рёбер,
-    /// парная модели по имени файла. Компилятор её не читает, сборка от неё не
-    /// зависит.
-    Layout,
-    /// Внешняя карта адресов портов (`.takt-map`) - формат ключа `--address-map`
-    /// компилятора. Сборку с адресами страница ведёт картой из состава проекта.
-    AddressMap,
-}
+/// Род файла проекта - тип крейта проекта: правило одно у сервера и командной
+/// строки.
+pub use takt_project::Kind;
 
-impl Kind {
-    /// Имя вида в базе.
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Takt => "takt",
-            Self::Scenario => "scenario",
-            Self::Markdown => "markdown",
-            Self::Layout => "layout",
-            Self::AddressMap => "address_map",
-        }
-    }
-}
-
-/// Проверяет имя файла и определяет его вид.
+/// Проверяет имя файла и определяет его род.
 ///
-/// Алфавит узкий: имя файла становится **именем корневой модели**, а оно попадает в
-/// порождённый код - `concat.takt` даёт отказ `iec2c`, пробел или кириллица не пройдут
-/// дальше первой цели. Отказать здесь дешевле, чем объяснять потом отказ чужого
-/// инструмента.
+/// Правило живёт в крейте проекта (`takt_project::check_file_name`): имя файла
+/// становится именем корневой модели, и алфавит у него узкий. Здесь - только
+/// перевод отказа в ответ сервиса.
 pub fn check_file_name(name: &str) -> Result<Kind, ApiError> {
-    let length = name.chars().count();
-    if length > NAME_CHARS {
-        return Err(exceeded("длина имени файла в символах", NAME_CHARS, length));
-    }
-    // Раскладка проверяется раньше модели: `.takt-ui` кончается не на `.takt`, но
-    // порядок ветвей делает правило независимым от формы расширений.
-    let kind = if let Some(stem) = name.strip_suffix(".takt-ui") {
-        check_stem(stem)?;
-        Kind::Layout
-    } else if let Some(stem) = name.strip_suffix(".takt") {
-        check_stem(stem)?;
-        Kind::Takt
-    } else if let Some(stem) = name.strip_suffix(".json") {
-        check_stem(stem)?;
-        Kind::Scenario
-    } else if let Some(stem) = name.strip_suffix(".md") {
-        // Алфавит тот же, хотя именем модели такой файл не станет: имя попадает в путь
-        // архива и в адрес ручки, и второе правило имени означало бы, что автор должен
-        // помнить, какое из них где.
-        check_stem(stem)?;
-        Kind::Markdown
-    } else if let Some(stem) = name.strip_suffix(".takt-map") {
-        check_stem(stem)?;
-        Kind::AddressMap
-    } else {
-        return Err(ApiError::BadRequest(
-            "имя файла: расширение '.takt', '.json', '.md', '.takt-ui' либо '.takt-map'"
-                .to_string(),
-        ));
-    };
-    Ok(kind)
-}
-
-fn check_stem(stem: &str) -> Result<(), ApiError> {
-    if stem.is_empty() {
-        return Err(ApiError::BadRequest("имя файла: пустое".to_string()));
-    }
-    if !stem
-        .chars()
-        .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
-    {
-        return Err(ApiError::BadRequest(
-            "имя файла: латинские буквы, цифры, '_' и '-'".to_string(),
-        ));
-    }
-    Ok(())
+    takt_project::check_file_name(name).map_err(ApiError::from)
 }
 
 #[cfg(test)]
@@ -278,31 +198,70 @@ mod tests {
     }
 
     #[test]
-    fn file_name_becomes_a_model_name_and_is_checked_as_one() {
-        assert_eq!(check_file_name("heater.takt").expect("годно"), Kind::Takt);
-        assert_eq!(
-            check_file_name("board.takt-map").expect("годно"),
-            Kind::AddressMap
-        );
-        assert_eq!(
-            check_file_name("run-1.json").expect("годно"),
-            Kind::Scenario
-        );
+    fn a_bad_file_name_is_a_bad_request_and_a_long_one_is_a_limit() {
+        // Правило имени проверяется в крейте проекта; здесь - что его отказы
+        // доезжают до ответа своим кодом.
         assert_eq!(
             check_file_name("heater.takt-ui").expect("годно"),
-            Kind::Layout,
-            "раскладка - свой род, а не модель"
+            Kind::Layout
         );
-        assert!(check_file_name(".takt-ui").is_err(), "пустое имя раскладки");
-        assert!(check_file_name("модель.takt-ui").is_err(), "тот же алфавит");
-        assert!(check_file_name("модель.takt").is_err(), "кириллица");
-        assert!(check_file_name("два слова.takt").is_err(), "пробел");
-        assert!(check_file_name("heater.c").is_err(), "чужое расширение");
-        assert!(check_file_name(".takt").is_err(), "пустое имя");
-        assert!(check_file_name("a/b.takt").is_err(), "путь, а не имя");
+        let (status, _) = check_file_name("модель.takt")
+            .expect_err("кириллица")
+            .status_and_code();
+        assert_eq!(status, axum::http::StatusCode::BAD_REQUEST);
+        let long = format!("{}.takt", "x".repeat(NAME_CHARS));
+        let (status, _) = check_file_name(&long)
+            .expect_err("длинное")
+            .status_and_code();
+        assert_eq!(status, axum::http::StatusCode::PAYLOAD_TOO_LARGE);
+    }
+
+    /// Расширения проекта в кавычках - признак второго списка родов.
+    const EXTENSIONS: [&str; 5] = [
+        "\".takt\"",
+        "\".takt-ui\"",
+        "\".takt-map\"",
+        "\".json\"",
+        "\".md\"",
+    ];
+
+    /// Строки кода файла (без тестов и комментариев), где стоит расширение проекта.
+    fn extension_lines(source: &str) -> Vec<String> {
+        let code = source.split("#[cfg(test)]").next().unwrap_or_default();
+        code.lines()
+            .filter(|line| !line.trim_start().starts_with("//"))
+            .filter(|line| EXTENSIONS.iter().any(|ext| line.contains(ext)))
+            .map(|line| line.trim().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn the_server_has_no_second_list_of_extensions() {
+        // Род файла по расширению знает крейт проекта; список у сервера разошёлся бы
+        // с ним молча - так уже было с родом, которого не знала страница.
+        assert_eq!(
+            extension_lines("fn kind(n: &str) { n.strip_suffix(\".takt-map\") }"),
+            ["fn kind(n: &str) { n.strip_suffix(\".takt-map\") }"],
+            "контроль ловит второй список"
+        );
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut found = Vec::new();
+        let mut read = 0;
+        for entry in std::fs::read_dir(&dir).expect("каталог исходников") {
+            let path = entry.expect("запись").path();
+            if path.extension().is_some_and(|e| e == "rs") {
+                read += 1;
+                let text = std::fs::read_to_string(&path).expect("исходник");
+                for line in extension_lines(&text) {
+                    found.push(format!("{}: {line}", path.display()));
+                }
+            }
+        }
+        assert!(read >= 10, "выборка пуста: прочитано {read} файлов");
         assert!(
-            check_file_name(&format!("{}.takt", "x".repeat(NAME_CHARS))).is_err(),
-            "длинное"
+            found.is_empty(),
+            "список расширений у сервера:\n{}",
+            found.join("\n")
         );
     }
 

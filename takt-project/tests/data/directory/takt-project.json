@@ -1,0 +1,18 @@
+{
+  "format": 5,
+  "name": "Нагреватель",
+  "description": "Проба каталога с манифестом",
+  "takt_lang": "0.61.0",
+  "main_file": "heater.takt",
+  "main_scenario": "heater_warm.json",
+  "files": [
+    { "name": "heater.takt", "kind": "takt" },
+    { "name": "lib.takt", "kind": "takt" },
+    { "name": "heater.takt-ui", "kind": "layout" },
+    { "name": "heater_warm.json", "kind": "scenario" },
+    { "name": "notes.md", "kind": "markdown" }
+  ],
+  "build_target": "rust",
+  "build_args": "--fsm=table",
+  "run_delays": { "heater_warm.json": 0.5 }
+}
