@@ -8,6 +8,8 @@ pub use crate::port_names::{PortDirectionKind, PortNames};
 // `takt_sim::runner::format_duration` держит реэкспорт.
 pub use crate::trace::format_duration;
 use crate::unit::{TickResult, Unit};
+use takt_lang::diagnostics::lang::keys;
+use takt_lang::msg;
 
 // -- Результат симуляции ------------------------------------------------------
 
@@ -374,11 +376,10 @@ impl SimulationRunner {
                 // внимания с самого своего появления, и смена формы вывода - не повод
                 // заводить код задним числом. Пустая строка означает отсутствие кода.
                 code: "",
-                message: format!(
-                    "имя '{bare}' объявлено несколькими моделями ({}). \
-                     По голому имени адресуется первая из них; для точного обращения \
-                     используйте квалифицированное имя.",
-                    qualified.join(", ")
+                message: msg!(
+                    keys::SIM_AMBIGUOUS_BARE_NAME,
+                    name = bare,
+                    models = qualified.join(", ")
                 ),
                 step: None,
             })
@@ -434,13 +435,7 @@ impl SimulationRunner {
         const CODE: &str = "SIM-037";
         self.warn(RunWarning {
             code: CODE,
-            message: "сценарий задаёт значения портов позиционным массивом — форма устарела. \
-                      Индекс в массиве привязан к месту имени в АЛФАВИТНОМ списке портов модели \
-                      и её под-моделей, поэтому добавление или переименование порта сдвигает \
-                      весь массив, и шаг начинает описывать другое событие — молча. Пользуйтесь \
-                      именами: `\"in_ports\": {\"имя_порта\": значение}`; при тёзках из разных \
-                      моделей имя уточняется как `Модель::порт`."
-                .to_string(),
+            message: msg!(keys::SIM_037_POSITIONAL_DEPRECATED),
             step: None,
         });
     }
@@ -463,12 +458,11 @@ impl SimulationRunner {
                     const CODE: &str = "SIM-032";
                     self.warn(RunWarning {
                         code: CODE,
-                        message: format!(
-                            "{} значений в позиционном массиве `{}`, а портов {} — лишние \
-                             игнорируются, недостающие не задаются",
-                            list.len(),
-                            direction.field(),
-                            names.len()
+                        message: msg!(
+                            keys::SIM_037_POSITIONAL_LENGTH,
+                            count = list.len(),
+                            field = direction.field(),
+                            ports = names.len()
                         ),
                         step: Some(step_no),
                     });
@@ -548,8 +542,11 @@ impl SimulationRunner {
             // Квалифицированное имя: проверяем существование пары "модель::имя".
             // Направление здесь не сужается - квалификация уже однозначна.
             if !self.port_names.qualified.contains(name) {
-                return Err(format!(
-                    "Ошибка [{NOT_FOUND}]: шаг {step_no}: порт `{name}` не найден в модели"
+                return Err(msg!(
+                    keys::SIM_PORT_NOT_FOUND,
+                    code = NOT_FOUND,
+                    step = step_no,
+                    name = name
                 ));
             }
             return Ok(());
@@ -560,17 +557,21 @@ impl SimulationRunner {
             .iter()
             .find(|(bare, _)| bare == name)
         {
-            return Err(format!(
-                "Ошибка [{AMBIGUOUS}]: шаг {step_no}: имя `{name}` объявлено несколькими моделями \
-                 ({}) — укажите квалифицированное имя",
-                variants.join(", ")
+            return Err(msg!(
+                keys::SIM_PORT_AMBIGUOUS,
+                code = AMBIGUOUS,
+                step = step_no,
+                name = name,
+                models = variants.join(", ")
             ));
         }
         if !self.names_of(direction).iter().any(|n| n == name) {
-            return Err(format!(
-                "Ошибка [{NOT_FOUND}]: шаг {step_no}: порт `{name}` не найден среди портов \
-                 направления `{}`",
-                direction.field()
+            return Err(msg!(
+                keys::SIM_PORT_NOT_IN_DIRECTION,
+                code = NOT_FOUND,
+                step = step_no,
+                name = name,
+                field = direction.field()
             ));
         }
         Ok(())
@@ -587,11 +588,13 @@ impl SimulationRunner {
             for (name, expected) in self.resolve_values(values, direction, step_no)? {
                 let actual = self.unit.get_value(&name);
                 if !values_match(&actual, &expected) {
-                    return Err(format!(
-                        "Guard шага {step_no}: {} ({name}): ожидалось {:?}, получено {:?}",
-                        direction.field(),
-                        expected,
-                        actual
+                    return Err(msg!(
+                        keys::SIM_GUARD_PORT,
+                        step = step_no,
+                        field = direction.field(),
+                        name = name,
+                        expected = format!("{:?}", expected),
+                        actual = format!("{:?}", actual)
                     ));
                 }
             }
@@ -603,9 +606,12 @@ impl SimulationRunner {
                 };
                 let actual = self.unit.get_value(var_name);
                 if !values_match(&actual, &expected) {
-                    return Err(format!(
-                        "Guard шага {step_no}: vars[{var_name}]: ожидалось {:?}, получено {:?}",
-                        expected, actual
+                    return Err(msg!(
+                        keys::SIM_GUARD_VAR,
+                        step = step_no,
+                        name = var_name,
+                        expected = format!("{expected:?}"),
+                        actual = format!("{actual:?}")
                     ));
                 }
             }
@@ -648,7 +654,11 @@ fn extern_stubs_of(
         match value {
             ExternValue::Any(raw) => {
                 let value = crate::json_input::json_to_value(raw).ok_or_else(|| {
-                    format!("шаг {step_no}: значение extern-функции '{name}' не читается")
+                    msg!(
+                        keys::SIM_EXTERN_VALUE_UNREADABLE,
+                        step = step_no,
+                        name = name
+                    )
                 })?;
                 stubs.declare(name, crate::context::ExternStub::Any(value));
             }
@@ -656,15 +666,19 @@ fn extern_stubs_of(
                 let mut by_arg = std::collections::HashMap::new();
                 for (key, raw) in table {
                     let key: i128 = key.parse().map_err(|_| {
-                        format!(
-                            "шаг {step_no}: ключ '{key}' таблицы extern-функции '{name}' \
-                             не число — таблица ищет по значению первого аргумента"
+                        msg!(
+                            keys::SIM_EXTERN_KEY_NOT_NUMBER,
+                            step = step_no,
+                            key = key,
+                            name = name
                         )
                     })?;
                     let value = crate::json_input::json_to_value(raw).ok_or_else(|| {
-                        format!(
-                            "шаг {step_no}: значение extern-функции '{name}' при аргументе \
-                             {key} не читается"
+                        msg!(
+                            keys::SIM_EXTERN_VALUE_AT_KEY_UNREADABLE,
+                            step = step_no,
+                            name = name,
+                            key = key
                         )
                     })?;
                     by_arg.insert(key, value);

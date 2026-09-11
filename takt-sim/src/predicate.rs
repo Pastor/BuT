@@ -17,7 +17,9 @@ use crate::eval::error::EvalError;
 use crate::eval::ops::{self, BinOp, UnOp};
 use crate::eval::value::Value;
 use crate::unit::Predicate;
+use takt_lang::diagnostics::lang::keys;
 use takt_lang::diagnostics::{Diagnostic, Location};
+use takt_lang::msg;
 use takt_lang::semantic::ConditionNode;
 use takt_lang::semantic::condition::state_of::{compared_state_name, state_of_model};
 use takt_lang::semantic::type_node::TypeNode;
@@ -182,9 +184,9 @@ pub(crate) fn eval_condition(
             Value::Duration(ns) => Ok(Value::Boolean(ctx.since_state_entry_ns() >= ns)),
             other => Err(Diagnostic::error(
                 loc_of(inner),
-                format!(
-                    "выдержка 'after' ожидала длительность, выражение дало {}",
-                    crate::eval::error::value_kind(&other)
+                msg!(
+                    keys::SIM_AFTER_EXPECTS_DURATION,
+                    kind = msg!(crate::eval::error::value_kind(&other))
                 ),
             )
             .with_code("SIM-007")),
@@ -198,7 +200,7 @@ pub(crate) fn eval_condition(
             let parsed: f64 = text.parse().map_err(|_| {
                 Diagnostic::error(
                     Location::Builtin,
-                    format!("не удалось разобрать вещественный литерал '{text}'"),
+                    msg!(keys::SIM_008_REAL_LITERAL, text = text),
                 )
                 .with_code("SIM-008")
             })?;
@@ -211,7 +213,7 @@ pub(crate) fn eval_condition(
         ConditionNode::Variable(var, loc) => {
             let name = var.borrow().name().to_string();
             ctx.get_value(&name).ok_or_else(|| {
-                Diagnostic::error(*loc, format!("переменная '{name}' не найдена"))
+                Diagnostic::error(*loc, msg!(keys::SIM_009_VARIABLE_NOT_FOUND, name = name))
                     .with_code("SIM-009")
             })
         }
@@ -222,16 +224,14 @@ pub(crate) fn eval_condition(
             let loc = loc_of(cond);
             let array = eval_condition(base, ctx)?;
             let Value::Array(items) = array else {
-                return Err(Diagnostic::error(
-                    loc,
-                    "индексируемое значение не является массивом".to_string(),
-                )
-                .with_code("SIM-010"));
+                return Err(
+                    Diagnostic::error(loc, msg!(keys::SIM_010_NOT_AN_ARRAY)).with_code("SIM-010")
+                );
             };
             let index_value = eval_condition(index, ctx)?;
             let Value::Number(idx) = index_value else {
                 return Err(
-                    Diagnostic::error(loc, "индекс массива должен быть целым".to_string())
+                    Diagnostic::error(loc, msg!(keys::SIM_010_INDEX_NOT_INTEGER))
                         .with_code("SIM-010"),
                 );
             };
@@ -241,7 +241,11 @@ pub(crate) fn eval_condition(
                 .ok_or_else(|| {
                     Diagnostic::error(
                         loc,
-                        format!("индекс {idx} вне границ массива (длина {})", items.len()),
+                        msg!(
+                            keys::SIM_010_INDEX_OUT_OF_BOUNDS,
+                            index = idx,
+                            len = items.len()
+                        ),
                     )
                     .with_code("SIM-010")
                 })?;
@@ -304,20 +308,17 @@ pub(crate) fn eval_condition(
         // Состояние`); её исполняет `state_of_condition` ниже.
         ConditionNode::State(state, _) => Err(Diagnostic::error(
             Location::Builtin,
-            format!(
-                "имя состояния '{}' условием не является — такой вход отвергает \
-                 семантика (SE-110); проверка состояния записывается как \
-                 'S(Модель) = Состояние'",
-                state.borrow().name()
+            msg!(
+                keys::SIM_STATE_NAME_NOT_CONDITION,
+                name = state.borrow().name()
             ),
         )
         .with_code("SIM-013")),
         ConditionNode::Model(model, _) => Err(Diagnostic::error(
             Location::Builtin,
-            format!(
-                "имя модели '{}' условием не является — такой вход отвергает \
-                 семантика (SE-110); напишите 'Модель = Состояние'",
-                model
+            msg!(
+                keys::SIM_MODEL_NAME_NOT_CONDITION,
+                name = model
                     .borrow()
                     .name
                     .clone()
@@ -328,19 +329,19 @@ pub(crate) fn eval_condition(
         // `Value` не представляет строки - пробел зафиксирован анализом.
         ConditionNode::String(_) => Err(Diagnostic::error(
             Location::Builtin,
-            "строки не поддерживаются симулятором".to_string(),
+            msg!(keys::SIM_014_STRINGS),
         )
         .with_code("SIM-014")),
 
         // -- Невычислимые по определению --------------------------------------
         ConditionNode::None => Err(Diagnostic::error(
             Location::Builtin,
-            "пустое условие не может быть вычислено".to_string(),
+            msg!(keys::SIM_015_EMPTY_CONDITION),
         )
         .with_code("SIM-015")),
         ConditionNode::Unresolved(_) => Err(Diagnostic::error(
             Location::Builtin,
-            "неразрешённое условие не может быть вычислено".to_string(),
+            msg!(keys::SIM_016_UNRESOLVED_CONDITION),
         )
         .with_code("SIM-016")),
     }
@@ -363,29 +364,19 @@ fn state_matches(
 ) -> Result<bool, Diagnostic> {
     let model = state_of_model(left).expect("паттерн проверен вызывающим");
     let model_name = model.borrow().name.clone().ok_or_else(|| {
-        Diagnostic::error(
-            loc,
-            "проверка состояния безымянной модели невозможна".to_string(),
-        )
-        .with_code("SIM-036")
+        Diagnostic::error(loc, msg!(keys::SIM_036_UNNAMED_MODEL)).with_code("SIM-036")
     })?;
     let Some(wanted) = compared_state_name(right) else {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "справа от сравнения с состоянием модели '{model_name}' \
-                 ожидалось имя состояния"
-            ),
+            msg!(keys::SIM_STATE_NAME_EXPECTED, model = model_name),
         )
         .with_code("SIM-036"));
     };
     let current = ctx.model_state(&model_name).ok_or_else(|| {
         Diagnostic::error(
             loc,
-            format!(
-                "модель '{model_name}' в этом прогоне не запущена: проверить её \
-                 состояние нечем"
-            ),
+            msg!(keys::SIM_036_MODEL_NOT_RUNNING, model = model_name),
         )
         .with_code("SIM-036")
     })?;

@@ -25,6 +25,8 @@ use crate::film::{Film, ROOT_SHEET};
 use crate::json_input::SimStep;
 use crate::port_names::PortNames;
 use crate::runner::SimulationRunner;
+use takt_lang::diagnostics::lang::keys;
+use takt_lang::msg;
 
 /// Предел тактов прогона без сценария и без `-n`: модель без терминального
 /// состояния иначе шла бы вечно. То же умолчание, что у бюджета прогона страницы.
@@ -126,12 +128,12 @@ struct Drawn {
 /// одной модели объёма; модель не собирается; два листа дают одно имя файла.
 pub fn export(project: &Project, request: &Request) -> Result<Export, String> {
     if request.formats.is_empty() {
-        return Err("не назван ни один формат".to_string());
+        return Err(msg!(keys::SIM_EXPORT_NO_FORMAT));
     }
     let (videos, pictures): (BTreeSet<Format>, BTreeSet<Format>) =
         request.formats.iter().partition(|f| f.is_video());
     if !videos.is_empty() && request.view == Some(View::Draft) {
-        return Err("видео - всегда цветной вид прогона: чертёжный вид здесь не годится".into());
+        return Err(msg!(keys::SIM_EXPORT_VIDEO_DRAFT));
     }
     // Картинки и видео - разный объём по умолчанию: картинки - все листы всех
     // моделей, видео - корень активной. Обе части считаются в памяти, и отказ любой
@@ -167,7 +169,11 @@ fn part(
         };
         for key in &keys {
             if !model.sheets.iter().any(|s| &s.key == key) {
-                return Err(format!("`{}`: листа `{key}` нет", model.file));
+                return Err(msg!(
+                    keys::SIM_EXPORT_NO_SHEET,
+                    file = model.file,
+                    key = key
+                ));
             }
         }
         let steps = if run_view {
@@ -199,9 +205,7 @@ fn part(
             for format in formats {
                 let name = format!("{stem}.{view}.{}", format.extension());
                 if !names.insert(name.clone()) {
-                    return Err(format!(
-                        "два листа дают одно имя файла `{name}`: выгрузите модели по одной (`--model`)"
-                    ));
+                    return Err(msg!(keys::SIM_EXPORT_DUPLICATE_NAME, name = name));
                 }
                 let bytes = match (format, &film) {
                     (Format::Svg, _) => drawing(true)?.into_bytes(),
@@ -213,7 +217,7 @@ fn part(
                     }
                     (Format::Mp4, Some(film)) => film.mp4(request.pause_ms)?,
                     (Format::Gif | Format::Mp4, None) => {
-                        return Err("видео без прогона не пишется".to_string());
+                        return Err(msg!(keys::SIM_EXPORT_VIDEO_WITHOUT_RUN));
                     }
                 };
                 out.files.push(Output { name, bytes });
@@ -231,7 +235,7 @@ fn scope(project: &Project, request: &Request, video: bool) -> Result<Vec<String
         .collect();
     if let Some(model) = &request.model {
         if !models.contains(model) {
-            return Err(format!("модели `{model}` в проекте нет"));
+            return Err(msg!(keys::SIM_EXPORT_NO_MODEL, name = model));
         }
         return Ok(vec![model.clone()]);
     }
@@ -250,7 +254,7 @@ fn main_model(project: &Project, models: &[String]) -> Result<String, String> {
     }
     match models {
         [only] => Ok(only.clone()),
-        _ => Err("активная модель не выбрана: назовите её ключом `--model`".to_string()),
+        _ => Err(msg!(keys::SIM_EXPORT_NO_ACTIVE_MODEL)),
     }
 }
 
@@ -278,9 +282,7 @@ fn draw_all(project: &Project, files: &[String], named: bool) -> Result<Vec<Draw
         }
         let Some(layout_file) = project.layout_of(file) else {
             let stem = stem_of(file).map_or(file.as_str(), |(s, _)| s);
-            refusals.push(format!(
-                "`{file}`: раскладки нет - картинка рисуется по файлу `{stem}.takt-ui`, его пишет редактор схемы"
-            ));
+            refusals.push(msg!(keys::SIM_EXPORT_NO_LAYOUT, file = file, stem = stem));
             continue;
         };
         let layout = match takt_scheme::layout::parse(&layout_file.text) {
@@ -317,7 +319,7 @@ fn picture(model: &Drawn, key: &str, legend: bool, fonts: bool) -> Result<String
         fonts,
     };
     svg(key, &model.sheets, &model.layout, &options)
-        .ok_or_else(|| format!("`{}`: листа `{key}` нет", model.file))
+        .ok_or_else(|| msg!(keys::SIM_EXPORT_NO_SHEET, file = model.file, key = key))
 }
 
 /// Сценарий прогона модели: названный, активный проекта (если он её), либо
@@ -326,7 +328,7 @@ fn scenario_of(project: &Project, file: &str, request: &Request) -> Result<Optio
     let own = project.scenarios_of(file);
     if let Some(named) = &request.scenario {
         if project.file(named).is_none() {
-            return Err(format!("сценария `{named}` в проекте нет"));
+            return Err(msg!(keys::SIM_EXPORT_NO_SCENARIO, name = named));
         }
         return Ok(Some(named.clone()));
     }
@@ -351,9 +353,10 @@ fn run(
         .unwrap_or_default();
     let mut table = FileTable::new(file);
     let (ast, _) = takt_lang::parse(&source, 0).map_err(|diagnostics| {
-        diagnostics
-            .first()
-            .map_or_else(|| format!("`{file}` не разбирается"), |d| shown(d, &table))
+        diagnostics.first().map_or_else(
+            || msg!(keys::SIM_EXPORT_NOT_PARSED, file = file),
+            |d| shown(d, &table),
+        )
     })?;
     // Импорты каталога и архива - по составу проекта, как у страницы; одна модель
     // читает соседей с диска, как прогон без подкоманды.
@@ -381,7 +384,8 @@ fn run(
                 .file(name)
                 .map(|f| f.text.clone())
                 .unwrap_or_default();
-            serde_json::from_str(&text).map_err(|e| format!("`{name}` не читается: {e}"))?
+            serde_json::from_str(&text)
+                .map_err(|e| msg!(keys::SIM_EXPORT_UNREADABLE, name = name, error = e))?
         }
         None => Vec::new(),
     };

@@ -20,6 +20,7 @@
 use crate::eval::error::EvalError;
 use crate::eval::ops::{self, BinOp, UnOp};
 use crate::eval::value::Value;
+use takt_lang::diagnostics::lang::keys;
 
 /// Вычисляет встроенную функцию по имени и уже вычисленным аргументам.
 ///
@@ -91,7 +92,7 @@ fn is_less(a: &Value, b: &Value) -> Result<bool, EvalError> {
         | Value::Array(_)
         | Value::Struct { .. } => Err(EvalError::TypeMismatch {
             op: "<",
-            lhs: "значение",
+            lhs: keys::SIM_KIND_VALUE,
             rhs: None,
         }),
     }

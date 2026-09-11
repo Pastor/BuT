@@ -11,6 +11,8 @@ use crate::context::Context;
 use crate::eval::value::Value;
 use crate::json_input::json_to_value;
 use crate::unit::{Unit, UnitKind};
+use takt_lang::diagnostics::lang::keys;
+use takt_lang::msg;
 
 // -- Структуры снимка ----------------------------------------------------------
 
@@ -170,21 +172,32 @@ fn restore_kind(unit: &mut Unit, snap: &UnitSnapshot) {
 pub fn save_to_file(unit: &Unit, path: &Path) -> Result<(), String> {
     let snap = snapshot(unit);
     let json = serde_json::to_string_pretty(&snap)
-        .map_err(|e| format!("Ошибка сериализации состояния: {e}"))?;
-    std::fs::write(path, json)
-        .map_err(|e| format!("Не удалось записать файл состояния {}: {e}", path.display()))
+        .map_err(|e| msg!(keys::SIM_STATE_SERIALIZE_FAILED, error = e))?;
+    std::fs::write(path, json).map_err(|e| {
+        msg!(
+            keys::SIM_STATE_WRITE_FAILED,
+            path = path.display(),
+            error = e
+        )
+    })
 }
 
 /// Загружает снимок из JSON-файла и восстанавливает состояние Unit.
 pub fn load_from_file(unit: &mut Unit, path: &Path) -> Result<(), String> {
     let json = std::fs::read_to_string(path).map_err(|e| {
-        format!(
-            "Не удалось прочитать файл состояния {}: {e}",
-            path.display()
+        msg!(
+            keys::SIM_STATE_READ_FAILED,
+            path = path.display(),
+            error = e
         )
     })?;
-    let snap: UnitSnapshot = serde_json::from_str(&json)
-        .map_err(|e| format!("Ошибка разбора файла состояния {}: {e}", path.display()))?;
+    let snap: UnitSnapshot = serde_json::from_str(&json).map_err(|e| {
+        msg!(
+            keys::SIM_STATE_PARSE_FAILED,
+            path = path.display(),
+            error = e
+        )
+    })?;
     restore(unit, &snap);
     Ok(())
 }

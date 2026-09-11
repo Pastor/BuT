@@ -15,6 +15,8 @@ use takt_scheme::svg::{Options, svg};
 use takt_scheme::video;
 
 use crate::runner::Step;
+use takt_lang::diagnostics::lang::keys;
+use takt_lang::msg;
 
 /// Пауза между кадрами по умолчанию, миллисекунд.
 pub use takt_scheme::video::PAUSE_MS;
@@ -56,7 +58,7 @@ impl Film {
         legend: bool,
     ) -> Result<Self, String> {
         if !sheets.iter().any(|s| s.key == sheet) {
-            return Err(format!("листа `{sheet}` в модели нет"));
+            return Err(msg!(keys::SIM_FILM_NO_SHEET, key = sheet));
         }
         Ok(Self {
             sheets,
@@ -85,7 +87,10 @@ impl Film {
     /// # Ошибки
     /// Кадра с таким номером нет.
     pub fn frame(&self, i: usize) -> Result<String, String> {
-        let (tick, line) = self.ticks.get(i).ok_or_else(|| format!("кадра {i} нет"))?;
+        let (tick, line) = self
+            .ticks
+            .get(i)
+            .ok_or_else(|| msg!(keys::SIM_FILM_NO_FRAME, index = i))?;
         self.draw(Some(tick), Some(line), false)
     }
 
@@ -113,7 +118,7 @@ impl Film {
             fonts,
         };
         svg(&self.key, &self.sheets, &self.layout, &options)
-            .ok_or_else(|| format!("листа `{}` в модели нет", self.key))
+            .ok_or_else(|| msg!(keys::SIM_FILM_NO_SHEET, key = self.key))
     }
 
     fn tape(&self) -> video::Film<impl Fn(usize) -> Result<String, String> + '_> {

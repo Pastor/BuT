@@ -17,6 +17,8 @@ use takt_lang::semantic::{
 
 use crate::unit::context_model::ModelNodeContext;
 use crate::unit::initial::eval_expr;
+use takt_lang::diagnostics::lang::keys;
+use takt_lang::msg;
 
 type Executions = HashMap<String, Vec<Execution>>;
 
@@ -261,15 +263,14 @@ fn reject_unsupported_arguments(
         None => Ok(()),
         Some(first) => Err(Diagnostic::error(
             first.loc,
-            format!(
-                "Модель '{}' — композиция без собственных состояний: задать её \
-                 параметр '{}' при инстанцировании нельзя (значение хранить негде)",
-                model.borrow().name.clone().unwrap_or_default(),
-                first.name
+            msg!(
+                keys::SIM_034_COMPOSITION_PARAMETER,
+                model = model.borrow().name.clone().unwrap_or_default(),
+                name = first.name
             ),
         )
         .with_code("SIM-034")
-        .with_note(call_loc, "инстанцирование здесь".to_string())),
+        .with_note(call_loc, msg!(keys::SIM_034_INSTANTIATION_HERE))),
     }
 }
 
@@ -297,12 +298,7 @@ fn build_node(
                 } => Some(name.clone()),
                 _ => None,
             })
-            .ok_or_else(|| {
-                Diagnostic::error(
-                    Location::Builtin,
-                    "Нет начального состояния в модели".to_string(),
-                )
-            })
+            .ok_or_else(|| Diagnostic::error(Location::Builtin, msg!(keys::SIM_NO_START_STATE)))
     }?;
 
     let states_snapshot: Vec<(String, StateNode)> = {
@@ -329,7 +325,7 @@ fn build_node(
         let value = eval_expr(&arg.value).ok_or_else(|| {
             Diagnostic::error(
                 arg.loc,
-                format!("Значение параметра '{}' не вычислено", arg.name),
+                msg!(keys::SIM_035_PARAMETER_NOT_COMPUTED, name = arg.name),
             )
             .with_code("SIM-035")
         })?;

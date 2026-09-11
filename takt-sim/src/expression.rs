@@ -27,7 +27,9 @@ use crate::eval::error::EvalError;
 use crate::eval::ops::{self, BinOp, UnOp};
 use crate::eval::value::Value;
 use crate::eval::{self as eval_core};
+use takt_lang::diagnostics::lang::keys;
 use takt_lang::diagnostics::{Diagnostic, Location};
+use takt_lang::msg;
 use takt_lang::semantic::ExpressionNode;
 
 /// Вычисляет выражение в значение.
@@ -64,7 +66,7 @@ pub(crate) fn eval_expression(
             ctx.get_value(borrowed.name()).ok_or_else(|| {
                 Diagnostic::error(
                     borrowed.loc(),
-                    format!("переменная '{}' не найдена", borrowed.name()),
+                    msg!(keys::SIM_009_VARIABLE_NOT_FOUND, name = borrowed.name()),
                 )
                 .with_code("SIM-009")
             })
@@ -76,15 +78,13 @@ pub(crate) fn eval_expression(
             let loc = base.loc();
             let array = eval_expression(base, ctx)?;
             let Value::Array(items) = array else {
-                return Err(Diagnostic::error(
-                    loc,
-                    "индексируемое значение не является массивом".to_string(),
-                )
-                .with_code("SIM-010"));
+                return Err(
+                    Diagnostic::error(loc, msg!(keys::SIM_010_NOT_AN_ARRAY)).with_code("SIM-010")
+                );
             };
             let Value::Number(idx) = eval_expression(index, ctx)? else {
                 return Err(
-                    Diagnostic::error(loc, "индекс массива должен быть целым".to_string())
+                    Diagnostic::error(loc, msg!(keys::SIM_010_INDEX_NOT_INTEGER))
                         .with_code("SIM-010"),
                 );
             };
@@ -94,7 +94,11 @@ pub(crate) fn eval_expression(
                 .ok_or_else(|| {
                     Diagnostic::error(
                         loc,
-                        format!("индекс {idx} вне границ массива (длина {})", items.len()),
+                        msg!(
+                            keys::SIM_010_INDEX_OUT_OF_BOUNDS,
+                            index = idx,
+                            len = items.len()
+                        ),
                     )
                     .with_code("SIM-010")
                 })
@@ -103,11 +107,10 @@ pub(crate) fn eval_expression(
             let loc = base.loc();
             let array = eval_expression(base, ctx)?;
             let Value::Array(items) = array else {
-                return Err(Diagnostic::error(
-                    loc,
-                    "срезаемое значение не является массивом".to_string(),
-                )
-                .with_code("SIM-010"));
+                return Err(
+                    Diagnostic::error(loc, msg!(keys::SIM_010_SLICE_NOT_AN_ARRAY))
+                        .with_code("SIM-010"),
+                );
             };
             let start = usize::try_from(from.unwrap_or(0)).unwrap_or(0);
             let end = to
@@ -119,9 +122,11 @@ pub(crate) fn eval_expression(
                 .ok_or_else(|| {
                     Diagnostic::error(
                         loc,
-                        format!(
-                            "срез [{start}:{end}] вне границ массива (длина {})",
-                            items.len()
+                        msg!(
+                            keys::SIM_010_SLICE_OUT_OF_BOUNDS,
+                            start = start,
+                            end = end,
+                            len = items.len()
                         ),
                     )
                     .with_code("SIM-010")
@@ -213,18 +218,21 @@ pub(crate) fn eval_expression(
             crate::unit::statement::call_function(func, &values, ctx)
         }
         ExpressionNode::NamedFunctionBox(_, _) => {
-            Err(unsupported("вызов с именованными аргументами", expr.loc()))
+            Err(unsupported(&msg!(keys::SIM_WHAT_NAMED_CALL), expr.loc()))
         }
-        ExpressionNode::CodeBlock(_, _) => Err(unsupported("блок кода как выражение", expr.loc())),
+        ExpressionNode::CodeBlock(_, _) => {
+            Err(unsupported(&msg!(keys::SIM_WHAT_CODE_BLOCK), expr.loc()))
+        }
         // Присваивание внутри выражения требует доступа на запись, которого у
         // вычислителя нет. Присваивание-оператор обрабатывает `builder.rs`.
-        ExpressionNode::Assign(_, _) => {
-            Err(unsupported("присваивание внутри выражения", expr.loc()))
-        }
+        ExpressionNode::Assign(_, _) => Err(unsupported(
+            &msg!(keys::SIM_WHAT_ASSIGN_IN_EXPRESSION),
+            expr.loc(),
+        )),
         // `Value` не представляет строки - пробел зафиксирован анализом.
-        ExpressionNode::String(_) => Err(unsupported("строки", expr.loc())),
-        ExpressionNode::Type(_) => Err(unsupported("тип как выражение", expr.loc())),
-        ExpressionNode::Model(_) => Err(unsupported("модель как выражение", expr.loc())),
+        ExpressionNode::String(_) => Err(unsupported(&msg!(keys::SIM_WHAT_STRINGS), expr.loc())),
+        ExpressionNode::Type(_) => Err(unsupported(&msg!(keys::SIM_WHAT_TYPE), expr.loc())),
+        ExpressionNode::Model(_) => Err(unsupported(&msg!(keys::SIM_WHAT_MODEL), expr.loc())),
         // Именованное условие в позиции выражения вычисляется тем же адаптером условий,
         // что и на ребре. Иначе эталон отвечает `SIM-014`, а цель `c` печатает для того
         // же входа макрос `COND_...`, которого нигде не определяет, то есть выдаёт
@@ -235,17 +243,20 @@ pub(crate) fn eval_expression(
         ExpressionNode::Condition(cond) => {
             crate::predicate::eval_condition(&cond.borrow().value, ctx)
         }
-        ExpressionNode::List(_) => Err(unsupported("список параметров", expr.loc())),
+        ExpressionNode::List(_) => Err(unsupported(
+            &msg!(keys::SIM_WHAT_PARAMETER_LIST),
+            expr.loc(),
+        )),
 
         // -- Невычислимые по определению --------------------------------------
         ExpressionNode::None => Err(Diagnostic::error(
             expr.loc(),
-            "пустое выражение не может быть вычислено".to_string(),
+            msg!(keys::SIM_015_EMPTY_EXPRESSION),
         )
         .with_code("SIM-015")),
         ExpressionNode::Unresolved(_) => Err(Diagnostic::error(
             expr.loc(),
-            "неразрешённое выражение не может быть вычислено".to_string(),
+            msg!(keys::SIM_016_UNRESOLVED_EXPRESSION),
         )
         .with_code("SIM-016")),
     }
@@ -274,14 +285,14 @@ fn debug_argument(
 }
 
 fn unsupported(what: &str, loc: Location) -> Diagnostic {
-    Diagnostic::error(loc, format!("{what} не поддерживается симулятором")).with_code("SIM-014")
+    Diagnostic::error(loc, msg!(keys::SIM_014_UNSUPPORTED, what = what)).with_code("SIM-014")
 }
 
 fn parse_rational(text: &str, negative: bool) -> Result<Value, Diagnostic> {
     let parsed: f64 = text.parse().map_err(|_| {
         Diagnostic::error(
             Location::Builtin,
-            format!("не удалось разобрать вещественный литерал '{text}'"),
+            msg!(keys::SIM_008_REAL_LITERAL, text = text),
         )
         .with_code("SIM-008")
     })?;

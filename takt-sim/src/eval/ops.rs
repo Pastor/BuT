@@ -122,10 +122,8 @@ pub(crate) fn to_bool(value: &Value) -> Result<bool, EvalError> {
         | Value::Array(_)
         | Value::Fixed { .. }
         | Value::Struct { .. }
-        | Value::Duration(_) => Err(EvalError::TypeMismatch {
-            op: "логическое условие",
-            lhs: value_kind(value),
-            rhs: None,
+        | Value::Duration(_) => Err(EvalError::NotACondition {
+            value: value_kind(value),
         }),
     }
 }
@@ -747,7 +745,7 @@ mod tests {
     fn to_bool_on_real_is_error() {
         assert!(matches!(
             to_bool(&real(1.0)),
-            Err(EvalError::TypeMismatch { .. })
+            Err(EvalError::NotACondition { .. })
         ));
     }
 }

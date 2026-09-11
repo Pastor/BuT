@@ -2,6 +2,8 @@ use crate::eval::value::Value;
 use serde::Deserialize;
 use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
+use takt_lang::diagnostics::lang::keys;
+use takt_lang::msg;
 
 // -- Структуры шага симуляции -------------------------------------------------
 
@@ -85,10 +87,20 @@ pub struct Guard {
 
 /// Читает JSON-файл симуляции и возвращает вектор шагов.
 pub fn load_sim_steps(path: &Path) -> Result<Vec<SimStep>, String> {
-    let content = std::fs::read_to_string(path)
-        .map_err(|e| format!("Ошибка чтения {}: {}", path.display(), e))?;
-    serde_json::from_str(&content)
-        .map_err(|e| format!("Ошибка парсинга JSON {}: {}", path.display(), e))
+    let content = std::fs::read_to_string(path).map_err(|e| {
+        msg!(
+            keys::SIM_SCENARIO_READ_FAILED,
+            path = path.display(),
+            error = e
+        )
+    })?;
+    serde_json::from_str(&content).map_err(|e| {
+        msg!(
+            keys::SIM_SCENARIO_PARSE_FAILED,
+            path = path.display(),
+            error = e
+        )
+    })
 }
 
 // -- Конвертация значений ------------------------------------------------------

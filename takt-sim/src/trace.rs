@@ -5,6 +5,8 @@ use crate::eval::value::Value;
 use crate::port_names::PortNames;
 use crate::runner::{RunResult, RunWarning};
 use crate::unit::Unit;
+use takt_lang::diagnostics::lang::keys;
+use takt_lang::msg;
 
 /// Строит строку шага трассы - ту же, что печатает `takt-sim`.
 ///
@@ -79,14 +81,20 @@ pub fn step_line(unit: &Unit, port_names: &PortNames, step_no: usize, now_ns: i6
 /// двусмысленных именах, печатавшееся словом внимания с самого появления.
 pub fn warning_line(warning: &RunWarning) -> String {
     if warning.code.is_empty() {
-        return format!("ВНИМАНИЕ: {}", warning.message);
+        return msg!(keys::SIM_TRACE_ATTENTION, message = warning.message);
     }
     match warning.step {
-        Some(step) => format!(
-            "Предупреждение [{}]: шаг {step}: {}",
-            warning.code, warning.message
+        Some(step) => msg!(
+            keys::SIM_TRACE_WARNING_AT_STEP,
+            code = warning.code,
+            step = step,
+            message = warning.message
         ),
-        None => format!("Предупреждение [{}]: {}", warning.code, warning.message),
+        None => msg!(
+            keys::SIM_TRACE_WARNING,
+            code = warning.code,
+            message = warning.message
+        ),
     }
 }
 
@@ -108,27 +116,29 @@ pub fn result_report(result: &RunResult) -> ResultReport {
     let mut report = ResultReport::default();
     match result {
         RunResult::Terminated { steps } => {
-            report.info.push(format!(
-                "Завершено: модель достигла терминального состояния за {steps} шагов."
-            ));
+            report
+                .info
+                .push(msg!(keys::SIM_TRACE_TERMINATED, steps = steps));
         }
         RunResult::StepsReached { steps } => {
             report
                 .info
-                .push(format!("Выполнено {steps} шагов (лимит достигнут)."));
+                .push(msg!(keys::SIM_TRACE_STEPS_EXHAUSTED, steps = steps));
         }
         RunResult::GuardFailed { step, details } => {
-            report
-                .errors
-                .push(format!("ОШИБКА guard на шаге {step}: {details}"));
+            report.errors.push(msg!(
+                keys::SIM_TRACE_GUARD_FAILED,
+                step = step,
+                details = details
+            ));
         }
         RunResult::EvalFailed { step, details } => {
-            report
-                .errors
-                .push(format!("ОШИБКА вычисления на шаге {step}: {details}"));
-            report
-                .errors
-                .push("Симуляция остановлена: результат недостоверен.".to_string());
+            report.errors.push(msg!(
+                keys::SIM_TRACE_EVAL_FAILED,
+                step = step,
+                details = details
+            ));
+            report.errors.push(msg!(keys::SIM_TRACE_UNRELIABLE));
         }
         RunResult::CompletedWithInvariantViolations {
             steps,
@@ -136,19 +146,27 @@ pub fn result_report(result: &RunResult) -> ResultReport {
             violations,
         } => {
             let how = if *terminated {
-                "модель достигла терминального состояния"
+                msg!(keys::SIM_TRACE_HOW_TERMINATED)
             } else {
-                "лимит шагов достигнут"
+                msg!(keys::SIM_TRACE_HOW_LIMIT)
             };
-            report.info.push(format!(
-                "Прогон завершён ({how}) за {steps} шагов; мягкий режим инвариантов."
+            report.info.push(msg!(
+                keys::SIM_TRACE_SOFT_FINISHED,
+                how = how,
+                steps = steps
             ));
-            report.errors.push(format!(
-                "Нарушений инвариантов: {} (режим --invariant-soft — прогон продолжен):",
-                violations.len()
-            ));
+            report
+                .errors
+                .push(msg!(keys::SIM_TRACE_VIOLATIONS, count = violations.len()));
             for (step, details) in violations {
-                report.errors.push(format!("  шаг {step}: {details}"));
+                report.errors.push(format!(
+                    "  {}",
+                    msg!(
+                        keys::SIM_TRACE_VIOLATION_STEP,
+                        step = step,
+                        details = details
+                    )
+                ));
             }
         }
     }

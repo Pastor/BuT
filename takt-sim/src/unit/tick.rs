@@ -10,6 +10,8 @@
 //! юнитов и сбор трасс остались в `mod.rs`.
 
 use super::*;
+use takt_lang::diagnostics::lang::keys;
+use takt_lang::msg;
 
 impl Unit {
     /// Один такт симуляции - **жёсткий** режим (умолчание): нарушение инварианта
@@ -95,7 +97,7 @@ impl Unit {
                 Ok(true) => {}
                 Ok(false) => {
                     let named = name.as_ref().map(|n| format!(" '{n}'")).unwrap_or_default();
-                    let details = format!("нарушен инвариант{named} (SIM-025)");
+                    let details = msg!(keys::SIM_025_INVARIANT_VIOLATED_WITH_CODE, named = named);
                     if soft {
                         // Мягкий режим: записать и продолжить (не прерывать такт).
                         if let UnitKind::Node {

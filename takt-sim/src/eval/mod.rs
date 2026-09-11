@@ -36,6 +36,8 @@ use takt_lang::semantic::type_node::TypeNode;
 
 use crate::eval::error::{EvalError, value_kind};
 use crate::eval::value::Value;
+use takt_lang::diagnostics::lang::keys;
+use takt_lang::msg;
 
 /// Реестр структурных типов: даёт определение `struct` по имени.
 ///
@@ -163,7 +165,7 @@ pub(crate) fn coerce_to_type_with(
             | Value::Struct { .. }
             | Value::Duration(_) => Err(EvalError::NotCoercible {
                 value: value_kind(&value),
-                ty: "адресный порт".to_string(),
+                ty: msg!(keys::SIM_TY_ADDRESS_PORT),
             }),
         },
         // Структурная цель: инициализатор `{...}` (пришёл как `Array`, адаптер не знает
@@ -171,29 +173,29 @@ pub(crate) fn coerce_to_type_with(
         // := p`).
         TypeNode::Struct(name) => coerce_struct(value, name, structs),
         TypeNode::Inference => Err(EvalError::UnsupportedType {
-            ty: "невыведенный тип".to_string(),
+            ty: msg!(keys::SIM_TY_INFERENCE),
         }),
         TypeNode::Unit => Err(EvalError::UnsupportedType {
-            ty: "пустой тип".to_string(),
+            ty: msg!(keys::SIM_TY_UNIT),
         }),
         TypeNode::Unsupported => Err(EvalError::UnsupportedType {
-            ty: "неподдерживаемый тип".to_string(),
+            ty: msg!(keys::SIM_TY_UNSUPPORTED),
         }),
         TypeNode::BuiltinString => Err(EvalError::UnsupportedType {
-            ty: "строка".to_string(),
+            ty: msg!(keys::SIM_TY_STRING),
         }),
         TypeNode::BuiltinModel => Err(EvalError::UnsupportedType {
-            ty: "модель".to_string(),
+            ty: msg!(keys::SIM_TY_MODEL),
         }),
         TypeNode::BuiltinState => Err(EvalError::UnsupportedType {
-            ty: "состояние".to_string(),
+            ty: msg!(keys::SIM_TY_STATE),
         }),
         TypeNode::BuiltinNumeric => match &value {
             Value::Number(_) | Value::Real(_) | Value::Fixed { .. } => Ok(value),
             Value::Boolean(_) | Value::Array(_) | Value::Struct { .. } | Value::Duration(_) => {
                 Err(EvalError::NotCoercible {
                     value: value_kind(&value),
-                    ty: "числовой тип".to_string(),
+                    ty: msg!(keys::SIM_TY_NUMERIC),
                 })
             }
         },
@@ -378,13 +380,13 @@ fn coerce_array(
     let Value::Array(items) = value else {
         return Err(EvalError::NotCoercible {
             value: value_kind(&value),
-            ty: format!("массив [{size}]"),
+            ty: msg!(keys::SIM_TY_ARRAY, size = size),
         });
     };
     if items.len() != usize::from(size) {
         return Err(EvalError::NotCoercible {
-            value: "массив другой длины",
-            ty: format!("массив [{size}]"),
+            value: keys::SIM_KIND_ARRAY_OTHER_LENGTH,
+            ty: msg!(keys::SIM_TY_ARRAY, size = size),
         });
     }
     let coerced = items
@@ -408,7 +410,7 @@ fn coerce_struct(
     let def = structs
         .find_struct(name)
         .ok_or_else(|| EvalError::UnsupportedType {
-            ty: format!("структура '{name}' (определение не найдено)"),
+            ty: msg!(keys::SIM_TY_STRUCT_NOT_FOUND, name = name),
         })?;
     match value {
         // Позиционный инициализатор `{1, 2}` -> поля в объявленном порядке.
@@ -451,7 +453,7 @@ fn coerce_struct(
         | Value::Fixed { .. }
         | Value::Duration(_)) => Err(EvalError::NotCoercible {
             value: value_kind(&scalar),
-            ty: format!("структура '{name}'"),
+            ty: msg!(keys::SIM_TY_STRUCT, name = name),
         }),
     }
 }

@@ -32,7 +32,9 @@ use crate::unit::{Execution, Flow};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
+use takt_lang::diagnostics::lang::keys;
 use takt_lang::diagnostics::{Diagnostic, Location};
+use takt_lang::msg;
 use takt_lang::parser::ast::Member;
 use takt_lang::semantic::formula::Formula;
 use takt_lang::semantic::type_node::TypeNode;
@@ -366,7 +368,7 @@ pub(crate) fn exec_statement(
                                 name.as_ref().map(|n| format!(" '{n}'")).unwrap_or_default();
                             return Err(Diagnostic::error(
                                 Location::Implicit,
-                                format!("нарушен инвариант{named}"),
+                                msg!(keys::SIM_025_INVARIANT_VIOLATED, named = named),
                             )
                             .with_code("SIM-025"));
                         }
@@ -428,15 +430,16 @@ fn resolve_place<'a>(
             }
             let Value::Number(idx) = eval_expression(index_expr, ctx)? else {
                 return Err(
-                    Diagnostic::error(loc, "индекс массива должен быть целым".to_string())
+                    Diagnostic::error(loc, msg!(keys::SIM_010_INDEX_NOT_INTEGER))
                         .with_code("SIM-010"),
                 );
             };
             let Ok(index) = usize::try_from(idx) else {
-                return Err(
-                    Diagnostic::error(loc, format!("индекс {idx} вне границ массива"))
-                        .with_code("SIM-010"),
-                );
+                return Err(Diagnostic::error(
+                    loc,
+                    msg!(keys::SIM_010_INDEX_OUT_OF_RANGE, index = idx),
+                )
+                .with_code("SIM-010"));
             };
             path.push(PlaceSegment::Index(index));
             Ok(root)
@@ -486,14 +489,10 @@ fn exec_expression(expr: &ExpressionNode, ctx: &mut dyn Context) -> Result<Flow,
                 // Текст называет единственную оставшуюся форму. Срез не переводит ни
                 // один потребитель, поэтому отказ эталона идёт заодно с целями, а не
                 // вместо них.
-                return Err(Diagnostic::error(
-                    loc_of_assign(lhs),
-                    "запись в срез массива ('x[a:b] := …') не поддерживается: срез не \
-                     переводит ни одна цель генерации, и эталон отказывает вместе с \
-                     ними. Присвойте элементы по отдельности ('x[a] := …')"
-                        .to_string(),
-                )
-                .with_code("SIM-017"));
+                return Err(
+                    Diagnostic::error(loc_of_assign(lhs), msg!(keys::SIM_SLICE_WRITE))
+                        .with_code("SIM-017"),
+                );
             };
             let (name, ty, loc) = {
                 let b = var_rc.borrow();
@@ -510,7 +509,7 @@ fn exec_expression(expr: &ExpressionNode, ctx: &mut dyn Context) -> Result<Flow,
                 // по пути сегментов (лист приводится к типу поля/элемента), пишем
                 // обратно. `ty` корня даёт тип элемента.
                 let current = ctx.get_value(&name).ok_or_else(|| {
-                    Diagnostic::error(loc, format!("переменная '{name}' не найдена"))
+                    Diagnostic::error(loc, msg!(keys::SIM_009_VARIABLE_NOT_FOUND, name = name))
                         .with_code("SIM-009")
                 })?;
                 let updated =
@@ -550,7 +549,7 @@ fn exec_loop(
         if iterations >= MAX_ITERATIONS {
             return Err(Diagnostic::error(
                 Location::Builtin,
-                format!("превышен предел итераций цикла ({MAX_ITERATIONS})"),
+                msg!(keys::SIM_018_LOOP_LIMIT, max = MAX_ITERATIONS),
             )
             .with_code("SIM-018"));
         }
@@ -587,7 +586,7 @@ fn exec_for(
         if iterations >= MAX_ITERATIONS {
             return Err(Diagnostic::error(
                 Location::Builtin,
-                format!("превышен предел итераций цикла for ({MAX_ITERATIONS})"),
+                msg!(keys::SIM_018_FOR_LIMIT, max = MAX_ITERATIONS),
             )
             .with_code("SIM-018"));
         }
@@ -661,13 +660,10 @@ pub(crate) fn call_function(
                 return if matches!(ret, TypeNode::Unit) {
                     Ok(Value::Number(0))
                 } else {
-                    Err(Diagnostic::error(
-                        *loc,
-                        format!(
-                            "внешняя функция '{name}' не имеет тела: симуляция значения невозможна"
-                        ),
+                    Err(
+                        Diagnostic::error(*loc, msg!(keys::SIM_EXTERN_WITHOUT_BODY, name = name))
+                            .with_code("SIM-019"),
                     )
-                    .with_code("SIM-019"))
                 };
             }
             // Встроенные функции. Вычисление живёт в `eval::builtin` и идёт через те же
@@ -699,17 +695,14 @@ pub(crate) fn call_function(
                 // быть.
                 return Err(Diagnostic::error(
                     Location::Builtin,
-                    format!(
-                        "встроенная функция '{name}' значения в этой позиции не \
-                         имеет — вычислить его нечем"
-                    ),
+                    msg!(keys::SIM_BUILTIN_WITHOUT_VALUE, name = name),
                 )
                 .with_code("SIM-020"));
             }
             FunctionDefinitionNode::None | FunctionDefinitionNode::Unresolved(_) => {
                 return Err(Diagnostic::error(
                     Location::Builtin,
-                    "неразрешённая функция не может быть вызвана".to_string(),
+                    msg!(keys::SIM_016_UNRESOLVED_FUNCTION),
                 )
                 .with_code("SIM-016"));
             }
@@ -719,10 +712,11 @@ pub(crate) fn call_function(
     if params.len() != args.len() {
         return Err(Diagnostic::error(
             loc,
-            format!(
-                "функция '{name}': ожидалось аргументов {}, передано {}",
-                params.len(),
-                args.len()
+            msg!(
+                keys::SIM_FUNCTION_ARITY,
+                name = name,
+                expected = params.len(),
+                got = args.len()
             ),
         )
         .with_code("SIM-021"));
@@ -754,7 +748,11 @@ fn call_local(
     if depth > MAX_CALL_DEPTH {
         return Err(Diagnostic::error(
             loc,
-            format!("превышена глубина рекурсии ({MAX_CALL_DEPTH}) при вызове '{name}'"),
+            msg!(
+                keys::SIM_022_RECURSION_DEPTH,
+                max = MAX_CALL_DEPTH,
+                name = name
+            ),
         )
         .with_code("SIM-022"));
     }
@@ -784,14 +782,14 @@ fn call_local(
                 Ok(Value::Number(0))
             } else {
                 Err(
-                    Diagnostic::error(loc, format!("функция '{name}' не вернула значение"))
+                    Diagnostic::error(loc, msg!(keys::SIM_023_NO_RETURN, name = name))
                         .with_code("SIM-023"),
                 )
             }
         }
         Flow::Break | Flow::Continue => Err(Diagnostic::error(
             loc,
-            format!("'{name}': break/continue вне цикла"),
+            msg!(keys::SIM_024_BREAK_OUTSIDE_LOOP, name = name),
         )
         .with_code("SIM-024")),
     }

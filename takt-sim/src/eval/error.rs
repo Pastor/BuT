@@ -4,8 +4,13 @@
 //! Позицию добавляет адаптер, у которого она есть, - через
 //! [`EvalError::to_diagnostic`]. Такое разделение даёт диагностику с позицией в
 //! исходнике вместо `Location::Builtin`.
+//!
+//! Вид значения ошибка хранит ключом каталога, а не текстом: текст строится при
+//! печати, на языке прогона.
 
+use takt_lang::diagnostics::lang::{Key, keys};
 use takt_lang::diagnostics::{Diagnostic, Location};
+use takt_lang::msg;
 
 use crate::eval::value::Value;
 
@@ -23,18 +28,20 @@ pub(crate) enum EvalError {
     SignedOverflow { value: i128, bits: u8 },
     /// Переполнение внутреннего 64-битного представления.
     ArithmeticOverflow { op: &'static str },
-    /// Операция не определена для операндов таких типов (в т.ч.
+    /// Операция не определена для операндов таких типов.
     TypeMismatch {
         op: &'static str,
-        lhs: &'static str,
-        rhs: Option<&'static str>,
+        lhs: Key,
+        rhs: Option<Key>,
     },
+    /// Значение в позиции логического условия не является логическим.
+    NotACondition { value: Key },
     /// Значение нельзя привести к типу назначения.
-    NotCoercible { value: &'static str, ty: String },
+    NotCoercible { value: Key, ty: String },
     /// Тип не поддерживается симулятором.
     UnsupportedType { ty: String },
     /// Доступ к полю (`.имя`) у значения, не являющегося структурой.
-    FieldOfNonStruct { value: &'static str },
+    FieldOfNonStruct { value: Key },
     /// Число полей инициализатора `{...}` не совпадает с объявлением структуры.
     StructArity {
         name: String,
@@ -48,63 +55,76 @@ pub(crate) enum EvalError {
     /// Обращение к структуре по номеру бита (`p.0`) - бита у структуры нет.
     BitIndexOfStruct { name: String },
     /// Доступ к биту (`.N`) у значения, не являющегося целым/логическим.
-    BitOfNonInteger { value: &'static str },
+    BitOfNonInteger { value: Key },
     /// Номер бита вне разрядов значения.
     ///
     /// `width` - сколько разрядов у значения **на самом деле**: 64 у целого (ширина
     /// носителя), `1` у логического, `слов x 64` у бит-вектора `[bit;N > 64]`.
     BitIndexOutOfRange { bit: i128, width: usize },
     /// Индексная запись (`x[i] := ...`) в значение, не являющееся массивом.
-    IndexOfNonArray { value: &'static str },
+    IndexOfNonArray { value: Key },
     /// Индекс записи вне границ массива (`data[i] := ...`, `i >= длины`).
     ArrayIndexOutOfBounds { index: usize, len: usize },
 }
 
 impl EvalError {
-    /// Текст диагностики на русском языке ().
+    /// Текст диагностики на языке прогона.
     pub(crate) fn message(&self) -> String {
         match self {
-            EvalError::DivisionByZero => "деление на ноль".to_string(),
-            EvalError::ShiftOutOfRange { by } => {
-                format!("сдвиг на {by} бит: величина сдвига должна быть в диапазоне 0..64")
-            }
+            EvalError::DivisionByZero => msg!(keys::SIM_001_DIVISION_BY_ZERO),
+            EvalError::ShiftOutOfRange { by } => msg!(keys::SIM_002_SHIFT_OUT_OF_RANGE, by = by),
             EvalError::SignedOverflow { value, bits } => {
-                format!("значение {value} не помещается в знаковый {bits}-битный тип")
+                msg!(keys::SIM_003_SIGNED_OVERFLOW, value = value, bits = bits)
             }
             EvalError::ArithmeticOverflow { op } => {
-                format!("переполнение при вычислении операции '{op}'")
+                msg!(keys::SIM_004_ARITHMETIC_OVERFLOW, op = op)
             }
             EvalError::TypeMismatch { op, lhs, rhs } => match rhs {
-                Some(rhs) => format!("операция '{op}' не определена для операндов {lhs} и {rhs}"),
-                None => format!("операция '{op}' не определена для операнда {lhs}"),
+                Some(rhs) => msg!(
+                    keys::SIM_005_TYPE_MISMATCH_BINARY,
+                    op = op,
+                    lhs = msg!(*lhs),
+                    rhs = msg!(*rhs)
+                ),
+                None => msg!(keys::SIM_005_TYPE_MISMATCH_UNARY, op = op, lhs = msg!(*lhs)),
             },
+            EvalError::NotACondition { value } => msg!(
+                keys::SIM_005_TYPE_MISMATCH_UNARY,
+                op = msg!(keys::SIM_OP_LOGICAL_CONDITION),
+                lhs = msg!(*value)
+            ),
             EvalError::NotCoercible { value, ty } => {
-                format!("значение {value} нельзя привести к типу {ty}")
+                msg!(keys::SIM_006_NOT_COERCIBLE, value = msg!(*value), ty = ty)
             }
-            EvalError::UnsupportedType { ty } => {
-                format!("тип {ty} не поддерживается симулятором")
-            }
+            EvalError::UnsupportedType { ty } => msg!(keys::SIM_007_UNSUPPORTED_TYPE, ty = ty),
             EvalError::FieldOfNonStruct { value } => {
-                format!("доступ к полю возможен только у структуры, а не у значения {value}")
+                msg!(keys::SIM_012_FIELD_OF_NON_STRUCT, value = msg!(*value))
             }
             EvalError::StructArity {
                 name,
                 expected,
                 got,
-            } => format!(
-                "инициализатор структуры '{name}' содержит {got} полей, а объявлено {expected}"
+            } => msg!(
+                keys::SIM_026_STRUCT_ARITY,
+                name = name,
+                got = got,
+                expected = expected
             ),
             EvalError::UnknownField { name, field } => {
-                format!("структура '{name}' не имеет поля '{field}'")
+                msg!(keys::SIM_027_UNKNOWN_FIELD, name = name, field = field)
             }
             EvalError::StructTypeMismatch { expected, got } => {
-                format!("ожидалась структура '{expected}', получена '{got}'")
+                msg!(
+                    keys::SIM_028_STRUCT_TYPE_MISMATCH,
+                    expected = expected,
+                    got = got
+                )
             }
             EvalError::BitIndexOfStruct { name } => {
-                format!("к структуре '{name}' нельзя обратиться по номеру бита")
+                msg!(keys::SIM_029_BIT_INDEX_OF_STRUCT, name = name)
             }
             EvalError::BitOfNonInteger { value } => {
-                format!("доступ к биту возможен только у целого значения, а не у {value}")
+                msg!(keys::SIM_011_BIT_OF_NON_INTEGER, value = msg!(*value))
             }
             EvalError::BitIndexOutOfRange { bit, width } => {
                 // Граница печатается включительно: "0..128" на 128-разрядном значении
@@ -112,19 +132,16 @@ impl EvalError {
                 // логического разряд один, и множественное число там звучало бы
                 // ошибкой.
                 if *width == 1 {
-                    format!("номер бита {bit} недопустим: у логического значения один разряд — 0")
+                    msg!(keys::SIM_011_BIT_OF_BOOL, bit = bit)
                 } else {
-                    format!(
-                        "номер бита {bit} вне разрядов значения: доступны 0..{}",
-                        width - 1
-                    )
+                    msg!(keys::SIM_011_BIT_OUT_OF_RANGE, bit = bit, last = width - 1)
                 }
             }
             EvalError::IndexOfNonArray { value } => {
-                format!("индексная запись возможна только в массив, а не в значение {value}")
+                msg!(keys::SIM_010_INDEX_OF_NON_ARRAY, value = msg!(*value))
             }
             EvalError::ArrayIndexOutOfBounds { index, len } => {
-                format!("индекс {index} вне границ массива (длина {len})")
+                msg!(keys::SIM_010_INDEX_OUT_OF_BOUNDS, index = index, len = len)
             }
         }
     }
@@ -136,7 +153,7 @@ impl EvalError {
             EvalError::ShiftOutOfRange { .. } => "SIM-002",
             EvalError::SignedOverflow { .. } => "SIM-003",
             EvalError::ArithmeticOverflow { .. } => "SIM-004",
-            EvalError::TypeMismatch { .. } => "SIM-005",
+            EvalError::TypeMismatch { .. } | EvalError::NotACondition { .. } => "SIM-005",
             EvalError::NotCoercible { .. } => "SIM-006",
             EvalError::UnsupportedType { .. } => "SIM-007",
             EvalError::FieldOfNonStruct { .. } => "SIM-012",
@@ -144,7 +161,7 @@ impl EvalError {
             EvalError::UnknownField { .. } => "SIM-027",
             EvalError::StructTypeMismatch { .. } => "SIM-028",
             EvalError::BitIndexOfStruct { .. } => "SIM-029",
-            // SIM-011 - прежний код доступа к биту (адаптер), теперь в ядре.
+            // SIM-011 - код доступа к биту и у адаптера, и у ядра.
             EvalError::BitOfNonInteger { .. } | EvalError::BitIndexOutOfRange { .. } => "SIM-011",
             // SIM-010 - тот же код, что у ошибок чтения массива (`expression.rs`): "не
             // массив" и "вне границ" едины для чтения и записи.
@@ -162,16 +179,16 @@ impl EvalError {
     }
 }
 
-/// Имя типа значения для текстов диагностик.
-pub(crate) fn value_kind(value: &Value) -> &'static str {
+/// Вид значения для текстов диагностик - ключом каталога.
+pub(crate) fn value_kind(value: &Value) -> Key {
     match value {
-        Value::Number(_) => "целое",
-        Value::Real(_) => "вещественное",
-        Value::Boolean(_) => "логическое",
-        Value::Array(_) => "массив",
-        Value::Fixed { .. } => "fixed-point",
-        Value::Struct { .. } => "структура",
-        Value::Duration(_) => "длительность",
+        Value::Number(_) => keys::SIM_KIND_INTEGER,
+        Value::Real(_) => keys::SIM_KIND_REAL,
+        Value::Boolean(_) => keys::SIM_KIND_BOOLEAN,
+        Value::Array(_) => keys::SIM_KIND_ARRAY,
+        Value::Fixed { .. } => keys::SIM_KIND_FIXED,
+        Value::Struct { .. } => keys::SIM_KIND_STRUCT,
+        Value::Duration(_) => keys::SIM_KIND_DURATION,
     }
 }
 
@@ -208,8 +225,8 @@ mod tests {
     fn type_mismatch_binary_mentions_both_operands() {
         let err = EvalError::TypeMismatch {
             op: "+",
-            lhs: "логическое",
-            rhs: Some("целое"),
+            lhs: keys::SIM_KIND_BOOLEAN,
+            rhs: Some(keys::SIM_KIND_INTEGER),
         };
         assert!(err.message().contains("логическое"));
         assert!(err.message().contains("целое"));
@@ -219,11 +236,24 @@ mod tests {
     fn type_mismatch_unary_mentions_single_operand() {
         let err = EvalError::TypeMismatch {
             op: "~",
-            lhs: "вещественное",
+            lhs: keys::SIM_KIND_REAL,
             rhs: None,
         };
         assert!(err.message().contains("вещественное"));
         assert!(!err.message().contains(" и "));
+    }
+
+    /// Значение вне логического условия печатается прежней формой `SIM-005`.
+    #[test]
+    fn not_a_condition_reads_as_type_mismatch() {
+        let err = EvalError::NotACondition {
+            value: keys::SIM_KIND_ARRAY,
+        };
+        assert_eq!(
+            err.message(),
+            "операция 'логическое условие' не определена для операнда массив"
+        );
+        assert_eq!(err.code(), "SIM-005");
     }
 
     #[test]
@@ -238,9 +268,9 @@ mod tests {
 
     #[test]
     fn value_kind_covers_all_variants() {
-        assert_eq!(value_kind(&Value::Number(1)), "целое");
-        assert_eq!(value_kind(&Value::Real(1.0)), "вещественное");
-        assert_eq!(value_kind(&Value::Boolean(true)), "логическое");
-        assert_eq!(value_kind(&Value::Array(vec![])), "массив");
+        assert_eq!(msg!(value_kind(&Value::Number(1))), "целое");
+        assert_eq!(msg!(value_kind(&Value::Real(1.0))), "вещественное");
+        assert_eq!(msg!(value_kind(&Value::Boolean(true))), "логическое");
+        assert_eq!(msg!(value_kind(&Value::Array(vec![]))), "массив");
     }
 }
