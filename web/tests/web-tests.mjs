@@ -2376,3 +2376,24 @@ test("вход: без входа видны верхняя шапка и спр
     globalThis.fetch = fetchBefore;
   }
 });
+
+test("справка: поле поиска стоит у кнопок перехода, а не у заголовка", async () => {
+  // Поле, число совпадений и стрелки - одно действие и одна группа у правого края;
+  // между полем и стрелками - ничего.
+  const html = await readFile(new URL("../static/index.html", import.meta.url), "utf8");
+  const head = html.slice(html.indexOf('<div class="help-head">'), html.indexOf('<div class="help-body">'));
+  const order = [...head.matchAll(/<(?:span|input|button)\b[^>]*?(?:id="([\w-]+)"|class="(help-find)")/g)].map(
+    (m) => m[1] ?? m[2],
+  );
+  assert.deepEqual(
+    order,
+    ["help-title", "help-find", "help-count", "help-search", "help-prev", "help-next", "help-close"],
+    "порядок шапки справки",
+  );
+  const find = head.slice(head.indexOf('<span class="help-find">'), head.indexOf('<button id="help-close"'));
+  for (const id of ["help-count", "help-search", "help-prev", "help-next"]) {
+    assert.ok(find.includes(`id="${id}"`), `'${id}' вне группы поиска`);
+  }
+  const css = await readFile(new URL("../static/app.css", import.meta.url), "utf8");
+  assert.match(css, /\.help-find \{[^}]*margin-inline-start: auto;/, "группа поиска не прижата к правому краю");
+});

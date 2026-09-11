@@ -2844,14 +2844,25 @@ body[data-auth="out"] .say:empty,
 body[data-auth="out"] .work > :not(.help) { display: none; }
 .help-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--gap-half);
   padding: var(--gap-half) var(--gap);
   border-bottom: 1px solid var(--border);
 }
 .help-title { font-weight: 700; font-size: var(--text-lg); white-space: nowrap; }
-.help-search { flex: 0 1 22rem; min-width: 8rem; height: var(--h-control); }
-.help-count { font-size: var(--text-xs); min-width: 9ch; white-space: nowrap; }
+/* Поиск - одна группа с числом совпадений и стрелками у правого края, а не у
+ * заголовка: действие одно, и глаз ищет его части вместе. Не помещается рядом с
+ * заголовком - группа переносится на вторую строку целиком. */
+.help-find {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-half);
+  margin-inline-start: auto;
+  min-width: 0;
+}
+.help-search { flex: 0 1 16rem; min-width: 8rem; height: var(--h-control); }
+.help-count { font-size: var(--text-xs); min-width: 9ch; white-space: nowrap; text-align: end; }
 .help-body {
   flex: 1;
   min-height: 0;

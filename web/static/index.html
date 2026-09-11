@@ -122,14 +122,18 @@
   <div id="help" class="help" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
     <div class="help-head">
       <span id="help-title" class="help-title" data-i18n="help.title">Справка — язык Takt</span>
-      <input id="help-search" class="help-search" type="search"
-           data-i18n-attr="placeholder:help.search;aria-label:help.search" placeholder="Поиск по справке" aria-label="Поиск по справке">
-      <span id="help-count" class="help-count muted" aria-live="polite"></span>
-      <button id="help-prev" class="icon-btn" type="button"
-            data-i18n-attr="data-tip:help.prev;aria-label:help.prev" data-tip="Предыдущее совпадение" aria-label="Предыдущее совпадение"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 14.5 12 9l5.5 5.5"/></svg></button>
-      <button id="help-next" class="icon-btn" type="button"
-            data-i18n-attr="data-tip:help.next;aria-label:help.next" data-tip="Следующее совпадение" aria-label="Следующее совпадение"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 9.5 12 15l5.5-5.5"/></svg></button>
-      <span class="spacer"></span>
+      <!-- Поиск стоит у кнопок перехода по найденному, а не у заголовка: поле,
+           число совпадений и стрелки - одно действие, и глаз ищет их вместе.
+           Группа прижата к правому краю и на узкой странице переносится целиком. -->
+      <span class="help-find">
+        <span id="help-count" class="help-count muted" aria-live="polite"></span>
+        <input id="help-search" class="help-search" type="search"
+             data-i18n-attr="placeholder:help.search;aria-label:help.search" placeholder="Поиск по справке" aria-label="Поиск по справке">
+        <button id="help-prev" class="icon-btn" type="button"
+              data-i18n-attr="data-tip:help.prev;aria-label:help.prev" data-tip="Предыдущее совпадение" aria-label="Предыдущее совпадение"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 14.5 12 9l5.5 5.5"/></svg></button>
+        <button id="help-next" class="icon-btn" type="button"
+              data-i18n-attr="data-tip:help.next;aria-label:help.next" data-tip="Следующее совпадение" aria-label="Следующее совпадение"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 9.5 12 15l5.5-5.5"/></svg></button>
+      </span>
       <button id="help-close" class="icon-btn" type="button"
             data-i18n-attr="data-tip:help.close;aria-label:help.close" data-tip="Закрыть справку" aria-label="Закрыть справку"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
     </div>
