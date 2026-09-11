@@ -728,6 +728,9 @@ export function centerOn(view, box, x, y) {
   return { k: view.k, x: box.width / 2 - x * view.k, y: box.height / 2 - y * view.k };
 }
 
+/** Отступ рамки скобок и параллели от своих шагов. */
+const FRAME_PAD = SNAP * 3;
+
 /**
  * Лист композиции по дереву реализации: цепочка слева направо, ветви параллели друг
  * под другом в рамке, скобки - вложенной рамкой. Это форма выражения и автораскладка
@@ -749,9 +752,8 @@ export function composeSheet(implement) {
     pairs.set(pair, ordinal + 1);
     edges.push({ from, to, ordinal, kind: "next" });
   };
-  const frames = [];
   const gap = SNAP * 6;
-  const pad = SNAP * 3;
+  const pad = FRAME_PAD;
 
   const measure = (item) => {
     if (item.model) return { w: SIDE, h: SIDE };
@@ -791,10 +793,7 @@ export function composeSheet(implement) {
       });
       return { first: [name], last: [name] };
     }
-    if (item.group) {
-      frames.push({ x, y, w: size.w, h: size.h });
-      return lay(item.group, x + pad, y + pad, measure(item.group));
-    }
+    if (item.group) return lay(item.group, x + pad, y + pad, measure(item.group));
     if (item.chain) {
       let at = x;
       let first = null;
@@ -810,7 +809,6 @@ export function composeSheet(implement) {
       return { first: first ?? [], last: prev?.last ?? [] };
     }
     const items = item.parallel ?? [];
-    frames.push({ x, y, w: size.w, h: size.h, parallel: true });
     let at = y + pad;
     const first = [];
     const last = [];
@@ -826,5 +824,60 @@ export function composeSheet(implement) {
 
   const size = measure(implement);
   lay(implement, MARGIN, MARGIN, size);
+  const frames = framesOf(implement, new Map(nodes.map((n) => [n.name, n])));
   return { nodes, edges, frames, w: size.w + MARGIN * 2, h: size.h + MARGIN * 2 };
+}
+
+/**
+ * Рамки листа композиции по положению шагов: рамка скобок и рамка параллели
+ * обнимают свои шаги и вложенные рамки с отступом.
+ *
+ * Рамка следует за шагами, а не хранится: что в какой скобке, говорит выражение, и
+ * шаг, унесённый автором, остаётся внутри своей рамки - иначе схема солгала бы о
+ * форме. Рамки идут от внешней к вложенной: внешняя рисуется первой и ложится под.
+ * Имена шагов - те же, что даёт `composeSheet`: модель и номер среди её шагов в
+ * порядке обхода выражения.
+ *
+ * @param {object} implement дерево реализации
+ * @param {Map<string, {x: number, y: number}>} at центры шагов по имени
+ * @returns {{x: number, y: number, w: number, h: number, parallel?: boolean}[]}
+ */
+export function framesOf(implement, at) {
+  const frames = [];
+  const seen = new Map();
+  // Отвечает огибающим прямоугольником элемента `[minX, minY, maxX, maxY]`;
+  // `null` - в элементе нет ни одного размещённого шага.
+  const walk = (item) => {
+    if (item.model) {
+      const count = (seen.get(item.model.name) ?? 0) + 1;
+      seen.set(item.model.name, count);
+      const point = at.get(`${item.model.name}#${count}`);
+      if (!point) return null;
+      const h = SIDE / 2;
+      return [point.x - h, point.y - h, point.x + h, point.y + h];
+    }
+    const framed = item.group !== undefined || item.parallel !== undefined;
+    // Место рамки занимается до обхода детей: порядок "внешняя раньше вложенной"
+    // держит индекс, а размер известен только после.
+    const slot = framed ? frames.push(null) - 1 : -1;
+    const children = item.group ? [item.group] : (item.chain ?? item.parallel ?? []);
+    let box = null;
+    for (const child of children) box = union(box, walk(child));
+    if (!framed) return box;
+    if (!box) return null;
+    const [x0, y0, x1, y1] = [box[0] - FRAME_PAD, box[1] - FRAME_PAD, box[2] + FRAME_PAD, box[3] + FRAME_PAD];
+    const frame = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+    if (item.parallel) frame.parallel = true;
+    frames[slot] = frame;
+    return [x0, y0, x1, y1];
+  };
+  walk(implement);
+  return frames.filter(Boolean);
+}
+
+/** Огибающий прямоугольник двух; `null` - пустой. */
+function union(a, b) {
+  if (!a) return b;
+  if (!b) return a;
+  return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
 }

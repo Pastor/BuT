@@ -667,6 +667,138 @@ test("раскладка: сверка листа композиции - по ш
   assert.deepEqual(layout.reconcile(stored, gone).extraSheets, [key]);
 });
 
+test("геометрия: рамки скобок и параллели обнимают свои шаги", () => {
+  const implement = COMPOSED.sheets[0].nodes[0].implements;
+  const composed = geo.composeSheet(implement);
+  const at = new Map(composed.nodes.map((n) => [n.name, { x: n.x, y: n.y }]));
+  assert.deepEqual(geo.framesOf(implement, at), composed.frames, "по форме выражения - те же рамки");
+  const [outer, inner] = composed.frames;
+  assert.equal(inner.parallel, true);
+  assert.equal(outer.parallel, undefined, "внешняя - скобки, она идёт первой");
+
+  // Шаг параллели унесён вниз за прежнюю рамку: обе рамки его вмещают. Унеси его
+  // под соседний шаг - и рамка обнимет чужой: это названная граница, а не дефект.
+  at.set("Pump#2", { x: at.get("Pump#2").x, y: at.get("Pump#2").y + 400 });
+  const [movedOuter, movedInner] = geo.framesOf(implement, at);
+  const h = geo.SIDE / 2;
+  const inside = (frame, p) => frame.x <= p.x - h && p.x + h <= frame.x + frame.w && frame.y <= p.y - h && p.y + h <= frame.y + frame.h;
+  assert.ok(inside(movedInner, at.get("Pump#2")), "параллель вмещает унесённый шаг");
+  assert.ok(inside(movedInner, at.get("Pump#1")), "и оставшийся");
+  assert.ok(
+    movedOuter.x < movedInner.x && movedOuter.y < movedInner.y &&
+      movedInner.x + movedInner.w < movedOuter.x + movedOuter.w && movedInner.y + movedInner.h < movedOuter.y + movedOuter.h,
+    "вложенная рамка внутри внешней",
+  );
+  assert.ok(!inside(movedInner, at.get("Heater#2")), "чужой шаг рамка не забирает");
+  assert.deepEqual(geo.framesOf({ group: { chain: [] } }, new Map()), [], "рамки без шагов нет");
+});
+
+/** Холст без страницы: методы листа и правки на объекте класса, отрисовка - заглушка. */
+async function bareScheme(graph, stored = layout.empty()) {
+  const { Scheme } = await import("../static/scheme.js");
+  const scheme = Object.create(Scheme.prototype);
+  Object.assign(scheme, {
+    graph,
+    layout: stored,
+    undo: [],
+    redo: [],
+    trail: [{ kind: "model", path: "/" }, { kind: "composition", sheetPath: "/", node: "Main" }],
+    selected: null,
+    t: (key) => key,
+    who: () => "",
+    draw: () => {},
+    onChange: () => {},
+  });
+  return scheme;
+}
+
+test("холст: лист композиции читает запись и правится по её ключу", async () => {
+  const key = layout.compositionKey("/", "Main");
+  const scheme = await bareScheme(COMPOSED);
+  const fresh = scheme.current();
+  assert.equal(fresh.key, key);
+  assert.equal(fresh.path, null, "во вложенную композицию с листа композиции не входят");
+  assert.equal(fresh.editable, true);
+  assert.ok(fresh.nodes.every((n) => n.unplaced), "без записи шаги не размещены");
+  assert.deepEqual(fresh.frames, geo.composeSheet(COMPOSED.sheets[0].nodes[0].implements).frames, "форма выражения");
+
+  // Перенос шага пишет запись листа композиции, а не листа модели.
+  scheme.moveNode("Pump#2", 603, 797);
+  assert.deepEqual(scheme.layout.sheets[key].nodes["Pump#2"], { x: 600, y: 800 }, "с привязкой к сетке");
+  assert.equal(scheme.layout.sheets["/"], undefined);
+  const moved = scheme.current();
+  const pump = moved.nodes.find((n) => n.name === "Pump#2");
+  assert.deepEqual([pump.x, pump.y, pump.unplaced], [600, 800, false]);
+  assert.ok(moved.nodes.filter((n) => n.name !== "Pump#2").every((n) => n.unplaced), "прочие шаги по-прежнему не размещены");
+  // Рамки пошли за шагом, а лист вместил и шаг, и рамки.
+  const h = geo.SIDE / 2;
+  for (const frame of moved.frames) assert.ok(frame.y + frame.h >= 800 + h, "рамка вмещает унесённый шаг");
+  for (const frame of moved.frames) {
+    assert.ok(moved.ox <= frame.x && frame.x + frame.w <= moved.ox + moved.w, "лист вмещает рамку по ширине");
+    assert.ok(moved.oy <= frame.y && frame.y + frame.h <= moved.oy + moved.h, "и по высоте");
+  }
+
+  // Излом и закреплённый конец ребра между шагами читаются из записи.
+  layout.bend(scheme.layout, key, "Pump#2>Heater#2:0", [[640, 900]]);
+  layout.endAt(scheme.layout, key, "Pump#2>Heater#2:0", "from", 4);
+  const edge = scheme.current().edges.find((e) => e.key === "Pump#2>Heater#2:0");
+  assert.deepEqual(edge.points, [[640, 900]]);
+  assert.deepEqual(edge.ends, { from: 4 });
+  assert.ok(scheme.current().oy + scheme.current().h >= 900, "лист вмещает излом");
+
+  // Отмена возвращает прежнее положение; автораскладка снимает координаты и изломы,
+  // подписи остаются.
+  scheme.undoLast();
+  assert.equal(scheme.layout.sheets?.[key]?.nodes?.["Pump#2"], undefined, "отмена снимает перенос");
+  scheme.redoLast();
+  assert.deepEqual(scheme.layout.sheets[key].nodes["Pump#2"], { x: 600, y: 800 }, "повтор возвращает");
+  layout.bend(scheme.layout, key, "Pump#2>Heater#2:0", [[640, 900]]);
+  layout.nameNode(scheme.layout, key, "Heater#1", "Нагрев");
+  scheme.autoLayout();
+  const auto = scheme.current();
+  assert.ok(auto.nodes.every((n) => n.unplaced), "автораскладка - форма выражения");
+  assert.deepEqual(auto.edges.find((e) => e.key === "Pump#2>Heater#2:0").points, []);
+  assert.equal(auto.nodes.find((n) => n.name === "Heater#1").alias, "Нагрев", "подпись осталась");
+});
+
+test("холст: миниатюра квадрата композиции повторяет хранимую раскладку", async () => {
+  const key = layout.compositionKey("/", "Main");
+  const stored = layout.place(layout.empty(), key, "Heater#2", 960, 72);
+  const scheme = await bareScheme(COMPOSED, stored);
+  scheme.trail = [{ kind: "model", path: "/" }];
+  const parent = scheme.current();
+  const main = parent.nodes.find((n) => n.name === "Main");
+  // Миниатюра рисует лист, куда ведёт вход в квадрат, - тот же, что открывается.
+  const inner = scheme.sheetOf(scheme.target(parent, main));
+  assert.deepEqual(
+    [inner.nodes.find((n) => n.name === "Heater#2").x, inner.nodes.find((n) => n.name === "Heater#2").y],
+    [960, 72],
+  );
+});
+
+test("холст: переименование модели переносит шаги, состояния - только своё", async () => {
+  const key = layout.compositionKey("/", "Main");
+  const stored = layout.place(layout.empty(), key, "Pump#1", 272, 72);
+  layout.place(stored, "/", "Done", 16, 8);
+  const scheme = await bareScheme(COMPOSED, stored);
+  scheme.renamed("Pump", "Blower");
+  assert.deepEqual(Object.keys(scheme.layout.sheets[key].nodes), ["Blower#1"], "модель выражения - шаги переехали");
+  scheme.renamed("Done", "Finish");
+  assert.deepEqual(Object.keys(scheme.layout.sheets["/"].nodes), ["Finish"]);
+  // Состояние, совпавшее именем с моделью, которой в выражениях нет, шагов не трогает.
+  const { composedModels } = await import("../static/scheme.js");
+  assert.deepEqual([...composedModels(COMPOSED)].sort(), ["Heater", "Pump"]);
+  assert.deepEqual([...composedModels(null)], []);
+});
+
+test("холст: уведомление называет лист композиции именем состояния", async () => {
+  const { sheetLabel } = await import("../static/scheme.js");
+  assert.equal(sheetLabel("/"), "");
+  assert.equal(sheetLabel("Engine"), "Engine");
+  assert.equal(sheetLabel("/#Middle"), "Middle");
+  assert.equal(sheetLabel("Engine#Run"), "Engine/Run");
+});
+
 test("раскладка: реализация одной моделью своего листа не имеет", () => {
   assert.equal(layout.hasCompositionSheet({ model: { name: "Heater" } }), false);
   assert.equal(layout.hasCompositionSheet({ group: { model: { name: "Heater" } } }), true, "скобки - уже лист");

@@ -91,9 +91,9 @@ export function paintLegend(container, ctx) {
     const line = row([
       span("legend-mark", node.mark),
       span("legend-name", source),
-      // Подпись ставится и на листе композиции: он строится из выражения, но
-      // подписи его квадратов живут в раскладке, как у состояний.
-      sheet.namesAt
+      // Подпись ставится и на листе композиции: подписи его квадратов живут в
+      // раскладке под ключом листа, как у состояний.
+      sheet.key
         ? aliasField(
             node.alias,
             t("scheme.legend.aliasEmpty"),

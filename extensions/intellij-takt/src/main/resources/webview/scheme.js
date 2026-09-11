@@ -142,6 +142,37 @@ export function innerLabel(nodes, running) {
     .join(", ");
 }
 
+/**
+ * Модели, стоящие в выражениях реализации графа: у них есть шаги на листах
+ * композиций.
+ *
+ * @param {{sheets: object[]}|null} graph ответ `takt_graph`
+ * @returns {Set<string>} имена моделей так, как они записаны в выражении
+ */
+export function composedModels(graph) {
+  const out = new Set();
+  const walk = (item) => {
+    if (!item) return;
+    if (item.model) out.add(item.model.name);
+    else if (item.group) walk(item.group);
+    else for (const child of item.chain ?? item.parallel ?? []) walk(child);
+  };
+  for (const sheet of graph?.sheets ?? []) for (const node of sheet.nodes) walk(node.implements);
+  return out;
+}
+
+/**
+ * Как назвать лист раскладки в уведомлении: путь модели, а у листа композиции -
+ * путь владельца и имя состояния через ту же косую черту. Корень - пустая строка.
+ * Служебный ключ `/#Main` автору ничего не говорит, `Main` - говорит.
+ */
+export function sheetLabel(key) {
+  const [owner, state] = key.split("#");
+  const path = owner === "/" ? "" : owner;
+  if (state === undefined) return path;
+  return path === "" ? state : `${path}/${state}`;
+}
+
 /** Запас белого поля маски за краем листа: больше любого переноса за один жест. */
 const REACH_ALL = 100000;
 
@@ -274,12 +305,20 @@ export class Scheme {
     }
   }
 
-  /** Переименование состояния из редактора переносит записи раскладки. */
+  /**
+   * Переименование символа из редактора переносит записи раскладки: состояния - на
+   * листах, модели - в шагах листов композиций.
+   *
+   * Род символа редактор не сообщает, и спрашивается граф до правки: шаги
+   * переносятся, только если такая модель стоит в выражении реализации. Иначе
+   * переименование состояния, совпавшего по имени с моделью, увело бы чужие записи.
+   */
   renamed(from, to) {
     const before = this.text();
     for (const path of Object.keys(this.layout.sheets ?? {})) {
       this.layout = layoutFile.rename(this.layout, path, from, to);
     }
+    if (composedModels(this.graph).has(from)) this.layout = layoutFile.renameModel(this.layout, from, to);
     if (this.selected === from) this.selected = to;
     if (this.text() !== before) this.commit(before);
   }
@@ -401,7 +440,6 @@ export class Scheme {
     return {
       key: found.path,
       path: found.path,
-      namesAt: found.path,
       title: found.path === "/" ? this.t("scheme.root") : found.name,
       editable: true,
       nodes,
@@ -411,51 +449,66 @@ export class Scheme {
     };
   }
 
-  /** Лист композиции: строится из выражения и не хранится. */
+  /**
+   * Лист композиции: состав шагов и рамок задаёт выражение, положение - запись
+   * листа в раскладке под ключом "путь листа-владельца#составное состояние".
+   *
+   * Шаг без записи стоит по форме выражения и помечен неразмещённым - те же
+   * правила, что у листа модели. Рамки скобок и параллели следуют за шагами.
+   */
   compositionSheet(node, sheetPath) {
     const composed = geo.composeSheet(node.implements);
-    // Лист не хранится, но подписи автора у его квадратов - хранятся: запись листа
-    // ключуется путём листа-владельца и именем составного состояния.
-    const key = `${sheetPath}#${node.name}`;
-    const names = this.layout.sheets?.[key]?.names ?? {};
-    const nodes = composed.nodes.map((n, i) => ({
-      name: n.name,
-      kind: "composition",
-      start: false,
-      x: n.x,
-      y: n.y,
-      unplaced: false,
-      alias: names[n.name] ?? "",
-      model: n.model,
-      implements: n.path ? { model: { name: n.model, path: n.path } } : null,
-      mark: `S${i + 1}`,
-    }));
-    const edges = composed.edges.map((e, i) => ({
-      key: `${e.from}>${e.to}:${i}`,
-      from: e.from,
-      to: e.to,
-      ordinal: i,
-      kind: "next",
-      cond: null,
-      alias: "",
-      points: [],
-      label: null,
-      loop: false,
-      mark: "",
-    }));
+    const key = layoutFile.compositionKey(sheetPath, node.name);
+    const stored = this.layout.sheets?.[key] ?? {};
+    const nodes = composed.nodes.map((n, i) => {
+      const kept = stored.nodes?.[n.name];
+      return {
+        name: n.name,
+        kind: "composition",
+        start: false,
+        x: kept?.x ?? n.x,
+        y: kept?.y ?? n.y,
+        unplaced: !kept,
+        alias: stored.names?.[n.name] ?? "",
+        model: n.model,
+        implements: n.path ? { model: { name: n.model, path: n.path } } : null,
+        mark: `S${i + 1}`,
+      };
+    });
+    const edges = composed.edges.map((e) => {
+      const edgeKey = layoutFile.edgeKey(e);
+      const record = stored.edges?.[edgeKey] ?? {};
+      return {
+        key: edgeKey,
+        from: e.from,
+        to: e.to,
+        ordinal: e.ordinal,
+        kind: "next",
+        cond: null,
+        alias: "",
+        points: record.points ?? [],
+        ends: layoutFile.endsOf(record),
+        label: null,
+        loop: false,
+        mark: "",
+      };
+    });
+    const frames = geo.framesOf(node.implements, new Map(nodes.map((n) => [n.name, n])));
+    // Рамка - часть рисунка: шаг, унесённый к краю, тянет за собой свою рамку, и
+    // лист обязан вместить её так же, как излом.
+    const corners = frames.flatMap((f) => [[f.x, f.y], [f.x + f.w, f.y + f.h]]);
+    const size = geo.sheetSize(nodes, [...edges.flatMap((e) => e.points), ...corners]);
     return {
       key,
+      // Пути модели у листа композиции нет: во вложенную композицию с него не
+      // входят, а запись идёт по ключу листа.
       path: null,
-      namesAt: key,
       title: node.name,
-      editable: false,
+      editable: true,
       nodes,
       edges,
-      frames: composed.frames,
-      ox: 0,
-      oy: 0,
-      w: composed.w,
-      h: composed.h,
+      frames,
+      ...size,
     };
   }
 
@@ -536,7 +589,7 @@ export class Scheme {
     const sheet = this.current();
     if (!sheet.editable) return;
     const before = this.text();
-    layoutFile.place(this.layout, sheet.path, name, this.snapped(x), this.snapped(y));
+    layoutFile.place(this.layout, sheet.key, name, this.snapped(x), this.snapped(y));
     this.commit(before);
   }
 
@@ -545,9 +598,9 @@ export class Scheme {
     const sheet = this.current();
     if (!sheet.editable) return;
     const before = this.text();
-    const stored = layoutFile.sheet(this.layout, sheet.path);
+    const stored = layoutFile.sheet(this.layout, sheet.key);
     stored.nodes = {};
-    for (const key of Object.keys(stored.edges)) layoutFile.bend(this.layout, sheet.path, key, []);
+    for (const key of Object.keys(stored.edges)) layoutFile.bend(this.layout, sheet.key, key, []);
     this.commit(before);
   }
 
@@ -693,7 +746,7 @@ export class Scheme {
     // в соседние, а не под неё.
     const reserved = new Map();
     for (const node of sheet.nodes) {
-      if (node.start && node.kind !== "composition") reserved.set(node.name, layoutFile.entryOf(this.layout, sheet.path));
+      if (node.start && node.kind !== "composition") reserved.set(node.name, layoutFile.entryOf(this.layout, sheet.key));
     }
     const routes = geo.routeSheet(byName, sheet.edges, reserved);
     this.routes = new Map();
@@ -778,7 +831,7 @@ export class Scheme {
         text.addEventListener("pointerdown", (event) => this.dragMark(event, sheet, edge, pts, text));
         const center = () => {
           const before = this.text();
-          layoutFile.labelAt(this.layout, sheet.path, edge.key, "center");
+          layoutFile.labelAt(this.layout, sheet.key, edge.key, "center");
           this.commit(before);
         };
         text.addEventListener("dblclick", (event) => {
@@ -931,7 +984,7 @@ export class Scheme {
    * шестнадцати точек. Занятую стрелкой точку рёбра обходят.
    */
   drawEntry(group, sheet, node) {
-    const port = layoutFile.entryOf(this.layout, sheet.path);
+    const port = layoutFile.entryOf(this.layout, sheet.key);
     const angle = (port * 2 * Math.PI) / geo.PORTS;
     const out = [Math.cos(angle), Math.sin(angle)];
     const side = [-out[1], out[0]];
@@ -954,7 +1007,7 @@ export class Scheme {
       event.preventDefault();
       event.stopPropagation();
       const before = this.text();
-      layoutFile.entryAt(this.layout, sheet.path, (port + step + geo.PORTS) % geo.PORTS);
+      layoutFile.entryAt(this.layout, sheet.key, (port + step + geo.PORTS) % geo.PORTS);
       this.commit(before);
     });
   }
@@ -1109,12 +1162,12 @@ export class Scheme {
       onEnter: (name) => this.enter(name),
       onAlias: (name, text) => {
         const before = this.text();
-        layoutFile.nameNode(this.layout, sheet.namesAt, name, text);
+        layoutFile.nameNode(this.layout, sheet.key, name, text);
         this.commitQuiet(before);
       },
       onEdgeAlias: (key, text) => {
         const before = this.text();
-        layoutFile.nameEdge(this.layout, sheet.path, key, text);
+        layoutFile.nameEdge(this.layout, sheet.key, key, text);
         this.commitQuiet(before);
       },
       onTitleDown: (event) => this.dragLegend(event),
@@ -1181,7 +1234,7 @@ export class Scheme {
     const kept = geo.bendingPoints(from, edge.loop ? from : to, edge.points);
     if (kept.length === edge.points.length) return;
     const before = this.text();
-    layoutFile.bend(this.layout, sheet.path, edge.key, kept);
+    layoutFile.bend(this.layout, sheet.key, edge.key, kept);
     this.commit(before);
   }
 
@@ -1349,7 +1402,7 @@ export class Scheme {
       onMove: (dx, dy) => {
         if (!sheet.editable) return;
         last = [this.snapped(origin.x + dx), this.snapped(origin.y + dy)];
-        layoutFile.place(this.layout, sheet.path, node.name, last[0], last[1]);
+        layoutFile.place(this.layout, sheet.key, node.name, last[0], last[1]);
         this.draw();
       },
       onEnd: (moved) => {
@@ -1401,7 +1454,7 @@ export class Scheme {
     });
     const set = (port) => {
       const before = this.text();
-      layoutFile.endAt(this.layout, sheet.path, edge.key, side, port);
+      layoutFile.endAt(this.layout, sheet.key, edge.key, side, port);
       this.selectedEdge = edge.key;
       this.commit(before);
     };
@@ -1428,7 +1481,7 @@ export class Scheme {
     this.drag(event, {
       onStart: () => pin.classList.add("dragging"),
       onMove: (dx, dy) => {
-        layoutFile.endAt(this.layout, sheet.path, edge.key, side, geo.portToward(node, [origin[0] + dx, origin[1] + dy]));
+        layoutFile.endAt(this.layout, sheet.key, edge.key, side, geo.portToward(node, [origin[0] + dx, origin[1] + dy]));
         this.selectedEdge = edge.key;
         this.selected = null;
         this.draw();
@@ -1451,7 +1504,7 @@ export class Scheme {
       onStart: () => pin.classList.add("dragging"),
       onMove: (dx, dy) => {
         const points = edge.points.map((p, i) => (i === index ? [this.snapped(origin[0] + dx), this.snapped(origin[1] + dy)] : p));
-        layoutFile.bend(this.layout, sheet.path, edge.key, points);
+        layoutFile.bend(this.layout, sheet.key, edge.key, points);
         this.selectedEdge = edge.key;
         this.selected = null;
         this.draw();
@@ -1470,11 +1523,11 @@ export class Scheme {
   /** Перенос стрелки начального состояния: точка - ближайшая к указателю по направлению из центра. */
   dragEntry(event, sheet, node, grip) {
     const before = this.text();
-    const origin = geo.portPoint(node, layoutFile.entryOf(this.layout, sheet.path));
+    const origin = geo.portPoint(node, layoutFile.entryOf(this.layout, sheet.key));
     this.drag(event, {
       onStart: () => grip.classList.add("dragging"),
       onMove: (dx, dy) => {
-        layoutFile.entryAt(this.layout, sheet.path, geo.portToward(node, [origin[0] + dx, origin[1] + dy]));
+        layoutFile.entryAt(this.layout, sheet.key, geo.portToward(node, [origin[0] + dx, origin[1] + dy]));
         this.draw();
       },
       onEnd: (moved) => {
@@ -1493,7 +1546,7 @@ export class Scheme {
     this.drag(event, {
       onStart: () => text.classList.add("dragging"),
       onMove: (dx, dy) => {
-        layoutFile.labelAt(this.layout, sheet.path, edge.key, "own", this.snapped(origin[0] + dx), this.snapped(origin[1] + dy));
+        layoutFile.labelAt(this.layout, sheet.key, edge.key, "own", this.snapped(origin[0] + dx), this.snapped(origin[1] + dy));
         this.selectedEdge = edge.key;
         this.selected = null;
         this.draw();
@@ -1545,7 +1598,7 @@ export class Scheme {
     const points = [...edge.points];
     points.splice(at, 0, p);
     const before = this.text();
-    layoutFile.bend(this.layout, sheet.path, edge.key, points);
+    layoutFile.bend(this.layout, sheet.key, edge.key, points);
     this.focusEdge(edge.key);
     this.selected = null;
     this.commit(before);
@@ -1573,7 +1626,7 @@ export class Scheme {
     const points = [...edge.points];
     // Петля строится без изломов автора, и сегмент её ломаной на них не ложится.
     points.splice(edge.loop ? points.length : at, 0, [this.snapped(point[0]), this.snapped(point[1])]);
-    layoutFile.bend(this.layout, sheet.path, edge.key, points);
+    layoutFile.bend(this.layout, sheet.key, edge.key, points);
     this.commit(before);
   }
 
@@ -1756,10 +1809,11 @@ export class Scheme {
     }
     const names = [];
     for (const [path, found] of Object.entries(report.sheets)) {
-      const prefix = path === "/" ? "" : `${path}/`;
+      const label = sheetLabel(path);
+      const prefix = label === "" ? "" : `${label}/`;
       names.push(...found.extraNodes.map((n) => `${prefix}${n}`), ...found.extraEdges.map((k) => `${prefix}${k}`));
     }
-    names.push(...report.extraSheets);
+    names.push(...report.extraSheets.map((key) => sheetLabel(key) || key));
     noticeText.textContent = this.t("scheme.stale", { names: names.join(", ") });
     notice.hidden = false;
   }
