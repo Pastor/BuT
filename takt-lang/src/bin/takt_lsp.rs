@@ -29,7 +29,14 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     // протокол и отвечает `ProtocolError("disconnected channel")`. Версия нужна, чтобы
     // отличить устаревший установленный сервер от дефекта языка: редактор держит свой
     // сервер и обновляется независимо от дерева.
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    let mut args: Vec<String> = std::env::args().skip(1).collect();
+    // Ключ `--lang` общий с `taktc` и `takt-sim`; `initializationOptions.lang` клиента
+    // сильнее его, как параметр вызова сильнее ключа. Запросы сервер обрабатывает в
+    // одном потоке (`main_loop`), поэтому язык, поставленный здесь, держится до конца.
+    if let Err(message) = takt_lang::diagnostics::lang::take_flag(&mut args) {
+        eprintln!("[takt-lsp] {message}");
+        process::exit(2);
+    }
     if let Some(code) = takt_lang::version::handle_server_args(&args) {
         process::exit(code);
     }
@@ -53,6 +60,11 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     // (аналог `-I` у `taktc`), иначе импорт из общей библиотеки вне каталога документа
     // в редакторе не находится.
     let (init_id, init_params) = connection.initialize_start()?;
+    match takt_lang::lsp::lang_from_options(init_params.get("initializationOptions")) {
+        Some(Ok(chosen)) => takt_lang::diagnostics::lang::activate(chosen),
+        Some(Err(message)) => eprintln!("[takt-lsp] {message}"),
+        None => {}
+    }
     let search_paths = search_paths_from_init(&init_params);
     // Корни рабочей области: по ним идут `references` и `rename`. Клиент присылает либо
     // `workspaceFolders`, либо устаревший `root_uri`; если ни того, ни другого -

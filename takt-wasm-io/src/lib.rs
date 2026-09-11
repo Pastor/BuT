@@ -18,11 +18,16 @@
 //!
 //! Модуль однопоточен, вызовы не реентерабельны - состояние живёт в
 //! `thread_local`.
+//!
+//! Язык ответа задаёт поле `lang` запроса, одно на все операции обоих модулей
+//! ([`call`]); список языков называет [`languages`].
 
 pub mod reply;
 
 use serde::Deserialize;
 use std::cell::RefCell;
+use takt_lang::diagnostics::lang::{self, Lang, keys};
+use takt_lang::msg;
 
 /// Начальная ёмкость буфера ввода-вывода.
 ///
@@ -66,20 +71,51 @@ where
     T: for<'de> Deserialize<'de>,
     F: FnOnce(T) -> String,
 {
-    let request = IO.with(|io| {
+    // Пока запрос не разобран, язык его неизвестен: отказ разбора идёт на базовом.
+    let value = IO.with(|io| {
         let io = io.borrow();
         let len = (len as usize).min(io.len());
         std::str::from_utf8(&io[..len])
-            .map_err(|e| format!("запрос не UTF-8: {e}"))
+            .map_err(|e| unread(keys::BRIDGE_REQUEST_NOT_UTF8, &e))
             .and_then(|text| {
-                serde_json::from_str::<T>(text).map_err(|e| format!("запрос не читается: {e}"))
+                serde_json::from_str::<serde_json::Value>(text)
+                    .map_err(|e| unread(keys::BRIDGE_REQUEST_UNREADABLE, &e))
             })
+    });
+    let request = value.and_then(|value| {
+        choose_language(&value)?;
+        serde_json::from_value::<T>(value)
+            .map_err(|e| msg!(keys::BRIDGE_REQUEST_UNREADABLE, error = e))
     });
     let answer = match request {
         Ok(request) => operation(request),
         Err(message) => reply::refused(message),
     };
     write_reply(&answer)
+}
+
+/// Отказ разбора запроса на базовом языке.
+fn unread(key: lang::Key, error: &dyn std::fmt::Display) -> String {
+    lang::render_in(Lang::base(), key, &[("error", error)])
+}
+
+/// Ставит язык ответа по полю `lang` запроса.
+///
+/// Язык ставится на каждый вызов и не запоминается: запрос без поля обязан получить
+/// умолчание, иначе язык прошлого вызова отвечал бы за чужой запрос. Неизвестный код -
+/// отказ вызова с перечислением известных.
+fn choose_language(request: &serde_json::Value) -> Result<(), String> {
+    match request.get("lang").and_then(serde_json::Value::as_str) {
+        Some(code) => lang::activate(lang::parse(code)?),
+        None => lang::reset(),
+    }
+    Ok(())
+}
+
+/// Коды языков, у которых есть каталог: их называет ответ `takt_version` каждого
+/// модуля, и страница не заводит своего списка.
+pub fn languages() -> Vec<&'static str> {
+    lang::all().iter().map(Lang::code).collect()
 }
 
 /// Кладёт ответ в буфер, расширяя его при необходимости.
@@ -105,4 +141,42 @@ pub fn put_request(text: &str) -> u32 {
 /// Ответ длиной `len` из буфера. Для родных тестов модулей.
 pub fn take_reply(len: u32) -> String {
     IO.with(|io| String::from_utf8_lossy(&io.borrow()[..len as usize]).into_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Операция, отвечающая языком, на котором её позвали.
+    fn answered_language(request: &str) -> serde_json::Value {
+        let len = put_request(request);
+        let reply = take_reply(call(len, |_: serde_json::Value| {
+            reply::ok(serde_json::json!({ "lang": lang::current().code() }))
+        }));
+        serde_json::from_str(&reply).expect("ответ - JSON")
+    }
+
+    /// Язык задаёт запрос, и следующий запрос без поля его не наследует.
+    #[test]
+    fn language_is_chosen_per_call() {
+        assert_eq!(answered_language(r#"{"lang": "en"}"#)["lang"], "en");
+        let base = answered_language("{}");
+        assert_eq!(base["lang"], lang::current().code(), "без поля - умолчание");
+        assert_ne!(base["lang"], "en", "язык прошлого вызова не наследуется");
+    }
+
+    /// Неизвестный язык - отказ вызова, и он перечисляет известные.
+    #[test]
+    fn unknown_language_is_refused_with_the_known_ones() {
+        let reply = answered_language(r#"{"lang": "xx"}"#);
+        assert_eq!(reply["ok"], false, "{reply}");
+        let text = reply.to_string();
+        assert!(text.contains("en") && text.contains("ru"), "{text}");
+    }
+
+    /// Список языков - те же каталоги, что у компилятора.
+    #[test]
+    fn languages_name_the_catalogues() {
+        assert_eq!(languages(), ["en", "ru"]);
+    }
 }

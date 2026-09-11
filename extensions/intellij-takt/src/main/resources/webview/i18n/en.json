@@ -136,7 +136,7 @@
   "profile.linkedRow": "{provider} — click to unlink",
   "profile.noLinks": "no platforms linked",
   "profile.unlinked": "the platform is unlinked",
-  "tools.russianOnly": "Tool messages are still Russian only",
+  "tools.traceData": "Trace step lines are run data and are not translated",
   "gen.title": "Generation",
   "gen.actions": "Output actions",
   "gen.copy": "Copy file",

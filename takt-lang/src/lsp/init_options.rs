@@ -1,4 +1,4 @@
-//! Разбор `initializationOptions` LSP: пути поиска импортов.
+//! Разбор `initializationOptions` LSP: пути поиска импортов и язык сообщений.
 //!
 //! Без них ядро получает пустой список путей (`&[]`), и импорт из общей библиотеки вне
 //! каталога документа в редакторе не находится, хотя `taktc -I lib` его собирает.
@@ -7,6 +7,17 @@
 
 use serde_json::Value;
 use std::path::Path;
+
+use crate::diagnostics::lang::{self, Lang};
+
+/// Язык сообщений из `initializationOptions.lang`; `None` - клиент язык не назвал.
+///
+/// Неизвестный код - отказ словами с перечислением известных, а решает вызывающий:
+/// сервер пишет его в журнал и остаётся на прежнем языке, а не падает на старте.
+pub fn lang_from_options(options: Option<&Value>) -> Option<Result<Lang, String>> {
+    let code = options?.get("lang")?.as_str()?;
+    Some(lang::parse(code))
+}
 
 /// Извлекает пути поиска импортов (аналог `-I` у `taktc`) из `initializationOptions`
 /// LSP.
@@ -47,6 +58,31 @@ fn resolve_path(path: &str, root: Option<&str>) -> String {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn reads_language() {
+        let opts = json!({ "lang": "en" });
+        let chosen = lang_from_options(Some(&opts)).expect("язык назван");
+        assert_eq!(chosen.expect("язык известен").code(), "en");
+    }
+
+    #[test]
+    fn language_absent_or_not_a_string_gives_none() {
+        assert!(lang_from_options(None).is_none());
+        assert!(lang_from_options(Some(&json!({}))).is_none());
+        assert!(lang_from_options(Some(&json!({ "lang": 7 }))).is_none());
+    }
+
+    #[test]
+    fn unknown_language_is_refused_with_the_known_ones() {
+        let refused = lang_from_options(Some(&json!({ "lang": "xx" })))
+            .expect("язык назван")
+            .expect_err("язык неизвестен");
+        assert!(
+            refused.contains("en") && refused.contains("ru"),
+            "{refused}"
+        );
+    }
 
     #[test]
     fn reads_search_paths_array() {

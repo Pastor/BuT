@@ -42,7 +42,7 @@ pub use diagnostics::{collect_diagnostics, collect_diagnostics_at, grammar_diagn
 pub use formatting::formatting_edits;
 pub use goto::{Location, goto_declaration, goto_declaration_at, goto_declaration_with_paths};
 pub use hover::{hover_info, word_at_position};
-pub use init_options::search_paths_from_options;
+pub use init_options::{lang_from_options, search_paths_from_options};
 pub use keywords::SEMANTIC_TOKEN_TYPES;
 /// Типы протокола - Тот же крейт, которым живёт слой.
 ///

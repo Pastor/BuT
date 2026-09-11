@@ -67,6 +67,7 @@ pub extern "C" fn takt_version() -> u32 {
     let reply = reply::ok(serde_json::json!({
         "language": takt_lang::LANGUAGE_VERSION,
         "takt_lang": env!("CARGO_PKG_VERSION"),
+        "languages": takt_wasm_io::languages(),
         "targets": takt_lang::compile::Target::ALL
             .iter()
             .map(|t| t.name())
@@ -410,5 +411,6 @@ mod tests {
             Value::String(takt_lang::LANGUAGE_VERSION.to_string())
         );
         assert_eq!(reply["targets"].as_array().unwrap().len(), 7);
+        assert_eq!(reply["languages"], serde_json::json!(["en", "ru"]));
     }
 }

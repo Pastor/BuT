@@ -139,6 +139,26 @@ async function loadBridge() {
   return loaded;
 }
 
+test("мост: язык ответа задаёт запрос, умолчание не наследуется", async () => {
+  const bridge = await loadBridge();
+  assert.deepEqual(bridge.version().languages, ["en", "ru"], "языки называет модуль");
+  const broken = "start A {\n  ref Nowhere;\n}\n";
+  const cyrillic = /[А-Яа-яЁё]/;
+  try {
+    bridge.lang = "en";
+    const english = bridge.diagnostics(broken).diagnostics ?? [];
+    assert.ok(english.length > 0, "диагностика есть");
+    assert.ok(!english.some((d) => cyrillic.test(d.message)), JSON.stringify(english));
+    bridge.lang = null;
+    const base = bridge.diagnostics(broken).diagnostics ?? [];
+    assert.ok(base.some((d) => cyrillic.test(d.message)), "без поля - базовый язык");
+    bridge.lang = "xx";
+    assert.equal(bridge.diagnostics(broken).ok, false, "неизвестный язык - отказ");
+  } finally {
+    bridge.lang = null;
+  }
+});
+
 test("мост: страница и модуль сходятся формой ответа", async () => {
   const bridge = await loadBridge();
 

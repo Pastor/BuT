@@ -56,8 +56,11 @@ self.onmessage = async (event) => {
  *
  * @returns {Promise<boolean>} сессия готова к тактам
  */
-async function ensure({ wasmUrl, source, scenario, tickMs, files, steps }) {
+async function ensure({ wasmUrl, source, scenario, tickMs, files, steps, lang }) {
   if (!bridge) bridge = await Bridge.load(wasmUrl);
+  // Язык - не часть ключа сессии: модель от него не меняется, а каждый такт несёт
+  // язык сам.
+  bridge.lang = lang ?? null;
   // Состав проекта входит в ключ: правка подключаемого файла меняет модель так же,
   // как правка её самой, и прогон по старому тексту был бы прогоном чужой модели.
   // Длина прогона - тоже: эталон заканчивает прогон по ней, и сессия, открытая под
@@ -149,6 +152,7 @@ async function exportProject(message) {
       post({ type: "exportLoading" });
       exporter = await Bridge.load(message.exportUrl);
     }
+    exporter.lang = message.lang ?? null;
     return exporter.exportProject(message.request);
   } catch (error) {
     return { ok: false, error: { message: String(error?.message ?? error) } };

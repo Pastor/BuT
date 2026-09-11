@@ -190,6 +190,7 @@ export async function main() {
   // Опись сборки читается до модуля: в ней адрес модуля с версией в пути.
   state.build = await build.describe();
   state.bridge = await Bridge.load(state.build.wasm ?? WASM_DEFAULT);
+  state.bridge.lang = i18n.language();
   const version = state.bridge.version();
   state.version = version.takt_lang ?? "";
   state.languageVersion = version.language ?? "";
@@ -482,13 +483,17 @@ async function useLanguage(lang) {
   await i18n.load(lang);
   i18n.apply(document);
   if (dom.lang) setPick("lang", i18n.language());
-  // До диагностики, трасса и сводка приходят из модуля только по-русски. При другом
-  // языке оболочки смешение называется строкой, а не прячется: читатель, увидевший
-  // русский текст без предупреждения, решит, что перевод сломан.
+  // Строки шагов трассы - данные прогона: на них стоят сверки, и язык их не меняет.
+  // При другом языке оболочки это названо строкой, а не спрятано: читатель, увидевший
+  // русскую строку шага без пояснения, решит, что перевод сломан.
   const mixed = i18n.language() !== i18n.BASE;
-  if (dom["tools-lang"]) dom["tools-lang"].hidden = !mixed;
   if (dom["tools-lang-trace"]) dom["tools-lang-trace"].hidden = !mixed;
   redraw();
+  // Диагностики строит модуль на языке запроса: смена языка спрашивает их заново.
+  if (state.bridge) {
+    state.bridge.lang = i18n.language();
+    if (state.editor) refresh();
+  }
 }
 
 /**
@@ -666,7 +671,7 @@ function cache() {
     "build-modal", "build-tabs", "build-target", "build-flags", "build-line", "build-save", "build-cancel",
     "scheme-export", "export-modal", "export-format", "export-scope", "export-view", "export-background",
     "export-legend", "export-pause", "export-cancel", "export-go",
-    "lang", "tools-lang", "tools-lang-trace", "update", "showgen", "showdiag", "grip", "split", "hsplit", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
+    "lang", "tools-lang-trace", "update", "showgen", "showdiag", "grip", "split", "hsplit", "fontless", "fontmore", "fontsize", "project", "flags", "flags-applies",
     "session", "icon-enter", "icon-leave",
     "save", "openfile", "panel", "signedout", "signedin", "whoami",
     "whoami-bar",
@@ -1586,6 +1591,8 @@ function session() {
     scenario: state.scenario,
     tickMs: 0,
     files: projectFiles(),
+    // Язык ответов прогона: сводку и отказы модуль строит на языке запроса.
+    lang: i18n.language(),
     // Длина прогона - ключ `-n`: сценарий задаёт входы, а не число тактов, и после
     // его последнего шага прогон идёт дальше с удержанными значениями.
     steps: Number(dom.budget.value) || 10_000,
@@ -1664,7 +1671,7 @@ function exportInWorker(request) {
   return new Promise((resolve) => {
     state.exportSeq += 1;
     state.exports.set(state.exportSeq, resolve);
-    worker().postMessage({ type: "export", id: state.exportSeq, exportUrl: exportUrl(), request });
+    worker().postMessage({ type: "export", id: state.exportSeq, exportUrl: exportUrl(), request, lang: i18n.language() });
   });
 }
 

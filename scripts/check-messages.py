@@ -69,7 +69,7 @@ def parse_catalogue(path: Path, errors: list[str]) -> dict[str, str]:
 def sources(root: Path) -> str:
     """Текст всех исходников крейтов — в нём ищутся упоминания констант (`M5`)."""
     text = []
-    for crate in ("takt-lang", "takt-sim", "takt-wasm"):
+    for crate in ("takt-lang", "takt-sim", "takt-wasm", "takt-wasm-io", "takt-wasm-export"):
         src = root / crate / "src"
         if not src.is_dir():
             continue

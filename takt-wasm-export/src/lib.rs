@@ -48,6 +48,7 @@ pub extern "C" fn takt_io_reserve(len: u32) -> u32 {
 pub extern "C" fn takt_version() -> u32 {
     write_reply(&reply::ok(serde_json::json!({
         "language": takt_lang::LANGUAGE_VERSION,
+        "languages": takt_wasm_io::languages(),
     })))
 }
 
@@ -154,5 +155,6 @@ mod tests {
             reply["language"],
             Value::String(takt_lang::LANGUAGE_VERSION.to_string())
         );
+        assert_eq!(reply["languages"], serde_json::json!(["en", "ru"]));
     }
 }

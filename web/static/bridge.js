@@ -20,6 +20,9 @@ const decoder = new TextDecoder();
 export class Bridge {
   constructor(exports) {
     this.wasm = exports;
+    // Язык ответов модуля - код словаря страницы. Едет с каждым запросом: модуль
+    // ставит язык на вызов и не запоминает его, а без поля отвечает на базовом.
+    this.lang = null;
   }
 
   /** Загружает модуль по URL. */
@@ -36,7 +39,8 @@ export class Bridge {
   /** Зовёт операцию модуля и возвращает разобранный ответ. */
   call(operation, request) {
     const wasm = this.wasm;
-    const bytes = encoder.encode(JSON.stringify(request ?? {}));
+    const body = this.lang ? { ...(request ?? {}), lang: this.lang } : (request ?? {});
+    const bytes = encoder.encode(JSON.stringify(body));
     wasm.takt_io_reserve(bytes.length);
     new Uint8Array(wasm.memory.buffer, wasm.takt_io_ptr(), bytes.length).set(bytes);
     const length = wasm[operation](bytes.length);

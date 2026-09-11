@@ -960,3 +960,7 @@ sim.export-not-parsed = `{file}` does not parse
 sim.export-unreadable = `{name}` cannot be read: {error}
 sim.film-no-sheet = there is no sheet `{key}` in the model
 sim.film-no-frame = there is no frame {index}
+
+# ─── Мост модуля: разбор запроса (`takt-wasm-io`) ──────────────────────────
+bridge.request-not-utf8 = the request is not UTF-8: {error}
+bridge.request-unreadable = the request cannot be read: {error}
