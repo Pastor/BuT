@@ -13,8 +13,9 @@
 //   листа композиции по форме выражения - ровно та, что страница строит сама при
 //   первом показе схемы, той же функцией (`layout.placeAll`). Файл полон: в нём
 //   нет неразмещённых узлов, и экспорт по нему не отказывает;
-// - сценарии прогона - `examples/simulations/<имя>.json` и `<имя>_*.json`: по
-//   правилу имени они принадлежат модели и выбираются в окне сценариев.
+// - сценарии прогона - `examples/simulations/<имя>.json`, `<имя>_*.json` и
+//   `<имя>-*.json`: какой модели сценарий принадлежит, отвечает модуль (правило
+//   крейта проекта, то же у страницы и командной строки).
 //
 // Библиотека (файл без состояний) своим проектом не становится - она едет
 // подключаемым кодом у тех, кто её импортирует: открыть её на странице нечем.
@@ -152,7 +153,7 @@ function buildProject(bridge, file, version, stems) {
   const description = describe(stem, source);
   if (description) files.push({ name: `${stem}.md`, kind: "markdown", text: description });
   files.push({ name: `${stem}${layout.EXTENSION}`, kind: "layout", text: scheme(sheets) });
-  const scenarios = scenariosOf(stem, stems);
+  const scenarios = scenariosOf(bridge, stem, stems);
   for (const scenario of scenarios) files.push(scenario);
 
   const problem = limits(files);
@@ -233,22 +234,16 @@ function scheme(sheets) {
 }
 
 /**
- * Сценарии модели по правилу имени: `<имя>.json` и `<имя>_*.json`.
- *
- * Сценарий достаётся модели с **самым длинным** подходящим именем: одно имя бывает
- * префиксом другого, и `elevator_mini_floor2.json` принадлежит `elevator_mini`, а
- * не `elevator` - иначе проект лифта получил бы сценарий чужой модели, чьих портов
- * у него нет.
+ * Сценарии модели по правилу принадлежности - у модуля: своей копии правила у
+ * скрипта нет, иначе проекты примеров расходились бы со страницей молча.
  */
-function scenariosOf(stem, stems) {
+function scenariosOf(bridge, stem, stems) {
   if (!existsSync(SIMULATIONS)) return [];
-  const fits = (name, candidate) =>
-    name === `${candidate}.json` || (name.startsWith(`${candidate}_`) && name.endsWith(".json"));
-  return readdirSync(SIMULATIONS)
-    .filter((name) => fits(name, stem))
-    .filter((name) => !stems.some((other) => other.length > stem.length && fits(name, other)))
+  const names = readdirSync(SIMULATIONS).filter((name) => name.endsWith(".json"));
+  const reply = bridge.scenarios([...stems.map((other) => `${other}.takt`), ...names]);
+  if (!reply.ok) throw new Error(`модуль не назвал сценарии: ${reply.error?.message}`);
+  return (reply.scenarios[`${stem}.takt`] ?? [])
     .filter((name) => STEM.test(basename(name, ".json")))
-    .sort()
     .map((name) => ({ name, kind: "scenario", text: readFileSync(join(SIMULATIONS, name), "utf8") }));
 }
 

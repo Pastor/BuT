@@ -526,9 +526,15 @@ mod tests {
         let reply = round_trip(
             serde_json::json!({ "names": [
                 "elevator.takt", "elevator_mini.takt", "elevator_rush.json",
-                "elevator_mini_floor2.json", "notes.md"
+                "elevator_mini_floor2.json", "notes.md",
+                "model.takt", "model-scenario-1.json"
             ] }),
             takt_scenarios,
+        );
+        // Сценарий, заведённый на странице через дефис, - тоже сценарий модели.
+        assert_eq!(
+            reply["scenarios"]["model.takt"],
+            serde_json::json!(["model-scenario-1.json"])
         );
         assert_eq!(
             reply["scenarios"]["elevator.takt"],

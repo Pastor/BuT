@@ -3,10 +3,15 @@
 //! # Правило
 //!
 //! Сценарий `S.json` принадлежит модели с основой `M`, если `S` равно `M` либо
-//! начинается с `M_`; из подходящих моделей побеждает **самая длинная** основа.
-//! Иначе у проекта с моделями `elevator` и `elevator_mini` сценарий
+//! начинается с `M_` или `M-`; из подходящих моделей побеждает **самая длинная**
+//! основа. Иначе у проекта с моделями `elevator` и `elevator_mini` сценарий
 //! `elevator_mini_floor2.json` достался бы обеим, а прогон `elevator` пошёл бы по
 //! чужим входам.
+//!
+//! Разделителей два: подчёркивание называет сценарии примеров, дефис - сценарии,
+//! которые заводят на странице (`test1-cold.json`); тот же дефис сервер считает
+//! частью имени, названного по проекту, при переименовании. Правило, знающее
+//! один разделитель, теряло сценарии второго рода - прогон шёл без входов.
 
 /// Модель, которой принадлежит сценарий: самая длинная подходящая основа.
 ///
@@ -47,7 +52,7 @@ fn fits(stem: &str, model: &str) -> bool {
         && (stem == model
             || stem
                 .strip_prefix(model)
-                .is_some_and(|rest| rest.starts_with('_')))
+                .is_some_and(|rest| rest.starts_with('_') || rest.starts_with('-')))
 }
 
 #[cfg(test)]
@@ -70,8 +75,16 @@ mod tests {
     }
 
     #[test]
-    fn a_prefix_without_an_underscore_does_not_count() {
-        // `heaterx.json` - не сценарий `heater`: граница имени - подчёркивание.
+    fn a_hyphen_separates_like_an_underscore() {
+        let models = ["test1", "test1-big"];
+        assert_eq!(owner_of("test1-cold.json", models), Some("test1"));
+        assert_eq!(owner_of("test1_warm.json", models), Some("test1"));
+        assert_eq!(owner_of("test1-big-run.json", models), Some("test1-big"));
+    }
+
+    #[test]
+    fn a_prefix_without_a_separator_does_not_count() {
+        // `heaterx.json` - не сценарий `heater`: граница имени - разделитель.
         assert_eq!(owner_of("heaterx.json", ["heater"]), None);
         assert_eq!(owner_of("heater.md", ["heater"]), None, "не сценарий");
         assert_eq!(owner_of("orphan.json", ["heater"]), None);
